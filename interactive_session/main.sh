@@ -78,8 +78,31 @@ else
     TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:$servicePort localhost"
 fi
 
-cat > session.sh <<HERE
-#!/bin/bash
+# Initiallize session batch file:
+echo "#!/bin/bash" > session.sh
+# SET SLURM DEFAULT VALUES:
+if ! [ -z ${partition} ] && ! [[ "${walltime}" == "default" ]]; then
+    echo "#SBATCH --partition=${partition}" >> session.sh
+fi
+
+if ! [ -z ${walltime} ] && ! [[ "${walltime}" == "default" ]]; then
+    echo "#SBATCH --time=${walltime}" >> session.sh
+fi
+
+if [ -z ${numnodes} ]; then
+    echo "#SBATCH --nodes=1" >> session.sh
+else
+    echo "#SBATCH --nodes=${numnodes}" >> session.sh
+fi
+
+
+if [[ "${exclusive}" == "True" ]]; then
+    echo "#SBATCH --exclusive" >> session.sh
+fi
+
+cat >> session.sh <<HERE
+#SBATCH --job-name=session-${job_number}
+#SBATCH --output=session-${job_number}.out
 
 echo
 echo Starting interactive session - sessionPort: $servicePort tunnelPort: $openPort
@@ -106,30 +129,14 @@ replace_templated_inputs session.sh $@
 
 # move the session file over
 chmod 777 session.sh
-scp session.sh $sshuser@$sshhost:session.sh
+scp session.sh $sshuser@$sshhost:session-${job_number}.sh
 
-if [[ "$numnodes" == "" ]];then
-    numnodes="1"
-fi
-
-if [[ "$walltime" == "default" ]];then
-    walltime=""
-fi
-if [[ "$walltime" != "" ]];then
-    walltime="-t $walltime"
-fi
 
 echo
 echo "Submitting slurm request (wait for node to become available before connecting)..."
 echo
-
-if [[ "$partition" == "" ]] || [[ "$partition" == "default" ]];then
-    echo $sshcmd sbatch -N $numnodes $walltime --wrap './session.sh'
-    slurmjob=$($sshcmd sbatch -N $numnodes $walltime --wrap './session.sh' | tail -1 | awk -F ' ' '{print $4}')
-else
-    echo $sshcmd sbatch -p $partition -N $numnodes $walltime --wrap './session.sh'
-    slurmjob=$($sshcmd sbatch -p $partition -N $numnodes $walltime --wrap './session.sh' | tail -1 | awk -F ' ' '{print $4}')
-fi
+echo $sshcmd sbatch session-${job_number}.sh
+slurmjob=$($sshcmd sbatch session-${job_number}.sh | tail -1 | awk -F ' ' '{print $4}')
 
 if [[ "$slurmjob" == "" ]];then
     echo "ERROR submitting job - exiting the workflow"

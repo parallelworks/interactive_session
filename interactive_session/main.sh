@@ -137,16 +137,15 @@ if [[ "$slurmjob" == "" ]];then
 fi
 
 # CREATE KILL FILE:
+# - When the job is killed PW runs /pw/jobs/job-number/kill.sh
+# Initialize kill.sh
+echo "#!/bin/bash" > kill.sh
 # Add application-specific code
 app_kill_sh=../app_kill.sh
 if [ -f "${app_kill_sh}" ]; then
-    cat ${app_kill_sh} > kill.sh
+    echo "$sshcmd 'bash -s' < ${app_kill_sh}" >> kill.sh
 fi
-
-cat >> kill.sh <<HERE
-#!/bin/bash
-$sshcmd scancel $slurmjob
-HERE
+echo $sshcmd scancel $slurmjob >> kill.sh
 
 replace_templated_inputs kill.sh $@
 

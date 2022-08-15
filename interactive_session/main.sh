@@ -101,8 +101,8 @@ HERE
 app_session_sh=../app_session.sh
 if [ -f "${app_session_sh}" ]; then
     cat ${app_session_sh} >> session.sh
-    replace_templated_inputs ${app_session_sh} $@
 fi
+replace_templated_inputs session.sh $@
 
 # move the session file over
 chmod 777 session.sh
@@ -141,13 +141,14 @@ fi
 app_kill_sh=../app_kill.sh
 if [ -f "${app_kill_sh}" ]; then
     cat ${app_kill_sh} > kill.sh
-    replace_templated_inputs ${app_kill_sh} $@
 fi
 
 cat >> kill.sh <<HERE
 #!/bin/bash
 $sshcmd scancel $slurmjob
 HERE
+
+replace_templated_inputs kill.sh $@
 
 chmod 777 kill.sh
 

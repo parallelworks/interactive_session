@@ -116,7 +116,7 @@
   }
 </style>
 
-<body style="background:transparent">
+<body style="background:transparent;margin:0px">
 
   <iframe id="frame" src="" style="display:none;width:100vw;height:100vh;border:0px"></iframe>
 

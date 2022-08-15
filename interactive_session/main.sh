@@ -148,7 +148,7 @@ fi
 # Initialize kill.sh
 echo "#!/bin/bash" > kill.sh
 # Add application-specific code
-app_kill_sh=../app_kill.sh
+app_kill_sh=app_kill.sh
 if [ -f "${app_kill_sh}" ]; then
     echo "$sshcmd 'bash -s' < ${app_kill_sh}" >> kill.sh
 fi

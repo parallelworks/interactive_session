@@ -45,27 +45,8 @@ sed -i "s/__OPENPORT__/$openPort/" service.html.tmp
 
 mv service.html.tmp service.html
 
-processPoolProperties
-
-if [[ "$poolProperties" == "" ]];then
-    echo "ERROR - cannot get pool properties..."
-    exit 1
-fi
-
-echo "Getting submit host IP address (will wait until acquired)..."
-getResourceInfo
-
-if [[ "$submitHostIp" == "" ]];then
-    echo "ERROR - cannot get resource master ip..."
-    exit 1
-fi
-
-echo "Submitting job to $submitHostIp"
-
-sshuser=$(echo "$poolProperties" | python -c 'import sys,json;print(json.load(sys.stdin)["pwuser"])')
-sshhost=$(echo $submitHostIp)
-
-sshcmd="ssh -o StrictHostKeyChecking=no $sshuser@$sshhost"
+echo "Submitting job to ${controller}"
+sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
 
 # create the script that will generate the session tunnel and run the interactive session app
 # NOTE - in the below example there is an ~/.ssh/config definition of "localhost" control master that already points to the user container
@@ -73,7 +54,8 @@ masterIp=$($sshcmd cat '~/.ssh/masterip')
 
 if [[ "$USERMODE" == "k8s" ]];then
     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
-    TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null localhost \"ssh -J $submitHostIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:$openPort:localhost:$servicePort "'$(hostname)'"\""
+    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
+    TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null localhost \"ssh -J ${controller} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:$openPort:localhost:$servicePort "'$(hostname)'"\""
 else
     TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:$servicePort localhost"
 fi
@@ -129,8 +111,9 @@ replace_templated_inputs session.sh $@
 
 # move the session file over
 chmod 777 session.sh
-scp session.sh $sshuser@$sshhost:session-${job_number}.sh
-
+# REMOVE ME
+#scp session.sh $sshuser@$sshhost:session-${job_number}.sh
+scp session.sh ${controller}:session-${job_number}.sh
 
 echo
 echo "Submitting slurm request (wait for node to become available before connecting)..."

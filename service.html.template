@@ -116,7 +116,7 @@
   }
 </style>
 
-<body style="background:transparent">
+<body style="background:transparent;margin:0px">
 
   <iframe id="frame" src="" style="display:none;width:100vw;height:100vh;border:0px"></iframe>
 
@@ -129,10 +129,9 @@
             <div class="progress_bar__shimmer"></div>
           </div>
         </div>
-        <div class="progress_bar__state" data-start="Initializing session" data-middle="Establishing connection" data-end="Retrying - waiting for session to start"></div>
-      </div>
+        <div class=“progress_bar__state” data-start=“Establishing connection” data-middle=“Establishing connection” data-end=“Establishing connection”>
+        </div>
     </div>
-
   </div>
 
   <script>

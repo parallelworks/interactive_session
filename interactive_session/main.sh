@@ -95,7 +95,7 @@ echo
 echo "Running blocking ssh command..."
 # run this in a screen so the blocking tunnel cleans up properly
 screen -d -m $TUNNELCMD
-
+echo "Exit code: \$?"
 # start the app
 # nc -kl --no-shutdown $servicePort
 echo "Starting session..."

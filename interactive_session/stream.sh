@@ -1,37 +1,61 @@
 #!/bin/bash
 # Runs on the remote host
 
-host=$1        # localhost
-pushpath="$2"  # pw/path/to/filename
-pushfile="$3"  # filename
-delay=$4       # 30
-port=$5        #
+# Inputs:
+# --host localhost
+# --pushpath pw/path/to/filename
+# --pushfile filename
+# --delay 30
+# --port ${PARSL_CLIENT_SSH_PORT}
+# --masterIP internal-IP-of-controller-node
 
-if [ -z "$5" ]; then
+# Exports inputs in the formart
+# --a 1 --b 2 --c 3
+# to:
+# export a=1 b=2 c=3
+parseArgs() {
+    index=1
+    args=""
+    for arg in $@; do
+	    prefix=$(echo "${arg}" | cut -c1-2)
+	    if [[ ${prefix} == '--' ]]; then
+	        pname=$(echo $@ | cut -d ' ' -f${index} | sed 's/--//g')
+	        pval=$(echo $@ | cut -d ' ' -f$((index + 1)))
+		    # To support empty inputs (--a 1 --b --c 3)
+		    if [ ${pval:0:2} != "--" ]; then
+	            echo "export ${pname}=${pval}" >> $(dirname $0)/stream-env.sh
+	            export "${pname}=${pval}"
+		    fi
+	    fi
+        index=$((index+1))
+    done
+}
+
+parseArgs $@
+
+if [ -z "${port}" ]; then
     port_flag=""
 else
-    port_flag=" -p $5 "
+    port_flag=" -p ${port} "
 fi
 
-
-if [[ "${host}" == "None" ]]; then
-    exit 0
+if [ -z "${masterIp}" ]; then
+    sshcmd="ssh -o StrictHostKeyChecking=no ${port_flag} $host"
+else
+    sshcmd="ssh -J $masterIp -o StrictHostKeyChecking=no ${port_flag} $host"
 fi
 
-chmod 777 "$PWD" -R
-
-
-ssh -o StrictHostKeyChecking=no ${port_flag} $host 'cat >"'$pushpath'"' >> logstream.out 2>&1
+${sshcmd} 'cat >"'$pushpath'"' >> logstream.out 2>&1
 
 while true; do
     if [ -f "$pushfile" ]; then
         echo "Running" >> logstream.out 2>&1
-        tail -c +1 -f "$pushfile" | ssh -o StrictHostKeyChecking=no ${port_flag} $host 'cat >>"'$pushpath'"' >> logstream.out 2>&1
+        tail -c +1 -f "$pushfile" | ${sshcmd} 'cat >>"'$pushpath'"' >> logstream.out 2>&1
         echo CLOSING PID: $? >> logstream.out 2>&1
         exit 0
     else
         echo "Preparing" >> logstream.out 2>&1
-        echo "preparing inputs" | ssh -o StrictHostKeyChecking=no -p ${port_flag} $host 'cat >>"'$pushpath'"' >> logstream.out 2>&1
+        echo "preparing inputs" | ${sshcmd} 'cat >>"'$pushpath'"' >> logstream.out 2>&1
         sleep $delay
     fi
 done

@@ -1,7 +1,7 @@
 # Exports inputs in the formart
-# --a 1 --b 2 --c 3
+# --a 1 --b 2 --c --d 4
 # to:
-# export a=1 b=2 c=3
+# export a=1 b=2 d=4
 parseArgs() {
     index=1
     args=""
@@ -22,23 +22,21 @@ parseArgs() {
 
 # get a unique open port
 getOpenPort() {
+    minPort=50000
+    maxPort=50100
 
-minPort=50000
-maxPort=50100
-
-qty=1
-count=0
-for i in $(seq $minPort $maxPort); do
-    out=$(netstat -aln | grep LISTEN | grep $i)
-    if [[ "$out" == "" ]];then
-        openPort=$(echo $i)
-        (( ++ count ))
-    fi
-    if [[ "$count" == "$qty" ]];then
-        break
-    fi
-done
-
+    qty=1
+    count=0
+    for i in $(seq $minPort $maxPort); do
+        out=$(netstat -aln | grep LISTEN | grep $i)
+        if [[ "$out" == "" ]];then
+            openPort=$(echo $i)
+            (( ++ count ))
+        fi
+        if [[ "$count" == "$qty" ]];then
+            break
+        fi
+    done
 }
 
 

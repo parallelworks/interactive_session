@@ -5,7 +5,7 @@ echo Arguments:
 echo $@
 echo
 
-source lib
+source lib.sh
 
 parseArgs $@
 
@@ -22,7 +22,7 @@ if [[ "$servicePort" == "" ]];then
     servicePort="8000"
 fi
 
-echo "Generating session file..."
+echo "Generating session html"
 cp service.html.template service.html.tmp
 
 if [ ! -z "${KUBERNETES_PORT}" ];then
@@ -61,6 +61,7 @@ else
 fi
 
 # Initiallize session batch file:
+echo "Generating session script"
 echo "#!/bin/bash" > session.sh
 # SET SLURM DEFAULT VALUES:
 if ! [ -z ${partition} ] && ! [[ "${walltime}" == "default" ]]; then
@@ -77,14 +78,23 @@ else
     echo "#SBATCH --nodes=${numnodes}" >> session.sh
 fi
 
-
 if [[ "${exclusive}" == "True" ]]; then
     echo "#SBATCH --exclusive" >> session.sh
 fi
 
+echo "#SBATCH --job-name=session-${job_number}" >> session.sh
+echo "#SBATCH --output=session-${job_number}.out" >> session.sh
+echo >> session.sh
+
+# ADD STREAMING
+if [[ "${stream}" == "True" ]]; then
+    stream_args="--host localhost --pushpath ${PWD}/session-${job_number}.out --pushfile session-${job_number}.out --delay 30 --port ${PARSL_CLIENT_SSH_PORT} --masterIp ${masterIp}"
+    stream_cmd="bash stream-${job_number}.sh ${stream_args} &"
+    echo; echo "Streaming command:"; echo "${stream_cmd}"; echo
+    echo ${stream_cmd} >> session.sh
+fi
+
 cat >> session.sh <<HERE
-#SBATCH --job-name=session-${job_number}
-#SBATCH --output=session-${job_number}.out
 
 echo
 echo Starting interactive session - sessionPort: $servicePort tunnelPort: $openPort
@@ -93,6 +103,7 @@ echo
 
 # create a port tunnel from the allocated compute node to the user container (or user node in some cases)
 echo "Running blocking ssh command..."
+sleep 3
 # run this in a screen so the blocking tunnel cleans up properly
 screen -d -m $TUNNELCMD
 echo "Exit code: \$?"
@@ -114,6 +125,7 @@ chmod 777 session.sh
 # REMOVE ME
 #scp session.sh $sshuser@$sshhost:session-${job_number}.sh
 scp session.sh ${controller}:session-${job_number}.sh
+scp  stream.sh ${controller}:stream-${job_number}.sh
 
 echo
 echo "Submitting slurm request (wait for node to become available before connecting)..."

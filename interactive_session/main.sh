@@ -161,4 +161,4 @@ chmod 777 kill.sh
 echo
 echo "Submitted slurm job: $slurmjob"
 
-sleep 9999
+sleep 99999

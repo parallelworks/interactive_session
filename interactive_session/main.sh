@@ -143,9 +143,9 @@ fi
 # Initialize kill.sh
 echo "#!/bin/bash" > kill.sh
 # Add application-specific code
-app_kill_sh=app_kill.sh
-if [ -f "${app_kill_sh}" ]; then
-    echo "$sshcmd 'bash -s' < ${app_kill_sh}" >> kill.sh
+# WARNING: if part run in a different directory than bash command!
+if [ -f "../app_kill.sh" ]; then
+    echo "$sshcmd 'bash -s' < app_kill.sh" >> kill.sh
 fi
 echo $sshcmd scancel $slurmjob >> kill.sh
 

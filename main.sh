@@ -43,7 +43,7 @@ sed -i "s/__FORWARDPATH__/$FORWARDPATH/" service.html.tmp
 sed -i "s/__IPADDRESS__/$IPADDRESS/" service.html.tmp
 sed -i "s/__OPENPORT__/$openPort/" service.html.tmp
 
-mv service.html.tmp service.html
+mv service.html.tmp /pw/jobs/${job_number}/service.html
 
 echo "Submitting job to ${controller}"
 sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
@@ -91,7 +91,7 @@ echo >> session.sh
 
 # ADD STREAMING
 if [[ "${stream}" == "True" ]]; then
-    stream_args="--host localhost --pushpath ${PWD}/session-${job_number}.out --pushfile session-${job_number}.out --delay 30 --port ${PARSL_CLIENT_SSH_PORT} --masterIp ${masterIp}"
+    stream_args="--host localhost --pushpath /pw/jobs/${job_number}/session-${job_number}.out --pushfile session-${job_number}.out --delay 30 --port ${PARSL_CLIENT_SSH_PORT} --masterIp ${masterIp}"
     stream_cmd="bash stream-${job_number}.sh ${stream_args} &"
     echo; echo "Streaming command:"; echo "${stream_cmd}"; echo
     echo ${stream_cmd} >> session.sh
@@ -144,17 +144,18 @@ fi
 # CREATE KILL FILE:
 # - When the job is killed PW runs /pw/jobs/job-number/kill.sh
 # Initialize kill.sh
-echo "#!/bin/bash" > kill.sh
+kill_sh=/pw/jobs/${job_number}/kill.sh
+echo "#!/bin/bash" > ${kill_sh}
 # Add application-specific code
 # WARNING: if part runs in a different directory than bash command! --> Use absolute paths!!
 if [ -f "${kill_app_sh}" ]; then
-    echo "$sshcmd 'bash -s' < ${kill_app_sh}.sh" >> kill.sh
+    echo "$sshcmd 'bash -s' < ${kill_app_sh}.sh" >> ${kill_sh}
 fi
-echo $sshcmd scancel $slurmjob >> kill.sh
+echo $sshcmd scancel $slurmjob >> ${kill_sh}
 
-replace_templated_inputs kill.sh $@
+replace_templated_inputs ${kill_sh} $@
 
-chmod 777 kill.sh
+chmod 777 ${kill_sh}
 
 echo
 echo "Submitted slurm job: $slurmjob"

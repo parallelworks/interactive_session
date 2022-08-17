@@ -132,8 +132,8 @@ echo "Starting session..."
 HERE
 
 # Add application-specific code
-if [ -f "${start_app_sh}" ]; then
-    cat ${start_app_sh} >> session.sh
+if [ -f "${start_service_sh}" ]; then
+    cat ${start_service_sh} >> session.sh
 fi
 
 # move the session file over
@@ -161,9 +161,9 @@ kill_sh=/pw/jobs/${job_number}/kill.sh
 echo "#!/bin/bash" > ${kill_sh}
 # Add application-specific code
 # WARNING: if part runs in a different directory than bash command! --> Use absolute paths!!
-if [ -f "${kill_app_sh}" ]; then
-    echo "Adding kill server script: ${kill_app_sh}"
-    echo "$sshcmd 'bash -s' < ${kill_app_sh}" >> ${kill_sh}
+if [ -f "${kill_service_sh}" ]; then
+    echo "Adding kill server script: ${kill_service_sh}"
+    echo "$sshcmd 'bash -s' < ${kill_service_sh}" >> ${kill_sh}
 fi
 echo $sshcmd scancel $slurmjob >> ${kill_sh}
 

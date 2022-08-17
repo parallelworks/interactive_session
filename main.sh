@@ -45,6 +45,19 @@ sed -i "s/__OPENPORT__/$openPort/" service.html.tmp
 
 mv service.html.tmp /pw/jobs/${job_number}/service.html
 
+if [[ ${controller} == "pw.conf" ]]; then
+    poolname=$(cat /pw/jobs/${job_number}/pw.conf | grep sites | grep -o -P '(?<=\[).*?(?=\])')
+    if [ -z "${poolname}" ]; then
+        echo "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
+    fi
+    controller=${poolname}.clusters.pw
+fi
+
+if [ -z "${controller}" ]; then
+    echo "ERROR: No controller was specified - exiting the workflow"
+fi
+
+
 echo "Submitting job to ${controller}"
 sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
 

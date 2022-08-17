@@ -77,7 +77,7 @@ fi
 
 # Initiallize session batch file:
 echo "Generating session script"
-session_sh=/pw/jobs/${job_number}
+session_sh=/pw/jobs/${job_number}/session.sh
 echo "#!/bin/bash" > ${session_sh}
 # SET SLURM DEFAULT VALUES:
 if ! [ -z ${partition} ] && ! [[ "${walltime}" == "default" ]]; then

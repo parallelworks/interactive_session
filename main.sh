@@ -49,12 +49,14 @@ if [[ ${controller} == "pw.conf" ]]; then
     poolname=$(cat /pw/jobs/${job_number}/pw.conf | grep sites | grep -o -P '(?<=\[).*?(?=\])')
     if [ -z "${poolname}" ]; then
         echo "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
+        exit 1
     fi
     controller=${poolname}.clusters.pw
 fi
 
 if [ -z "${controller}" ]; then
     echo "ERROR: No controller was specified - exiting the workflow"
+    exit 1
 fi
 
 

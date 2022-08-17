@@ -77,42 +77,43 @@ fi
 
 # Initiallize session batch file:
 echo "Generating session script"
-echo "#!/bin/bash" > session.sh
+session_sh=/pw/jobs/${job_number}
+echo "#!/bin/bash" > ${session_sh}
 # SET SLURM DEFAULT VALUES:
 if ! [ -z ${partition} ] && ! [[ "${walltime}" == "default" ]]; then
-    echo "#SBATCH --partition=${partition}" >> session.sh
+    echo "#SBATCH --partition=${partition}" >> ${session_sh}
 fi
 
 if ! [ -z ${walltime} ] && ! [[ "${walltime}" == "default" ]]; then
-    echo "#SBATCH --time=${walltime}" >> session.sh
+    echo "#SBATCH --time=${walltime}" >> ${session_sh}
     swalltime=$(echo "${walltime}" | awk -F: '{ print ($1 * 3600) + ($2 * 60) + $3 + 60}')
 else
     swalltime=9999
 fi
 
 if [ -z ${numnodes} ]; then
-    echo "#SBATCH --nodes=1" >> session.sh
+    echo "#SBATCH --nodes=1" >> ${session_sh}
 else
-    echo "#SBATCH --nodes=${numnodes}" >> session.sh
+    echo "#SBATCH --nodes=${numnodes}" >> ${session_sh}
 fi
 
 if [[ "${exclusive}" == "True" ]]; then
-    echo "#SBATCH --exclusive" >> session.sh
+    echo "#SBATCH --exclusive" >> ${session_sh}
 fi
 
-echo "#SBATCH --job-name=session-${job_number}" >> session.sh
-echo "#SBATCH --output=session-${job_number}.out" >> session.sh
-echo >> session.sh
+echo "#SBATCH --job-name=session-${job_number}" >> ${session_sh}
+echo "#SBATCH --output=session-${job_number}.out" >> ${session_sh}
+echo >> ${session_sh}
 
 # ADD STREAMING
 if [[ "${stream}" == "True" ]]; then
     stream_args="--host localhost --pushpath /pw/jobs/${job_number}/session-${job_number}.out --pushfile session-${job_number}.out --delay 30 --port ${PARSL_CLIENT_SSH_PORT} --masterIp ${masterIp}"
     stream_cmd="bash stream-${job_number}.sh ${stream_args} &"
     echo; echo "Streaming command:"; echo "${stream_cmd}"; echo
-    echo ${stream_cmd} >> session.sh
+    echo ${stream_cmd} >> ${session_sh}
 fi
 
-cat >> session.sh <<HERE
+cat >> ${session_sh} <<HERE
 
 echo
 echo Starting interactive session - sessionPort: $servicePort tunnelPort: $openPort
@@ -133,15 +134,13 @@ HERE
 
 # Add application-specific code
 if [ -f "${start_service_sh}" ]; then
-    cat ${start_service_sh} >> session.sh
+    cat ${start_service_sh} >> ${session_sh}
 fi
 
 # move the session file over
-chmod 777 session.sh
-# REMOVE ME
-#scp session.sh $sshuser@$sshhost:session-${job_number}.sh
-scp session.sh ${controller}:session-${job_number}.sh
-scp  stream.sh ${controller}:stream-${job_number}.sh
+chmod 777 ${session_sh}
+scp ${session_sh} ${controller}:session-${job_number}.sh
+scp ${session_sh} ${controller}:stream-${job_number}.sh
 
 echo
 echo "Submitting slurm request (wait for node to become available before connecting)..."

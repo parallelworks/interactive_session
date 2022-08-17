@@ -117,10 +117,10 @@ echo "Starting session..."
 HERE
 
 # Add application-specific code
-app_session_sh=../app_session.sh
-if [ -f "${app_session_sh}" ]; then
-    cat ${app_session_sh} >> session.sh
+if [ -f "${start_app_sh}" ]; then
+    cat ${start_app_sh} >> session.sh
 fi
+
 replace_templated_inputs session.sh $@
 
 # move the session file over
@@ -146,9 +146,9 @@ fi
 # Initialize kill.sh
 echo "#!/bin/bash" > kill.sh
 # Add application-specific code
-# WARNING: if part run in a different directory than bash command!
-if [ -f "../app_kill.sh" ]; then
-    echo "$sshcmd 'bash -s' < app_kill.sh" >> kill.sh
+# WARNING: if part runs in a different directory than bash command! --> Use absolute paths!!
+if [ -f "${kill_app_sh}" ]; then
+    echo "$sshcmd 'bash -s' < ${kill_app_sh}.sh" >> kill.sh
 fi
 echo $sshcmd scancel $slurmjob >> kill.sh
 

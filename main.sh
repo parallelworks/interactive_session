@@ -164,7 +164,8 @@ echo "#!/bin/bash" > ${kill_sh}
 # Add application-specific code
 # WARNING: if part runs in a different directory than bash command! --> Use absolute paths!!
 if [ -f "${kill_app_sh}" ]; then
-    echo "$sshcmd 'bash -s' < ${kill_app_sh}.sh" >> ${kill_sh}
+    echo "Adding kill server script: ${kill_app_sh}"
+    echo "$sshcmd 'bash -s' < ${kill_app_sh}" >> ${kill_sh}
 fi
 echo $sshcmd scancel $slurmjob >> ${kill_sh}
 

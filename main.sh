@@ -136,8 +136,6 @@ if [ -f "${start_app_sh}" ]; then
     cat ${start_app_sh} >> session.sh
 fi
 
-replace_templated_inputs session.sh $@
-
 # move the session file over
 chmod 777 session.sh
 # REMOVE ME
@@ -168,8 +166,6 @@ if [ -f "${kill_app_sh}" ]; then
     echo "$sshcmd 'bash -s' < ${kill_app_sh}" >> ${kill_sh}
 fi
 echo $sshcmd scancel $slurmjob >> ${kill_sh}
-
-replace_templated_inputs ${kill_sh} $@
 
 chmod 777 ${kill_sh}
 

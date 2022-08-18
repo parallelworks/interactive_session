@@ -1,3 +1,11 @@
+
+if [ ! -z "${KUBERNETES_PORT}" ];then
+    export USERMODE="k8s"
+else
+    export USERMODE="docker"
+fi
+
+
 # Exports inputs in the formart
 # --a 1 --b 2 --c --d 4
 # to:
@@ -37,4 +45,9 @@ getOpenPort() {
             break
         fi
     done
+}
+
+
+echod() {
+    echo $(date): $@
 }

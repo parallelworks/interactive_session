@@ -24,13 +24,6 @@ fi
 
 echo "Generating session html"
 
-if [ ! -z "${KUBERNETES_PORT}" ];then
-    USERMODE="k8s"
-else
-    USERMODE="docker"
-fi
-
-
 sed -i "s/__OPENPORT__/$openPort/" service.html.template
 
 mv service.html.template /pw/jobs/${job_number}/service.html

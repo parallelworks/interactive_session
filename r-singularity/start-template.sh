@@ -20,6 +20,7 @@ printf 'provider=sqlite\ndirectory=/var/lib/rstudio-server\n' > database.conf
 # https://github.com/rstudio/rstudio/issues/7953
 # https://support.rstudio.com/hc/en-us/articles/200552326-Running-RStudio-Server-with-a-Proxy
 
+
 singularity run \
     --bind run:/run,var-lib-rstudio-server:/var/lib/rstudio-server,database.conf:/etc/rstudio/database.conf \
     ${mount_dirs} \
@@ -29,6 +30,7 @@ singularity run \
     --www-port=__servicePort__  \
     --www-root-path="/${FORWARDPATH}/${IPADDRESS}/${openPort}/" \
     --www-proxy-localhost=0 \
-    --auth-none=1
+    --auth-none=1 \
+    --www-frame-origin=same
 
 

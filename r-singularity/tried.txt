@@ -1,0 +1,41 @@
+# Build command:
+
+# Building with fake root:
+# sudo singularity config fakeroot --add User.Demo
+# [User.Demo@gcpslurmv2-27 ~]$ sudo singularity build --fakeroot rserver-root.sif rserver.def
+# FATAL:   could not use fakeroot: no mapping entry found in /etc/subuid for root
+
+
+sudo singularity shell -s /bin/bash --net --network-args "portmap=8787:8787/tcp" -B `pwd`:`pwd` rserver.sif
+# https://docs.sylabs.io/guides/3.0/user-guide/networking.html
+# https://support.rstudio.com/hc/en-us/articles/200532327-Managing-RStudio-Workbench-RStudio-Server
+
+
+
+
+# As User:
+# [User.Demo@gcpslurmv2-27 ~]$ singularity shell -s /bin/bash -B `pwd`:`pwd` rserver.sif
+# Singularity> rstudio-server start
+# Failed to get D-Bus connection: Operation not permitted
+
+# As root:
+# [User.Demo@gcpslurmv2-27 ~]$ sudo singularity shell -s /bin/bash -B `pwd`:`pwd` rserver.sif
+# Singularity>  rstudio-server start
+# Running in chroot, ignoring request.
+
+
+# PORTS:
+# When you start the server in a VM you can see port 8787 listening but cant find the listening process:
+# [root@gcpslurmv2rserver-1 User.Demo]$  netstat -tulpn | grep LISTEN | grep 8787
+# tcp        0      0 0.0.0.0:8787            0.0.0.0:*               LISTEN      6439/rserver
+
+
+# THIS WORKS!!
+# https://rocker-project.org/use/singularity.html
+mkdir -p run var-lib-rstudio-server
+printf 'provider=sqlite\ndirectory=/var/lib/rstudio-server\n' > database.conf
+singularity exec --bind run:/run,var-lib-rstudio-server:/var/lib/rstudio-server,database.conf:/etc/rstudio/database.conf rserver.sif /usr/lib/rstudio-server/bin/rserver --www-address=127.0.0.1
+
+# singularity instance start --bind run:/run,var-lib-rstudio-server:/var/lib/rstudio-server,database.conf:/etc/rstudio/database.conf rserver.sif rserver
+
+# Tunnel command needs to run on remote node!

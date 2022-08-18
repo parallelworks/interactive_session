@@ -51,3 +51,22 @@ getOpenPort() {
 echod() {
     echo $(date): $@
 }
+
+replace_templated_inputs() {
+    echo Replacing templated inputs
+    script=$1
+    index=1
+    for arg in $@; do
+        prefix=$(echo "${arg}" | cut -c1-2)
+	    if [[ ${prefix} == '--' ]]; then
+	        pname=$(echo $@ | cut -d ' ' -f${index} | sed 's/--//g')
+	        pval=$(echo $@ | cut -d ' ' -f$((index + 1)))
+	        # To support empty inputs (--a 1 --b --c 3)
+	        if [ ${pval:0:2} != "--" ]; then
+                echo "    sed -i \"s|__${pname}__|${pval}|g\" ${script}"
+		        sed -i "s|__${pname}__|${pval}|g" ${script}
+	        fi
+	    fi
+        index=$((index+1))
+    done
+}

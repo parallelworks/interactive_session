@@ -16,9 +16,19 @@ mkdir -p run var-lib-rstudio-server
 printf 'provider=sqlite\ndirectory=/var/lib/rstudio-server\n' > database.conf
 #singularity exec --bind run:/run,var-lib-rstudio-server:/var/lib/rstudio-server,database.conf:/etc/rstudio/database.conf rserver.sif /usr/lib/rstudio-server/bin/rserver --www-address=127.0.0.1
 
+# WEB ADDRESS ISSUES:
+# https://github.com/rstudio/rstudio/issues/7953
+# https://support.rstudio.com/hc/en-us/articles/200552326-Running-RStudio-Server-with-a-Proxy
+
 singularity run \
     --bind run:/run,var-lib-rstudio-server:/var/lib/rstudio-server,database.conf:/etc/rstudio/database.conf \
     ${mount_dirs} \
     ${path_to_sing} \
-    /usr/lib/rstudio-server/bin/rserver --www-address=0.0.0.0 --www-port __servicePort__
+    /usr/lib/rstudio-server/bin/rserver \
+    --www-address=0.0.0.0 \
+    --www-port=__servicePort__  \
+    --www-root-path="/${FORWARDPATH}/${IPADDRESS}/${openPort}/" \
+    --www-proxy-localhost=0 \
+    --auth-none=1
+
 

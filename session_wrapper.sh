@@ -23,7 +23,6 @@ if [[ "$servicePort" == "" ]];then
 fi
 
 echo "Generating session html"
-cp service.html.template service.html.tmp
 
 if [ ! -z "${KUBERNETES_PORT}" ];then
     USERMODE="k8s"
@@ -31,19 +30,10 @@ else
     USERMODE="docker"
 fi
 
-if [[ "$USERMODE" == "k8s" ]];then
-    FORWARDPATH="pwide-kube"
-    IPADDRESS="$(hostname -I | xargs)"
-else
-    FORWARDPATH="pwide"
-    IPADDRESS="$PW_USER_HOST"
-fi
 
-sed -i "s/__FORWARDPATH__/$FORWARDPATH/" service.html.tmp
-sed -i "s/__IPADDRESS__/$IPADDRESS/" service.html.tmp
-sed -i "s/__OPENPORT__/$openPort/" service.html.tmp
+sed -i "s/__OPENPORT__/$openPort/" service.html.template
 
-mv service.html.tmp /pw/jobs/${job_number}/service.html
+mv service.html.template /pw/jobs/${job_number}/service.html
 
 if [[ ${controller} == "pw.conf" ]]; then
     poolname=$(cat /pw/jobs/${job_number}/pw.conf | grep sites | grep -o -P '(?<=\[).*?(?=\])')

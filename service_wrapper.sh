@@ -73,11 +73,16 @@ if [ -f "${service_name}/kill-template.sh" ]; then
     replace_templated_inputs ${kill_service_sh} $@
 fi
 
-# SERVICE URL
-urlend="\""
-if [ -f "${service_name}/__URLEND__" ]; then
-    urlend=$(cat ${service_name}/__URLEND__)
+if ! [ -f "${service_name}/url.sh" ]; then
+    echod "ERROR: Directory ${service_name}/url.sh was not found --> Add URL definition script --> Exiting workflow"
+    exit 1
 fi
-sed -i "s|__URLEND__|${urlend}|g" service.html.template
+
+# SERVICE URL
+source ${service_name}/url.sh
+sed -i "s|__URLEND__|${URLEND}|g" service.html.template
+sed -i "s/__FORWARDPATH__/$FORWARDPATH/" service.html.template
+sed -i "s/__IPADDRESS__/$IPADDRESS/" service.html.template
+
 
 bash session_wrapper.sh $@ --start_service_sh ${start_service_sh} --kill_service_sh ${kill_service_sh}

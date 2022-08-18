@@ -10,6 +10,18 @@ if ! [ -d "${service_name}" ]; then
     exit 1
 fi
 
+if ! [ -f "${service_name}/url.sh" ]; then
+    echod "ERROR: Directory ${service_name}/url.sh was not found --> Add URL definition script --> Exiting workflow"
+    exit 1
+fi
+
+# SERVICE URL
+source ${service_name}/url.sh
+sed -i "s|__URLEND__|${URLEND}|g" service.html.template
+sed -i "s/__FORWARDPATH__/$FORWARDPATH/" service.html.template
+sed -i "s/__IPADDRESS__/$IPADDRESS/" service.html.template
+
+
 # START / KILL SCRIPTS
 if [ -f "${service_name}/start-template.sh" ]; then
     start_service_sh=/pw/jobs/${job_number}/start-service.sh
@@ -22,17 +34,6 @@ if [ -f "${service_name}/kill-template.sh" ]; then
     cp ${service_name}/kill-template.sh ${kill_service_sh}
     replace_templated_inputs ${kill_service_sh} $@
 fi
-
-if ! [ -f "${service_name}/url.sh" ]; then
-    echod "ERROR: Directory ${service_name}/url.sh was not found --> Add URL definition script --> Exiting workflow"
-    exit 1
-fi
-
-# SERVICE URL
-source ${service_name}/url.sh
-sed -i "s|__URLEND__|${URLEND}|g" service.html.template
-sed -i "s/__FORWARDPATH__/$FORWARDPATH/" service.html.template
-sed -i "s/__IPADDRESS__/$IPADDRESS/" service.html.template
 
 
 bash session_wrapper.sh $@ --start_service_sh ${start_service_sh} --kill_service_sh ${kill_service_sh}

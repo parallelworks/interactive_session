@@ -103,6 +103,11 @@ echo Starting interactive session - sessionPort: $servicePort tunnelPort: $openP
 echo Test command to run in user container: telnet localhost $openPort
 echo
 
+# These are not workflow parameters but need to be available to the service on the remote node!
+FORWARDPATH=${FORWARDPATH}
+IPADDRESS=${IPADDRESS}
+openPort=${openPort}
+
 # create a port tunnel from the allocated compute node to the user container (or user node in some cases)
 echo "Running blocking ssh command..."
 sleep 3

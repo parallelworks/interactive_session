@@ -78,6 +78,6 @@ urlend=""
 if [ -f "${service_name}/__URLEND__" ]; then
     urlend=$(cat ${service_name}/__URLEND__)
 fi
-sed -i "s|__URLEND__|${urlend}|g" service.html.tmp
+sed -i "s|__URLEND__|${urlend}|g" service.html.template
 
 bash session_wrapper.sh $@ --start_service_sh ${start_service_sh} --kill_service_sh ${kill_service_sh}

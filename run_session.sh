@@ -140,7 +140,7 @@ fi
 # move the session file over
 chmod 777 ${session_sh}
 scp ${session_sh} ${controller}:session-${job_number}.sh
-scp ${session_sh} ${controller}:stream-${job_number}.sh
+scp stream.sh ${controller}:stream-${job_number}.sh
 
 echo
 echo "Submitting slurm request (wait for node to become available before connecting)..."

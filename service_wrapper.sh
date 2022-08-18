@@ -73,4 +73,4 @@ if [ -f "${service_name}/kill-template.sh" ]; then
 fi
 
 cd /pw/jobs/${job_number}/${isession_dir}
-bash run_session.sh $@ --start_service_sh ${start_service_sh} --kill_service_sh ${kill_service_sh}
+bash session_wrapper.sh $@ --start_service_sh ${start_service_sh} --kill_service_sh ${kill_service_sh}

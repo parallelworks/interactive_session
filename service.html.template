@@ -136,7 +136,7 @@
 
   <script>
 
-    var url = "/__FORWARDPATH__/__IPADDRESS__/__OPENPORT__/__URLEND__"
+    var url = "/__FORWARDPATH__/__IPADDRESS__/__OPENPORT__/__URLEND__
 
     function httpGet() {
       var xmlHttp = new XMLHttpRequest();

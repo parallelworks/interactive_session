@@ -74,7 +74,7 @@ if [ -f "${service_name}/kill-template.sh" ]; then
 fi
 
 # SERVICE URL
-urlend=""
+urlend="\""
 if [ -f "${service_name}/__URLEND__" ]; then
     urlend=$(cat ${service_name}/__URLEND__)
 fi

@@ -2,7 +2,7 @@
 
 source lib.sh
 
-f_read_cmd_args $@
+parseArgs $@
 
 # SANITY CHECKS
 if ! [ -d "${service_name}" ]; then

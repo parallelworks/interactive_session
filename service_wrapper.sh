@@ -60,6 +60,7 @@ if ! [ -d "${service_name}" ]; then
     exit 1
 fi
 
+# START / KILL SCRIPTS
 if [ -f "${service_name}/start-template.sh" ]; then
     start_service_sh=/pw/jobs/${job_number}/start-service.sh
     cp ${service_name}/start-template.sh ${start_service_sh}
@@ -72,5 +73,11 @@ if [ -f "${service_name}/kill-template.sh" ]; then
     replace_templated_inputs ${kill_service_sh} $@
 fi
 
-cd /pw/jobs/${job_number}/${isession_dir}
+# SERVICE URL
+urlend=""
+if [ -f "${service_name}/__URLEND__" ]; then
+    urlend=$(cat ${service_name}/__URLEND__)
+fi
+sed -i "s|__URLEND__|${urlend}|g" service.html.tmp
+
 bash session_wrapper.sh $@ --start_service_sh ${start_service_sh} --kill_service_sh ${kill_service_sh}

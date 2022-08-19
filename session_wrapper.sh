@@ -48,7 +48,8 @@ sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
 
 # create the script that will generate the session tunnel and run the interactive session app
 # NOTE - in the below example there is an ~/.ssh/config definition of "localhost" control master that already points to the user container
-masterIp=$($sshcmd cat '~/.ssh/masterip')
+#masterIp=$($sshcmd cat '~/.ssh/masterip')
+masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usually be the internal ip
 
 if [[ "$USERMODE" == "k8s" ]];then
     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
@@ -63,7 +64,7 @@ echo "Generating session script"
 session_sh=/pw/jobs/${job_number}/session.sh
 echo "#!/bin/bash" > ${session_sh}
 # SET SLURM DEFAULT VALUES:
-if ! [ -z ${partition} ] && ! [[ "${walltime}" == "default" ]]; then
+if ! [ -z ${partition} ] && ! [[ "${partition}" == "default" ]]; then
     echo "#SBATCH --partition=${partition}" >> ${session_sh}
 fi
 

@@ -1,0 +1,11 @@
+BootStrap: docker
+From: tensorflow/tensorflow:latest-gpu-jupyter
+%help
+  This Singularity definition contains a TensorFlow-gpu installation
+%post
+  pip install scipy six numpy pandas matplotlib scikit-learn netCDF4 zarr jupyterlab
+%environment
+  export LC_ALL=C
+%runscript
+%labels
+  Author Alvaro.Vidal

@@ -24,7 +24,7 @@ printf 'provider=sqlite\ndirectory=/var/lib/rstudio-server\n' > database.conf
 singularity run \
     ${mount_dirs} \
     ${path_to_sing} \
-    /opt/conda/bin/jupyter-notebook \
+    jupyter-notebook \
     --port=$servicePort \
     --ip=0.0.0.0 \
     --NotebookApp.iopub_data_rate_limit=10000000000 \

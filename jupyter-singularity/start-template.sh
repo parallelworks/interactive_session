@@ -2,6 +2,7 @@ echo "$(date): $(hostname):${PWD} $0 $@"
 
 mount_dirs="$(echo  __mount_dirs__ | sed "s|___| |g" | sed "s|__mount_dirs__||g" )"
 path_to_sing="__path_to_sing__"
+servicePort="__servicePort__"
 
 # SANITY CHECKS!
 if ! [ -f "${path_to_sing}" ]; then

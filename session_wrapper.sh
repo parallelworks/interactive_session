@@ -75,6 +75,15 @@ else
     swalltime=9999
 fi
 
+if ! [ -z ${chdir} ] && ! [[ "${chdir}" == "default" ]]; then
+    chdir=$(echo ${chdir} | sed "s|__job_number__|${job_number}|g")
+    echo "#SBATCH --chdir=${chdir}" >> ${session_sh}
+    ${sshcmd} mkdir -p ${chdir}
+    remote_session_dir=${chdir}
+else
+    remote_session_dir="./"
+fi
+
 if [ -z ${numnodes} ]; then
     echo "#SBATCH --nodes=1" >> ${session_sh}
 else
@@ -128,14 +137,14 @@ fi
 
 # move the session file over
 chmod 777 ${session_sh}
-scp ${session_sh} ${controller}:session-${job_number}.sh
-scp stream.sh ${controller}:stream-${job_number}.sh
+scp ${session_sh} ${controller}:${remote_session_dir}/session-${job_number}.sh
+scp stream.sh ${controller}:${remote_session_dir}/stream-${job_number}.sh
 
 echo
 echo "Submitting slurm request (wait for node to become available before connecting)..."
 echo
-echo $sshcmd sbatch session-${job_number}.sh
-slurmjob=$($sshcmd sbatch session-${job_number}.sh | tail -1 | awk -F ' ' '{print $4}')
+echo $sshcmd sbatch ${remote_session_dir}/session-${job_number}.sh
+slurmjob=$($sshcmd sbatch ${remote_session_dir}/session-${job_number}.sh | tail -1 | awk -F ' ' '{print $4}')
 
 if [[ "$slurmjob" == "" ]];then
     echo "ERROR submitting job - exiting the workflow"

@@ -17,9 +17,10 @@ fi
 
 # SERVICE URL
 source ${service_name}/url.sh
-sed -i "s|__URLEND__|${URLEND}|g" service.html.template
-sed -i "s/__FORWARDPATH__/$FORWARDPATH/" service.html.template
-sed -i "s/__IPADDRESS__/$IPADDRESS/" service.html.template
+cp service.html.template service.html
+sed -i "s|__URLEND__|${URLEND}|g" service.html
+sed -i "s/__FORWARDPATH__/$FORWARDPATH/g" service.html
+sed -i "s/__IPADDRESS__/$IPADDRESS/g" service.html
 
 
 # START / KILL SCRIPTS

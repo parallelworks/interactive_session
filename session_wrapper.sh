@@ -24,9 +24,9 @@ fi
 
 echo "Generating session html"
 
-sed -i "s/__OPENPORT__/$openPort/" service.html.template
+sed -i "s/__OPENPORT__/$openPort/g" service.html
 
-mv service.html.template /pw/jobs/${job_number}/service.html
+mv service.html /pw/jobs/${job_number}/service.html
 
 if [[ ${controller} == "pw.conf" ]]; then
     poolname=$(cat /pw/jobs/${job_number}/pw.conf | grep sites | grep -o -P '(?<=\[).*?(?=\])')

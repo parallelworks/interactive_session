@@ -51,6 +51,9 @@ sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
 #masterIp=$($sshcmd cat '~/.ssh/masterip')
 masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usually be the internal ip
 
+
+# TUNNEL COMMAND:
+
 if [[ "$USERMODE" == "k8s" ]];then
     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
     # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
@@ -118,11 +121,19 @@ FORWARDPATH=${FORWARDPATH}
 IPADDRESS=${IPADDRESS}
 openPort=${openPort}
 
-# create a port tunnel from the allocated compute node to the user container (or user node in some cases)
+# Create a port tunnel from the allocated compute node to the user container (or user node in some cases)
+screen_bin=\$(which screen 2> /dev/null)
+if [ -z "\${screen_bin}" ]; then
+    PRE_TUNNELCMD=""
+    POST_TUNNELCMD=" &"
+else
+    PRE_TUNNELCMD="screen -d -m "
+    POST_TUNNELCMD=""
+fi
 echo "Running blocking ssh command..."
-sleep 3
 # run this in a screen so the blocking tunnel cleans up properly
-screen -d -m $TUNNELCMD
+echo "\${PRE_TUNNELCMD} ${TUNNELCMD} \${POST_TUNNELCMD}"
+\${PRE_TUNNELCMD} ${TUNNELCMD} \${POST_TUNNELCMD}
 echo "Exit code: \$?"
 # start the app
 # nc -kl --no-shutdown $servicePort

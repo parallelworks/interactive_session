@@ -3,6 +3,17 @@ echo "$(date): $(hostname):${PWD} $0 $@"
 mount_dirs="$(echo  __mount_dirs__ | sed "s|___| |g" | sed "s|__mount_dirs__||g" )"
 path_to_sing="__path_to_sing__"
 
+# MOUNT DIR DEFAULTS
+if [ -d "/contrib" ]; then
+    mount_dirs="${mount_dirs} -B /contrib:/contrib"
+fi
+
+if [ -d "/lustre" ]; then
+    mount_dirs="${mount_dirs} -B /lustre:/lustre"
+fi
+
+echo ${mdirs_cmd}
+
 # SANITY CHECKS!
 if ! [ -f "${path_to_sing}" ]; then
     echo "ERROR: File $(hostname):${path_to_sing} not found!"

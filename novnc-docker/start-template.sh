@@ -15,4 +15,8 @@ chmod 777 docker-kill-${job_number}.sh
 
 sudo systemctl start docker
 
-sudo docker run --rm --name=novnc-$servicePort -p $servicePort:6901 __docker_repo__
+# Docker supports mounting directories that do not exist (singularity does not)
+
+sudo docker run --rm \
+    -v /contrib:/contrib -v /lustre:/lustre -v ${HOME}:${HOME} \
+    --name=novnc-$servicePort -p $servicePort:6901 __docker_repo__

@@ -15,7 +15,13 @@ chmod 777 docker-kill-${job_number}.sh
 
 sudo systemctl start docker
 
-sudo docker run ${gpu_flag} --rm --name=jupyter-$servicePort -p $servicePort:$servicePort __docker_repo__ /opt/conda/bin/jupyter-notebook \
+# Docker supports mounting directories that do not exist (singularity does not)
+
+sudo docker run ${gpu_flag} --rm \
+    -v /contrib:/contrib -v /lustre:/lustre -v ${HOME}:${HOME} \
+    --name=jupyter-$servicePort \
+    -p $servicePort:$servicePort \
+    __docker_repo__ /opt/conda/bin/jupyter-notebook \
     --port=$servicePort \
     --ip=0.0.0.0 \
     --NotebookApp.iopub_data_rate_limit=10000000000 \

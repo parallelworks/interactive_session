@@ -5,6 +5,19 @@ path_to_sing="__path_to_sing__"
 servicePort="__servicePort__"
 use_gpus="__use_gpus__"
 
+# MOUNT DIR DEFAULTS
+if [ -d "/contrib" ]; then
+    mount_dirs="${mount_dirs} -B /contrib:/contrib"
+fi
+
+if [ -d "/lustre" ]; then
+    mount_dirs="${mount_dirs} -B /lustre:/lustre"
+fi
+
+echo ${mdirs_cmd}
+
+
+# GPU SUPPORT
 if [[ ${use_gpus} == "True" ]]; then
     gpu_flag="--nv"
 else

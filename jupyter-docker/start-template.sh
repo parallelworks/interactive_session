@@ -26,4 +26,3 @@ sudo docker run ${gpu_flag} --rm --name=jupyter-$servicePort -p $servicePort:$se
     --NotebookApp.tornado_settings="{'static_url_prefix':'/${FORWARDPATH}/${IPADDRESS}/${openPort}/static/'}" \
     --NotebookApp.base_url="/${FORWARDPATH}/${IPADDRESS}/${openPort}/" \
     --NotebookApp.allow_origin=*
-

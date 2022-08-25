@@ -4,6 +4,7 @@ mount_dirs="$(echo  __mount_dirs__ | sed "s|___| |g" | sed "s|__mount_dirs__||g"
 path_to_sing="__path_to_sing__"
 
 # MOUNT DIR DEFAULTS
+mount_dirs="${mount_dirs} -B ${HOME}:${HOME}"
 if [ -d "/contrib" ]; then
     mount_dirs="${mount_dirs} -B /contrib:/contrib"
 fi

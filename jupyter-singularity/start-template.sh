@@ -6,6 +6,7 @@ servicePort="__servicePort__"
 use_gpus="__use_gpus__"
 
 # MOUNT DIR DEFAULTS
+mount_dirs="${mount_dirs} -B ${HOME}:${HOME}"
 if [ -d "/contrib" ]; then
     mount_dirs="${mount_dirs} -B /contrib:/contrib"
 fi

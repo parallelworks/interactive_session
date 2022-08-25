@@ -2,6 +2,7 @@
 
 source lib.sh
 
+echo "service wrapper: $@"
 parseArgs $@
 
 # SANITY CHECKS

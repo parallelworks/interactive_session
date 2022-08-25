@@ -11,23 +11,6 @@ parseArgs $@
 
 getOpenPort
 
-if [[ "$openPort" == "" ]];then
-    echo "ERROR - cannot find open port..."
-    exit 1
-fi
-
-echo "Interactive Session Port: $openPort"
-
-if [[ "$servicePort" == "" ]];then
-    servicePort="8000"
-fi
-
-echo "Generating session html"
-
-sed -i "s/__OPENPORT__/$openPort/g" service.html
-
-mv service.html /pw/jobs/${job_number}/service.html
-
 if [[ ${controller} == "pw.conf" ]]; then
     poolname=$(cat /pw/jobs/${job_number}/pw.conf | grep sites | grep -o -P '(?<=\[).*?(?=\])')
     if [ -z "${poolname}" ]; then

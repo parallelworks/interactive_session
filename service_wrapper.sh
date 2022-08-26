@@ -43,8 +43,6 @@ if [ -z "${controller}" ]; then
     exit 1
 fi
 
-sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
-
 # SERVICE URL
 echo "Generating session html"
 source ${service_name}/url.sh
@@ -81,6 +79,5 @@ fi
 bash ${session_wrapper} $@ \
         --openPort ${openPort} \
         --controller ${controller} \
-        --sshcmd ${sshcmd} \
         --start_service_sh ${start_service_sh} \
         --kill_service_sh ${kill_service_sh}

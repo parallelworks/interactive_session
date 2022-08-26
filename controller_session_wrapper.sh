@@ -7,6 +7,8 @@ echo
 source lib.sh
 
 parseArgs $@
+sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
+
 
 # CREATE KILL FILE:
 # - NEEDS TO BE MADE BEFORE RUNNING SESSION SCRIPT!

@@ -7,6 +7,7 @@ echo
 source lib.sh
 
 parseArgs $@
+sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
 
 # create the script that will generate the session tunnel and run the interactive session app
 # NOTE - in the below example there is an ~/.ssh/config definition of "localhost" control master that already points to the user container

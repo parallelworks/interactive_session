@@ -15,6 +15,7 @@ sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
 # - When the job is killed PW runs /pw/jobs/job-number/kill.sh
 # Initialize kill.sh
 kill_sh=/pw/jobs/${job_number}/kill.sh
+kill_tunnels_sh=/pw/jobs/${job_number}/kill_tunnels_template.sh
 echo "#!/bin/bash" > ${kill_sh}
 echo "echo Running ${kill_sh}" >> ${kill_sh}
 # Add application-specific code
@@ -23,6 +24,13 @@ if [ -f "${kill_service_sh}" ]; then
     echo "Adding kill server script: ${kill_service_sh}"
     echo "$sshcmd 'bash -s' < ${kill_service_sh}" >> ${kill_sh}
 fi
+# Kill tunnels
+cp kill_tunnels_template.sh ${kill_tunnels_sh}
+sed -i "s/__OPENPORT__/$openPort/g" ${kill_tunnels_sh}
+cat >> ${kill_sh} <<HERE
+$sshcmd 'bash -s' < ${kill_tunnels_sh}
+bash ${kill_tunnels_sh}
+HERE
 echo "echo Finished running ${kill_sh}" >> ${kill_sh}
 chmod 777 ${kill_sh}
 
@@ -31,7 +39,7 @@ chmod 777 ${kill_sh}
 if [[ "$USERMODE" == "k8s" ]];then
     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
     # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-    TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null localhost \"ssh -J ${controller} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:$openPort:localhost:$servicePort "'$(hostname)'"\""
+    TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null localhost \"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:$openPort:localhost:$servicePort "'$(hostname)'"\""
 else
     TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:$servicePort localhost"
 fi

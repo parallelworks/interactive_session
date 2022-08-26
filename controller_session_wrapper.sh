@@ -16,14 +16,14 @@ sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
 # Initialize kill.sh
 kill_sh=/pw/jobs/${job_number}/kill.sh
 echo "#!/bin/bash" > ${kill_sh}
-echo "Running ${kill_sh}" >> ${kill_sh}
+echo "echo Running ${kill_sh}" >> ${kill_sh}
 # Add application-specific code
 # WARNING: if part runs in a different directory than bash command! --> Use absolute paths!!
 if [ -f "${kill_service_sh}" ]; then
     echo "Adding kill server script: ${kill_service_sh}"
     echo "$sshcmd 'bash -s' < ${kill_service_sh}" >> ${kill_sh}
 fi
-echo "Finished running ${kill_sh}" >> ${kill_sh}
+echo "echo Finished running ${kill_sh}" >> ${kill_sh}
 chmod 777 ${kill_sh}
 
 

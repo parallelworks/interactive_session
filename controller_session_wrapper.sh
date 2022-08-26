@@ -16,6 +16,7 @@ sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
 # Initialize kill.sh
 kill_sh=/pw/jobs/${job_number}/kill.sh
 kill_tunnels_sh=/pw/jobs/${job_number}/kill_tunnels_template.sh
+kill_controller_session_sh=/pw/jobs/${job_number}/kill_controller_session.sh
 echo "#!/bin/bash" > ${kill_sh}
 echo "echo Running ${kill_sh}" >> ${kill_sh}
 # Add application-specific code
@@ -24,10 +25,13 @@ if [ -f "${kill_service_sh}" ]; then
     echo "Adding kill server script: ${kill_service_sh}"
     echo "$sshcmd 'bash -s' < ${kill_service_sh}" >> ${kill_sh}
 fi
-# Kill tunnels
+# Kill tunnels and child processes
 cp kill_tunnels_template.sh ${kill_tunnels_sh}
+cp kill_controller_session_template.sh ${kill_controller_session_sh}
 sed -i "s/__OPENPORT__/$openPort/g" ${kill_tunnels_sh}
+sed -i "s/__job_number__/${job_number}/g" ${kill_controller_session_sh}
 cat >> ${kill_sh} <<HERE
+$sshcmd 'bash -s' < ${kill_controller_session_sh}
 $sshcmd 'bash -s' < ${kill_tunnels_sh}
 bash ${kill_tunnels_sh}
 HERE
@@ -50,6 +54,7 @@ session_sh=/pw/jobs/${job_number}/session.sh
 echo "#!/bin/bash" > ${session_sh}
 
 if ! [ -z ${chdir} ] && ! [[ "${chdir}" == "default" ]]; then
+    chdir=$(echo ${chdir} | sed "s|__job_number__|${job_number}|g")
     echo "cd ${chdir}" >> ${session_sh}
 fi
 
@@ -59,6 +64,9 @@ echo
 echo Starting interactive session - sessionPort: $servicePort tunnelPort: $openPort
 echo Test command to run in user container: telnet localhost $openPort
 echo
+
+# Note that job started running
+echo \$$ > ~/${job_number}.pid
 
 # These are not workflow parameters but need to be available to the service on the remote node!
 FORWARDPATH=${FORWARDPATH}
@@ -89,6 +97,10 @@ HERE
 if [ -f "${start_service_sh}" ]; then
     cat ${start_service_sh} >> ${session_sh}
 fi
+
+# Note that job is no longer running
+echo >> ${session_sh}
+echo "rm ~/${job_number}.pid" >> ${session_sh}
 
 chmod 777 ${session_sh}
 

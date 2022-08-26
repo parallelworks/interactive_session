@@ -70,13 +70,13 @@ fi
 
 if [[ ${partition_or_controller} == "True" ]]; then
     echo "Submitting batch job to ${controller}"
-    session_wrapper=partition_session_wrapper.sh
+    session_wrapper_dir=partition
 else
     echo "Submitting ssh job to ${controller}"
-    session_wrapper=controller_session_wrapper.sh
+    session_wrapper_dir=controller
 fi
 
-bash ${session_wrapper} $@ \
+bash ${session_wrapper_dir}/session_wrapper.sh $@ \
         --openPort ${openPort} \
         --controller ${controller} \
         --start_service_sh ${start_service_sh} \

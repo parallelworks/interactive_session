@@ -2,6 +2,7 @@ echo "$(date): $(hostname):${PWD} $0 $@"
 
 servicePort=__servicePort__
 job_number=__job_number__
+partition_or_controller=__partition_or_controller__
 
 if [[ ${use_gpus} == "True" ]]; then
     gpu_flag="--gpus all"
@@ -9,8 +10,13 @@ else
     gpu_flag=""
 fi
 
-# Create kill script. Needs to be here because we need the hostname of the compute node.
-echo ssh "'$(hostname)'" sudo docker stop jupyter-$servicePort > docker-kill-${job_number}.sh
+if [[ ${partition_or_controller} == "True" ]]; then
+    # Create kill script. Needs to be here because we need the hostname of the compute node.
+    echo ssh "'$(hostname)'" sudo docker stop jupyter-$servicePort > docker-kill-${job_number}.sh
+else
+    echo sudo docker stop jupyter-$servicePort > docker-kill-${job_number}.sh
+fi
+
 chmod 777 docker-kill-${job_number}.sh
 
 sudo systemctl start docker

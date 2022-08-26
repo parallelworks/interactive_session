@@ -1,5 +1,4 @@
 #!/bin/bash
-
 echo
 echo Arguments:
 echo $@
@@ -8,26 +7,6 @@ echo
 source lib.sh
 
 parseArgs $@
-
-getOpenPort
-
-if [[ ${controller} == "pw.conf" ]]; then
-    poolname=$(cat /pw/jobs/${job_number}/pw.conf | grep sites | grep -o -P '(?<=\[).*?(?=\])')
-    if [ -z "${poolname}" ]; then
-        echo "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
-        exit 1
-    fi
-    controller=${poolname}.clusters.pw
-fi
-
-if [ -z "${controller}" ]; then
-    echo "ERROR: No controller was specified - exiting the workflow"
-    exit 1
-fi
-
-
-echo "Submitting job to ${controller}"
-sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
 
 # create the script that will generate the session tunnel and run the interactive session app
 # NOTE - in the below example there is an ~/.ssh/config definition of "localhost" control master that already points to the user container
@@ -150,6 +129,8 @@ fi
 # Initialize kill.sh
 kill_sh=/pw/jobs/${job_number}/kill.sh
 echo "#!/bin/bash" > ${kill_sh}
+echo "Running ${kill_sh}" >> ${kill_sh}
+
 # Add application-specific code
 # WARNING: if part runs in a different directory than bash command! --> Use absolute paths!!
 if [ -f "${kill_service_sh}" ]; then
@@ -157,7 +138,7 @@ if [ -f "${kill_service_sh}" ]; then
     echo "$sshcmd 'bash -s' < ${kill_service_sh}" >> ${kill_sh}
 fi
 echo $sshcmd scancel $slurmjob >> ${kill_sh}
-
+echo "Finished running ${kill_sh}" >> ${kill_sh}
 chmod 777 ${kill_sh}
 
 echo

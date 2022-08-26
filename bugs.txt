@@ -1,0 +1,2 @@
+1. Ports race condition
+2. docker kill won't work if chdir != ${HOME}

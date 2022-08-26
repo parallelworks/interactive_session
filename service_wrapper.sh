@@ -29,6 +29,22 @@ if ! [ -f "${service_name}/url.sh" ]; then
     exit 1
 fi
 
+if [[ ${controller} == "pw.conf" ]]; then
+    poolname=$(cat /pw/jobs/${job_number}/pw.conf | grep sites | grep -o -P '(?<=\[).*?(?=\])')
+    if [ -z "${poolname}" ]; then
+        echo "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
+        exit 1
+    fi
+    controller=${poolname}.clusters.pw
+fi
+
+if [ -z "${controller}" ]; then
+    echo "ERROR: No controller was specified - exiting the workflow"
+    exit 1
+fi
+
+sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
+
 # SERVICE URL
 echo "Generating session html"
 source ${service_name}/url.sh
@@ -55,8 +71,16 @@ fi
 
 
 if [[ ${partition_or_controller} == "True" ]]; then
-    bash session_wrapper.sh $@ --start_service_sh ${start_service_sh} --kill_service_sh ${kill_service_sh}
+    echo "Submitting batch job to ${controller}"
+    session_wrapper=partition_session_wrapper.sh
 else
-    exit 0
-    #bash session_wrapper.sh $@ --start_service_sh ${start_service_sh} --kill_service_sh ${kill_service_sh}
+    echo "Submitting ssh job to ${controller}"
+    session_wrapper=controller_session_wrapper.sh
 fi
+
+bash ${session_wrapper} $@ \
+        --openPort ${openPort} \
+        --controller ${controller} \
+        --sshcmd ${sshcmd} \
+        --start_service_sh ${start_service_sh} \
+        --kill_service_sh ${kill_service_sh}

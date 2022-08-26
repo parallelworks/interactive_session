@@ -17,7 +17,7 @@ sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
 # Initialize kill.sh
 kill_sh=/pw/jobs/${job_number}/kill.sh
 kill_tunnels_sh=/pw/jobs/${job_number}/kill_tunnels_template.sh
-kill_controller_session_sh=/pw/jobs/${job_number}/kill_controller_session.sh
+kill_controller_session_sh=/pw/jobs/${job_number}/kill_session.sh
 echo "#!/bin/bash" > ${kill_sh}
 echo "echo Running ${kill_sh}" >> ${kill_sh}
 # Add application-specific code
@@ -28,7 +28,7 @@ if [ -f "${kill_service_sh}" ]; then
 fi
 # Kill tunnels and child processes
 cp ${sdir}/kill_tunnels_template.sh ${kill_tunnels_sh}
-cp ${sdir}/kill_controller_session_template.sh ${kill_controller_session_sh}
+cp ${sdir}/kill_session_template.sh ${kill_controller_session_sh}
 sed -i "s/__OPENPORT__/$openPort/g" ${kill_tunnels_sh}
 sed -i "s/__job_number__/${job_number}/g" ${kill_controller_session_sh}
 cat >> ${kill_sh} <<HERE

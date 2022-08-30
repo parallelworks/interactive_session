@@ -2,6 +2,10 @@
 
 source lib.sh
 
+# Very useful to rerun a workflow with the exact same code version!
+commit_hash=$(git log --pretty=format:'%h' -n 1)
+echo "COMMIT HASH: ${commit_hash}"
+
 echo "service wrapper: $@"
 parseArgs $@
 

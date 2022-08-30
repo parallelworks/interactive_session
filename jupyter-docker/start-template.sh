@@ -34,6 +34,7 @@ sudo docker run ${gpu_flag} --rm \
     --NotebookApp.token= \
     --NotebookApp.password= \
     --no-browser \
+    --allow-root \
     --notebook-dir=/ \
     --NotebookApp.tornado_settings="{'static_url_prefix':'/${FORWARDPATH}/${IPADDRESS}/${openPort}/static/'}" \
     --NotebookApp.base_url="/${FORWARDPATH}/${IPADDRESS}/${openPort}/" \

@@ -27,7 +27,7 @@ sudo docker run ${gpu_flag} --rm \
     -v /contrib:/contrib -v /lustre:/lustre -v ${HOME}:${HOME} \
     --name=jupyter-$servicePort \
     -p $servicePort:$servicePort \
-    __docker_repo__ /opt/conda/bin/jupyter-notebook \
+    __docker_repo__ jupyter-notebook \
     --port=$servicePort \
     --ip=0.0.0.0 \
     --NotebookApp.iopub_data_rate_limit=10000000000 \

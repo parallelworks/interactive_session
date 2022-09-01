@@ -11,6 +11,13 @@ parseArgs $@
 
 getOpenPort
 
+# LOAD PLATFORM-SPECIFIC ENVIRONMENT:
+env_sh=platforms/${PARSL_CLIENT_HOST}/env.sh
+if ! [ -f "${env_sh}" ]; then
+    env_sh=platforms/default/env.sh
+fi
+source ${env_sh}
+
 # SANITY CHECKS
 if [[ "$openPort" == "" ]];then
     echo "ERROR - cannot find open port..."

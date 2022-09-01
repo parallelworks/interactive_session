@@ -79,7 +79,7 @@ fi
 
 cat >> ${session_sh} <<HERE
 
-if [[ ${pooltype} == slurmshv2 ]]; then
+if [[ "${pooltype}" == slurmshv2 ]]; then
     # register the worker to the coaster service
     ~/pworks/remote.sh
 fi

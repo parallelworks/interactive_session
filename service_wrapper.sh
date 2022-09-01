@@ -42,7 +42,20 @@ fi
 
 #  CONTROLLER INFO
 poolname=$(cat /pw/jobs/${job_number}/pw.conf | grep sites | grep -o -P '(?<=\[).*?(?=\])')
-pooltype=$(${CONDA_PYTHON_EXE} interactive_session/utils/get_pool_type.py ${poolname})
+if [ -z "${poolname}" ]; then
+    echo "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
+    exit 1
+fi
+
+pooltype=$(${CONDA_PYTHON_EXE} utils/get_pool_type.py ${poolname})
+ if [ -z "${pooltype}" ]; then
+    echo "ERROR: Pool type not found - exiting the workflow"
+    echo "${CONDA_PYTHON_EXE} utils/get_pool_type.py ${poolname}"
+    exit 1
+fi
+
+echo "Pool type: ${pooltype}"
+
 
 if [[ ${controller} == "pw.conf" ]]; then
     if [ -z "${poolname}" ]; then

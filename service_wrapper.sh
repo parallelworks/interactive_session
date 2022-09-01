@@ -40,14 +40,21 @@ if ! [ -f "${service_name}/url.sh" ]; then
     exit 1
 fi
 
+#  CONTROLLER INFO
+poolname=$(cat /pw/jobs/${job_number}/pw.conf | grep sites | grep -o -P '(?<=\[).*?(?=\])')
+pooltype=$(${CONDA_PYTHON_EXE} interactive_session/utils/get_pool_type.py ${poolname})
+
 if [[ ${controller} == "pw.conf" ]]; then
-    poolname=$(cat /pw/jobs/${job_number}/pw.conf | grep sites | grep -o -P '(?<=\[).*?(?=\])')
     if [ -z "${poolname}" ]; then
         echo "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
         exit 1
     fi
     controller=${poolname}.clusters.pw
+    if [[ ${pooltype} == "slurmshv2" ]]; then
+        controller=$(python /swift-pw-bin/utils/cluster-ip-api-wrapper.py $controller)
+    fi
 fi
+
 
 if [ -z "${controller}" ]; then
     echo "ERROR: No controller was specified - exiting the workflow"
@@ -91,4 +98,5 @@ bash ${session_wrapper_dir}/session_wrapper.sh $@ \
         --openPort ${openPort} \
         --controller ${controller} \
         --start_service_sh ${start_service_sh} \
-        --kill_service_sh ${kill_service_sh}
+        --kill_service_sh ${kill_service_sh} \
+        --pooltype ${pooltype}

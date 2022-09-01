@@ -1,1 +1,0 @@
-export python_cmd=/gs/gsfs0/hpc01/rhel8/apps/conda3/bin/python3

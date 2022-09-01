@@ -1,1 +1,0 @@
-export python_cmd=python3

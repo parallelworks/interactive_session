@@ -16,13 +16,18 @@ masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usual
 
 
 # TUNNEL COMMAND:
+if [[ ${pooltype} == "slurmshv2"]]; then
+    USER_CONTAINER_HOST=${PARSL_CLIENT_HOST}
+else
+    USER_CONTAINER_HOST="localhost"
+fi
 
 if [[ "$USERMODE" == "k8s" ]];then
     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
     # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-    TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null localhost \"ssh -J ${controller} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:$openPort:localhost:$servicePort "'$(hostname)'"\""
+    TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST} \"ssh -J ${controller} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:$openPort:localhost:$servicePort "'$(hostname)'"\""
 else
-    TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:$servicePort localhost"
+    TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:$servicePort ${USER_CONTAINER_HOST}"
 fi
 
 # Initiallize session batch file:
@@ -73,6 +78,11 @@ if [[ "${stream}" == "True" ]]; then
 fi
 
 cat >> ${session_sh} <<HERE
+
+if [[ ${pooltype} == slurmshv2 ]]; then
+    # register the worker to the coaster service
+    ~/pworks/remote.sh
+fi
 
 echo
 echo Starting interactive session - sessionPort: $servicePort tunnelPort: $openPort

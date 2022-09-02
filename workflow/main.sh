@@ -1,13 +1,9 @@
 #!/bin/bash
 set -e
+date
 jobdir=${PWD}
 job_number=$(basename ${PWD})
 
-echo
-echo "JOB NUMBER: ${job_number}"
-echo "USER:       ${PW_USER}"
-echo "DATE:       $(date)"
-echo
 # HELPER FUNCTIONS
 
 # Exports inputs in the format
@@ -45,7 +41,7 @@ isession_dir=interactive_session
 if [[ "${isession_clone_latest}" == "True" ]]; then
     echo Cloning ${isession_repo_url}
     rm -rf ${isession_dir}
-    git clone --recurse-submodules ${isession_repo_url} ${isession_dir}
+    ssh-agent bash -c 'ssh-add repo_read_key; git clone ${isession_repo_url} ${isession_dir}'
     git --git-dir=${isession_dir}/.git --work-tree=${isession_dir}/ checkout ${isession_repo_branch}
 fi
 
@@ -63,5 +59,4 @@ echo
 # - Prepares the start and kill service scripts
 # - Edits the service.html.tmp with the specific url for the service
 # - Executes run_session.sh passing it these scripts as arguments: --start_service_sh --kill_service_sh
-echo $@
 bash service_wrapper.sh $@ --job_number ${job_number} --isession_dir ${isession_dir}

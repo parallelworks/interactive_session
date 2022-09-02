@@ -1,6 +1,5 @@
 echo "$(date): $(hostname):${PWD} $0 $@"
 
-mount_dirs="$(echo  __mount_dirs__ | sed "s|___| |g" | sed "s|__mount_dirs__||g" )"
 path_to_sing="__path_to_sing__"
 servicePort="__servicePort__"
 use_gpus="__use_gpus__"
@@ -38,6 +37,13 @@ fi
 # https://github.com/rstudio/rstudio/issues/7953
 # https://support.rstudio.com/hc/en-us/articles/200552326-Running-RStudio-Server-with-a-Proxy
 
+# Moving the python3 command to NotebookApp.password= wont work!
+sha=$(singularity run ${path_to_sing} python3 -c "from notebook.auth.security import passwd; print(passwd('__password__', algorithm = 'sha1'))")
+
+if [ -z "${sha}" ]; then
+    echo "ERROR: No password specified for jupyter notebook - exiting the workflow"
+    exit 1
+fi
 
 singularity run ${gpu_flag} \
     ${mount_dirs} \
@@ -47,7 +53,7 @@ singularity run ${gpu_flag} \
     --ip=0.0.0.0 \
     --NotebookApp.iopub_data_rate_limit=10000000000 \
     --NotebookApp.token= \
-    --NotebookApp.password= \
+    --NotebookApp.password=${sha} \
     --no-browser \
     --notebook-dir=~/ \
     --NotebookApp.tornado_settings="{'static_url_prefix':'/${FORWARDPATH}/${IPADDRESS}/${openPort}/static/'}" \

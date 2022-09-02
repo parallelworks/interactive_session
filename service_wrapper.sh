@@ -64,7 +64,7 @@ if [[ ${controller} == "pw.conf" ]]; then
     fi
     controller=${poolname}.clusters.pw
     if [[ ${pooltype} == "slurmshv2" ]]; then
-        controller=$(python /swift-pw-bin/utils/cluster-ip-api-wrapper.py $controller)
+        controller=$(${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py $controller)
     fi
 fi
 

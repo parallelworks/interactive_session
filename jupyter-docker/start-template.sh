@@ -21,8 +21,14 @@ chmod 777 docker-kill-${job_number}.sh
 
 sudo systemctl start docker
 
-# Docker supports mounting directories that do not exist (singularity does not)
+sha=$(sudo docker run --rm __docker_repo__ python3 -c "from notebook.auth.security import passwd; print(passwd('__password__', algorithm = 'sha1'))")
 
+if [ -z "${sha}" ]; then
+    echo "ERROR: No password specified for jupyter notebook - exiting the workflow"
+    exit 1
+fi
+
+# Docker supports mounting directories that do not exist (singularity does not)
 sudo docker run ${gpu_flag} --rm \
     -v /contrib:/contrib -v /lustre:/lustre -v ${HOME}:${HOME} \
     --name=jupyter-$servicePort \
@@ -32,7 +38,7 @@ sudo docker run ${gpu_flag} --rm \
     --ip=0.0.0.0 \
     --NotebookApp.iopub_data_rate_limit=10000000000 \
     --NotebookApp.token= \
-    --NotebookApp.password= \
+    --NotebookApp.password=${sha} \
     --no-browser \
     --allow-root \
     --notebook-dir=/ \

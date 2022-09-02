@@ -40,7 +40,7 @@ if ! [ -z ${partition} ] && ! [[ "${partition}" == "default" ]]; then
 fi
 
 if ! [ -z ${account} ] && ! [[ "${account}" == "default" ]]; then
- echo "#SBATCH --account=${account}" >> ${session_sh}
+    echo "#SBATCH --account=${account}" >> ${session_sh}
 fi
 
 if ! [ -z ${walltime} ] && ! [[ "${walltime}" == "default" ]]; then

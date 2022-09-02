@@ -17,7 +17,7 @@ masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usual
 
 # TUNNEL COMMAND:
 if [[ ${pooltype} == "slurmshv2" ]]; then
-    USER_CONTAINER_HOST=${PARSL_CLIENT_HOST}
+    USER_CONTAINER_HOST=${PW_USER_HOST} #${PARSL_CLIENT_HOST}
 else
     USER_CONTAINER_HOST="localhost"
 fi

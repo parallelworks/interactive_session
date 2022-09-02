@@ -39,6 +39,10 @@ if ! [ -z ${partition} ] && ! [[ "${partition}" == "default" ]]; then
     echo "#SBATCH --partition=${partition}" >> ${session_sh}
 fi
 
+if ! [ -z ${account} ] && ! [[ "${account}" == "default" ]]; then
+ echo "#SBATCH --account=${account}" >> ${session_sh}
+fi
+
 if ! [ -z ${walltime} ] && ! [[ "${walltime}" == "default" ]]; then
     echo "#SBATCH --time=${walltime}" >> ${session_sh}
     swalltime=$(echo "${walltime}" | awk -F: '{ print ($1 * 3600) + ($2 * 60) + $3 + 60}')

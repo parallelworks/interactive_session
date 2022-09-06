@@ -9,4 +9,9 @@ else
     remote_session_dir="./"
 fi
 
-bash ${remote_session_dir}/docker-kill-${job_number}.sh
+{
+    bash ${remote_session_dir}/docker-kill-${job_number}.sh
+    rm ${remote_session_dir}/docker-kill-${job_number}.sh
+} || {
+    echo "ERROR: Could not run bash ${remote_session_dir}/docker-kill-${job_number}.sh. Please run it manually!"
+}

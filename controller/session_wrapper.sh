@@ -9,6 +9,7 @@ source lib.sh
 
 parseArgs $@
 sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
+chdir=$(echo ${chdir} | sed "s|__job_number__|${job_number}|g")
 
 
 # CREATE KILL FILE:
@@ -58,7 +59,6 @@ session_sh=/pw/jobs/${job_number}/session.sh
 echo "#!/bin/bash" > ${session_sh}
 
 if ! [ -z ${chdir} ] && ! [[ "${chdir}" == "default" ]]; then
-    chdir=$(echo ${chdir} | sed "s|__job_number__|${job_number}|g")
     echo "mkdir -p ${chdir}" >> ${session_sh}
     echo "cd ${chdir}" >> ${session_sh}
 fi

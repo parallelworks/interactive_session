@@ -18,6 +18,7 @@ sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
 kill_sh=/pw/jobs/${job_number}/kill.sh
 kill_tunnels_sh=/pw/jobs/${job_number}/kill_tunnels_template.sh
 kill_controller_session_sh=/pw/jobs/${job_number}/kill_session.sh
+
 echo "#!/bin/bash" > ${kill_sh}
 echo "echo Running ${kill_sh}" >> ${kill_sh}
 # Add application-specific code
@@ -67,7 +68,7 @@ echo Test command to run in user container: telnet localhost $openPort
 echo
 
 # Note that job started running
-echo \$$ > ~/${job_number}.pid
+echo \$$ > ${job_number}.pid
 
 # These are not workflow parameters but need to be available to the service on the remote node!
 FORWARDPATH=${FORWARDPATH}

@@ -31,9 +31,11 @@ fi
 # Kill tunnels and child processes
 cp ${sdir}/kill_tunnels_template.sh ${kill_tunnels_sh}
 cp ${sdir}/kill_session_template.sh ${kill_controller_session_sh}
+
 sed -i "s/__OPENPORT__/$openPort/g" ${kill_tunnels_sh}
+
 sed -i "s/__job_number__/${job_number}/g" ${kill_controller_session_sh}
-sed -i "s/__chdir__/${chdir}/g" ${kill_controller_session_sh}
+sed -i "s|__chdir__|${chdir}|g" ${kill_controller_session_sh}
 
 cat >> ${kill_sh} <<HERE
 $sshcmd 'bash -s' < ${kill_controller_session_sh}

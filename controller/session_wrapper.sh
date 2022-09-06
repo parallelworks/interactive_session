@@ -47,12 +47,19 @@ chmod 777 ${kill_sh}
 
 
 # TUNNEL COMMAND:
+if [[ ${pooltype} == "slurmshv2" ]]; then
+    USER_CONTAINER_HOST=${PW_USER_HOST} #${PARSL_CLIENT_HOST}
+else
+    USER_CONTAINER_HOST="localhost"
+fi
+
+# TUNNEL COMMAND:
 if [[ "$USERMODE" == "k8s" ]];then
     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
     # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-    TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null localhost \"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:$openPort:localhost:$servicePort "'$(hostname)'"\""
+    TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST} \"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:$openPort:localhost:$servicePort "'$(hostname)'"\""
 else
-    TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:$servicePort localhost"
+    TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:$servicePort ${USER_CONTAINER_HOST}"
 fi
 
 # Initiallize session batch file:

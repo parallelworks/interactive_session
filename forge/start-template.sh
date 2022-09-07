@@ -1,7 +1,22 @@
 # Runs via ssh + sbatch
+servicePort=__servicePort__
 
-/opt/TurboVNC/bin/vncserver -kill :1
-/opt/TurboVNC/bin/vncserver :1
+#printf "password\npassword\n\n" | vncpasswd
+
+if [ -z $(which vncserver) ]; then
+    vncserver_exec=/opt/TurboVNC/bin/vncserver
+    if [ -f "${vncserver_exec}" ]; then
+        ${vncserver_exec} -kill :1
+        ${vncserver_exec} :1
+    else
+        echo "ERROR: vncserver command not found!"
+        exit 1
+    fi
+else
+    vncserver -kill :1
+    vncserver :1
+fi
+
 
 cd ~/pworks
 # if ! [ -d "~/pworks/noVNC-1.3.0" ];then
@@ -10,11 +25,15 @@ cd ~/pworks
 # fi
 cd noVNC-1.3.0
 
-screen -wipe
-screen -S noVNC -d -m ./utils/novnc_proxy --vnc localhost:5901
-
-module load forge
-export DISPLAY=:1
-screen -S forge -d -m forge
-
-sleep 9999
+if [ -z "$(which screen)" ]; then
+    ./utils/novnc_proxy --vnc localhost:5901 --listen localhost:${servicePort} &
+    module load forge
+    export DISPLAY=:1
+    forge &
+else
+    screen -wipe
+    screen -S noVNC -d -m ./utils/novnc_proxy --vnc localhost:5901 --listen localhost:${servicePort}
+    module load forge
+    export DISPLAY=:1
+    screen -S forge -d -m forge
+fi

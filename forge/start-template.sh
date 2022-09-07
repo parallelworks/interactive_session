@@ -37,3 +37,5 @@ else
     export DISPLAY=:1
     screen -S forge -d -m forge
 fi
+
+sleep 99999

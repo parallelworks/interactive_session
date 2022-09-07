@@ -7,7 +7,9 @@ kill_vnc_cmd="kill \$(ps -x | grep vnc | grep __servicePort__ | awk '{print \$1}
 if [[ ${partition_or_controller} == "True" ]]; then
     # Create kill script. Needs to be here because we need the hostname of the compute node.
     echo ${kill_vnc_cmd} > kill-vnc-${job_number}-ssh.sh
-    echo "ssh '$(hostname)' 'bash -s' < kill-vnc-${job_number}-ssh.sh" > kill-vnc-${job_number}.sh
+    # Remove .cluster.local for einteinmed!
+    hname=$(hostname | sed "s/.cluster.local//g")
+    echo "ssh ${hname} 'bash -s' < kill-vnc-${job_number}-ssh.sh" > kill-vnc-${job_number}.sh
 else
     echo ${kill_vnc_cmd} > kill-vnc-${job_number}.sh
 fi

@@ -1,5 +1,14 @@
 # Runs via ssh + sbatch
 servicePort=__servicePort__
+partition_or_controller=__partition_or_controller__
+
+kill_vnc_cmd="kill \$(ps -x | grep vnc | grep __servicePort__)"
+if [[ ${partition_or_controller} == "True" ]]; then
+    # Create kill script. Needs to be here because we need the hostname of the compute node.
+    echo ssh "'$(hostname)'" ${kill_vnc_cmd} > kill-vnc-${job_number}.sh
+else
+    echo ${kill_vnc_cmd} > kill-vnc-${job_number}.sh
+fi
 
 #printf "password\npassword\n\n" | vncpasswd
 

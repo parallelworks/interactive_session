@@ -73,7 +73,7 @@ if [ -z "$(which screen)" ]; then
 
 else
     screen -S noVNC-${job_number} -d -m ./utils/novnc_proxy --vnc localhost:5901 --listen localhost:${servicePort}
-    pid=$(ps -x | grep noVNC-${job_number} | awk '{print $1}')
+    pid=$(ps -x | grep noVNC-${job_number} | grep -wv grep | awk '{print $1}')
     echo ${pid} > ${job_dir}/service.pid
 
     # Launch service:
@@ -81,7 +81,7 @@ else
         export DISPLAY=:1
         echo "Starting ${service_bin}"
         screen -S ${service_bin}-${job_number} -d -m ${service_bin}
-        pid=$(ps -x | grep ${service_bin}-${job_number} | awk '{print $1}')
+        pid=$(ps -x | grep ${service_bin}-${job_number} | grep -wv grep | awk '{print $1}')
         echo ${pid} >> ${job_dir}/service.pid
     fi
 fi

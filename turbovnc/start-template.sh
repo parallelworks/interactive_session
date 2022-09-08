@@ -4,6 +4,7 @@ partition_or_controller=__partition_or_controller__
 job_number=__job_number__
 slurm_module=__slurm_module__
 service_bin=__service_bin__
+service_background=__service_background__ # Launch service as a background process (! or screen)
 
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
@@ -68,8 +69,13 @@ if [ -z "$(which screen)" ]; then
     if ! [ -z ${service_bin} ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
         export DISPLAY=:1
         echo "Starting ${service_bin}"
-        ${service_bin} &
-        echo $! >> ${job_dir}/service.pid
+        if [[ ${service_background} == "False" ]]; then
+            ${service_bin}
+        else
+            echo "Running ${service_bin} in the background"
+            ${service_bin} &
+            echo $! >> ${job_dir}/service.pid
+        fi
     fi
 
 else
@@ -81,9 +87,14 @@ else
     if ! [ -z ${service_bin} ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
         export DISPLAY=:1
         echo "Starting ${service_bin}"
-        screen -S ${service_bin}-${job_number} -d -m ${service_bin}
-        pid=$(ps -x | grep ${service_bin}-${job_number} | grep -wv grep | awk '{print $1}')
-        echo ${pid} >> ${job_dir}/service.pid
+        if [[ ${service_background} == "False" ]]; then
+            ${service_bin}
+        else
+            echo "Running ${service_bin} in the background"
+            screen -S ${service_bin}-${job_number} -d -m ${service_bin}
+            pid=$(ps -x | grep ${service_bin}-${job_number} | grep -wv grep | awk '{print $1}')
+            echo ${pid} >> ${job_dir}/service.pid
+        fi
     fi
 fi
 

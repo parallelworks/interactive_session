@@ -68,8 +68,8 @@ if [ -z "$(which screen)" ]; then
     # Launch service
     if ! [ -z ${service_bin} ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
         export DISPLAY=:1
-        echo "Starting ${service_bin}"
         if [[ ${service_background} == "False" ]]; then
+            echo "Running ${service_bin}"
             ${service_bin}
         else
             echo "Running ${service_bin} in the background"
@@ -86,8 +86,8 @@ else
     # Launch service:
     if ! [ -z ${service_bin} ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
         export DISPLAY=:1
-        echo "Starting ${service_bin}"
         if [[ ${service_background} == "False" ]]; then
+            echo "Running  ${service_bin}"
             ${service_bin}
         else
             echo "Running ${service_bin} in the background"

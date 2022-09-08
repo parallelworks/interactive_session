@@ -42,6 +42,7 @@ if [ -z "$(which screen)" ]; then
     ./utils/novnc_proxy --vnc localhost:5901 --listen localhost:${servicePort} &
     module load matlab
     export DISPLAY=:1
+    echo "Starting matlab"
     matlab &
     echo $! > kill.pid
 else
@@ -49,6 +50,7 @@ else
     # ENTER VNC APP SPECIFICS HERE
     module load matlab
     export DISPLAY=:1
+    echo "Starting matlab"
     screen -S matlab-${job_number} -d -m matlab
     pid=$(ps -x | grep matlab-${job_number} | awk '{print $1}')
     echo ${pid} > kill.pid

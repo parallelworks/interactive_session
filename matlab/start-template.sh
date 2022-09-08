@@ -39,15 +39,16 @@ cd ~/pworks
 cd noVNC-1.3.0
 
 if [ -z "$(which screen)" ]; then
-    ./utils/novnc_proxy --vnc localhost:5901 --listen localhost:${servicePort}
+    ./utils/novnc_proxy --vnc localhost:5901 --listen localhost:${servicePort} &
+    module load matlab
+    export DISPLAY=:1
+    matlab &
 else
     screen -S noVNC -d -m ./utils/novnc_proxy --vnc localhost:5901 --listen localhost:${servicePort}
+    # ENTER VNC APP SPECIFICS HERE
+    module load matlab
+    export DISPLAY=:1
+    screen -S matlab -d -m matlab
 fi
-
-# ENTER VNC APP SPECIFICS HERE
-module load matlab
-export DISPLAY=:1
-#screen -S matlab -d -m matlab
-matlab
 
 sleep 99999

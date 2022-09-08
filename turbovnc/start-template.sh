@@ -9,7 +9,7 @@ if [[ ${partition_or_controller} == "True" ]]; then
     echo ${kill_vnc_cmd} > kill-vnc-${job_number}-ssh.sh
     # Remove .cluster.local for einteinmed!
     hname=$(hostname | sed "s/.cluster.local//g")
-    echo "ssh ${hname} 'bash -s' < kill-vnc-${job_number}-ssh.sh" > kill-vnc-${job_number}.sh
+    echo "ssh ${hname} 'bash -s' < ${PWD}/kill-vnc-${job_number}-ssh.sh" > kill-vnc-${job_number}.sh
 else
     echo ${kill_vnc_cmd} > kill-vnc-${job_number}.sh
 fi

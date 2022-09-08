@@ -52,6 +52,7 @@ else
     export DISPLAY=:1
     echo "Starting matlab"
     screen -S matlab-${job_number} -d -m matlab
+    sleep 2
     pid=$(ps -x | grep matlab-${job_number} | awk '{print $1}')
     echo ${pid} > kill.pid
 fi

@@ -18,13 +18,13 @@ else
 fi
 
 cat >> service-kill-${job_number}-main.sh <<HERE
-service_pid=$(cat ${PWD}/service.pid)
-if [ -z ${service_pid} ]; then
+service_pid=\$(cat ${PWD}/service.pid)
+if [ -z \${service_pid} ]; then
     echo "ERROR: No service pid was found!"
 else
     echo "$(hostname) - Killing process: ${service_pid}"
-    pkill -P ${service_pid}
-    kill ${service_pid}
+    pkill -P \${service_pid}
+    kill \${service_pid}
 fi
 HERE
 

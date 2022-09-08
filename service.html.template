@@ -129,7 +129,7 @@
             <div class="progress_bar__shimmer"></div>
           </div>
         </div>
-        <div class=“progress_bar__state” data-start=“Establishing connection” data-middle=“Establishing connection” data-end=“Establishing connection”>
+        <div class="progress_bar__state" data-start="Establishing connection" data-middle="Establishing connection" data-end="Establishing connection">
         </div>
     </div>
   </div>

@@ -30,6 +30,7 @@ else
     vncserver :1
 fi
 
+job_dir=${PWD}
 
 cd ~/pworks
 # if ! [ -d "~/pworks/noVNC-1.3.0" ];then
@@ -44,7 +45,7 @@ if [ -z "$(which screen)" ]; then
     export DISPLAY=:1
     echo "Starting matlab"
     matlab &
-    echo $! > kill.pid
+    echo $! > ${job_dir}/kill.pid
 else
     screen -S noVNC -d -m ./utils/novnc_proxy --vnc localhost:5901 --listen localhost:${servicePort}
     # ENTER VNC APP SPECIFICS HERE
@@ -52,9 +53,8 @@ else
     export DISPLAY=:1
     echo "Starting matlab"
     screen -S matlab-${job_number} -d -m matlab
-    sleep 2
     pid=$(ps -x | grep matlab-${job_number} | awk '{print $1}')
-    echo ${pid} > kill.pid
+    echo ${pid} > ${job_dir}/kill.pid
 fi
 
 sleep 99999

@@ -54,7 +54,8 @@ cd ~/pworks
 cd noVNC-1.3.0
 
 # Load slurm module
-if ! [ -z ${slurm_module} ] && ! [[ "${slurm_module}" == "__slurm_module__" ]]; then
+# - multiple quotes are used to prevent replacement of __varname__ !!!
+if ! [ -z ${slurm_module} ] && ! [[ "${slurm_module}" == "__""slurm_module""__" ]]; then
     echo "module load ${slurm_module}"
     module load ${slurm_module}
 fi
@@ -64,7 +65,7 @@ if [ -z "$(which screen)" ]; then
     echo $! > ${job_dir}/service.pid
 
     # Launch service
-    if ! [ -z ${service_bin} ] && ! [[ "${service_bin}" == "__service_bin__" ]]; then
+    if ! [ -z ${service_bin} ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
         export DISPLAY=:1
         echo "Starting ${service_bin}"
         ${service_bin} &
@@ -77,7 +78,7 @@ else
     echo ${pid} > ${job_dir}/service.pid
 
     # Launch service:
-    if ! [ -z ${service_bin} ] && ! [[ "${service_bin}" == "__service_bin__" ]]; then
+    if ! [ -z ${service_bin} ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
         export DISPLAY=:1
         echo "Starting ${service_bin}"
         screen -S ${service_bin}-${job_number} -d -m ${service_bin}

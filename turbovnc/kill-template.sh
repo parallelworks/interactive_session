@@ -1,3 +1,4 @@
+# Runs in the controller node:
 
 job_number=__job_number__
 chdir=__chdir__
@@ -9,4 +10,13 @@ else
     remote_session_dir="./"
 fi
 
-bash ${remote_session_dir}/kill-vnc-${job_number}.sh
+bash ${remote_session_dir}/service-kill-${job_number}.sh
+
+service_pid=$(cat ${remote_session_dir}/service.pid)
+if [ -z ${service_pid} ]; then
+    echo "ERROR: No service pid was found!"
+else
+    echo "$(hostname) - Killing process: ${service_pid}"
+    pkill -P ${service_pid}
+    kill ${service_pid}
+fi

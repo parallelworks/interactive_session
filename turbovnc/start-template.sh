@@ -2,17 +2,31 @@
 servicePort=__servicePort__
 partition_or_controller=__partition_or_controller__
 job_number=__job_number__
+slurm_module=__slurm_module__
+service_bin=__service_bin__
 
-kill_vnc_cmd="kill \$(ps -x | grep vnc | grep __servicePort__ | awk '{print \$1}')"
+# Prepare kill service script
+# - Needs to be here because we need the hostname of the compute node.
+# - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
+
 if [[ ${partition_or_controller} == "True" ]]; then
-    # Create kill script. Needs to be here because we need the hostname of the compute node.
-    echo ${kill_vnc_cmd} > kill-vnc-${job_number}-ssh.sh
     # Remove .cluster.local for einteinmed!
     hname=$(hostname | sed "s/.cluster.local//g")
-    echo "ssh ${hname} 'bash -s' < ${PWD}/kill-vnc-${job_number}-ssh.sh" > kill-vnc-${job_number}.sh
+    echo "ssh ${hname} 'bash -s' < ${PWD}/service-kill-${job_number}-main.sh" > service-kill-${job_number}.sh
 else
-    echo ${kill_vnc_cmd} > kill-vnc-${job_number}.sh
+    echo "bash ${PWD}/service-kill-${job_number}-main.sh" > service-kill-${job_number}.sh
 fi
+
+cat >> service-kill-${job_number}-main.sh <<HERE
+service_pid=$(cat ${PWD}/service.pid)
+if [ -z ${service_pid} ]; then
+    echo "ERROR: No service pid was found!"
+else
+    echo "$(hostname) - Killing process: ${service_pid}"
+    pkill -P ${service_pid}
+    kill ${service_pid}
+fi
+HERE
 
 #printf "password\npassword\n\n" | vncpasswd
 
@@ -30,6 +44,7 @@ else
     vncserver :1
 fi
 
+job_dir=${PWD}
 
 cd ~/pworks
 # if ! [ -d "~/pworks/noVNC-1.3.0" ];then
@@ -38,16 +53,37 @@ cd ~/pworks
 # fi
 cd noVNC-1.3.0
 
-if [ -z "$(which screen)" ]; then
-    ./utils/novnc_proxy --vnc localhost:5901 --listen localhost:${servicePort}
-else
-    screen -S noVNC -d -m ./utils/novnc_proxy --vnc localhost:5901 --listen localhost:${servicePort}
+# Load slurm module
+if ! [ -z ${slurm_module} ] && ! [[ "${slurm_module}" == "__slurm_module__" ]]; then
+    echo "module load ${slurm_module}"
+    module load ${slurm_module}
 fi
 
+if [ -z "$(which screen)" ]; then
+    ./utils/novnc_proxy --vnc localhost:5901 --listen localhost:${servicePort} &
+    echo $! > ${job_dir}/service.pid
 
-# ENTER VNC APP SPECIFICS HERE
-#module load matlab
-#export DISPLAY=:1
-#screen -S matlab -d -m matlab
+    # Launch service
+    if ! [ -z ${service_bin} ] && ! [[ "${service_bin}" == "__service_bin__" ]]; then
+        export DISPLAY=:1
+        echo "Starting ${service_bin}"
+        ${service_bin} &
+        echo $! >> ${job_dir}/service.pid
+    fi
 
-sleep 9999
+else
+    screen -S noVNC-${job_number} -d -m ./utils/novnc_proxy --vnc localhost:5901 --listen localhost:${servicePort}
+    pid=$(ps -x | grep noVNC-${job_number} | awk '{print $1}')
+    echo ${pid} > ${job_dir}/service.pid
+
+    # Launch service:
+    if ! [ -z ${service_bin} ] && ! [[ "${service_bin}" == "__service_bin__" ]]; then
+        export DISPLAY=:1
+        echo "Starting ${service_bin}"
+        screen -S ${service_bin}-${job_number} -d -m ${service_bin}
+        pid=$(ps -x | grep ${service_bin}-${job_number} | awk '{print $1}')
+        echo ${pid} >> ${job_dir}/service.pid
+    fi
+fi
+
+sleep 99999

@@ -114,7 +114,6 @@ fi
 
 # Note that job is no longer running
 echo >> ${session_sh}
-echo "rm ~/${job_number}.pid" >> ${session_sh}
 
 chmod 777 ${session_sh}
 

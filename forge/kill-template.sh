@@ -11,5 +11,4 @@ fi
 
 bash ${remote_session_dir}/kill-vnc-${job_number}.sh
 
-#kill $(ps -x | grep MATLAB | awk '{print $1}')
-#kill $(ps -x | grep matlab | awk '{print $1}')
+kill $(ps -x | grep forge | awk '{print $1}')

@@ -11,5 +11,10 @@ fi
 
 bash ${remote_session_dir}/kill-vnc-${job_number}.sh
 
-kill $(ps -x | grep MATLAB | awk '{print $1}')
-kill $(ps -x | grep matlab | awk '{print $1}')
+service_pid=$(cat ${remote_session_dir}/kill.pid)
+echo "Killing process $(hostname):${service_pid}"
+pkill -P ${service_pid}
+kill ${service_pid}
+
+#kill $(ps -x | grep MATLAB | awk '{print $1}')
+#kill $(ps -x | grep matlab | awk '{print $1}')

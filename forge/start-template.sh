@@ -48,7 +48,7 @@ else
     # ENTER VNC APP SPECIFICS HERE
     module load forge
     export DISPLAY=:1
-    screen -S matlab -d -m forge
+    screen -S forge -d -m forge
 fi
 
 sleep 99999

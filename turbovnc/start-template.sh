@@ -64,7 +64,7 @@ fi
 if [ -z "$(which screen)" ]; then
     ./utils/novnc_proxy --vnc localhost:5901 --listen localhost:${servicePort} &
     echo $! > ${job_dir}/service.pid
-    sleep 10
+    sleep 5 # Need this specially in controller node or second software won't show up!
 
     # Launch service
     if ! [ -z ${service_bin} ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
@@ -83,7 +83,7 @@ else
     screen -S noVNC-${job_number} -d -m ./utils/novnc_proxy --vnc localhost:5901 --listen localhost:${servicePort}
     pid=$(ps -x | grep noVNC-${job_number} | grep -wv grep | awk '{print $1}')
     echo ${pid} > ${job_dir}/service.pid
-    sleep 10
+    sleep 5  # Need this specially in controller node or second software won't show up!
 
     # Launch service:
     if ! [ -z ${service_bin} ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then

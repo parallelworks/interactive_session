@@ -19,6 +19,8 @@
                 <param name="service_background" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="un service in background?" help='Select Yes to run the GUI service in the background' width="25%_none" optional='true' float="right"></param>
             </when>
             <when value="jupyter-host">
+                <param name='conda_sh' label='Path to conda.sh' type='text' value='/contrib/anaconda/anaconda3/latest/etc/profile.d/conda.sh' help='Path to use in source /path/to/conda.sh' width='50%_none'></param>
+                <param name='conda_env' label='Conda environment (recommened: base)' type='text' value='base' help='Environment to active. The base environment enables changing kernel to other environments!' width='50%_none'></param>
                 <param name='password' label='Password for notebook access:' type='text' value='EnterPassword' help='' width='50%_none'></param>
             </when>
             <when value="r-singularity">

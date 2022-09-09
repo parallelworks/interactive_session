@@ -18,11 +18,12 @@ sha=$(python3 -c "from notebook.auth.security import passwd; print(passwd('${pas
 
 jupyter-notebook \
     --port=$servicePort \
+    --ip=0.0.0.0 \
     --NotebookApp.iopub_data_rate_limit=10000000000 \
     --NotebookApp.token= \
     --NotebookApp.password=$sha \
     --no-browser \
-    --notebook-dir=~/ \
+    --notebook-dir=/ \
     --NotebookApp.tornado_settings="{'static_url_prefix':'/${FORWARDPATH}/${IPADDRESS}/${openPort}/static/'}" \
     --NotebookApp.base_url="/${FORWARDPATH}/${IPADDRESS}/${openPort}/" \
     --NotebookApp.allow_origin=*

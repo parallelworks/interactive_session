@@ -119,6 +119,7 @@ else
 fi
 
 bash ${session_wrapper_dir}/session_wrapper.sh $@ \
+        --job_number ${job_number} \
         --openPort ${openPort} \
         --controller ${controller} \
         --start_service_sh ${start_service_sh} \

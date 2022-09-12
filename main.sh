@@ -100,13 +100,13 @@ mv service.html /pw/jobs/${job_number}/service.html
 if [ -f "${service_name}/start-template.sh" ]; then
     start_service_sh=/pw/jobs/${job_number}/start-service.sh
     cp ${service_name}/start-template.sh ${start_service_sh}
-    replace_templated_inputs ${start_service_sh} $@
+    replace_templated_inputs ${start_service_sh} $@ --job_number ${job_number}
 fi
 
 if [ -f "${service_name}/kill-template.sh" ]; then
     kill_service_sh=/pw/jobs/${job_number}/kill-service.sh
     cp ${service_name}/kill-template.sh ${kill_service_sh}
-    replace_templated_inputs ${kill_service_sh} $@
+    replace_templated_inputs ${kill_service_sh} $@ --job_number ${job_number}
 fi
 
 

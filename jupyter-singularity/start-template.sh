@@ -38,7 +38,7 @@ fi
 # https://support.rstudio.com/hc/en-us/articles/200552326-Running-RStudio-Server-with-a-Proxy
 
 # Moving the python3 command to NotebookApp.password= wont work!
-sha=$(singularity run ${path_to_sing} python3 -c "from notebook.auth.security import passwd; print(passwd('__password__', algorithm = 'sha1'))")
+sha=$(singularity exec ${path_to_sing} python3 -c "from notebook.auth.security import passwd; print(passwd('__password__', algorithm = 'sha1'))")
 
 if [ -z "${sha}" ]; then
     echo "ERROR: No password specified for jupyter notebook - exiting the workflow"

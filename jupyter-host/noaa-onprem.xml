@@ -34,7 +34,7 @@
                 </param>
             </when>
         </conditional>
-        <param name="stream" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW' width="25%_none" optional='true' float="right">
+        <param name="stream" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW' width="25%_none" optional='true' float="right">
         </param>
         <param name='controller' label='Controller host' type='text' value='pw.conf' help='Use hostname@ip or a proxy like PoolName.clusters.pw. Use pw.conf to get PoolName from pw.conf' width='50%_none'>
         </param>

@@ -55,7 +55,7 @@ singularity run ${gpu_flag} \
     --NotebookApp.token= \
     --NotebookApp.password=${sha} \
     --no-browser \
-    --notebook-dir=~/ \
+    --notebook-dir=/ \
     --NotebookApp.tornado_settings="{'static_url_prefix':'/${FORWARDPATH}/${IPADDRESS}/${openPort}/static/'}" \
     --NotebookApp.base_url="/${FORWARDPATH}/${IPADDRESS}/${openPort}/" \
     --NotebookApp.allow_origin=*

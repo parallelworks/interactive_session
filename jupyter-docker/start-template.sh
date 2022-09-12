@@ -4,7 +4,7 @@ servicePort=__servicePort__
 job_number=__job_number__
 partition_or_controller=__partition_or_controller__
 
-if [[ ${use_gpus} == "True" ]]; then
+if [[ __use_gpus__ == "True" ]]; then
     gpu_flag="--gpus all"
 else
     gpu_flag=""

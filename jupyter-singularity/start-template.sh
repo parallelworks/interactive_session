@@ -45,7 +45,7 @@ if [ -z "${sha}" ]; then
     exit 1
 fi
 
-singularity run ${gpu_flag} \
+singularity exec ${gpu_flag} \
     ${mount_dirs} \
     ${path_to_sing} \
     jupyter-notebook \

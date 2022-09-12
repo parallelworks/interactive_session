@@ -1,4 +1,15 @@
 #!/bin/bash
+source lib.sh
+job_number=$(basename ${PWD})
+
+echo
+echo "JOB NUMBER:  ${job_number}"
+echo "USER:        ${PW_USER}"
+echo "DATE:        $(date)"
+# Very useful to rerun a workflow with the exact same code version!
+commit_hash=$(git log --pretty=format:'%h' -n 1)
+echo "COMMIT HASH: ${commit_hash}"
+echo
 
 source lib.sh
 

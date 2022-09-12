@@ -72,15 +72,6 @@
     </param>
     </section>
     <section name='advanced_options_other' type='section' title='Advanced Options' expanded='false'>
-        <conditional name="isession_clone_latest_cond">
-            <param name="isession_clone_latest" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Clone interactive_session repository?" help='Clone repository or use the local copy of the repository' width="25%_none" optional='true' float="right"/>
-            <when value="Yes">
-                <param name='isession_repo_url' label='URL of repository' type='text' help='This is passed to command: git clone --recurse-submodules' value='https://github.com/parallelworks/interactive_session.git' width='50%_none'>
-                </param>
-                <param name='isession_repo_branch' label='Branch name' type='text' help='Name of the Github branch to check out: git checkout branch-name' value='main' width='50%_none'>
-                </param>
-            </when>
-        </conditional>
         <param name="stream" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW' width="25%_none" optional='true' float="right">
         </param>
         <param name='controller' label='Controller host' type='text' value='pw.conf' help='Use hostname@ip or a proxy like PoolName.clusters.pw. Use pw.conf to get PoolName from pw.conf' width='50%_none'>

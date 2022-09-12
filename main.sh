@@ -17,7 +17,7 @@ source lib.sh
 commit_hash=$(git log --pretty=format:'%h' -n 1)
 echo "COMMIT HASH: ${commit_hash}"
 
-echo "service wrapper: $@"
+echo "$0 $@"
 parseArgs $@
 
 getOpenPort
@@ -42,7 +42,7 @@ if [[ "$servicePort" == "" ]];then
 fi
 
 if ! [ -d "${service_name}" ]; then
-    echod "ERROR: Directory ${service_name} was not found --> ${service_name} is not supported --> Exiting workflow"
+    echod "ERROR: Directory ${service_name} was not found --> Service ${service_name} is not supported --> Exiting workflow"
     exit 1
 fi
 

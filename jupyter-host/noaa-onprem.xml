@@ -1,6 +1,7 @@
 <tool id='Matthew.Shaxted_interactive_session' name='Matthew.Shaxted_interactive_session'>
   <command interpreter='bash'>main.sh</command>
   <inputs>
+  <param name='service_name' label='Service' type='hidden' value='jupyter-host' width='50%_none'></param>
    <section name='service_sec' type='section' title='Jupyter Notebook Settings' expanded='true'>
         <param name='conda_sh' label='Path to conda.sh' type='text' value='/contrib/anaconda/anaconda3/latest/etc/profile.d/conda.sh' help='Path to use in source /path/to/conda.sh' width='50%_none'></param>
         <param name='conda_env' label='Conda environment (recommened: base)' type='text' value='base' help='Environment to active. The base environment enables changing kernel to other environments!' width='50%_none'></param>

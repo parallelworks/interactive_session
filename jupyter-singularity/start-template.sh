@@ -2,7 +2,6 @@ echo "$(date): $(hostname):${PWD} $0 $@"
 
 path_to_sing="__path_to_sing__"
 servicePort="__servicePort__"
-use_gpus="__use_gpus__"
 
 # MOUNT DIR DEFAULTS
 mount_dirs="${mount_dirs} -B ${HOME}:${HOME}"
@@ -18,8 +17,12 @@ echo ${mdirs_cmd}
 
 
 # GPU SUPPORT
-if [[ ${use_gpus} == "True" ]]; then
+if [[ __use_gpus__ == "True" ]]; then
     gpu_flag="--nv"
+    # This is only needed in PW clusters
+    if [ -d "/usr/share/nvidia/" ]; then
+        mount_dirs="${mount_dirs} -B /usr/share/nvidia/:/usr/share/nvidia -B /usr/bin/nvidia-smi:/usr/bin/nvidia-smi"
+    fi
 else
     gpu_flag=""
 fi
@@ -45,6 +48,7 @@ if [ -z "${sha}" ]; then
     exit 1
 fi
 
+set -x
 singularity exec ${gpu_flag} \
     ${mount_dirs} \
     ${path_to_sing} \

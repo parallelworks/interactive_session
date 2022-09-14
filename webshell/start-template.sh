@@ -73,7 +73,7 @@ if [ -z "$(which screen)" ]; then
     echo $! >> ${job_dir}/service.pid
 else
     screen -S tty-${job_number} -d -m ./pworks/noVNC-1.3.0/ttyd.x86_64 -p $servicePort bash
-    pid=$(ps -x | grep noVNC-${job_number} | grep -wv grep | awk '{print $1}')
+    pid=$(ps -x | grep tty-${job_number} | grep -wv grep | awk '{print $1}')
     echo ${pid} >> ${job_dir}/service.pid
 fi
 

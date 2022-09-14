@@ -75,7 +75,7 @@ if ! [ -d "~/pworks/noVNC-1.3.0" ]; then
             scp ${ssh_options} ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pworks
         fi
     fi
-    tar -zxf pworks/noVNC-1.3.0.tgz -C ~/pworks
+    tar -zxf ~/pworks/noVNC-1.3.0.tgz -C ~/pworks
     set +x
 fi
 cd  ~/pworks/noVNC-1.3.0

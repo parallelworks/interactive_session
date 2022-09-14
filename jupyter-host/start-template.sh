@@ -16,6 +16,7 @@ export XDG_RUNTIME_DIR=""
 echo "Generating sha"
 sha=$(python3 -c "from notebook.auth.security import passwd; print(passwd('${password}', algorithm = 'sha1'))")
 
+set -x
 jupyter-notebook \
     --port=$servicePort \
     --ip=0.0.0.0 \

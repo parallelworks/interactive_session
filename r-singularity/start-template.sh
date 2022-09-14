@@ -32,7 +32,7 @@ printf 'provider=sqlite\ndirectory=/var/lib/rstudio-server\n' > database.conf
 # https://github.com/rstudio/rstudio/issues/7953
 # https://support.rstudio.com/hc/en-us/articles/200552326-Running-RStudio-Server-with-a-Proxy
 
-
+set -x
 singularity run \
     --bind run:/run,var-lib-rstudio-server:/var/lib/rstudio-server,database.conf:/etc/rstudio/database.conf \
     ${mount_dirs} \

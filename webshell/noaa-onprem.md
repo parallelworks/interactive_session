@@ -1,5 +1,5 @@
-## ecFlow Interactive Session
-This workflow starts an interactive session for ecFlow in a desktop environment running in the compute or controller nodes. The services are started in the selected slurm partition using an sbatch command.
+## Webshell
+This workflow starts a shell in the controller or compute nodes. The services are started in the selected slurm partition using an sbatch command.
 
 #### Instructions
 

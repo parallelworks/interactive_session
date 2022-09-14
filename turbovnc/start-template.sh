@@ -54,7 +54,7 @@ if ! [ -d "~/pworks/noVNC-1.3.0" ]; then
     set -x
     mkdir -p ~/pworks
     ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-    if [[ ${partition_or_controller} == "True" ]];
+    if [[ ${partition_or_controller} == "True" ]]; then
         # Running in a compute partition
         if [[ "$USERMODE" == "k8s" ]]; then
             # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT

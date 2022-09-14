@@ -108,7 +108,7 @@ fi
 
 
 if [[ ${partition_or_controller} == "True" ]]; then
-    echo "Submitting batch job to ${controller}"
+    echo "Submitting sbatch job to ${controller}"
     session_wrapper_dir=partition
 else
     echo "Submitting ssh job to ${controller}"

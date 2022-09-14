@@ -82,7 +82,6 @@ if [[ "${stream}" == "True" ]]; then
 fi
 
 cat >> ${session_sh} <<HERE
-
 if [[ "${pooltype}" == slurmshv2 ]]; then
     # register the worker to the coaster service
     ~/pworks/remote.sh
@@ -97,6 +96,10 @@ echo
 FORWARDPATH=${FORWARDPATH}
 IPADDRESS=${IPADDRESS}
 openPort=${openPort}
+masterIp=${masterIp}
+USER_CONTAINER_HOST=${USER_CONTAINER_HOST}
+controller=${controller}
+USERMODE=${USERMODE}
 
 # Create a port tunnel from the allocated compute node to the user container (or user node in some cases)
 screen_bin=\$(which screen 2> /dev/null)

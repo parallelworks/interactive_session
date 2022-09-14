@@ -86,6 +86,7 @@ echo \$$ > ${job_number}.pid
 FORWARDPATH=${FORWARDPATH}
 IPADDRESS=${IPADDRESS}
 openPort=${openPort}
+USER_CONTAINER_HOST=${USER_CONTAINER_HOST}
 
 # Create a port tunnel from the allocated compute node to the user container (or user node in some cases)
 screen_bin=\$(which screen 2> /dev/null)

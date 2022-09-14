@@ -47,12 +47,35 @@ fi
 
 job_dir=${PWD}
 
-cd ~/pworks
-# if ! [ -d "~/pworks/noVNC-1.3.0" ];then
-#     wget https://github.com/novnc/noVNC/archive/refs/tags/v1.3.0.tar.gz
-#     tar xzvf v1.3.0.tar.gz
-# fi
-cd noVNC-1.3.0
+# Check if the noVNC directory is present
+# - if not copy from user container -> /swift-pw-bin/noVNC-1.3.0.tgz
+if ! [ -d "~/pworks/noVNC-1.3.0" ]; then
+    mkdir -p ~/pworks
+    ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+    if [[ ${partition_or_controller} == "True" ]];
+        # Running in a compute partition
+        if [[ "$USERMODE" == "k8s" ]]; then
+            # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
+            # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
+            # Works because home directory is shared!
+            ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pworks
+        else # Docker mode
+            # Works because home directory is shared!
+            ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pworks
+        fi
+    else
+        # Running in a controller node
+        if [[ "$USERMODE" == "k8s" ]]; then
+            # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
+            # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
+            scp ${ssh_options} ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pworks
+        else # Docker mode
+            scp ${ssh_options} ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pworks
+        fi
+    fi
+    tar -zxf pworks/noVNC-1.3.0.tgz -C ~/pworks
+fi
+cd  ~/pworks/noVNC-1.3.0
 
 # Load slurm module
 # - multiple quotes are used to prevent replacement of __varname__ !!!

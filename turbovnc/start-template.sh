@@ -31,21 +31,37 @@ HERE
 
 #printf "password\npassword\n\n" | vncpasswd
 
+VNC_DISPLAY=":1"
+
 if [ -z $(which vncserver) ]; then
     vncserver_exec=/opt/TurboVNC/bin/vncserver
     if [ -f "${vncserver_exec}" ]; then
-        ${vncserver_exec} -kill :1
-        ${vncserver_exec} :1
+        ${vncserver_exec} -kill $VNC_DISPLAY
+        ${vncserver_exec} $VNC_DISPLAY
     else
         echo "ERROR: vncserver command not found!"
         exit 1
     fi
 else
-    vncserver -kill :1
-    vncserver :1
+    vncserver -kill $VNC_DISPLAY
+    vncserver $VNC_DISPLAY
 fi
 
+export DISPLAY=$VNC_DISPLAY
+
 job_dir=${PWD}
+
+rm -f ${job_dir}/service.pid
+touch ${job_dir}/service.pid
+
+DESKTOP_CMD="startxfce4"
+
+if [ -z $(which $DESKTOP_CMD) ]; then
+    echo "WARNING: vnc desktop not found!"
+else
+    $DESKTOP_CMD &
+    echo $! > ${job_dir}/service.pid
+fi
 
 # Check if the noVNC directory is present
 # - if not copy from user container -> /swift-pw-bin/noVNC-1.3.0.tgz
@@ -89,7 +105,7 @@ fi
 
 if [ -z "$(which screen)" ]; then
     ./utils/novnc_proxy --vnc localhost:5901 --listen localhost:${servicePort} &
-    echo $! > ${job_dir}/service.pid
+    echo $! >> ${job_dir}/service.pid
     sleep 5 # Need this specially in controller node or second software won't show up!
 
     # Launch service
@@ -108,12 +124,12 @@ if [ -z "$(which screen)" ]; then
 else
     screen -S noVNC-${job_number} -d -m ./utils/novnc_proxy --vnc localhost:5901 --listen localhost:${servicePort}
     pid=$(ps -x | grep noVNC-${job_number} | grep -wv grep | awk '{print $1}')
-    echo ${pid} > ${job_dir}/service.pid
+    echo ${pid} >> ${job_dir}/service.pid
     sleep 5  # Need this specially in controller node or second software won't show up!
 
     # Launch service:
     if ! [ -z ${service_bin} ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
-        export DISPLAY=:1
+       
         if [[ ${service_background} == "False" ]]; then
             echo "Running  ${service_bin}"
             ${service_bin}

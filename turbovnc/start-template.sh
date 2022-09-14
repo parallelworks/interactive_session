@@ -64,7 +64,7 @@ fi
 
 # Check if the noVNC directory is present
 # - if not copy from user container -> /swift-pw-bin/noVNC-1.3.0.tgz
-if ! [ -d "~/pworks/noVNC-1.3.0" ]; then
+if ! [ -d "$(echo ~/pworks/noVNC-1.3.0)" ]; then
     echo "Bootstrapping noVNC"
     set -x
     mkdir -p ~/pworks

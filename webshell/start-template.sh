@@ -1,12 +1,13 @@
 # Runs via ssh + sbatch
 
+partition_or_controller=__partition_or_controller__
 servicePort="__servicePort__"
 
 cd ~/
 
 # Check if the noVNC directory is present
 # - if not copy from user container -> /swift-pw-bin/noVNC-1.3.0.tgz
-if ! [ -d "~/pworks/noVNC-1.3.0" ]; then
+if ! [ -d "$(echo ~/pworks/noVNC-1.3.0)" ]; then
     echo "Bootstrapping noVNC"
     set -x
     mkdir -p ~/pworks
@@ -35,6 +36,7 @@ if ! [ -d "~/pworks/noVNC-1.3.0" ]; then
     tar -zxf ~/pworks/noVNC-1.3.0.tgz -C ~/pworks
     set +x
 fi
+chmod +x ./pworks/noVNC-1.3.0/ttyd.x86_64
 
 screen -wipe
 screen -S tty -d -m  ./pworks/noVNC-1.3.0/ttyd.x86_64 -p $servicePort bash

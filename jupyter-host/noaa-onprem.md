@@ -1,5 +1,5 @@
-## Webshell
-This workflow starts a shell in the controller or compute nodes. The services are started in the selected slurm partition using an sbatch command.
+## Jupyter Interactive Session
+This workflow starts a Jupyter server in a slurm partition or in the controller node. The services are started in the selected slurm partition using an sbatch command.
 
 #### Instructions
 

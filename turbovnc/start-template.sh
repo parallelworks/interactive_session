@@ -50,6 +50,8 @@ job_dir=${PWD}
 # Check if the noVNC directory is present
 # - if not copy from user container -> /swift-pw-bin/noVNC-1.3.0.tgz
 if ! [ -d "~/pworks/noVNC-1.3.0" ]; then
+    echo "Bootstrapping noVNC"
+    set -x
     mkdir -p ~/pworks
     ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
     if [[ ${partition_or_controller} == "True" ]];
@@ -74,6 +76,7 @@ if ! [ -d "~/pworks/noVNC-1.3.0" ]; then
         fi
     fi
     tar -zxf pworks/noVNC-1.3.0.tgz -C ~/pworks
+    set +x
 fi
 cd  ~/pworks/noVNC-1.3.0
 

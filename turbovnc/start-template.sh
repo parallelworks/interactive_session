@@ -85,9 +85,9 @@ if ! [ -d "~/pworks/noVNC-1.3.0" ]; then
         if [[ "$USERMODE" == "k8s" ]]; then
             # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
             # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-            scp ${ssh_options} ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pworks
+            scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pworks
         else # Docker mode
-            scp ${ssh_options} ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pworks
+            scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pworks
         fi
     fi
     tar -zxf ~/pworks/noVNC-1.3.0.tgz -C ~/pworks

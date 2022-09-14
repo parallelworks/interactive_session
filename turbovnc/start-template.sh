@@ -54,14 +54,13 @@ job_dir=${PWD}
 rm -f ${job_dir}/service.pid
 touch ${job_dir}/service.pid
 
-DESKTOP_CMD="startx"
-
-if [ -z $(which $DESKTOP_CMD) ]; then
-    echo "WARNING: vnc desktop not found!"
-else
-    $DESKTOP_CMD &
-    echo $! > ${job_dir}/service.pid
-fi
+# DESKTOP_CMD="startxfce4"
+# if [ -z $(which $DESKTOP_CMD) ]; then
+#     echo "WARNING: vnc desktop not found!"
+# else
+#     $DESKTOP_CMD &
+#     echo $! > ${job_dir}/service.pid
+# fi
 
 # Check if the noVNC directory is present
 # - if not copy from user container -> /swift-pw-bin/noVNC-1.3.0.tgz

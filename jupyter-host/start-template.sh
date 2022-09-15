@@ -12,6 +12,7 @@ if [ ! -d "$INSTALL_DIR" ] && [ "__conda_install__" == "Yes" ];then
     cd $INSTALL_DIR
     wget -O $INSTALL_DIR/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
     bash $INSTALL_DIR/miniconda.sh -b -p $INSTALL_DIR
+    rm miniconda.sh -f
 
     source $INSTALL_DIR/etc/profile.d/conda.sh
     conda activate __conda_env__

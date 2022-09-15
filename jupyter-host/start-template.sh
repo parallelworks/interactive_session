@@ -4,7 +4,7 @@ password="__password__"
 
 INSTALL_DIR="$(echo __conda_sh__)"
 
-if [ ! -d "$INSTALL_DIR" ] && [ "__conda_install__" == "Yes" ];then
+if [ ! -d "$INSTALL_DIR" ] && [ "__conda_install__" == "True" ];then
 
     echo "No conda environment found - provisioning miniconda the first time..."
 

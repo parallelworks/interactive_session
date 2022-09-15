@@ -28,7 +28,7 @@ fi
 
 echo "Activating conda..."
 # FIXME: THIS SHOULD BE AN INPUT!
-source $INSTALL_DIR/etc/profile.d/conda.sh
+source $CONDA_PATH/etc/profile.d/conda.sh
 conda activate __conda_env__
 echo "Conda activated"
 

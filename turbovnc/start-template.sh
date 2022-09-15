@@ -35,6 +35,14 @@ VNC_DISPLAY=":1"
 
 if [ -z $(which vncserver) ]; then
     vncserver_exec=/opt/TurboVNC/bin/vncserver
+
+    if [ ! -f /home/$USER/.vnc/passwd ]; then
+        mkdir -p /home/$USER/.vnc
+        echo headless | /opt/TurboVNC/bin/vncpasswd -f > /home/$USER/.vnc/passwd
+        chown -R $USER:$USER /home/$USER/.vnc
+        chmod 0600 /home/$USER/.vnc/passwd
+    fi
+
     if [ -f "${vncserver_exec}" ]; then
         ${vncserver_exec} -kill $VNC_DISPLAY
         ${vncserver_exec} $VNC_DISPLAY
@@ -42,7 +50,16 @@ if [ -z $(which vncserver) ]; then
         echo "ERROR: vncserver command not found!"
         exit 1
     fi
+
 else
+
+    if [ ! -f /home/$USER/.vnc/passwd ]; then
+        mkdir -p /home/$USER/.vnc
+        echo headless | vncpasswd -f > /home/$USER/.vnc/passwd
+        chown -R $USER:$USER /home/$USER/.vnc
+        chmod 0600 /home/$USER/.vnc/passwd
+    fi
+
     vncserver -kill $VNC_DISPLAY
     vncserver $VNC_DISPLAY
 fi
@@ -55,6 +72,7 @@ rm -f ${job_dir}/service.pid
 touch ${job_dir}/service.pid
 
 DESKTOP_CMD="mate-session"
+
 if [ -z $(which $DESKTOP_CMD) ]; then
     echo "WARNING: vnc desktop not found!"
 else

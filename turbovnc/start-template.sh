@@ -54,9 +54,7 @@ job_dir=${PWD}
 rm -f ${job_dir}/service.pid
 touch ${job_dir}/service.pid
 
-# DESKTOP_CMD="mate-session"
-DESKTOP_CMD="startxfce4"
-
+DESKTOP_CMD="mate-session"
 if [ -z $(which $DESKTOP_CMD) ]; then
     echo "WARNING: vnc desktop not found!"
 else

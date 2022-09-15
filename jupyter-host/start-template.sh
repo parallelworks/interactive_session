@@ -2,9 +2,28 @@
 servicePort="__servicePort__"
 password="__password__"
 
+INSTALL_DIR="$(echo __conda_sh__)"
+
+if [ ! -d "$INSTALL_DIR" ] && [ "__conda_install__" == "Yes" ];then
+
+    echo "No conda environment found - provisioning miniconda the first time..."
+
+    mkdir -p __conda_sh__
+    cd $INSTALL_DIR
+    wget -O $INSTALL_DIR/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    bash $INSTALL_DIR/miniconda.sh -b -p $INSTALL_DIR
+
+    source $INSTALL_DIR/etc/profile.d/conda.sh
+    conda activate __conda_env__
+    conda install -c anaconda jupyter
+
+    echo "Conda now installed..."
+
+fi
+
 echo "Activating conda..."
 # FIXME: THIS SHOULD BE AN INPUT!
-source __conda_sh__
+source $INSTALL_DIR/etc/profile.d/conda.sh
 conda activate __conda_env__
 echo "Conda activated"
 

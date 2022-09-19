@@ -94,7 +94,7 @@ mv service.html /pw/jobs/${job_number}/service.html
 
 
 # START / KILL SCRIPTS
-# - Overwrite any argument by passing it before $@! E.g.: --servicePort 1234 $@
+# - Overwrite any argument by passing it BEFORE AND AFTER $@! E.g.: --servicePort 1234 $@
 if [ -f "${service_name}/start-template.sh" ]; then
     start_service_sh=/pw/jobs/${job_number}/start-service.sh
     cp ${service_name}/start-template.sh ${start_service_sh}
@@ -116,7 +116,7 @@ else
     session_wrapper_dir=controller
 fi
 
-# - Overwrite any argument by passing it before $@! E.g.: --servicePort 1234 $@
+# - Overwrite any argument by passing it BEFORE AND AFTER $@! E.g.: --servicePort 1234 $@
 bash ${session_wrapper_dir}/session_wrapper.sh $@ \
         --job_number ${job_number} \
         --openPort ${openPort} \

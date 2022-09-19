@@ -70,7 +70,7 @@
         </param>
         <param name='controller' label='Controller host' type='text' value='pw.conf' help='Use hostname@ip or a proxy like PoolName.clusters.pw. Use pw.conf to get PoolName from pw.conf' width='50%_none'>
         </param>
-        <param name='chdir' label='Working directory of the batch script' type='text' value='/home/\$(whoami)/__job_number__' help='Working directory of the batch script to directory before it is executed' width='50%_none'>
+        <param name='chdir' label='Working directory of the batch script' type='text' value='/home/\$(whoami)/pworks/__job_number__' help='Working directory of the batch script to directory before it is executed' width='50%_none'>
         </param>
     </section>
   </inputs>

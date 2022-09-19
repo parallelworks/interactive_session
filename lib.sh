@@ -33,7 +33,7 @@ parseArgs() {
 # - if not works --> use random
 getOpenPort() {
     minPort=50000
-    maxPort=50500
+    maxPort=60500
 
     openPort=$(curl -s "https://${PW_USER_HOST}/api/v2/usercontainer/getSingleOpenPort?minPort=${minPort}&maxPort=${maxPort}&key=${PW_API_KEY}")
     # Check if openPort variable is a port

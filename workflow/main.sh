@@ -64,7 +64,7 @@ fi
 
 else
 
-isession_dir="."
+isession_dir="clone"
 
 fi
 

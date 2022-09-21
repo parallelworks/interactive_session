@@ -50,8 +50,7 @@ if [[ "${isession_clone_latest}" == "True" ]]; then
     rm -rf ${isession_dir}
     git clone --recurse-submodules ${isession_repo_url} ${isession_dir}
     git --git-dir=${isession_dir}/.git --work-tree=${isession_dir}/ checkout ${isession_repo_branch}
-fi
-
+    
 # MAKE SURE DIRECTORY EXISTS OR PLATFORM WILL CRASH
 # https://github.com/parallelworks/issues/issues/323
 if [ -d "${isession_dir}" ]; then
@@ -59,6 +58,8 @@ if [ -d "${isession_dir}" ]; then
 else
     echod "ERROR: Directory ${PWD}/${isession_dir} was not found!"
     exit 1
+fi
+
 fi
 
 echo

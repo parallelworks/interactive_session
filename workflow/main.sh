@@ -44,15 +44,14 @@ f_read_cmd_args $@
 
 # MANAGE CODE
 echo
-if [[ "${isession_clone_latest}" == "True" ]]; then
-
 isession_dir=interactive_session
+if [[ "${isession_clone_latest}" == "True" ]]; then
+    echo Cloning ${isession_repo_url}
+    rm -rf ${isession_dir}
+    git clone --recurse-submodules ${isession_repo_url} ${isession_dir}
+    git --git-dir=${isession_dir}/.git --work-tree=${isession_dir}/ checkout ${isession_repo_branch}
+fi
 
-echo Cloning ${isession_repo_url}
-rm -rf ${isession_dir}
-git clone --recurse-submodules ${isession_repo_url} ${isession_dir}
-git --git-dir=${isession_dir}/.git --work-tree=${isession_dir}/ checkout ${isession_repo_branch}
-    
 # MAKE SURE DIRECTORY EXISTS OR PLATFORM WILL CRASH
 # https://github.com/parallelworks/issues/issues/323
 if [ -d "${isession_dir}" ]; then
@@ -60,12 +59,6 @@ if [ -d "${isession_dir}" ]; then
 else
     echod "ERROR: Directory ${PWD}/${isession_dir} was not found!"
     exit 1
-fi
-
-else
-
-isession_dir="clone"
-
 fi
 
 echo

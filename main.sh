@@ -2,8 +2,8 @@
 source lib.sh
 job_number=$(basename ${PWD})
 
-# source the users env file
-source ~/.env
+# export the users env file (for some reason not all systems are getting these upon execution)
+while read LINE; do export "$LINE"; done < ~/.env
 
 echo
 echo "JOB NUMBER:  ${job_number}"

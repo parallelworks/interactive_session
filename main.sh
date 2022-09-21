@@ -12,6 +12,9 @@ commit_hash=$(git --git-dir=clone/.git log --pretty=format:'%h' -n 1)
 echo "COMMIT HASH: ${commit_hash}"
 echo
 
+# change permissions of run directly so we can execute all files
+chmod 777 * -Rf
+
 source lib.sh
 
 echo "$0 $@"

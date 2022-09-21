@@ -2,6 +2,9 @@
 source lib.sh
 job_number=$(basename ${PWD})
 
+# source the users env file
+source ~/.env
+
 echo
 echo "JOB NUMBER:  ${job_number}"
 echo "USER:        ${PW_USER}"

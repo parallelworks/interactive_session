@@ -50,7 +50,7 @@
     </section>
         <section name='advanced_options_gh' type='section' title='Advanced options: Github' expanded='false'>
         <conditional name="isession_clone_latest_cond">
-            <param name="isession_clone_latest" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Clone interactive_session repository?" help='Clone repository or use the local copy of the repository' width="25%_none" optional='true' float="right"/>
+            <param name="isession_clone_latest" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Clone interactive_session repository?" help='Clone repository or use the local copy of the repository' width="25%_none" optional='true' float="right"/>
             <when value="Yes">
                 <param name='isession_repo_url' label='URL of repository' type='text' help='This is passed to command: git clone --recurse-submodules' value='git@github.com:parallelworks/interactive_session.git' width='50%_none'>
                 </param>

@@ -88,6 +88,27 @@ if [ -z "${controller}" ]; then
     exit 1
 fi
 
+# RUN IN CONTROLLER OR PARTITION NODE
+if [[ ${partition_or_controller} == "True" ]]; then
+    echo "Submitting sbatch job to ${controller}"
+    session_wrapper_dir=partition
+    service_args=$@
+else
+    echo "Submitting ssh job to ${controller}"
+    session_wrapper_dir=controller
+    # Check if service port is available
+    echo "Checking if servicePort=${servicePort} is available in ${controller}"
+    sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
+    servicePort=$($sshcmd 'bash -s' < ${session_wrapper_dir}/get_service_port.sh ${servicePort})
+    if [ -z "${servicePort}" ]; then
+        echo "ERROR: No available service port was found! - exiting the workflow"
+        exit 1
+    fi
+    echo "Using servicePort=${servicePort}"
+    # - Overwrite any argument by passing it BEFORE AND AFTER $@! E.g.: --servicePort 1234 $@  --servicePort 1234
+    service_args="--servicePort ${servicePort} $@ --servicePort ${servicePort}"
+fi
+
 # SERVICE URL
 echo "Generating session html"
 source ${service_name}/url.sh
@@ -100,30 +121,19 @@ mv service.html /pw/jobs/${job_number}/service.html
 
 
 # START / KILL SCRIPTS
-# - Overwrite any argument by passing it BEFORE AND AFTER $@! E.g.: --servicePort 1234 $@  --servicePort 1234
 if [ -f "${service_name}/start-template.sh" ]; then
     start_service_sh=/pw/jobs/${job_number}/start-service.sh
     cp ${service_name}/start-template.sh ${start_service_sh}
-    replace_templated_inputs ${start_service_sh} $@ --job_number ${job_number}
+    replace_templated_inputs ${start_service_sh} ${service_args} --job_number ${job_number}
 fi
 
 if [ -f "${service_name}/kill-template.sh" ]; then
     kill_service_sh=/pw/jobs/${job_number}/kill-service.sh
     cp ${service_name}/kill-template.sh ${kill_service_sh}
-    replace_templated_inputs ${kill_service_sh} $@ --job_number ${job_number}
+    replace_templated_inputs ${kill_service_sh} ${service_args} --job_number ${job_number}
 fi
 
-
-if [[ ${partition_or_controller} == "True" ]]; then
-    echo "Submitting sbatch job to ${controller}"
-    session_wrapper_dir=partition
-else
-    echo "Submitting ssh job to ${controller}"
-    session_wrapper_dir=controller
-fi
-
-# - Overwrite any argument by passing it BEFORE AND AFTER $@! E.g.: --servicePort 1234 $@  --servicePort 1234
-bash ${session_wrapper_dir}/session_wrapper.sh $@ \
+bash ${session_wrapper_dir}/session_wrapper.sh ${service_args} \
         --job_number ${job_number} \
         --openPort ${openPort} \
         --controller ${controller} \

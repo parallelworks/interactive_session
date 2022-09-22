@@ -3,8 +3,8 @@
   <inputs>
   <param name='service_name' label='Service' type='hidden' value='jupyter-host' width='50%_none'></param>
    <section name='service_sec' type='section' title='Jupyter Notebook Settings' expanded='true'>
-        <param name='conda_sh' label='Path to conda environment' type='text' value='~/pworks/miniconda' help='Path to use in source /path/to/conda/etc/profile.d/conda.sh' width='50%_none'></param>
-        <param name="conda_install" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Install miniconda if not there?" help='Select Yes to install miniconda if the above directory does not exist' width="25%_none" optional='true' float="right">
+        <param name='conda_sh' label='Path to conda environment' type='text' value='/gs/gsfs0/hpc01/rhel8/apps/conda3/' help='Path to use in source /path/to/conda/etc/profile.d/conda.sh' width='50%_none'></param>
+        <param name="conda_install" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Install miniconda if not there?" help='Select Yes to install miniconda if the above directory does not exist' width="25%_none" optional='true' float="right">
         </param>
         <param name='conda_env' label='Conda environment (recommended: base)' type='text' value='base' help='Environment to active. The base environment enables changing kernel to other environments!' width='50%_none'></param>
         <param name='password' label='Password for notebook access:' type='text' value='EnterPassword' help='' width='50%_none'></param>
@@ -32,9 +32,9 @@
         </param>
         <param name='controller' label='Controller host' type='text' value='pw.conf' help='Use hostname@ip or a proxy like PoolName.clusters.pw. Use pw.conf to get PoolName from pw.conf' width='50%_none'>
         </param>
-        <param name='chdir' label='Working directory of the batch script' type='text' value='/home/\$(whoami)/pworks/__job_number__' help='Working directory of the batch script to directory before it is executed' width='50%_none'>
+        <param name='chdir' label='Working directory of the batch script' type='text' value='/gs/gsfs0/users/\$(whoami)/pw/jobs/__job_number__' help='Working directory of the batch script to directory before it is executed' width='50%_none'>
         </param>
-        <param name='servicePort' label='Interactive remote service port' type='text' help='Port of the listening service on the remote compute node' value='6080' width='50%_none'>
+        <param name='servicePort' label='Interactive remote service port' type='text' help='Port of the listening service on the remote compute node' value='8888' width='50%_none'>
         </param>
     </section>
   </inputs>

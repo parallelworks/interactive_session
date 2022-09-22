@@ -31,17 +31,17 @@ HERE
 
 #printf "password\npassword\n\n" | vncpasswd
 
+if [ ! -f ${HOME}/.vnc/passwd ]; then
+    mkdir -p ${HOME}/.vnc
+    echo headless | /opt/TurboVNC/bin/vncpasswd -f > ${HOME}/.vnc/passwd
+    chown -R $USER:$USER ${HOME}/.vnc
+    chmod 0600 ${HOME}/.vnc/passwd
+fi
+
 VNC_DISPLAY=":1"
 
 if [ -z $(which vncserver) ]; then
     vncserver_exec=/opt/TurboVNC/bin/vncserver
-
-    if [ ! -f /home/$USER/.vnc/passwd ]; then
-        mkdir -p /home/$USER/.vnc
-        echo headless | /opt/TurboVNC/bin/vncpasswd -f > /home/$USER/.vnc/passwd
-        chown -R $USER:$USER /home/$USER/.vnc
-        chmod 0600 /home/$USER/.vnc/passwd
-    fi
 
     if [ -f "${vncserver_exec}" ]; then
         ${vncserver_exec} -kill $VNC_DISPLAY
@@ -52,13 +52,6 @@ if [ -z $(which vncserver) ]; then
     fi
 
 else
-
-    if [ ! -f /home/$USER/.vnc/passwd ]; then
-        mkdir -p /home/$USER/.vnc
-        echo headless | vncpasswd -f > /home/$USER/.vnc/passwd
-        chown -R $USER:$USER /home/$USER/.vnc
-        chmod 0600 /home/$USER/.vnc/passwd
-    fi
 
     vncserver -kill $VNC_DISPLAY
     vncserver $VNC_DISPLAY
@@ -146,7 +139,7 @@ else
 
     # Launch service:
     if ! [ -z ${service_bin} ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
-       
+
         if [[ ${service_background} == "False" ]]; then
             echo "Running  ${service_bin}"
             ${service_bin}

@@ -4,7 +4,7 @@ set +x
 servicePort="__servicePort__"
 password="__password__"
 
-CONDA_PATH="$(echo __conda_sh__)"
+CONDA_PATH=$(echo __conda_sh__ | sed "s|etc/profile.d/conda.sh||g")
 
 CONDA_DIR="$(basename $CONDA_PATH)"
 INSTALL_DIR="$(dirname $CONDA_PATH)"
@@ -27,8 +27,7 @@ if [ ! -d "$CONDA_PATH" ] && [ "__conda_install__" == "True" ];then
 fi
 
 echo "Activating conda..."
-# FIXME: THIS SHOULD BE AN INPUT!
-source $CONDA_PATH/etc/profile.d/conda.sh
+source __conda_sh__
 conda activate __conda_env__
 echo "Conda activated"
 

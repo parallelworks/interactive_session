@@ -3,7 +3,7 @@
   <inputs>
   <param name='service_name' label='Service' type='hidden' value='jupyter-host' width='50%_none'></param>
    <section name='service_sec' type='section' title='Jupyter Notebook Settings' expanded='true'>
-        <param name='conda_sh' label='Path to conda environment' type='text' value='~/pworks/miniconda' help='Path to use in source /path/to/conda/etc/profile.d/conda.sh' width='50%_none'></param>
+        <param name='conda_sh' label='Path to conda environment' type='text' value='~/pworks/miniconda/etc/profile.d/conda.sh' help='Path to use in source /path/to/conda.sh' width='50%_none'></param>
         <param name="conda_install" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Install miniconda if not there?" help='Select Yes to install miniconda if the above directory does not exist' width="25%_none" optional='true' float="right">
         </param>
         <param name='conda_env' label='Conda environment (recommended: base)' type='text' value='base' help='Environment to active. The base environment enables changing kernel to other environments!' width='50%_none'></param>

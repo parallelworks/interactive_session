@@ -5,7 +5,7 @@ job_number=__job_number__
 slurm_module=__slurm_module__
 service_bin=__service_bin__
 service_background=__service_background__ # Launch service as a background process (! or screen)
-VNC_DISPLAY=__vnc_display__
+vnc_display=__vnc_display__
 
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
@@ -40,16 +40,16 @@ if [ ! -f ${HOME}/.vnc/passwd ]; then
 fi
 
 
-if [ -z ${VNC_DISPLAY} ] || [[ "${VNC_DISPLAY}" == "__""vnc_display""__" ]]; then
-    VNC_DISPLAY=":$(( ( RANDOM % 10 )  + 1 ))" # Random number from 1 to 10
+if [ -z ${vnc_display} ] || [[ "${vnc_display}" == "__""vnc_display""__" ]]; then
+    vnc_display=$(shuf -i 1-9 -n 1) # Random number from 1 to 9
 fi
 
 if [ -z $(which vncserver) ]; then
     vncserver_exec=/opt/TurboVNC/bin/vncserver
 
     if [ -f "${vncserver_exec}" ]; then
-        ${vncserver_exec} -kill $VNC_DISPLAY
-        ${vncserver_exec} $VNC_DISPLAY
+        ${vncserver_exec} -kill :${vnc_display}
+        ${vncserver_exec} :${vnc_display}
     else
         echo "ERROR: vncserver command not found!"
         exit 1
@@ -57,11 +57,11 @@ if [ -z $(which vncserver) ]; then
 
 else
 
-    vncserver -kill $VNC_DISPLAY
-    vncserver $VNC_DISPLAY
+    vncserver -kill :${vnc_display}
+    vncserver :${vnc_display}
 fi
 
-export DISPLAY=$VNC_DISPLAY
+export DISPLAY=:${vnc_display}
 
 job_dir=${PWD}
 
@@ -118,13 +118,12 @@ if ! [ -z ${slurm_module} ] && ! [[ "${slurm_module}" == "__""slurm_module""__" 
 fi
 
 if [ -z "$(which screen)" ]; then
-    ./utils/novnc_proxy --vnc localhost:5901 --listen localhost:${servicePort} &
+    ./utils/novnc_proxy --vnc localhost:590${vnc_display} --listen localhost:${servicePort} &
     echo $! >> ${job_dir}/service.pid
     sleep 5 # Need this specially in controller node or second software won't show up!
 
     # Launch service
     if ! [ -z ${service_bin} ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
-        export DISPLAY=$VNC_DISPLAY
         if [[ ${service_background} == "False" ]]; then
             echo "Running ${service_bin}"
             ${service_bin}
@@ -136,7 +135,7 @@ if [ -z "$(which screen)" ]; then
     fi
 
 else
-    screen -S noVNC-${job_number} -d -m ./utils/novnc_proxy --vnc localhost:5901 --listen localhost:${servicePort}
+    screen -S noVNC-${job_number} -d -m ./utils/novnc_proxy --vnc localhost:590${vnc_display} --listen localhost:${servicePort}
     pid=$(ps -x | grep noVNC-${job_number} | grep -wv grep | awk '{print $1}')
     echo ${pid} >> ${job_dir}/service.pid
     sleep 5  # Need this specially in controller node or second software won't show up!

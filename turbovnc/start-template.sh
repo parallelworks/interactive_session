@@ -5,6 +5,7 @@ job_number=__job_number__
 slurm_module=__slurm_module__
 service_bin=__service_bin__
 service_background=__service_background__ # Launch service as a background process (! or screen)
+VNC_DISPLAY=__vnc_display__
 
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
@@ -38,7 +39,10 @@ if [ ! -f ${HOME}/.vnc/passwd ]; then
     chmod 0600 ${HOME}/.vnc/passwd
 fi
 
-VNC_DISPLAY=":1"
+
+if [ -z ${VNC_DISPLAY} ] || [[ "${VNC_DISPLAY}" == "__""vnc_display""__" ]]; then
+    VNC_DISPLAY=":$(( ( RANDOM % 10 )  + 1 ))" # Random number from 1 to 10
+fi
 
 if [ -z $(which vncserver) ]; then
     vncserver_exec=/opt/TurboVNC/bin/vncserver
@@ -120,7 +124,7 @@ if [ -z "$(which screen)" ]; then
 
     # Launch service
     if ! [ -z ${service_bin} ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
-        export DISPLAY=:1
+        export DISPLAY=$VNC_DISPLAY
         if [[ ${service_background} == "False" ]]; then
             echo "Running ${service_bin}"
             ${service_bin}

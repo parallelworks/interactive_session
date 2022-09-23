@@ -65,7 +65,7 @@ if ! [ -z ${chdir} ] && ! [[ "${chdir}" == "default" ]]; then
 fi
 
 cat >> ${session_sh} <<HERE
-
+source ~/.bashrc # Need this on some systems when running code with ssh
 # Note that job started running
 echo \$$ > ${job_number}.pid
 

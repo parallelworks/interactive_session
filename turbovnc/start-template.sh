@@ -4,7 +4,6 @@ job_number=__job_number__
 slurm_module=__slurm_module__
 service_bin="$(echo __service_bin__  | sed "s|---| |g")"
 service_background=__service_background__ # Launch service as a background process (! or screen)
-vnc_display=__vnc_display__
 
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
@@ -41,29 +40,44 @@ fi
 echo
 set -x
 
-if [ -z ${vnc_display} ] || [[ "${vnc_display}" == "__""vnc_display""__" ]]; then
-    vnc_display=$(shuf -i 1-9 -n 1) # Random number from 1 to 9
-    echo "vnc_display=${vnc_display}"
+# Find an available display port
+minPort=5901
+maxPort=5999
+for port in $(seq ${minPort} ${maxPort} | shuf); do
+    out=$(netstat -aln | grep LISTEN | grep ${port})
+    if [ -z "${out}" ]; then
+        # To prevent multiple users from using the same available port --> Write file to reserve it
+        portFile=/tmp/${port}.port.used
+        if ! [ -f "${portFile}" ]; then
+            touch ${portFile}
+            export displayPort=${port}
+            displayNumber=${displayPort: -2}
+            export DISPLAY=:${displayNumber#0}
+            break
+        fi
+    fi
+done
+
+if [ -z "${servicePort}" ]; then
+    echo "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
+    exit 1
 fi
 
 if [ -z $(which vncserver) ]; then
     vncserver_exec=/opt/TurboVNC/bin/vncserver
 
     if [ -f "${vncserver_exec}" ]; then
-        ${vncserver_exec} -kill :${vnc_display}
-        ${vncserver_exec} :${vnc_display}
+        ${vncserver_exec} -kill ${DISPLAY}
+        ${vncserver_exec} ${DISPLAY}
     else
         echo "ERROR: vncserver command not found!"
         exit 1
     fi
 
 else
-
-    vncserver -kill :${vnc_display}
-    vncserver :${vnc_display}
+    vncserver -kill ${DISPLAY}
+    vncserver ${DISPLAY}
 fi
-
-export DISPLAY=:${vnc_display}
 
 job_dir=${PWD}
 
@@ -129,8 +143,9 @@ if ! [ -z ${slurm_module} ] && ! [[ "${slurm_module}" == "__""slurm_module""__" 
     module load ${slurm_module}
 fi
 
+
 if [ -z "$(which screen)" ]; then
-    ./utils/novnc_proxy --vnc localhost:590${vnc_display} --listen localhost:${servicePort} &
+    ./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort} &
     echo $! >> ${job_dir}/service.pid
     sleep 5 # Need this specially in controller node or second software won't show up!
 
@@ -147,7 +162,7 @@ if [ -z "$(which screen)" ]; then
     fi
 
 else
-    screen -S noVNC-${job_number} -d -m ./utils/novnc_proxy --vnc localhost:590${vnc_display} --listen localhost:${servicePort}
+    screen -S noVNC-${job_number} -d -m ./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort}
     pid=$(ps -x | grep noVNC-${job_number} | grep -wv grep | awk '{print $1}')
     echo ${pid} >> ${job_dir}/service.pid
     sleep 5  # Need this specially in controller node or second software won't show up!

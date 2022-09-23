@@ -29,7 +29,6 @@
         </param>
         <param name='chdir' label='Working directory of the batch script' type='text' value='/home/\$(whoami)/pworks/__job_number__' help='Working directory of the batch script to directory before it is executed' width='50%_none'>
         </param>
-        <param name='servicePort' label='Jupyter server port' type='text' help='Jupyter server port listening on the remote compute node' value='8888' width='50%_none'></param>
     </section>
   </inputs>
   <outputs>

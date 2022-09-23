@@ -2,8 +2,6 @@
   <command interpreter='bash'>main.sh</command>
   <inputs>
     <section name='service_sec' type='section' title='Service' expanded='true'>
-        <param name='servicePort' label='Interactive remote service port' type='text' help='Port of the listening service on the remote compute node' value='8787' width='50%_none'>
-        </param>
         <conditional name="service_env_cond">
             <param name='service_name' type='select' label='Service' width='50%_none' optional='false' multiple='false'>
                 <option value="netcat-tester" selected="true">netcat-tester</option>

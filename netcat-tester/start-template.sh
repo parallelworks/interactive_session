@@ -2,8 +2,6 @@
 
 while true; do
 
-#    nc -klv -p __servicePort__ -c 'echo -e "HTTP/1.1 200 OK\n\n $(date)\n\nhello world from $(hostname)"'
-
 cat > httpresponse.sh << "HERE"
 #!/bin/bash
 printf 'HTTP/1.1 200 OK\n\n%s' "$(cat index.html)"
@@ -368,6 +366,6 @@ body{
 </html>
 HERE
 
-nc -klv -p __servicePort__ -c '$PWD/httpresponse.sh'
+nc -klv -p ${servicePort} -c '$PWD/httpresponse.sh'
 
 done

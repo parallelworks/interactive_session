@@ -36,7 +36,6 @@ sed -i "s/__OPENPORT__/$openPort/g" ${kill_tunnels_sh}
 
 sed -i "s/__job_number__/${job_number}/g" ${kill_controller_session_sh}
 sed -i "s|__chdir__|${chdir}|g" ${kill_controller_session_sh}
-sed -i "s|__servicePort__|${servicePort}|g" ${kill_controller_session_sh}
 
 cat >> ${kill_sh} <<HERE
 $sshcmd 'bash -s' < ${kill_controller_session_sh}
@@ -47,21 +46,13 @@ echo "echo Finished running ${kill_sh}" >> ${kill_sh}
 chmod 777 ${kill_sh}
 
 
-# TUNNEL COMMAND:
+# USER_CONTAINER_HOST FOR TUNNEL COMMAND:
 if [[ ${pooltype} == "slurmshv2" ]]; then
     USER_CONTAINER_HOST=${PW_USER_HOST} #${PARSL_CLIENT_HOST}
 else
     USER_CONTAINER_HOST="localhost"
 fi
 
-# TUNNEL COMMAND:
-if [[ "$USERMODE" == "k8s" ]];then
-    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
-    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-    TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST} \"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:$openPort:localhost:$servicePort "'$(hostname)'"\""
-else
-    TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:$servicePort ${USER_CONTAINER_HOST}"
-fi
 
 # Initiallize session batch file:
 echo "Generating session script"
@@ -75,11 +66,6 @@ fi
 
 cat >> ${session_sh} <<HERE
 
-echo
-echo Starting interactive session - sessionPort: $servicePort tunnelPort: $openPort
-echo Test command to run in user container: telnet localhost $openPort
-echo
-
 # Note that job started running
 echo \$$ > ${job_number}.pid
 
@@ -88,6 +74,43 @@ FORWARDPATH=${FORWARDPATH}
 IPADDRESS=${IPADDRESS}
 openPort=${openPort}
 USER_CONTAINER_HOST=${USER_CONTAINER_HOST}
+USERMODE=${USERMODE}
+
+# Find an available servicePort
+minPort=6000
+maxPort=9000
+for port in \$(seq \${minPort} \${maxPort} | shuf); do
+    out=\$(netstat -aln | grep LISTEN | grep \${port})
+    if [ -z "\${out}" ]; then
+        # To prevent multiple users from using the same available port --> Write file to reserve it
+        portFile=/tmp/\${port}.port.used
+        if ! [ -f "\${portFile}" ]; then
+            touch \${portFile}
+            export servicePort=\${port}
+            echo "export servicePort=\${port}" >> ${job_number}.env
+            break
+        fi
+    fi
+done
+
+if [ -z "\${servicePort}" ]; then
+    echo "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
+    exit 1
+fi
+
+echo
+echo Starting interactive session - sessionPort: \$servicePort tunnelPort: $openPort
+echo Test command to run in user container: telnet localhost $openPort
+echo
+
+# TUNNEL COMMAND:
+if [[ "$USERMODE" == "k8s" ]];then
+    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
+    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
+    TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST} \"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:$openPort:localhost:\$servicePort "'\$(hostname)'"\""
+else
+    TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
+fi
 
 # Create a port tunnel from the allocated compute node to the user container (or user node in some cases)
 screen_bin=\$(which screen 2> /dev/null)
@@ -100,11 +123,9 @@ else
 fi
 echo "Running blocking ssh command..."
 # run this in a screen so the blocking tunnel cleans up properly
-echo "\${PRE_TUNNELCMD} ${TUNNELCMD} \${POST_TUNNELCMD}"
-\${PRE_TUNNELCMD} ${TUNNELCMD} \${POST_TUNNELCMD}
+echo "\${PRE_TUNNELCMD} \${TUNNELCMD} \${POST_TUNNELCMD}"
+\${PRE_TUNNELCMD} \${TUNNELCMD} \${POST_TUNNELCMD}
 echo "Exit code: \$?"
-# start the app
-# nc -kl --no-shutdown $servicePort
 echo "Starting session..."
 
 HERE

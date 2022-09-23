@@ -3,7 +3,6 @@
 # Only these 3 parameters are replaced!! --> See session_wrapper.sh
 job_number=__job_number__
 chdir=__chdir__
-servicePort=__servicePort__
 
 if ! [ -z ${chdir} ] && ! [[ "${chdir}" == "default" ]]; then
     chdir=$(echo ${chdir} | sed "s|__job_number__|${job_number}|g")
@@ -22,4 +21,7 @@ if [ -f "${job_pid_file}" ]; then
 fi
 
 # Release reserved service port:
+# - Variable servicePort is declared the job_number.env file
+source ${remote_session_dir}/${job_number}.env
+echo "Removing /tmp/${servicePort}.port.used"
 rm -f /tmp/${servicePort}.port.used

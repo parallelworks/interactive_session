@@ -40,10 +40,6 @@ fi
 
 echo "Interactive Session Port: $openPort"
 
-if [[ "$servicePort" == "" ]];then
-    servicePort="8000"
-fi
-
 if ! [ -d "${service_name}" ]; then
     echod "ERROR: Directory ${service_name} was not found --> Service ${service_name} is not supported --> Exiting workflow"
     exit 1
@@ -92,21 +88,9 @@ fi
 if [[ ${partition_or_controller} == "True" ]]; then
     echo "Submitting sbatch job to ${controller}"
     session_wrapper_dir=partition
-    service_args=$@
 else
     echo "Submitting ssh job to ${controller}"
     session_wrapper_dir=controller
-    # Check if service port is available
-    echo "Checking if servicePort=${servicePort} is available in ${controller}"
-    sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
-    servicePort=$($sshcmd 'bash -s' < ${session_wrapper_dir}/get_service_port.sh ${servicePort})
-    if [ -z "${servicePort}" ]; then
-        echo "ERROR: No available service port was found! - exiting the workflow"
-        exit 1
-    fi
-    echo "Using servicePort=${servicePort}"
-    # - Overwrite any argument by passing it BEFORE AND AFTER $@! E.g.: --servicePort 1234 $@  --servicePort 1234
-    service_args="--servicePort ${servicePort} $@ --servicePort ${servicePort}"
 fi
 
 # SERVICE URL
@@ -133,6 +117,7 @@ if [ -f "${service_name}/kill-template.sh" ]; then
     replace_templated_inputs ${kill_service_sh} ${service_args} --job_number ${job_number}
 fi
 
+# - Overwrite any argument by passing it BEFORE AND AFTER $@! E.g.: --argname argvalue $@  --argname argvalue
 bash ${session_wrapper_dir}/session_wrapper.sh ${service_args} \
         --job_number ${job_number} \
         --openPort ${openPort} \

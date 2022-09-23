@@ -1,7 +1,6 @@
 echo "$(date): $(hostname):${PWD} $0 $@"
 
 path_to_sing="__path_to_sing__"
-servicePort="__servicePort__"
 
 # MOUNT DIR DEFAULTS
 mount_dirs="${mount_dirs} -B ${HOME}:${HOME}"

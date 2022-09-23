@@ -1,7 +1,6 @@
 # Runs via ssh + sbatch
 set +x
 
-servicePort="__servicePort__"
 password="__password__"
 
 CONDA_PATH=$(echo __conda_sh__ | sed "s|etc/profile.d/conda.sh||g")

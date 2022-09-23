@@ -1,5 +1,4 @@
 # Runs via ssh + sbatch
-servicePort=__servicePort__
 partition_or_controller=__partition_or_controller__
 job_number=__job_number__
 slurm_module=__slurm_module__

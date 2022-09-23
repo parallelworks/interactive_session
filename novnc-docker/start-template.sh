@@ -1,6 +1,5 @@
 echo "$(date): $(hostname):${PWD} $0 $@"
 
-servicePort=__servicePort__
 job_number=__job_number__
 partition_or_controller=__partition_or_controller__
 

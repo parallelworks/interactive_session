@@ -39,7 +39,7 @@ singularity run \
     ${path_to_sing} \
     /usr/lib/rstudio-server/bin/rserver \
     --www-address=0.0.0.0 \
-    --www-port=__servicePort__  \
+    --www-port=${servicePort}  \
     --www-root-path="/${FORWARDPATH}/${IPADDRESS}/${openPort}/" \
     --www-proxy-localhost=0 \
     --auth-none=1 \

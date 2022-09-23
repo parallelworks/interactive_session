@@ -2,8 +2,6 @@
   <command interpreter='bash'>main.sh</command>
   <inputs>
     <section name='service_sec' type='section' title='noVNC Server' expanded='true'>
-        <param name='servicePort' label='noVNC server port' type='text' help='noVNC server port listening on the remote compute node' value='5900' width='50%_none'>
-        </param>
         <conditional name="service_env_cond">
             <param name='service_name' type='select' label='Service' width='50%_none' optional='false' multiple='false'>
                 <option value="novnc-docker" selected="true">novnc-docker</option>

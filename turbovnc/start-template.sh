@@ -3,7 +3,7 @@ servicePort=__servicePort__
 partition_or_controller=__partition_or_controller__
 job_number=__job_number__
 slurm_module=__slurm_module__
-service_bin=__service_bin__
+service_bin="$(echo __service_bin__  | sed "s|---| |g")"
 service_background=__service_background__ # Launch service as a background process (! or screen)
 vnc_display=__vnc_display__
 
@@ -119,7 +119,7 @@ if ! [ -d "$(echo ~/pworks/noVNC-1.3.0)" ]; then
     fi
 
     tar -zxf ~/pworks/noVNC-1.3.0.tgz -C ~/pworks
-    
+
 fi
 cd  ~/pworks/noVNC-1.3.0
 
@@ -136,7 +136,7 @@ if [ -z "$(which screen)" ]; then
     sleep 5 # Need this specially in controller node or second software won't show up!
 
     # Launch service
-    if ! [ -z ${service_bin} ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
+    if ! [ -z "${service_bin}" ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
         if [[ ${service_background} == "False" ]]; then
             echo "Running ${service_bin}"
             ${service_bin}
@@ -154,7 +154,7 @@ else
     sleep 5  # Need this specially in controller node or second software won't show up!
 
     # Launch service:
-    if ! [ -z ${service_bin} ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
+    if ! [ -z "${service_bin}" ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
 
         if [[ ${service_background} == "False" ]]; then
             echo "Running  ${service_bin}"

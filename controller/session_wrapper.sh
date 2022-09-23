@@ -58,6 +58,9 @@ fi
 echo "Generating session script"
 session_sh=/pw/jobs/${job_number}/session.sh
 echo "#!/bin/bash" > ${session_sh}
+# Need this on some systems when running code with ssh
+# - CAREFUL! This command can change your ${PWD} directory
+echo "source ~/.bashrc" >>  ${session_sh}
 
 if ! [ -z ${chdir} ] && ! [[ "${chdir}" == "default" ]]; then
     echo "mkdir -p ${chdir}" >> ${session_sh}
@@ -65,7 +68,6 @@ if ! [ -z ${chdir} ] && ! [[ "${chdir}" == "default" ]]; then
 fi
 
 cat >> ${session_sh} <<HERE
-source ~/.bashrc # Need this on some systems when running code with ssh
 # Note that job started running
 echo \$$ > ${job_number}.pid
 

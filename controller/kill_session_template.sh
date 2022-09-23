@@ -1,5 +1,6 @@
 # RUNS IN THE CONTROLLER NODE:
 # - Kill the session script pid and its child processes
+# Only these 3 parameters are replaced!! --> See session_wrapper.sh
 job_number=__job_number__
 chdir=__chdir__
 servicePort=__servicePort__

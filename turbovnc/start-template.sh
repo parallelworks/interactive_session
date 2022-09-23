@@ -39,6 +39,8 @@ if [ ! -f ${HOME}/.vnc/passwd ]; then
     chmod 0600 ${HOME}/.vnc/passwd
 fi
 
+echo
+set -x
 
 if [ -z ${vnc_display} ] || [[ "${vnc_display}" == "__""vnc_display""__" ]]; then
     vnc_display=$(shuf -i 1-9 -n 1) # Random number from 1 to 9
@@ -82,7 +84,6 @@ fi
 # - if not copy from user container -> /swift-pw-bin/noVNC-1.3.0.tgz
 if ! [ -d "$(echo ~/pworks/noVNC-1.3.0)" ]; then
     echo "Bootstrapping noVNC"
-    set -x
     mkdir -p ~/pworks
     ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
     if [[ ${partition_or_controller} == "True" ]]; then
@@ -107,7 +108,6 @@ if ! [ -d "$(echo ~/pworks/noVNC-1.3.0)" ]; then
         fi
     fi
     tar -zxf ~/pworks/noVNC-1.3.0.tgz -C ~/pworks
-    set +x
 fi
 cd  ~/pworks/noVNC-1.3.0
 
@@ -119,9 +119,7 @@ if ! [ -z ${slurm_module} ] && ! [[ "${slurm_module}" == "__""slurm_module""__" 
 fi
 
 if [ -z "$(which screen)" ]; then
-    set -x
     ./utils/novnc_proxy --vnc localhost:590${vnc_display} --listen localhost:${servicePort} &
-    set +x
     echo $! >> ${job_dir}/service.pid
     sleep 5 # Need this specially in controller node or second software won't show up!
 
@@ -138,9 +136,7 @@ if [ -z "$(which screen)" ]; then
     fi
 
 else
-    set -x
     screen -S noVNC-${job_number} -d -m ./utils/novnc_proxy --vnc localhost:590${vnc_display} --listen localhost:${servicePort}
-    set +x
     pid=$(ps -x | grep noVNC-${job_number} | grep -wv grep | awk '{print $1}')
     echo ${pid} >> ${job_dir}/service.pid
     sleep 5  # Need this specially in controller node or second software won't show up!

@@ -1,5 +1,5 @@
-## Schrodinger Interactive Session
-This workflow starts an interactive session for Schrodinger in a desktop environment. The services are started in the selected slurm partition using an sbatch command.
+## Schrodinger Maestro Interactive Session
+This workflow starts an interactive session for Schrodinger Maestro in a desktop environment. The services are started in the selected slurm partition using an sbatch command.
 
 #### Instructions
 

@@ -2,6 +2,7 @@
 # - Kill the session script pid and its child processes
 job_number=__job_number__
 chdir=__chdir__
+servicePort=__servicePort__
 
 if ! [ -z ${chdir} ] && ! [[ "${chdir}" == "default" ]]; then
     chdir=$(echo ${chdir} | sed "s|__job_number__|${job_number}|g")
@@ -18,3 +19,6 @@ if [ -f "${job_pid_file}" ]; then
     kill ${pid}
     rm ${job_pid_file}
 fi
+
+# Release reserved service port:
+rm -f /tmp/${servicePort}.port.used

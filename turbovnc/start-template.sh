@@ -9,7 +9,7 @@ chdir=__chdir__
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
 # - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
-echo "Creating file ${chdir}/service-kill-${job_number}-main.sh"
+echo "Creating file ${chdir}/service-kill-${job_number}-main.sh from directory ${PWD}"
 if [[ ${partition_or_controller} == "True" ]]; then
     # Remove .cluster.local for einteinmed!
     hname=$(hostname | sed "s/.cluster.local//g")

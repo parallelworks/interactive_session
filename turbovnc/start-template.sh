@@ -4,21 +4,22 @@ job_number=__job_number__
 slurm_module=__slurm_module__
 service_bin="$(echo __service_bin__  | sed "s|---| |g")"
 service_background=__service_background__ # Launch service as a background process (! or screen)
+chdir=__chdir__
 
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
 # - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
-
+echo "Creating file ${chdir}/service-kill-${job_number}-main.sh"
 if [[ ${partition_or_controller} == "True" ]]; then
     # Remove .cluster.local for einteinmed!
     hname=$(hostname | sed "s/.cluster.local//g")
-    echo "ssh ${hname} 'bash -s' < ${PWD}/service-kill-${job_number}-main.sh" > service-kill-${job_number}.sh
+    echo "ssh ${hname} 'bash -s' < ${chdir}/service-kill-${job_number}-main.sh" > service-kill-${job_number}.sh
 else
-    echo "bash ${PWD}/service-kill-${job_number}-main.sh" > service-kill-${job_number}.sh
+    echo "bash ${chdir}/service-kill-${job_number}-main.sh" > service-kill-${job_number}.sh
 fi
 
-cat >> service-kill-${job_number}-main.sh <<HERE
-service_pid=\$(cat ${PWD}/service.pid)
+cat >> ${chdir}/service-kill-${job_number}-main.sh <<HERE
+service_pid=\$(cat ${chdir}/service.pid)
 if [ -z \${service_pid} ]; then
     echo "ERROR: No service pid was found!"
 else
@@ -79,10 +80,8 @@ else
     vncserver ${DISPLAY}
 fi
 
-job_dir=${PWD}
-
-rm -f ${job_dir}/service.pid
-touch ${job_dir}/service.pid
+rm -f ${chdir}/service.pid
+touch ${chdir}/service.pid
 
 DESKTOP_CMD="mate-session"
 
@@ -90,7 +89,7 @@ if [ -z $(which $DESKTOP_CMD) ]; then
     echo "WARNING: vnc desktop not found!"
 else
     $DESKTOP_CMD &
-    echo $! > ${job_dir}/service.pid
+    echo $! > ${chdir}/service.pid
 fi
 
 # Check if the noVNC directory is present
@@ -148,9 +147,9 @@ echo
 
 if [ -z "$(which screen)" ]; then
     ./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort} &
-    echo $! >> ${job_dir}/service.pid
+    echo $! >> ${chdir}/service.pid
     pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
-    echo ${pid} >> ${job_dir}/service.pid
+    echo ${pid} >> ${chdir}/service.pid
     rm -f ${portFile}
     sleep 5 # Need this specially in controller node or second software won't show up!
 
@@ -162,7 +161,7 @@ if [ -z "$(which screen)" ]; then
         else
             echo "Running ${service_bin} in the background"
             ${service_bin} &
-            echo $! >> ${job_dir}/service.pid
+            echo $! >> ${chdir}/service.pid
         fi
     fi
 
@@ -170,9 +169,9 @@ else
     screen -S noVNC-${job_number} -d -m ./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort}
     rm -f ${portFile}
     pid=$(ps -x | grep noVNC-${job_number} | grep -wv grep | awk '{print $1}')
-    echo ${pid} >> ${job_dir}/service.pid
+    echo ${pid} >> ${chdir}/service.pid
     pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
-    echo ${pid} >> ${job_dir}/service.pid
+    echo ${pid} >> ${chdir}/service.pid
     sleep 5  # Need this specially in controller node or second software won't show up!
 
     # Launch service:
@@ -185,7 +184,7 @@ else
             echo "Running ${service_bin} in the background"
             screen -S ${service_bin}-${job_number} -d -m ${service_bin}
             pid=$(ps -x | grep ${service_bin}-${job_number} | grep -wv grep | awk '{print $1}')
-            echo ${pid} >> ${job_dir}/service.pid
+            echo ${pid} >> ${chdir}/service.pid
         fi
         echo "Done"
     fi

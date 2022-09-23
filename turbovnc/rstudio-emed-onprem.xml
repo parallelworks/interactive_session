@@ -1,0 +1,33 @@
+<tool id='Matthew.Shaxted_interactive_session' name='Matthew.Shaxted_interactive_session'>
+  <command interpreter='bash'>main.sh</command>
+  <inputs>
+    <param name='service_name' label='Service' type='hidden' value='turbovnc' width='50%_none'></param>
+    <param name='slurm_module' label='Slurm module' type='hidden' value='rstudio' width='50%_none'></param>
+    <param name='service_bin' label='Service binary' type='hidden' value='rstudio' width='50%_none'></param>
+    <section name='host' type='section' title='Rstudio Host' expanded='true'>
+      <conditional name="partition_or_controller_cond">
+            <param name="partition_or_controller" type="boolean" truevalue="Partition" falsevalue="Controller" checked="True" label="Partition or controller node?" help='Choose to run the service in the controller / login or partition / compute nodes' width="25%_none" optional='true' float="right"></param>
+            <when value="Partition">
+                <param name='partition' label='Slurm partition:' type='text' help='Partition to submit the interactive job to.' value='default' width='50%_none'>
+                </param>
+                <param name='numnodes' label='Number of nodes:' type='integer' min="1" max="10" help='Number of nodes to request for the interactive session.' value='1' width='50%_none'>
+                </param>
+                <param name="exclusive" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Exclusive" help='The job allocation can not share nodes with other running jobs' width="25%_none" optional='true' float="right">
+                </param>
+                <param name='walltime' placeholder="test" type='text' help='e.g. 00:10:00 - Amount of time slurm will honor the interactive session.' value='00:20:00' width='50%_none'>
+                </param>
+            </when>
+        </conditional>
+    </section>
+    <section name='advanced_options_other' type='section' title='Advanced Options' expanded='false'>
+        <param name="stream" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW' width="25%_none" optional='true' float="right">
+        </param>
+        <param name='controller' label='Controller host' type='text' value='pw.conf' help='Use hostname@ip or a proxy like PoolName.clusters.pw. Use pw.conf to get PoolName from pw.conf' width='50%_none'>
+        </param>
+        <param name='chdir' label='Working directory of the batch script' type='text' value='/gs/gsfs0/users/\$(whoami)/pw/jobs/__job_number__' help='Working directory of the batch script to directory before it is executed' width='50%_none'>
+        </param>
+    </section>
+  </inputs>
+  <outputs>
+  </outputs>
+</tool>

@@ -136,13 +136,15 @@ if ! [ -d "$(echo ~/pworks/noVNC-1.3.0)" ]; then
 fi
 cd  ~/pworks/noVNC-1.3.0
 
+echo
 # Load slurm module
 # - multiple quotes are used to prevent replacement of __varname__ !!!
 if ! [ -z ${slurm_module} ] && ! [[ "${slurm_module}" == "__""slurm_module""__" ]]; then
     echo "module load ${slurm_module}"
+    module avail ${slurm_module}
     module load ${slurm_module}
 fi
-
+echo
 
 if [ -z "$(which screen)" ]; then
     ./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort} &

@@ -19,9 +19,3 @@ if [ -f "${job_pid_file}" ]; then
     kill ${pid}
     rm ${job_pid_file}
 fi
-
-# Release reserved service port:
-# - Variable servicePort is declared the job_number.env file
-source ${remote_session_dir}/${job_number}.env
-echo "Removing /tmp/${servicePort}.port.used"
-rm -f /tmp/${servicePort}.port.used

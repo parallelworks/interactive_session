@@ -101,7 +101,6 @@ for port in \$(seq \${minPort} \${maxPort} | shuf); do
         if ! [ -f "\${portFile}" ]; then
             touch \${portFile}
             export servicePort=\${port}
-            echo "export servicePort=\${port}" >> ${job_number}.env
             break
         fi
     fi
@@ -141,7 +140,7 @@ echo "\${PRE_TUNNELCMD} \${TUNNELCMD} \${POST_TUNNELCMD}"
 \${PRE_TUNNELCMD} \${TUNNELCMD} \${POST_TUNNELCMD}
 echo "Exit code: \$?"
 echo "Starting session..."
-
+rm -f \${portFile}
 HERE
 
 # Add application-specific code

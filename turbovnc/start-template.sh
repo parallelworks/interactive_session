@@ -13,9 +13,9 @@ echo "Creating file ${chdir}/service-kill-${job_number}-main.sh"
 if [[ ${partition_or_controller} == "True" ]]; then
     # Remove .cluster.local for einteinmed!
     hname=$(hostname | sed "s/.cluster.local//g")
-    echo "ssh ${hname} 'bash -s' < ${chdir}/service-kill-${job_number}-main.sh" > service-kill-${job_number}.sh
+    echo "ssh ${hname} 'bash -s' < ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
 else
-    echo "bash ${chdir}/service-kill-${job_number}-main.sh" > service-kill-${job_number}.sh
+    echo "bash ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
 fi
 
 cat >> ${chdir}/service-kill-${job_number}-main.sh <<HERE

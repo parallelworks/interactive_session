@@ -65,12 +65,18 @@ if [ -z "${servicePort}" ]; then
 fi
 
 if [ -z $(which vncserver) ]; then
-    vncserver_exec=/opt/TurboVNC/bin/vncserver
-
-    if [ -f "${vncserver_exec}" ]; then
-        ${vncserver_exec} -kill ${DISPLAY}
-        ${vncserver_exec} ${DISPLAY}
-    else
+    # Paths to vncserver bin directory
+    vncserver_bindirs="/opt/TurboVNC/bin/ /shared/TurboVNC/bin/"
+    for vncserver_bindir in ${vncserver_bindirs}; do
+        vncserver_exec=${vncserver_bindir}/vncserver
+        if [ -f "${vncserver_exec}" ]; then
+            ${vncserver_exec} -kill ${DISPLAY}
+            ${vncserver_exec} ${DISPLAY}
+            found_vncserver=True
+            break
+        fi
+    done
+    if ! [[ ${found_vncserver} == "True" ]]; then
         echo "ERROR: vncserver command not found!"
         exit 1
     fi

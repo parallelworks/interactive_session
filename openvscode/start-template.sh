@@ -21,7 +21,6 @@ if [ ! -f "${server_exec}" ]; then
 fi
 
 # https://noaa.parallel.works/pwide-nb/noaa-user-1.parallel.works/50170/notebooks/home/Matthew.Shaxted/Untitled.ipynb?kernel_name=python3
-host=noaa.parallel.works
 
 ${server_exec} \
     --port ${servicePort} \

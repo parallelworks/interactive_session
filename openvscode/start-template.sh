@@ -8,6 +8,9 @@ set -x
 
 server_exec=__server_exec__
 partition_or_controller=__partition_or_controller__
+chdir=__chdir__
+job_number=__job_number__
+
 install_paths="${HOME}/pworks/*/bin /opt/*/bin /shared/*/bin"
 
 # Prepare kill service script

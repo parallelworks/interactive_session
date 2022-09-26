@@ -1,5 +1,5 @@
 # Runs via ssh + sbatch
-set +x
+set -x
 
 # Order of priority for server_exec:
 # 1. Whatever is in the ${PATH}

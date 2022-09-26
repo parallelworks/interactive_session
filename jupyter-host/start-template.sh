@@ -1,5 +1,4 @@
 # Runs via ssh + sbatch
-set +x
 
 password="__password__"
 

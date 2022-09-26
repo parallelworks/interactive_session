@@ -12,7 +12,7 @@ install_paths="${HOME}/pworks/*/bin /opt/*/bin /shared/*/bin"
 if ! [ -z $(which openvscode-server) ]; then
     server_exec=$(which openvscode-server)
 elif [ -z ${server_exec} ] || [[ "${server_exec}" == "__""server_exec""__" ]]; then
-    server_exec=$(find ${install_paths} -maxdepth 1 -mindepth 1 -name openvscode-server | head -n1)
+    server_exec=$(find ${install_paths} -maxdepth 1 -mindepth 1 -name openvscode-server  2>/dev/null | head -n1)
 fi
 
 if [ ! -f "${server_exec}" ]; then

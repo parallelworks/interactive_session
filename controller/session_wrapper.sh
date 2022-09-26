@@ -62,7 +62,7 @@ echo "#!/bin/bash" > ${session_sh}
 # - CAREFUL! This command can change your ${PWD} directory
 echo "source ~/.bashrc" >>  ${session_sh}
 
-if ! [ -z ${chdir} ] && ! [[ "${chdir}" == "default" ]]; then
+if ! [ -z "${chdir}" ] && ! [[ "${chdir}" == "default" ]]; then
     echo "mkdir -p ${chdir}" >> ${session_sh}
     echo "cd ${chdir}" >> ${session_sh}
 fi

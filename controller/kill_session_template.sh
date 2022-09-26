@@ -4,7 +4,7 @@
 job_number=__job_number__
 chdir=__chdir__
 
-if ! [ -z ${chdir} ] && ! [[ "${chdir}" == "default" ]]; then
+if ! [ -z "${chdir}" ] && ! [[ "${chdir}" == "default" ]]; then
     chdir=$(echo ${chdir} | sed "s|__job_number__|${job_number}|g")
     remote_session_dir=${chdir}
 else

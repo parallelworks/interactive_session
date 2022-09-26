@@ -20,7 +20,11 @@ if [ ! -f "${server_exec}" ]; then
     exit 1
 fi
 
+# https://noaa.parallel.works/pwide-nb/noaa-user-1.parallel.works/50170/notebooks/home/Matthew.Shaxted/Untitled.ipynb?kernel_name=python3
+host=noaa.parallel.works
+
 ${server_exec} \
     --port ${servicePort} \
     --without-connection-token \
-    --host localhost
+    --host /${FORWARDPATH}/${IPADDRESS}/${openPort}
+#    --host localhost

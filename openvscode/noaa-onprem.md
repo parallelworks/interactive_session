@@ -1,5 +1,5 @@
-## Jupyter Interactive Session
-This workflow starts a Jupyter server in a slurm partition or in the controller node. The services are started in the selected slurm partition using an sbatch command.
+## OpenVSCode Server Interactive Session
+This workflow starts an [OpenVSCode Server](https://github.com/gitpod-io/openvscode-server) in a slurm partition or in the controller node. The services are started in the selected slurm partition using an sbatch command.
 
 #### Instructions
 

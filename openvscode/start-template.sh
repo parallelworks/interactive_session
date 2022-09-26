@@ -20,7 +20,7 @@ if [ ! -f "${server_exec}" ]; then
     exit 1
 fi
 
-server_exec \
+${server_exec} \
     --port ${servicePort} \
     --without-connection-token \
     --host localhost

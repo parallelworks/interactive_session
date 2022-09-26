@@ -67,6 +67,7 @@ fi
 if [ -z $(which vncserver) ]; then
     # Paths to vncserver bin directory
     vncserver_bindirs="/opt/TurboVNC/bin/ /shared/TurboVNC/bin/"
+    echo "Looking for vncserver binary in ${vncserver_bindirs}"
     for vncserver_bindir in ${vncserver_bindirs}; do
         vncserver_exec=${vncserver_bindir}/vncserver
         if [ -f "${vncserver_exec}" ]; then

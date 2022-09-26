@@ -25,5 +25,7 @@ fi
 ${server_exec} \
     --port ${servicePort} \
     --without-connection-token \
-    --host /${FORWARDPATH}/${IPADDRESS}/${openPort}
-#    --host localhost
+    --host localhost
+
+# Does not work:
+#    --host /${FORWARDPATH}/${IPADDRESS}/${openPort}

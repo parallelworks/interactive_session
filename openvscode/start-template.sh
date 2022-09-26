@@ -27,8 +27,8 @@ fi
 
 cat >> ${chdir}/service-kill-${job_number}-main.sh <<HERE
 service_pid=\$(ps -x | grep openvscode-server | grep ${servicePort} | awk '{print $1}')
-kill ${service_pid}
-pkill ${service_pid}
+kill \${service_pid}
+pkill \${service_pid}
 HERE
 
 

@@ -5,6 +5,13 @@ slurm_module=__slurm_module__
 service_bin="$(echo __service_bin__  | sed "s|---| |g")"
 service_background=__service_background__ # Launch service as a background process (! or screen)
 chdir=__chdir__
+server_exec=__server_exec__
+# Order of priority for server_exec:
+# 1. Whatever is in the ${PATH}
+# 2. __server_exec__ (hidden parameter)
+# 3. install_paths
+install_paths="${HOME}/pworks/*/bin /opt/*/bin /shared/*/bin"
+
 
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
@@ -64,28 +71,21 @@ if [ -z "${servicePort}" ]; then
     exit 1
 fi
 
-if [ -z $(which vncserver) ]; then
-    # Paths to vncserver bin directory
-    vncserver_bindirs="/opt/TurboVNC/bin/ /shared/TurboVNC/bin/"
-    echo "Looking for vncserver binary in ${vncserver_bindirs}"
-    for vncserver_bindir in ${vncserver_bindirs}; do
-        vncserver_exec=${vncserver_bindir}/vncserver
-        if [ -f "${vncserver_exec}" ]; then
-            ${vncserver_exec} -kill ${DISPLAY}
-            ${vncserver_exec} ${DISPLAY}
-            found_vncserver=True
-            break
-        fi
-    done
-    if ! [[ ${found_vncserver} == "True" ]]; then
-        echo "ERROR: vncserver command not found!"
-        exit 1
-    fi
-
-else
-    vncserver -kill ${DISPLAY}
-    vncserver ${DISPLAY}
+# Find vncserver executable:
+if ! [ -z $(which vncserver) ]; then
+    server_exec=$(which vncserver)
+elif [ -z ${server_exec} ] || [[ "${server_exec}" == "__""server_exec""__" ]]; then
+    server_exec=$(find ${install_paths} -maxdepth 1 -mindepth 1 -name vncserver  2>/dev/null | head -n1)
 fi
+
+if [ ! -f "${server_exec}" ]; then
+    echo ERROR: server_exec=${server_exec} file not found! - Existing workflow!
+    exit 1
+fi
+
+# Start service
+${server_exec} -kill ${DISPLAY}
+${server_exec} ${DISPLAY}
 
 rm -f ${chdir}/service.pid
 touch ${chdir}/service.pid

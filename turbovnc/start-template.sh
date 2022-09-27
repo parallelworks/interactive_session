@@ -99,19 +99,19 @@ else
     echo $! > ${chdir}/service.pid
 fi
 
-# Check if the noVNC directory is present
+# BOOTSTRAP CODE --> FIXME: Cannot be generalized for different versions in different systems!
+install_dir=${HOME}/pworks/noVNC-1.3.0
+tgz_path=/swift-pw-bin/apps/noVNC-1.3.0.tgz
+# Check if the code directory is present
 # - if not copy from user container -> /swift-pw-bin/noVNC-1.3.0.tgz
-if ! [ -d "$(echo ~/pworks/noVNC-1.3.0)" ]; then
-    echo "Bootstrapping noVNC"
+if ! [ -d "${install_dir}" ]; then
+    echo "Bootstrapping ${install_dir}"
     mkdir -p ~/pworks
 
     # first check if the noVNC file is available on the node
-    if [[ -f "/core/pworks-main/swift-pw-bin/noVNC-1.3.0.tgz" ]]; then
-
-        cp /core/pworks-main/swift-pw-bin/noVNC-1.3.0.tgz ~/pworks
-
+    if [[ -f "/core/pworks-main/${tgz_path}" ]]; then
+        cp /core/pworks-main/${tgz_path} ~/pworks
     else
-
         ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
         if [[ ${partition_or_controller} == "True" ]]; then
             # Running in a compute partition
@@ -119,26 +119,24 @@ if ! [ -d "$(echo ~/pworks/noVNC-1.3.0)" ]; then
                 # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
                 # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
                 # Works because home directory is shared!
-                ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pworks
+                ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ~/pworks
             else # Docker mode
                 # Works because home directory is shared!
-                ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pworks
+                ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ~/pworks
             fi
         else
             # Running in a controller node
             if [[ "$USERMODE" == "k8s" ]]; then
                 # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
                 # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-                scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pworks
+                scp ${USER_CONTAINER_HOST}:${tgz_path} ~/pworks
             else # Docker mode
-                scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pworks
+                scp ${USER_CONTAINER_HOST}:${tgz_path} ~/pworks
             fi
         fi
 
     fi
-
-    tar -zxf ~/pworks/noVNC-1.3.0.tgz -C ~/pworks
-
+    tar -zxf ~/pworks/$(basename ${tgz_path}) -C ~/pworks
 fi
 cd  ~/pworks/noVNC-1.3.0
 

@@ -39,7 +39,7 @@ HERE
 # BOOTSTRAP CODE --> FIXME: Cannot be generalized for different versions in different systems!
 install_dir=${HOME}/pworks/code-server-4.7.0-linux-amd64
 tgz_path=/swift-pw-bin/apps/code-server-4.7.0-linux-amd64.tar.gz
-# Check if the noVNC directory is present
+# Check if the code directory is present
 # - if not copy from user container -> /swift-pw-bin/noVNC-1.3.0.tgz
 if ! [ -d "${install_dir}" ]; then
     echo "Bootstrapping ${install_dir}"

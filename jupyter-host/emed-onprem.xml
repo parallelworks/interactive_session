@@ -8,7 +8,7 @@
         </param>
         <param name='conda_env' label='Conda environment (recommended: base)' type='text' value='base' help='Environment to active. The base environment enables changing kernel to other environments!' width='50%_none'></param>
         <param name='password' label='Password for notebook access:' type='text' value='EnterPassword' help='' width='50%_none'></param>
-	<param name='notebook_dir' label='Directory to start JupyterHub GUI' type='text' value='/gs/gsfs0/users/\$(whoami)/pw/' help='' width='100%_none'></param>
+	<param name='notebook_dir' label='Directory to start JupyterHub GUI' type='text' value='/gs/gsfs0/users/\$(whoami)/pw/' help='This is the directory that you start with when the JupyterHub graphical user interface starts.  The default value here is your home directory (automatically inserting your username with the whoami command).' width='100%_none'></param>
    </section>
     <section name='host' type='section' title='Desktop Host' expanded='true'>
       <conditional name="partition_or_controller_cond">

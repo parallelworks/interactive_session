@@ -93,7 +93,8 @@ if [ ! -f "${server_exec}" ]; then
 fi
 
 ${server_exec} \
-    --auth=none  \
+    --auth=password  \
+    --password=${password} \
     --bind-addr=localhost:${servicePort} \
     ${server_dir}
 

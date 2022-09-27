@@ -82,7 +82,7 @@ if [ -z ${server_dir} ] || [[ "${server_dir}" == "__""server_dir""__" ]]; then
     server_dir=~/
 fi
 
-if [ -z ${github_token} ] || [[ "${github_token}" == "__""github_token""__" ]]; then
+if [ -z ${github_token} ] || [[ "${github_token}" == "__""github_token""__" ]] || [[ "${github_token}" == "optional" ]]; then
     gh_flag=""
 else
     export GITHUB_TOKEN=${github_token}

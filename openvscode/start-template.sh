@@ -11,6 +11,7 @@ partition_or_controller=__partition_or_controller__
 chdir=__chdir__
 job_number=__job_number__
 server_dir=__server_dir__
+password=__password__
 
 install_paths="${HOME}/pworks/*/bin /opt/*/bin /shared/*/bin"
 #server_bin="openvscode-server"
@@ -92,9 +93,9 @@ if [ ! -f "${server_exec}" ]; then
     exit 1
 fi
 
+export PASSWORD=${password}
 ${server_exec} \
     --auth=password  \
-    --password=${password} \
     --bind-addr=localhost:${servicePort} \
     ${server_dir}
 

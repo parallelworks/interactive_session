@@ -12,6 +12,7 @@ chdir=__chdir__
 job_number=__job_number__
 server_dir=__server_dir__
 password=__password__
+github_token=__github_token__
 
 install_paths="${HOME}/pworks/*/bin /opt/*/bin /shared/*/bin"
 #server_bin="openvscode-server"
@@ -81,6 +82,13 @@ if [ -z ${server_dir} ] || [[ "${server_dir}" == "__""server_dir""__" ]]; then
     server_dir=~/
 fi
 
+if [ -z ${github_token} ] || [[ "${github_token}" == "__""github_token""__" ]]; then
+    gh_flag=""
+else
+    export GITHUB_TOKEN=${github_token}
+    gh_flag="--github-auth"
+fi
+
 # START SERVICE
 if ! [ -z $(which ${server_bin}) ]; then
     server_exec=$(which ${server_bin})
@@ -97,6 +105,7 @@ export PASSWORD=${password}
 ${server_exec} \
     --auth=password  \
     --bind-addr=localhost:${servicePort} \
+    ${gh_flag} \
     ${server_dir}
 
 # DELETE ME: To test different server commands

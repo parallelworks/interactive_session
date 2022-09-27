@@ -1,7 +1,7 @@
 # Runs via ssh + sbatch
 
 password="__password__"
-
+notebook_dir="__notebook_dir__"
 CONDA_PATH=$(echo __conda_sh__ | sed "s|etc/profile.d/conda.sh||g")
 
 CONDA_DIR="$(basename $CONDA_PATH)"
@@ -37,6 +37,13 @@ export XDG_RUNTIME_DIR=""
 echo "Generating sha"
 sha=$(python3 -c "from notebook.auth.security import passwd; print(passwd('${password}', algorithm = 'sha1'))")
 
+# Set the launch directory for JupyterHub
+# If notebook_dir is not set or set to a templated value,
+# use the default value of "/".
+if [ -z ${notebook_dir} ] || [[ "${notebook_dir}" == "__""notebook_dir""__" ]]; then
+    notebook_dir="/"
+fi
+
 set -x
 jupyter-notebook \
     --port=$servicePort \
@@ -45,7 +52,7 @@ jupyter-notebook \
     --NotebookApp.token= \
     --NotebookApp.password=$sha \
     --no-browser \
-    --notebook-dir=/ \
+    --notebook-dir=$notebook_dir \
     --NotebookApp.tornado_settings="{'static_url_prefix':'/${FORWARDPATH}/${IPADDRESS}/${openPort}/static/'}" \
     --NotebookApp.base_url="/${FORWARDPATH}/${IPADDRESS}/${openPort}/" \
     --NotebookApp.allow_origin=*

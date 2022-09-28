@@ -6,12 +6,21 @@ service_bin="$(echo __service_bin__  | sed "s|---| |g")"
 service_background=__service_background__ # Launch service as a background process (! or screen)
 chdir=__chdir__
 server_exec=__server_exec__
+install_dir=__install_dir__
+tgz_path=__tgz_path__
 # Order of priority for server_exec:
 # 1. Whatever is in the ${PATH}
 # 2. __server_exec__ (hidden parameter)
 # 3. install_paths
 install_paths="${HOME}/pworks/*/bin /opt/*/bin /shared/*/bin"
 
+if [ -z ${install_dir} ] || [[ "${install_dir}" == "__""install_dir""__" ]]; then
+    install_dir=${HOME}/pworks/noVNC-1.3.0
+fi
+
+if [ -z ${tgz_path} ] || [[ "${tgz_path}" == "__""tgz_path""__" ]]; then
+    tgz_path=/swift-pw-bin/apps/noVNC-1.3.0.tgz
+fi
 
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
@@ -100,46 +109,49 @@ else
     echo $! > ${chdir}/service.pid
 fi
 
-# BOOTSTRAP CODE --> FIXME: Cannot be generalized for different versions in different systems!
-install_dir=${HOME}/pworks/noVNC-1.3.0
-tgz_path=/swift-pw-bin/apps/noVNC-1.3.0.tgz
-# Check if the code directory is present
-# - if not copy from user container -> /swift-pw-bin/noVNC-1.3.0.tgz
-if ! [ -d "${install_dir}" ]; then
-    echo "Bootstrapping ${install_dir}"
-    mkdir -p ~/pworks
+bootstrap_tgz() {
+    tgz_path=$1
+    install_dir=$2
+    # Check if the code directory is present
+    # - if not copy from user container -> /swift-pw-bin/noVNC-1.3.0.tgz
+    if ! [ -d "${install_dir}" ]; then
+        echo "Bootstrapping ${install_dir}"
+        install_parent_dir=$(dirname ${install_dir})
+        mkdir -p ${install_parent_dir}
 
-    # first check if the noVNC file is available on the node
-    if [[ -f "/core/pworks-main/${tgz_path}" ]]; then
-        cp /core/pworks-main/${tgz_path} ~/pworks
-    else
-        ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-        if [[ ${partition_or_controller} == "True" ]]; then
-            # Running in a compute partition
-            if [[ "$USERMODE" == "k8s" ]]; then
-                # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
-                # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-                # Works because home directory is shared!
-                ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ~/pworks
-            else # Docker mode
-                # Works because home directory is shared!
-                ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ~/pworks
-            fi
+        # first check if the noVNC file is available on the node
+        if [[ -f "/core/pworks-main/${tgz_path}" ]]; then
+            cp /core/pworks-main/${tgz_path} ${install_parent_dir}
         else
-            # Running in a controller node
-            if [[ "$USERMODE" == "k8s" ]]; then
-                # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
-                # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-                scp ${USER_CONTAINER_HOST}:${tgz_path} ~/pworks
-            else # Docker mode
-                scp ${USER_CONTAINER_HOST}:${tgz_path} ~/pworks
+            ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+            if [[ ${partition_or_controller} == "True" ]]; then
+                # Running in a compute partition
+                if [[ "$USERMODE" == "k8s" ]]; then
+                    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
+                    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
+                    # Works because home directory is shared!
+                    ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                else # Docker mode
+                    # Works because home directory is shared!
+                    ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                fi
+            else
+                # Running in a controller node
+                if [[ "$USERMODE" == "k8s" ]]; then
+                    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
+                    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
+                    scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                else # Docker mode
+                    scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                fi
             fi
         fi
-
+        tar -zxf ${install_parent_dir}/$(basename ${tgz_path}) -C ${install_parent_dir}
     fi
-    tar -zxf ~/pworks/$(basename ${tgz_path}) -C ~/pworks
-fi
-cd  ~/pworks/noVNC-1.3.0
+}
+
+bootstrap_tgz ${tgz_path} ${install_dir}
+cd ${install_dir}
 
 echo
 # Load slurm module

@@ -13,6 +13,28 @@ job_number=__job_number__
 server_dir=__server_dir__
 password=__password__
 github_token=__github_token__
+install_dir=__install_dir__
+tgz_path=__tgz_path__
+
+# SET DEFAULTS:
+if [ -z ${server_dir} ] || [[ "${server_dir}" == "__""server_dir""__" ]]; then
+    server_dir=~/
+fi
+
+if [ -z ${github_token} ] || [[ "${github_token}" == "__""github_token""__" ]]; then
+    gh_flag=""
+else
+    export GITHUB_TOKEN=${github_token}
+    gh_flag="--github-auth"
+fi
+
+if [ -z ${install_dir} ] || [[ "${install_dir}" == "__""install_dir""__" ]]; then
+    install_dir=${HOME}/pworks/code-server-4.7.0-linux-amd64
+fi
+
+if [ -z ${tgz_path} ] || [[ "${tgz_path}" == "__""tgz_path""__" ]]; then
+    tgz_path=/swift-pw-bin/apps/code-server-4.7.0-linux-amd64.tar.gz
+fi
 
 install_paths="${HOME}/pworks/*/bin /opt/*/bin /shared/*/bin"
 #server_bin="openvscode-server"
@@ -36,62 +58,60 @@ kill \${service_pid}
 pkill \${service_pid}
 HERE
 
-# BOOTSTRAP CODE --> FIXME: Cannot be generalized for different versions in different systems!
-install_dir=${HOME}/pworks/code-server-4.7.0-linux-amd64
-tgz_path=/swift-pw-bin/apps/code-server-4.7.0-linux-amd64.tar.gz
-# Check if the code directory is present
-# - if not copy from user container -> /swift-pw-bin/noVNC-1.3.0.tgz
-if ! [ -d "${install_dir}" ]; then
-    echo "Bootstrapping ${install_dir}"
-    mkdir -p ~/pworks
 
-    # first check if the noVNC file is available on the node
-    if [[ -f "/core/pworks-main/${tgz_path}" ]]; then
-        cp /core/pworks-main/${tgz_path} ~/pworks
-    else
-        ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-        if [[ ${partition_or_controller} == "True" ]]; then
-            # Running in a compute partition
-            if [[ "$USERMODE" == "k8s" ]]; then
-                # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
-                # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-                # Works because home directory is shared!
-                ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ~/pworks
-            else # Docker mode
-                # Works because home directory is shared!
-                ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ~/pworks
-            fi
+bootstrap_tgz() {
+    tgz_path=$1
+    install_dir=$2
+    # Check if the code directory is present
+    # - if not copy from user container -> /swift-pw-bin/noVNC-1.3.0.tgz
+    if ! [ -d "${install_dir}" ]; then
+        echo "Bootstrapping ${install_dir}"
+        install_parent_dir=$(dirname ${install_dir})
+        mkdir -p ${install_parent_dir}
+
+        # first check if the noVNC file is available on the node
+        if [[ -f "/core/pworks-main/${tgz_path}" ]]; then
+            cp /core/pworks-main/${tgz_path} ${install_parent_dir}
         else
-            # Running in a controller node
-            if [[ "$USERMODE" == "k8s" ]]; then
-                # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
-                # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-                scp ${USER_CONTAINER_HOST}:${tgz_path} ~/pworks
-            else # Docker mode
-                scp ${USER_CONTAINER_HOST}:${tgz_path} ~/pworks
+            ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+            if [[ ${partition_or_controller} == "True" ]]; then
+                # Running in a compute partition
+                if [[ "$USERMODE" == "k8s" ]]; then
+                    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
+                    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
+                    # Works because home directory is shared!
+                    ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                else # Docker mode
+                    # Works because home directory is shared!
+                    ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                fi
+            else
+                # Running in a controller node
+                if [[ "$USERMODE" == "k8s" ]]; then
+                    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
+                    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
+                    scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                else # Docker mode
+                    scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                fi
             fi
         fi
-
+        tar -zxf ${install_parent_dir}/$(basename ${tgz_path}) -C ${install_parent_dir}
     fi
-    tar -zxf ~/pworks/$(basename ${tgz_path}) -C ~/pworks
-fi
+}
 
-
-# SET DEFAULTS:
-if [ -z ${server_dir} ] || [[ "${server_dir}" == "__""server_dir""__" ]]; then
-    server_dir=~/
-fi
-
-if [ -z ${github_token} ] || [[ "${github_token}" == "__""github_token""__" ]]; then
-    gh_flag=""
-else
-    export GITHUB_TOKEN=${github_token}
-    gh_flag="--github-auth"
-fi
 
 # START SERVICE
 if ! [ -z $(which ${server_bin}) ]; then
+    # If server binary is in the path use it
     server_exec=$(which ${server_bin})
+else
+    # Else bootstrap (install)
+    bootstrap_tgz ${tgz_path} ${install_dir}
+fi
+
+if [ -f "${install_dir}/bin/${server_bin}" ]; then
+    server_exec=${install_dir}/bin/${server_bin}
 elif [ -z ${server_exec} ] || [[ "${server_exec}" == "__""server_exec""__" ]]; then
     server_exec=$(find ${install_paths} -maxdepth 1 -mindepth 1 -name ${server_bin}  2>/dev/null | head -n1)
 fi

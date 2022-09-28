@@ -125,3 +125,5 @@ bash ${session_wrapper_dir}/session_wrapper.sh $@ \
         --start_service_sh ${start_service_sh} \
         --kill_service_sh ${kill_service_sh} \
         --pooltype ${pooltype}
+
+bash kill.sh

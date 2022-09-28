@@ -129,7 +129,7 @@ fi
 screen_bin=\$(which screen 2> /dev/null)
 if [ -z "\${screen_bin}" ]; then
     PRE_TUNNELCMD=""
-    POST_TUNNELCMD=" &"
+    POST_TUNNELCMD=" \&"
 else
     PRE_TUNNELCMD="screen -d -m "
     POST_TUNNELCMD=""

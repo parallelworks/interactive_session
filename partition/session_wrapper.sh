@@ -135,9 +135,7 @@ if [ -z "\${screen_bin}" ]; then
 else
     echo "screen -d -m \${TUNNEL_CMD}"
     screen -d -m \${TUNNEL_CMD}
-    POST_TUNNELCMD=""
 fi
-# run this in a screen so the blocking tunnel cleans up properly
 echo "Exit code: \$?"
 echo "Starting session..."
 rm -f \${portFile}

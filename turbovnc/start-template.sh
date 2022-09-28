@@ -36,15 +36,6 @@ else
 fi
 HERE
 
-#printf "password\npassword\n\n" | vncpasswd
-
-if [ ! -f ${HOME}/.vnc/passwd ]; then
-    mkdir -p ${HOME}/.vnc
-    echo headless | /opt/TurboVNC/bin/vncpasswd -f > ${HOME}/.vnc/passwd
-    chown -R $USER:$USER ${HOME}/.vnc
-    chmod 0600 ${HOME}/.vnc/passwd
-fi
-
 echo
 set -x
 
@@ -81,6 +72,16 @@ fi
 if [ ! -f "${server_exec}" ]; then
     echo ERROR: server_exec=${server_exec} file not found! - Existing workflow!
     exit 1
+fi
+
+# Set password
+#printf "password\npassword\n\n" | vncpasswd
+# File does not exist or file is empty
+if [ ! -f ${HOME}/.vnc/passwd ] || ! [ -s ${HOME}/.vnc/passwd ]; then
+    mkdir -p ${HOME}/.vnc
+    echo headless | $(dirname ${server_exec})/vncpasswd -f > ${HOME}/.vnc/passwd
+    chown -R $USER:$USER ${HOME}/.vnc
+    chmod 0600 ${HOME}/.vnc/passwd
 fi
 
 # Start service

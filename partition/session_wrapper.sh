@@ -126,18 +126,18 @@ else
     TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
 fi
 
+# run this in a screen so the blocking tunnel cleans up properly
+echo "Running blocking ssh command..."
 screen_bin=\$(which screen 2> /dev/null)
 if [ -z "\${screen_bin}" ]; then
-    PRE_TUNNELCMD=""
-    POST_TUNNELCMD=" \&"
+    echo "\${TUNNELCMD} &"
+    \${TUNNELCMD} &
 else
-    PRE_TUNNELCMD="screen -d -m "
+    echo "screen -d -m \${TUNNEL_CMD}"
+    screen -d -m \${TUNNEL_CMD}
     POST_TUNNELCMD=""
 fi
-echo "Running blocking ssh command..."
 # run this in a screen so the blocking tunnel cleans up properly
-echo "\${PRE_TUNNELCMD} \${TUNNELCMD} \${POST_TUNNELCMD}"
-\${PRE_TUNNELCMD} \${TUNNELCMD} \${POST_TUNNELCMD}
 echo "Exit code: \$?"
 echo "Starting session..."
 rm -f \${portFile}

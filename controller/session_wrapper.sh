@@ -113,19 +113,16 @@ else
     TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
 fi
 
-# Create a port tunnel from the allocated compute node to the user container (or user node in some cases)
+# run this in a screen so the blocking tunnel cleans up properly
+echo "Running blocking ssh command..."
 screen_bin=\$(which screen 2> /dev/null)
 if [ -z "\${screen_bin}" ]; then
-    PRE_TUNNELCMD=""
-    POST_TUNNELCMD=" &"
+    echo "\${TUNNELCMD} &"
+    \${TUNNELCMD} &
 else
-    PRE_TUNNELCMD="screen -d -m "
-    POST_TUNNELCMD=""
+    echo "screen -d -m \${TUNNELCMD}"
+    screen -d -m \${TUNNELCMD}
 fi
-echo "Running blocking ssh command..."
-# run this in a screen so the blocking tunnel cleans up properly
-echo "\${PRE_TUNNELCMD} \${TUNNELCMD} \${POST_TUNNELCMD}"
-\${PRE_TUNNELCMD} \${TUNNELCMD} \${POST_TUNNELCMD}
 echo "Exit code: \$?"
 echo "Starting session..."
 rm -f \${portFile}

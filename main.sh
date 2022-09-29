@@ -19,9 +19,13 @@ echo
 chmod 777 * -Rf
 
 source lib.sh
+# Replace special placeholder since \$(whoami) and \${PW_USER} don't work everywhere and ${job_number} is not known
+wfargs="$(echo $@ | sed "s|__job_number__|${job_number}|g" | sed "s|__USER__|${PW_USER}|g") --job_number ${job_number}"
 
-echo "$0 $@"
-parseArgs $@
+
+echo "$0 $wfargs"
+
+parseArgs $wfargs
 
 getOpenPort
 
@@ -95,7 +99,7 @@ fi
 
 # SERVICE URL
 echo "Generating session html"
-replace_templated_inputs ${service_name}/url.sh $@ --job_number ${job_number}
+replace_templated_inputs ${service_name}/url.sh $wfargs
 source ${service_name}/url.sh
 cp service.html.template service.html
 sed -i "s|__URLEND__|${URLEND}|g" service.html
@@ -110,7 +114,7 @@ if [ -f "${service_name}/start-template.sh" ]; then
     start_service_sh=/pw/jobs/${job_number}/start-service.sh
     echo "Generating ${start_service_sh}"
     cp ${service_name}/start-template.sh ${start_service_sh}
-    replace_templated_inputs ${start_service_sh} $@ --job_number ${job_number}
+    replace_templated_inputs ${start_service_sh} $wfargs
     echo
 fi
 
@@ -118,13 +122,12 @@ if [ -f "${service_name}/kill-template.sh" ]; then
     kill_service_sh=/pw/jobs/${job_number}/kill-service.sh
     echo "Generating ${kill_service_sh}"
     cp ${service_name}/kill-template.sh ${kill_service_sh}
-    replace_templated_inputs ${kill_service_sh} $@ --job_number ${job_number}
+    replace_templated_inputs ${kill_service_sh} $wfargs
     echo
 fi
 
 # - Overwrite any argument by passing it BEFORE AND AFTER $@! E.g.: --argname argvalue $@  --argname argvalue
-bash ${session_wrapper_dir}/session_wrapper.sh $@ \
-        --job_number ${job_number} \
+bash ${session_wrapper_dir}/session_wrapper.sh $wfargs \
         --openPort ${openPort} \
         --controller ${controller} \
         --start_service_sh ${start_service_sh} \

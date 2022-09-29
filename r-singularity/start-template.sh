@@ -3,6 +3,41 @@ echo "$(date): $(hostname):${PWD} $0 $@"
 mount_dirs="$(echo  __mount_dirs__ | sed "s|___| |g" | sed "s|__mount_dirs__||g" )"
 path_to_sing="__path_to_sing__"
 
+# Bootstrap singularity file if it does not exist
+if ! [ -f "${path_to_sing}" ]; then
+    echo "WARNING: Path to singularity file <${path_to_sing}> was not found!"
+    echo "Trying to build singularity container from definition file ..."
+cat >> rserver.def <<HERE
+BootStrap: docker
+From: centos:centos7
+
+%post
+    yum install epel-release -y
+    yum install wget -y
+    yum install R -y
+    wget https://download2.rstudio.org/server/centos7/x86_64/rstudio-server-rhel-1.4.1717-x86_64.rpm
+    yum install rstudio-server-rhel-1.4.1717-x86_64.rpm -y
+
+%startscript
+    /usr/lib/rstudio-server/bin/rserver
+
+%labels
+    Author Alvaro.Vidal
+    Version v0.0.1
+
+%help
+    This is a container with centos7 and R server
+HERE
+    sudo singularity build ${path_to_sing} rserver.def
+fi
+
+if ! [ -f "${path_to_sing}" ]; then
+    # TODO: Copy file from /swift-pw-bin/apps/ ?
+    echo "ERROR: Path to singularity file <${path_to_sing}> was not found! --> Exiting workflow"
+    exit 1
+fi
+
+
 # MOUNT DIR DEFAULTS
 mount_dirs="${mount_dirs} -B ${HOME}:${HOME}"
 if [ -d "/contrib" ]; then

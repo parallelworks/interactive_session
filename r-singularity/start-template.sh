@@ -92,4 +92,6 @@ singularity run ${gpu_flag} \
     --auth-none=1 \
     --www-frame-origin=same
 
+sleep 99999 # FIXME: Remove
+
 

@@ -15,6 +15,18 @@ fi
 
 echo ${mdirs_cmd}
 
+# GPU SUPPORT
+if [[ __use_gpus__ == "True" ]]; then
+    gpu_flag="--nv"
+    # This is only needed in PW clusters
+    if [ -d "/usr/share/nvidia/" ]; then
+        mount_dirs="${mount_dirs} -B /usr/share/nvidia/:/usr/share/nvidia -B /usr/bin/nvidia-smi:/usr/bin/nvidia-smi"
+    fi
+else
+    gpu_flag=""
+fi
+
+
 # SANITY CHECKS!
 if ! [ -f "${path_to_sing}" ]; then
     echo "ERROR: File $(hostname):${path_to_sing} not found!"
@@ -33,7 +45,7 @@ printf 'provider=sqlite\ndirectory=/var/lib/rstudio-server\n' > database.conf
 # https://support.rstudio.com/hc/en-us/articles/200552326-Running-RStudio-Server-with-a-Proxy
 
 set -x
-singularity run \
+singularity run ${gpu_flag} \
     --bind run:/run,var-lib-rstudio-server:/var/lib/rstudio-server,database.conf:/etc/rstudio/database.conf \
     ${mount_dirs} \
     ${path_to_sing} \

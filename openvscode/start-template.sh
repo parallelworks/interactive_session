@@ -2,9 +2,11 @@
 set -x
 
 # Order of priority for server_exec:
-# 1. Whatever is in the ${PATH}
-# 2. __server_exec__ (hidden parameter)
-# 3. install_paths
+# 1. If server server_exec --> Use this
+# 2. If not:
+#     2.1: If server_exec is in PATH --> Use this
+#     2.2: Else --> bootstrap TGZ
+#     2.3: Else --> Search in install paths
 
 server_exec=__server_exec__
 partition_or_controller=__partition_or_controller__
@@ -102,18 +104,22 @@ bootstrap_tgz() {
 
 
 # START SERVICE
-if ! [ -z $(which ${server_bin}) ]; then
-    # If server binary is in the path use it
-    server_exec=$(which ${server_bin})
-else
-    # Else bootstrap (install)
-    bootstrap_tgz ${tgz_path} ${install_dir}
-fi
 
-if [ -f "${install_dir}/bin/${server_bin}" ]; then
-    server_exec=${install_dir}/bin/${server_bin}
-elif [ -z ${server_exec} ] || [[ "${server_exec}" == "__""server_exec""__" ]]; then
-    server_exec=$(find ${install_paths} -maxdepth 1 -mindepth 1 -name ${server_bin}  2>/dev/null | head -n1)
+if [ -z ${server_exec} ] || [[ "${server_exec}" == "__""server_exec""__" ]]; then
+    # If no server_exec is provided
+    if ! [ -z $(which ${server_bin}) ]; then
+        # If server binary is in the path use it
+        server_exec=$(which ${server_bin})
+    else
+        # Else bootstrap (install) -- Does nothing unless install_dir does not exist
+        bootstrap_tgz ${tgz_path} ${install_dir}
+        server_exec=${install_dir}/bin/${server_bin}
+    fi
+
+    # Search for the binary in install_paths
+    if [ ! -f "${server_exec}" ]; then
+        server_exec=$(find ${install_paths} -maxdepth 1 -mindepth 1 -name ${server_bin}  2>/dev/null | head -n1)
+    fi
 fi
 
 if [ ! -f "${server_exec}" ]; then

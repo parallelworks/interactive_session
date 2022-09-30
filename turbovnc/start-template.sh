@@ -5,22 +5,73 @@ slurm_module=__slurm_module__
 service_bin="$(echo __service_bin__  | sed "s|---| |g")"
 service_background=__service_background__ # Launch service as a background process (! or screen)
 chdir=__chdir__
-server_exec=__server_exec__
-install_dir=__install_dir__
-tgz_path=__tgz_path__
-# Order of priority for server_exec:
-# 1. Whatever is in the ${PATH}
-# 2. __server_exec__ (hidden parameter)
-# 3. install_paths
+vnc_exec=__vnc_exec__
+novnc_dir=__novnc_dir__
+novnc_tgz=__novnc_tgz__
+turbovnc_dir=__turbovnc_dir__
+turbovnc_tgz=__turbovnc_tgz__
+vnc_bin=vncserver
+
 install_paths="${HOME}/pworks/*/bin /opt/*/bin /shared/*/bin"
 
-if [ -z ${install_dir} ] || [[ "${install_dir}" == "__""install_dir""__" ]]; then
-    install_dir=${HOME}/pworks/noVNC-1.3.0
+
+bootstrap_tgz() {
+    tgz_path=$1
+    install_dir=$2
+    # Check if the code directory is present
+    # - if not copy from user container -> /swift-pw-bin/noVNC-1.3.0.tgz
+    if ! [ -d "${install_dir}" ]; then
+        echo "Bootstrapping ${install_dir}"
+        install_parent_dir=$(dirname ${install_dir})
+        mkdir -p ${install_parent_dir}
+
+        # first check if the noVNC file is available on the node
+        if [[ -f "/core/pworks-main/${tgz_path}" ]]; then
+            cp /core/pworks-main/${tgz_path} ${install_parent_dir}
+        else
+            ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+            if [[ ${partition_or_controller} == "True" ]]; then
+                # Running in a compute partition
+                if [[ "$USERMODE" == "k8s" ]]; then
+                    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
+                    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
+                    # Works because home directory is shared!
+                    ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                else # Docker mode
+                    # Works because home directory is shared!
+                    ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                fi
+            else
+                # Running in a controller node
+                if [[ "$USERMODE" == "k8s" ]]; then
+                    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
+                    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
+                    scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                else # Docker mode
+                    scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                fi
+            fi
+        fi
+        tar -zxf ${install_parent_dir}/$(basename ${tgz_path}) -C ${install_parent_dir}
+    fi
+}
+
+if [ -z ${novnc_dir} ] || [[ "${novnc_dir}" == "__""novnc_dir""__" ]]; then
+    novnc_dir=${HOME}/pworks/noVNC-1.3.0
 fi
 
-if [ -z ${tgz_path} ] || [[ "${tgz_path}" == "__""tgz_path""__" ]]; then
-    tgz_path=/swift-pw-bin/apps/noVNC-1.3.0.tgz
+if [ -z ${novnc_tgz} ] || [[ "${novnc_tgz}" == "__""novnc_tgz""__" ]]; then
+    novnc_tgz=/swift-pw-bin/apps/noVNC-1.3.0.tgz
 fi
+
+if [ -z ${turbovnc_dir} ] || [[ "${turbovnc_dir}" == "__""novnc_dir""__" ]]; then
+    turbovnc_dir=${HOME}/pworks/TurboVNC
+fi
+
+if [ -z ${turbovnc_tgz} ] || [[ "${turbovnc_tgz}" == "__""turbovnc_tgz""__" ]]; then
+    turbovnc_tgz=/swift-pw-bin/apps/turbovnc.tgz
+fi
+
 
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
@@ -71,15 +122,26 @@ if [ -z "${servicePort}" ]; then
     exit 1
 fi
 
-# Find vncserver executable:
-if ! [ -z $(which vncserver) ]; then
-    server_exec=$(which vncserver)
-elif [ -z ${server_exec} ] || [[ "${server_exec}" == "__""server_exec""__" ]]; then
-    server_exec=$(find ${install_paths} -maxdepth 1 -mindepth 1 -name vncserver  2>/dev/null | head -n1)
+# FIND SERVER EXECUTABLE (BOOTSTRAP)
+if [ -z ${vnc_exec} ] || [[ "${vnc_exec}" == "__""vnc_exec""__" ]]; then
+    # If no vnc_exec is provided
+    if ! [ -z $(which ${vnc_bin}) ]; then
+        # If server binary is in the path use it
+        vnc_exec=$(which ${vnc_bin})
+    else
+        # Else bootstrap (install) -- Does nothing unless install_dir does not exist
+        bootstrap_tgz ${turbovnc_tgz} ${turbovnc_dir}
+        vnc_exec=${turbovnc_dir}/bin/${vnc_bin}
+    fi
+
+    # Search for the binary in install_paths
+    if [ ! -f "${vnc_exec}" ]; then
+        vnc_exec=$(find ${install_paths} -maxdepth 1 -mindepth 1 -name ${vnc_bin}  2>/dev/null | head -n1)
+    fi
 fi
 
-if [ ! -f "${server_exec}" ]; then
-    echo ERROR: server_exec=${server_exec} file not found! - Existing workflow!
+if [ ! -f "${vnc_exec}" ]; then
+    echo ERROR: vnc_exec=${vnc_exec} file not found! - Existing workflow!
     exit 1
 fi
 
@@ -88,14 +150,14 @@ fi
 # File does not exist or file is empty
 if [ ! -f ${HOME}/.vnc/passwd ] || ! [ -s ${HOME}/.vnc/passwd ]; then
     mkdir -p ${HOME}/.vnc
-    echo headless | $(dirname ${server_exec})/vncpasswd -f > ${HOME}/.vnc/passwd
+    echo headless | $(dirname ${vnc_exec})/vncpasswd -f > ${HOME}/.vnc/passwd
     chown -R $USER:$USER ${HOME}/.vnc
     chmod 0600 ${HOME}/.vnc/passwd
 fi
 
 # Start service
-${server_exec} -kill ${DISPLAY}
-${server_exec} ${DISPLAY}
+${vnc_exec} -kill ${DISPLAY}
+${vnc_exec} ${DISPLAY}
 
 rm -f ${chdir}/service.pid
 touch ${chdir}/service.pid
@@ -109,49 +171,8 @@ else
     echo $! > ${chdir}/service.pid
 fi
 
-bootstrap_tgz() {
-    tgz_path=$1
-    install_dir=$2
-    # Check if the code directory is present
-    # - if not copy from user container -> /swift-pw-bin/noVNC-1.3.0.tgz
-    if ! [ -d "${install_dir}" ]; then
-        echo "Bootstrapping ${install_dir}"
-        install_parent_dir=$(dirname ${install_dir})
-        mkdir -p ${install_parent_dir}
-
-        # first check if the noVNC file is available on the node
-        if [[ -f "/core/pworks-main/${tgz_path}" ]]; then
-            cp /core/pworks-main/${tgz_path} ${install_parent_dir}
-        else
-            ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-            if [[ ${partition_or_controller} == "True" ]]; then
-                # Running in a compute partition
-                if [[ "$USERMODE" == "k8s" ]]; then
-                    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
-                    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-                    # Works because home directory is shared!
-                    ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
-                else # Docker mode
-                    # Works because home directory is shared!
-                    ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
-                fi
-            else
-                # Running in a controller node
-                if [[ "$USERMODE" == "k8s" ]]; then
-                    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
-                    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-                    scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
-                else # Docker mode
-                    scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
-                fi
-            fi
-        fi
-        tar -zxf ${install_parent_dir}/$(basename ${tgz_path}) -C ${install_parent_dir}
-    fi
-}
-
-bootstrap_tgz ${tgz_path} ${install_dir}
-cd ${install_dir}
+bootstrap_tgz ${novnc_tgz} ${novnc_dir}
+cd ${novnc_dir}
 
 echo
 # Load slurm module

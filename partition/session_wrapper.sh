@@ -22,6 +22,13 @@ else
     USER_CONTAINER_HOST="localhost"
 fi
 
+if [[ "$USERMODE" == "k8s" ]];then
+    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
+    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
+    TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST} \"ssh -J ${controller} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:$openPort:localhost:\$servicePort "'$(hostname)'"\""
+else
+    TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
+fi
 
 # Initiallize session batch file:
 echo "Generating session script"
@@ -88,7 +95,6 @@ openPort=${openPort}
 masterIp=${masterIp}
 USER_CONTAINER_HOST=${USER_CONTAINER_HOST}
 controller=${controller}
-USERMODE=${USERMODE}
 
 # Find an available servicePort
 minPort=6000
@@ -118,23 +124,15 @@ echo
 
 # Create a port tunnel from the allocated compute node to the user container (or user node in some cases)
 
-if [[ "$USERMODE" == "k8s" ]];then
-    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
-    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-    TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST} \"ssh -J ${controller} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:$openPort:localhost:\$servicePort "'\$(hostname)'"\""
-else
-    TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
-fi
-
 # run this in a screen so the blocking tunnel cleans up properly
 echo "Running blocking ssh command..."
 screen_bin=\$(which screen 2> /dev/null)
 if [ -z "\${screen_bin}" ]; then
-    echo "\${TUNNELCMD} &"
-    \${TUNNELCMD} &
+    echo "${TUNNELCMD} &"
+    ${TUNNELCMD} &
 else
-    echo "screen -d -m \${TUNNELCMD}"
-    screen -d -m \${TUNNELCMD}
+    echo "screen -d -m ${TUNNELCMD}"
+    screen -d -m ${TUNNELCMD}
 fi
 echo "Exit code: \$?"
 echo "Starting session..."

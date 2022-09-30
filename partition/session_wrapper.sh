@@ -131,6 +131,8 @@ echo
 echo "Running blocking ssh command..."
 screen_bin=\$(which screen 2> /dev/null)
 if [ -z "\${screen_bin}" ]; then
+    echo "ERROR: screen is not installed in the system --> Exiting workflow"
+    exit 1
     echo "${TUNNELCMD}"
     ${TUNNELCMD}
 else

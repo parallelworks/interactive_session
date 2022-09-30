@@ -82,6 +82,9 @@ if [[ "${stream}" == "True" ]]; then
 fi
 
 cat >> ${session_sh} <<HERE
+# Needed for emed
+source ~/.bashrc
+cd ${chdir}
 if [[ "${pooltype}" == slurmshv2 ]]; then
     # register the worker to the coaster service
     ~/pworks/remote.sh

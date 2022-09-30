@@ -7,7 +7,7 @@
     <param name='novnc_dir' label='Default noVNC installation directory' type='hidden' value='~/pworks/noVNC-1.3.0' width='50%_none'></param>
     <param name='novnc_tgz' label='Path to noVNC TGZ' type='hidden' value='/swift-pw-bin/apps/noVNC-1.3.0.tgz' width='50%_none'></param>
     <param name='turbovnc_dir' label='Default turbovnc installation directory' type='hidden' value='~/pworks/TurboVNC' width='50%_none'></param>
-    <param name='turbovnc_tgz' label='Path to turbovnc TGZ' type='hidden' value='/swift-pw-bin/apps/turbovnc.tgz' width='50%_none'></param>    <section name='host' type='section' title='ecFlow Host' expanded='true'>
+    <param name='turbovnc_tgz' label='Path to turbovnc TGZ' type='hidden' value='/swift-pw-bin/apps/turbovnc.tgz' width='50%_none'></param>
     <section name='host' type='section' title='Rstudio Host' expanded='true'>
       <conditional name="partition_or_controller_cond">
             <param name="partition_or_controller" type="boolean" truevalue="Partition" falsevalue="Controller" checked="True" label="Partition or controller node?" help='Choose to run the service in the controller / login or partition / compute nodes' width="25%_none" optional='true' float="right"></param>

@@ -11,7 +11,7 @@
       <conditional name="partition_or_controller_cond">
             <param name="partition_or_controller" type="boolean" truevalue="Partition" falsevalue="Controller" checked="True" label="Run service on partition or controller node?" help='Choose to run the service in the controller / login or partition / compute nodes' width="25%_none" optional='true' float="right"></param>
             <when value="Partition">
-                <param name='partition' label='Slurm partition with GPU support' type='text' help='Partition to submit the interactive job. Needs GPUs and CUDA!' value='default' width='50%_none'>
+                <param name='partition' label='Slurm partition with GPU support' type='text' help='Partition to submit the interactive job. Needs GPUs and CUDA!' value='gpu' width='50%_none'>
                 </param>
                 <param name='walltime' placeholder="test" type='text' help='e.g. 00:10:00 - Amount of time slurm will honor the interactive session.' value='00:20:00' width='50%_none'>
                 </param>

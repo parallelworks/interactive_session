@@ -42,6 +42,18 @@ if [[ "$openPort" == "" ]];then
     exit 1
 fi
 
+if ! [ -f "${CONDA_PYTHON_EXE}" ]; then
+    echo "WARNING: Environment variable CONDA_PYTHON_EXE is pointing to a missing file ${CONDA_PYTHON_EXE}!"
+    echo "         Modifying its value: export CONDA_PYTHON_EXE=$(which python3)"
+    export CONDA_PYTHON_EXE=$(which python3)
+fi
+
+if [[ "$openPort" == "" ]];then
+    echo "ERROR - cannot find open port..."
+    exit 1
+fi
+${CONDA_PYTHON_EXE}
+
 echo "Interactive Session Port: $openPort"
 
 if ! [ -d "${service_name}" ]; then

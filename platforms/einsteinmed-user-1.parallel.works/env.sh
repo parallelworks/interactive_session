@@ -1,0 +1,1 @@
+export CONDA_PYTHON_EXE=/public/apps/conda3/bin/python3

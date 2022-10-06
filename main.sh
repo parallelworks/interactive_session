@@ -45,6 +45,7 @@ fi
 if ! [ -f "${CONDA_PYTHON_EXE}" ]; then
     echo "WARNING: Environment variable CONDA_PYTHON_EXE is pointing to a missing file ${CONDA_PYTHON_EXE}!"
     echo "         Modifying its value: export CONDA_PYTHON_EXE=$(which python3)"
+    # Wont work unless it has requests...
     export CONDA_PYTHON_EXE=$(which python3)
 fi
 

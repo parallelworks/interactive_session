@@ -148,12 +148,12 @@ fi
 # Set password
 # printf "password\npassword\n\n" | vncpasswd
 # File does not exist or file is empty
-if [ ! -f ${HOME}/.vnc/passwd ] || ! [ -s ${HOME}/.vnc/passwd ]; then
-    mkdir -p ${HOME}/.vnc
-    echo headless | $(dirname ${vnc_exec})/vncpasswd -f > ${HOME}/.vnc/passwd
-    chown -R $USER:$USER ${HOME}/.vnc
-    chmod 0600 ${HOME}/.vnc/passwd
-fi
+# See issue: https://github.com/parallelworks/issues/issues/496
+passwd_file=passwd-$(date +%s)
+mkdir -p ${HOME}/.vnc
+echo headless | $(dirname ${vnc_exec})/vncpasswd -f > ${HOME}/.vnc/${passwd_file}
+chown -R $USER:$USER ${HOME}/.vnc
+chmod 0600 ${HOME}/.vnc/${passwd_file}
 
 # Start service
 ${vnc_exec} -kill ${DISPLAY}

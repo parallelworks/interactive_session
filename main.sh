@@ -68,11 +68,17 @@ if ! [ -f "${service_name}/url.sh" ]; then
 fi
 
 #  CONTROLLER INFO
-poolname=$(cat /pw/jobs/${job_number}/pw.conf | grep sites | grep -o -P '(?<=\[).*?(?=\])')
-if [ -z "${poolname}" ]; then
-    echo "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
-    exit 1
+# We need to know the poolname to get the pooltype (always) and the controller IP address (sometimes)
+if [ -z "${poolname}" ] || [[ "${poolname}" == "pw.conf" ]]; then
+    poolname=$(cat /pw/jobs/${job_number}/pw.conf | grep sites | grep -o -P '(?<=\[).*?(?=\])')
+    if [ -z "${poolname}" ]; then
+        echo "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
+        exit 1
+    fi
 fi
+# No underscores and only lowercase
+poolname=$(echo ${poolname} | sed "s/_//g" |  tr '[:upper:]' '[:lower:]')
+
 
 pooltype=$(${CONDA_PYTHON_EXE} utils/get_pool_type.py ${poolname})
  if [ -z "${pooltype}" ]; then

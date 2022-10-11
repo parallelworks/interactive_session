@@ -146,7 +146,7 @@ if [ ! -f "${vnc_exec}" ]; then
 fi
 
 # Set password
-printf "password\npassword\n\n" | vncpasswd
+# printf "password\npassword\n\n" | vncpasswd
 # File does not exist or file is empty
 if [ ! -f ${HOME}/.vnc/passwd ] || ! [ -s ${HOME}/.vnc/passwd ]; then
     mkdir -p ${HOME}/.vnc

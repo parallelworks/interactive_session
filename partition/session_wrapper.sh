@@ -13,6 +13,12 @@ sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
 # NOTE - in the below example there is an ~/.ssh/config definition of "localhost" control master that already points to the user container
 #masterIp=$($sshcmd cat '~/.ssh/masterip')
 masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usually be the internal ip
+if [ -z ${masterIp} ]; then
+    echo ERROR: masterIP variable is empty. Command:
+    echo "$sshcmd hostname -I | cut -d' ' -f1"
+    echo Exiting workflow
+    exit 1
+fi
 
 
 # USER_CONTAINER_HOST

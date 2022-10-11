@@ -20,7 +20,6 @@ if [ -z ${masterIp} ]; then
     exit 1
 fi
 
-
 # USER_CONTAINER_HOST
 if [[ ${pooltype} == "slurmshv2" ]]; then
     USER_CONTAINER_HOST=${PW_USER_HOST} #${PARSL_CLIENT_HOST}

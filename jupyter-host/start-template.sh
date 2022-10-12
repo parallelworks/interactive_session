@@ -34,9 +34,13 @@ echo "starting notebook on $servicePort..."
 export XDG_RUNTIME_DIR=""
 
 # Generate sha:
-echo "Generating sha"
-sha=$(python3 -c "from notebook.auth.security import passwd; print(passwd('${password}', algorithm = 'sha1'))")
-
+if [ -z "${password}" ]; then
+    echo "No password was specified"
+    sha=""
+else
+    echo "Generating sha"
+    sha=$(python3 -c "from notebook.auth.security import passwd; print(passwd('${password}', algorithm = 'sha1'))")
+fi
 # Set the launch directory for JupyterHub
 # If notebook_dir is not set or set to a templated value,
 # use the default value of "/".

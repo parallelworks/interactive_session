@@ -74,6 +74,10 @@ if [[ "${exclusive}" == "True" ]]; then
     echo "#SBATCH --exclusive" >> ${session_sh}
 fi
 
+if [[ "${cpus_per_task}" == "True" ]]; then
+    echo "#SBATCH --cpus-per-task=${cpus_per_task}" >> ${session_sh}
+fi
+
 echo "#SBATCH --job-name=session-${job_number}" >> ${session_sh}
 echo "#SBATCH --output=session-${job_number}.out" >> ${session_sh}
 echo >> ${session_sh}

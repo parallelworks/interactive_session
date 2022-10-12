@@ -20,11 +20,14 @@ chmod 777 docker-kill-${job_number}.sh
 
 sudo systemctl start docker
 
-sha=$(sudo docker run --rm __docker_repo__ python3 -c "from notebook.auth.security import passwd; print(passwd('__password__', algorithm = 'sha1'))")
 
-if [ -z "${sha}" ]; then
-    echo "ERROR: No password specified for jupyter notebook - exiting the workflow"
-    exit 1
+# Generate sha:
+if [ -z "${password}" ] || [[ "${password}" == "__""password""__" ]]; then
+    echo "No password was specified"
+    sha=""
+else
+    echo "Generating sha"
+    sha=$(sudo docker run --rm __docker_repo__ python3 -c "from notebook.auth.security import passwd; print(passwd('__password__', algorithm = 'sha1'))")
 fi
 
 # Docker supports mounting directories that do not exist (singularity does not)

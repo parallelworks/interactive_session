@@ -74,7 +74,7 @@ if [[ "${exclusive}" == "True" ]]; then
     echo "#SBATCH --exclusive" >> ${session_sh}
 fi
 
-if [[ "${cpus_per_task}" == "True" ]]; then
+if ! [ -z ${cpus_per_task} ]; then
     echo "#SBATCH --cpus-per-task=${cpus_per_task}" >> ${session_sh}
 fi
 

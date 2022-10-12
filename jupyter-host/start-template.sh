@@ -34,7 +34,7 @@ echo "starting notebook on $servicePort..."
 export XDG_RUNTIME_DIR=""
 
 # Generate sha:
-if [ -z "${password}" ]; then
+if [ -z "${password}" ] || [[ "${password}" == "__""password""__" ]]; then
     echo "No password was specified"
     sha=""
 else

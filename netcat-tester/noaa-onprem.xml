@@ -16,7 +16,7 @@
                 </param>
             </when>
         </conditional>
-    <param name='walltime' placeholder="test" type='text' help='e.g. 00:10:00 - Amount of time slurm will honor the interactive session.' value='00:20:00' width='50%_none'>
+    <param name='walltime' label='Walltime' type='text' help='e.g. 00:10:00 - Amount of time slurm will honor the interactive session.' value='00:20:00' width='50%_none'>
     </param>
     </section>
     <section name='advanced_options_other' type='section' title='Advanced Options' expanded='false'>

@@ -13,7 +13,7 @@
             <when value="Partition">
                 <param name='partition' label='Slurm partition with GPU support' type='text' help='Partition to submit the interactive job. Needs GPUs and CUDA!' value='gpu' width='50%_none'>
                 </param>
-                <param name='walltime' placeholder="test" type='text' help='e.g. 00:10:00 - Amount of time slurm will honor the interactive session.' value='00:20:00' width='50%_none'>
+                <param name='walltime' label='Walltime' type='text' help='e.g. 00:10:00 - Amount of time slurm will honor the interactive session.' value='00:20:00' width='50%_none'>
                 </param>
                 <param name='numnodes' label='Number of nodes' type='integer' min="1" max="10" help='Number of nodes to request for the interactive session.' value='1' width='50%_none'>
                 </param>

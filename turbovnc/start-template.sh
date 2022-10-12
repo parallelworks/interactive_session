@@ -145,17 +145,6 @@ if [ ! -f "${vnc_exec}" ]; then
     exit 1
 fi
 
-# Set password
-## printf "password\npassword\n\n" | vncpasswd
-# File does not exist or file is empty
-#passwd_file=${HOME}/.vnc/passwd-$(date +%s)
-#if [ ! -f ${HOME}/.vnc/passwd ] || ! [ -s ${HOME}/.vnc/passwd ]; then
-#    mkdir -p ${HOME}/.vnc
-#    echo headless | $(dirname ${vnc_exec})/vncpasswd -f > ${HOME}/.vnc/passwd
-#    chown -R $USER:$USER ${HOME}/.vnc
-#    chmod 0600 ${HOME}/.vnc/passwd
-#fi
-
 # Start service
 ${vnc_exec} -kill ${DISPLAY}
 ${vnc_exec} ${DISPLAY} -SecurityTypes None

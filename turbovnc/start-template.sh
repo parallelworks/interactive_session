@@ -72,31 +72,6 @@ if [ -z ${turbovnc_tgz} ] || [[ "${turbovnc_tgz}" == "__""turbovnc_tgz""__" ]]; 
     turbovnc_tgz=/swift-pw-bin/apps/turbovnc.tgz
 fi
 
-
-# Prepare kill service script
-# - Needs to be here because we need the hostname of the compute node.
-# - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
-echo "Creating file ${chdir}/service-kill-${job_number}-main.sh from directory ${PWD}"
-if [[ ${partition_or_controller} == "True" ]]; then
-    # Remove .cluster.local for einteinmed!
-    hname=$(hostname | sed "s/.cluster.local//g")
-    echo "ssh ${hname} 'bash -s' < ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
-else
-    echo "bash ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
-fi
-
-cat >> ${chdir}/service-kill-${job_number}-main.sh <<HERE
-service_pid=\$(cat ${chdir}/service.pid)
-if [ -z \${service_pid} ]; then
-    echo "ERROR: No service pid was found!"
-else
-    echo "$(hostname) - Killing process: ${service_pid}"
-    pkill -P \${service_pid}
-    kill \${service_pid}
-fi
-HERE
-
-echo
 set -x
 
 # Find an available display port
@@ -121,6 +96,38 @@ if [ -z "${servicePort}" ]; then
     echo "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
     exit 1
 fi
+
+# Prepare kill service script
+# - Needs to be here because we need the hostname of the compute node.
+# - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
+echo "Creating file ${chdir}/service-kill-${job_number}-main.sh from directory ${PWD}"
+if [[ ${partition_or_controller} == "True" ]]; then
+    # Remove .cluster.local for einteinmed!
+    hname=$(hostname | sed "s/.cluster.local//g")
+    echo "ssh ${hname} 'bash -s' < ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
+else
+    echo "bash ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
+fi
+
+cat >> ${chdir}/service-kill-${job_number}-main.sh <<HERE
+service_pid=\$(cat ${chdir}/service.pid)
+if [ -z \${service_pid} ]; then
+    echo "ERROR: No service pid was found!"
+else
+    echo "$(hostname) - Killing process: ${service_pid}"
+    pkill -P \${service_pid}
+    kill \${service_pid}
+fi
+echo "~/.vnc/\${HOSTNAME}${DISPLAY}.pid:"
+cat ~/.vnc/\${HOSTNAME}${DISPLAY}.pid
+echo "~/.vnc/\${HOSTNAME}${DISPLAY}.log:"
+cat ~/.vnc/\${HOSTNAME}${DISPLAY}.log
+vnc_pid=\$(cat ~/.vnc/\${HOSTNAME}${DISPLAY}.pid)
+pkill -P \${vnc_pid}
+kill \${vnc_pid}
+rm ~/.vnc/\${HOSTNAME}${DISPLAY}.*
+HERE
+echo
 
 # FIND SERVER EXECUTABLE (BOOTSTRAP)
 if [ -z ${vnc_exec} ] || [[ "${vnc_exec}" == "__""vnc_exec""__" ]]; then

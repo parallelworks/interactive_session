@@ -8,7 +8,7 @@
     <param name='turbovnc_tgz' label='Path to turbovnc TGZ' type='hidden' value='/swift-pw-bin/apps/turbovnc.tgz' width='50%_none'></param>
     <section name='host' type='section' title='Desktop Host' expanded='true'>
       <conditional name="partition_or_controller_cond">
-            <param name="partition_or_controller" type="boolean" truevalue="Partition" falsevalue="Controller" checked="False" label="Partition or controller node?" help='Choose to run the service in the controller / login or partition / compute nodes' width="25%_none" optional='true' float="right"></param>
+            <param name="partition_or_controller" type="boolean" truevalue="Partition" falsevalue="Controller" checked="True" label="Partition or controller node?" help='Choose to run the service in the controller / login or partition / compute nodes' width="25%_none" optional='true' float="right"></param>
             <when value="Partition">
                 <param name='partition' label='Slurm partition:' type='text' help='Partition to submit the interactive job to.' value='normal' width='50%_none'>
                 </param>

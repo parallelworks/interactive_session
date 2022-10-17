@@ -1,7 +1,0 @@
-BootStrap: docker
-From: openfoam/openfoam9-paraview56
-
-%help
-  This Singularity container of the openfoam9-paraview56 docker repository
-%labels
-  Author Alvaro.Vidal

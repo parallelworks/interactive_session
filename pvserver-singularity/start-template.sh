@@ -58,8 +58,6 @@ singularity exec ${gpu_flag} \
     ${path_to_sing} \
     pvserver \
     -server-port=${servicePort} \
-    --hostname=0.0.0.0 \
-    --port=$servicePort 
-
+    --hostname=0.0.0.0 
 
 sleep 99999

@@ -52,12 +52,11 @@ fi
 
 # FIXME: Add mpirun!
 #        Remove sleep
+#        Singularity container needs to be defined so that you dont need to touce /opt/openfoam...
 set -x
 singularity exec ${gpu_flag} \
     ${mount_dirs} \
     ${path_to_sing} \
-    pvserver \
-    --server-port=${servicePort} \
-    --hostname=0.0.0.0 
+    bash -c "source /opt/openfoam9/etc/bashrc; pvserver --server-port=${servicePort} --hostname=0.0.0.0" 
 
 sleep 99999

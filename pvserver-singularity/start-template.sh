@@ -57,7 +57,7 @@ singularity exec ${gpu_flag} \
     ${mount_dirs} \
     ${path_to_sing} \
     pvserver \
-    -server-port=${servicePort} \
+    --server-port=${servicePort} \
     --hostname=0.0.0.0 
 
 sleep 99999

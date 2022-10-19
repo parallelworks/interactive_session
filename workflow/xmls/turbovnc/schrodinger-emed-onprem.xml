@@ -22,7 +22,7 @@
         </conditional>
     </section>
     <section name='advanced_options_other' type='section' title='Advanced Options' expanded='false'>
-        <param name='chdir' label='Working directory of the batch script' type='text' value='/gs/gsfs0/users/\$(whoami)/pw/jobs/__job_number__' help='Working directory of the batch script to directory before it is executed' width='50%_none'>
+        <param name='chdir' label='Working directory of the batch script' type='text' value='/gs/gsfs0/users/__USER__/pw/jobs/__job_number__' help='Working directory of the batch script to directory before it is executed' width='50%_none'>
         </param>
     </section>
   </inputs>

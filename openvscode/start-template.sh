@@ -31,7 +31,7 @@ else
 fi
 
 if [ -z ${password} ] || [[ "${password}" == "__""password""__" ]]; then
-    password_flag=""
+    password_flag="--auth=none"
 else
     export PASSWORD=${password}
     password_flag="--auth=password"

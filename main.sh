@@ -90,7 +90,7 @@ fi
 echo "Pool type: ${pooltype}"
 
 
-if [[ ${controller} == "pw.conf" ]]; then
+if [ -z "${controller}" ] || [[ ${controller} == "pw.conf" ]]; then
     if [ -z "${poolname}" ]; then
         echo "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
         exit 1

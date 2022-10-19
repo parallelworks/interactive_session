@@ -1,6 +1,8 @@
 echo "$(date): $(hostname):${PWD} $0 $@"
 
 path_to_sing="__path_to_sing__"
+viewport_max_width="__viewport_max_width__"
+viewport_max_height="__viewport_max_height__"
 
 # FIXME: How do we mount /data?
 # MOUNT DIR DEFAULTS
@@ -45,6 +47,6 @@ singularity run ${gpu_flag} \
     --content /opt/paraview/install/share/paraview-5.6/web/visualizer/www \
     --port ${servicePort} \
     --data /data \
-    --viewport-max-width 1920 \
-    --viewport-max-height 1080 \
+    --viewport-max-width ${viewport_max_width} \
+    --viewport-max-height ${viewport_max_height} \
     --timeout 99999

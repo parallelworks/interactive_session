@@ -1,4 +1,4 @@
-<tool id='User.Demo_jupyter_docker_tensorflow_cloud' name='User.Demo_jupyter_docker_tensorflow_cloud'>
+<tool id='Matthew.Shaxted_paraview_web_singularity' name='Matthew.Shaxted_paraview_web_singularity'>
   <command interpreter='bash'>main.sh</command>
   <inputs>
     <section name='service_sec' type='section' title='Jupyter Server' expanded='true'>

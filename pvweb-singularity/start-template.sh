@@ -40,7 +40,7 @@ set -x
 singularity run ${gpu_flag} \
     ${mount_dirs} \
     ${path_to_sing} \
-    /opt/paraview/install/bin/pvpython '"${EXTRA_PVPYTHON_ARGS}'" \
+    /opt/paraview/install/bin/pvpython '"${EXTRA_PVPYTHON_ARGS}"' \
     /opt/paraview/install/share/paraview-5.6/web/visualizer/server/pvw-visualizer.py \
     --content /opt/paraview/install/share/paraview-5.6/web/visualizer/www \
     --port ${servicePort} \

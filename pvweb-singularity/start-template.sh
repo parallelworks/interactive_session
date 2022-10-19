@@ -47,4 +47,4 @@ singularity run ${gpu_flag} \
     --data /data \
     --viewport-max-width 1920 \
     --viewport-max-height 1080 \
-    --timeout 30
+    --timeout 99999

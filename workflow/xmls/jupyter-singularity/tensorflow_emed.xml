@@ -21,8 +21,6 @@
         </conditional>
     </section>
     <section name='advanced_options_other' type='section' title='Advanced options: Miscellaneous' expanded='false'>
-        <param name='controller' label='Controller host' type='text' value='pw.conf' help='Use hostname@ip or a proxy like PoolName.clusters.pw. Use pw.conf to get PoolName from pw.conf' width='50%_none'>
-        </param>
         <param name='chdir' label='Working directory of the batch script' type='text' value='/gs/gsfs0/users/__USER__/pw/jobs/__job_number__' help='Working directory of the batch script to directory before it is executed' width='50%_none'>
         </param>
     </section>

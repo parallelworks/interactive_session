@@ -5,7 +5,7 @@
   <param name='install_dir' label='Default OpenVSCode installation directory' type='hidden' value='/contrib/__USER__/pworks/code-server-4.7.0-linux-amd64' width='50%_none'></param>
   <param name='tgz_path' label='Path to bootstrap TGZ' type='hidden' value='/swift-pw-bin/apps/code-server-4.7.0-linux-amd64.tar.gz' width='50%_none'></param>
     <section name='service_sec' type='section' title='OpenVSCode Settings' expanded='true'>
-        <param name='password' label='Password for IDE access' type='text' value='EnterPassword' help='' width='50%_none'></param>
+        <param name='password' label='Password for IDE session' type='text' value='' help='Enter password or leave blank for no password' width='50%_none'></param>
         <param name='server_dir' label='Directory to open in VS code' type='text' value='~/' help='' width='50%_none'></param>
         <param name='github_token' label='GitHub authentication token (optional)' type='text' value='' help='' width='50%_none'></param>
    </section>

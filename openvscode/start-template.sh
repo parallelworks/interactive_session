@@ -30,6 +30,13 @@ else
     gh_flag="--github-auth"
 fi
 
+if [ -z ${password} ] || [[ "${password}" == "__""password""__" ]]; then
+    password_flag=""
+else
+    export PASSWORD=${password}
+    password_flag="--auth=password"
+fi
+
 if [ -z ${install_dir} ] || [[ "${install_dir}" == "__""install_dir""__" ]]; then
     install_dir=${HOME}/pworks/code-server-4.7.0-linux-amd64
 fi
@@ -127,15 +134,12 @@ if [ ! -f "${server_exec}" ]; then
     exit 1
 fi
 
-export PASSWORD=${password}
 ${server_exec} \
-    --auth=password  \
     --bind-addr=localhost:${servicePort} \
     ${gh_flag} \
+    ${password_flag} \
     ${server_dir}
 
-# DELETE ME: To test different server commands
-sleep 99999
 
 exit 0
 # For openvscode-server

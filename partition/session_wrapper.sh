@@ -91,8 +91,7 @@ if [[ "${stream}" == "True" ]]; then
 fi
 
 # MAKE SURE CONTROLLER NODES HAVE SSH ACCESS TO COMPUTE NODES:
-echo "cp ~/.ssh/id_rsa.pub ${remote_session_dir}" # DEBUG
-cp ~/.ssh/id_rsa.pub ${remote_session_dir}
+$sshcmd cp ~/.ssh/id_rsa.pub ${remote_session_dir}
 
 cat >> ${session_sh} <<HERE
 # Needed for emed

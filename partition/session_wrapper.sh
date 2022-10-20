@@ -90,10 +90,21 @@ if [[ "${stream}" == "True" ]]; then
     echo ${stream_cmd} >> ${session_sh}
 fi
 
+# MAKE SURE CONTROLLER NODES HAVE SSH ACCESS TO COMPUTE NODES:
+cp ~/.ssh/id_rsa.pub ${chdir}
+
 cat >> ${session_sh} <<HERE
 # Needed for emed
 source ~/.bashrc
 cd ${chdir}
+
+# MAKE SURE CONTROLLER NODES HAVE SSH ACCESS TO COMPUTE NODES:
+pubkey=\$(cat ~/.ssh/authorized_keys | grep \"\$(cat id_rsa.pub)\")
+if [ -z "\${pubkey}" ]; then
+    echo "Adding public key of controller node to compute node ~/.ssh/authorized_keys"
+    cat id_rsa.pub >> ~/.ssh/authorized_keys
+fi
+
 if [[ "${pooltype}" == slurmshv2 ]]; then
     # register the worker to the coaster service
     ~/pworks/remote.sh

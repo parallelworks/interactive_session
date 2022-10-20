@@ -11,6 +11,14 @@ parseArgs $@
 sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
 chdir=$(echo ${chdir} | sed "s|__job_number__|${job_number}|g")
 
+# Is needed for bootstraps!
+masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usually be the internal ip
+if [ -z ${masterIp} ]; then
+    echo ERROR: masterIP variable is empty. Command:
+    echo "$sshcmd hostname -I | cut -d' ' -f1"
+    echo Exiting workflow
+    exit 1
+fi
 
 # CREATE KILL FILE:
 # - NEEDS TO BE MADE BEFORE RUNNING SESSION SCRIPT!
@@ -85,6 +93,8 @@ IPADDRESS=${IPADDRESS}
 openPort=${openPort}
 USER_CONTAINER_HOST=${USER_CONTAINER_HOST}
 USERMODE=${USERMODE}
+masterIp=${masterIp}
+
 
 # Find an available servicePort
 minPort=6000

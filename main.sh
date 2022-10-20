@@ -78,7 +78,6 @@ fi
 # No underscores and only lowercase
 poolname=$(echo ${poolname} | sed "s/_//g" |  tr '[:upper:]' '[:lower:]')
 
-
 pooltype=$(${CONDA_PYTHON_EXE} utils/get_pool_type.py ${poolname})
  if [ -z "${pooltype}" ]; then
     echo "ERROR: Pool type not found - exiting the workflow"
@@ -87,6 +86,13 @@ pooltype=$(${CONDA_PYTHON_EXE} utils/get_pool_type.py ${poolname})
 fi
 
 echo "Pool type: ${pooltype}"
+
+# set USER_CONTAINER_HOST
+if [[ ${pooltype} == "slurmshv2" ]]; then
+    USER_CONTAINER_HOST=${PW_USER_HOST} #${PARSL_CLIENT_HOST}  
+else
+    USER_CONTAINER_HOST="localhost"
+fi
 
 
 if [ -z "${controller}" ] || [[ ${controller} == "pw.conf" ]]; then
@@ -108,6 +114,16 @@ fi
 if [[ ${partition_or_controller} == "True" ]]; then
     echo "Submitting sbatch job to ${controller}"
     session_wrapper_dir=partition
+    # Need poolworkdir to source ${poolworkdir}/pworks/remote.sh in onprem compute partitions
+    if [[ ${pooltype} == "slurmshv2" ]]; then
+        poolworkdir=$(${CONDA_PYTHON_EXE} utils/get_pool_workdir.py ${poolname})
+        if [ -z "${poolworkdir}" ]; then
+            echo "ERROR: Pool workdir not found - exiting the workflow"
+            echo "${CONDA_PYTHON_EXE} utils/get_pool_workdir.py ${poolname}"
+            exit 1
+        fi
+        wfargs="${wfargs} --poolworkdir ${poolworkdir}"
+    fi  
 else
     echo "Submitting ssh job to ${controller}"
     session_wrapper_dir=controller
@@ -148,6 +164,7 @@ bash ${session_wrapper_dir}/session_wrapper.sh $wfargs \
         --controller ${controller} \
         --start_service_sh ${start_service_sh} \
         --kill_service_sh ${kill_service_sh} \
-        --pooltype ${pooltype}
+        --pooltype ${pooltype} \
+        --USER_CONTAINER_HOST ${USER_CONTAINER_HOST}
 
 bash kill.sh

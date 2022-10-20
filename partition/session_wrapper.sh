@@ -20,13 +20,6 @@ if [ -z ${masterIp} ]; then
     exit 1
 fi
 
-# USER_CONTAINER_HOST
-if [[ ${pooltype} == "slurmshv2" ]]; then
-    USER_CONTAINER_HOST=${PW_USER_HOST} #${PARSL_CLIENT_HOST}
-else
-    USER_CONTAINER_HOST="localhost"
-fi
-
 if [[ "$USERMODE" == "k8s" ]];then
     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
     # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
@@ -105,12 +98,10 @@ if [ -z "\${pubkey}" ]; then
     cat id_rsa.pub >> ~/.ssh/authorized_keys
 fi
 
-if [[ "${pooltype}" == slurmshv2 ]]; then
-    # register the worker to the coaster service
-    ~/pworks/remote.sh
+if ! [ -z "${poolworkdir}" ]; then
+    ${poolworkdir}/pworks/remote.sh
 fi
 
-#!/bin/bash
 # These are not workflow parameters but need to be available to the service on the remote node!
 FORWARDPATH=${FORWARDPATH}
 IPADDRESS=${IPADDRESS}

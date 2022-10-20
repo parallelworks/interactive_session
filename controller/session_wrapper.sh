@@ -53,14 +53,6 @@ HERE
 echo "echo Finished running ${kill_sh}" >> ${kill_sh}
 chmod 777 ${kill_sh}
 
-
-# USER_CONTAINER_HOST FOR TUNNEL COMMAND:
-if [[ ${pooltype} == "slurmshv2" ]]; then
-    USER_CONTAINER_HOST=${PW_USER_HOST} #${PARSL_CLIENT_HOST}
-else
-    USER_CONTAINER_HOST="localhost"
-fi
-
 # TUNNEL COMMAND:
 if [[ "$USERMODE" == "k8s" ]];then
     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT

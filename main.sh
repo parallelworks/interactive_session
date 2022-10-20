@@ -10,8 +10,7 @@ echo "JOB NUMBER:  ${job_number}"
 echo "USER:        ${PW_USER}"
 echo "DATE:        $(date)"
 # Very useful to rerun a workflow with the exact same code version!
-#commit_hash=$(git log --pretty=format:'%h' -n 1)
-commit_hash=$(git --git-dir=clone/.git log --pretty=format:'%h' -n 1)
+#commit_hash=$(git --git-dir=clone/.git log --pretty=format:'%h' -n 1)
 echo "COMMIT HASH: ${commit_hash}"
 echo
 

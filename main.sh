@@ -28,6 +28,11 @@ parseArgs $wfargs
 
 getOpenPort
 
+###############################
+# SANITY CHECKS AND DEFAULTS: #
+###############################
+USER_CONTAINER_HOST="usercontainer"
+
 # LOAD PLATFORM-SPECIFIC ENVIRONMENT:
 env_sh=platforms/${PARSL_CLIENT_HOST}/env.sh
 if ! [ -f "${env_sh}" ]; then
@@ -35,7 +40,6 @@ if ! [ -f "${env_sh}" ]; then
 fi
 source ${env_sh}
 
-# SANITY CHECKS
 if [[ "$openPort" == "" ]];then
     echo "ERROR - cannot find open port..."
     exit 1
@@ -87,7 +91,7 @@ fi
 
 echo "Pool type: ${pooltype}"
 
-# set USER_CONTAINER_HOST - this has been unified now between cloud and on-prem resources
+# POOL TYPE DEFAULTS
 if [[ ${pooltype} == "slurmshv2" ]]; then
     USER_CONTAINER_HOST="usercontainer"
 else

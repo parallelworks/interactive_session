@@ -50,3 +50,5 @@ singularity run ${gpu_flag} \
     --viewport-max-width ${viewport_max_width} \
     --viewport-max-height ${viewport_max_height} \
     --timeout 99999
+
+sleep 99999

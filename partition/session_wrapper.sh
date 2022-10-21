@@ -98,8 +98,8 @@ if [ -z "\${pubkey}" ]; then
     cat id_rsa.pub >> ~/.ssh/authorized_keys
 fi
 
-if ! [ -z "${poolworkdir}" ]; then
-    ${poolworkdir}/pworks/remote.sh
+if [ -f "${remote_sh}" ]; then
+    ${remote_sh}
 fi
 
 # These are not workflow parameters but need to be available to the service on the remote node!

@@ -90,9 +90,30 @@ fi
 
 echo "Pool type: ${pooltype}"
 
-# POOL TYPE DEFAULTS
-#if [[ ${pooltype} == "slurmshv2" ]]; then
+# SET POOL WORK DIR:
+# - This is only needed to
+#   1. Run in a partition of a slurmshv2 to call the remote.sh script
+#   2. If chdir is pw.conf or empty --> chdir=${poolworkdir}/pworks/__job_number__
+if [[ ${pooltype} == "slurmshv2" ]]; then
+    poolworkdir=$(${CONDA_PYTHON_EXE} utils/get_pool_workdir.py ${poolname})
+    if [ -z "${poolworkdir}" ]; then
+        echo "ERROR: Pool workdir not found - exiting the workflow"
+        echo "${CONDA_PYTHON_EXE} utils/get_pool_workdir.py ${poolname}"
+        exit 1
+    fi
+else
+    poolworkdir=${HOME}
+fi
 
+# SET DEFAULT chdir
+if [ -z "${chdir}" ]; then 
+    wfargs="${wfargs} --chdir ${poolworkdir}/pworks/${job_number}/"
+elif [[ ${chdir} == "pw.conf" ]]; then
+    wfargs=$(echo ${wfargs} | sed "s|--chdir pw.conf|--chdir ${poolworkdir}/pworks/${job_number}/|g")
+fi
+
+
+# GET CONTROLLER IP FROM PW API IF NOT SPECIFIED
 if [ -z "${controller}" ] || [[ ${controller} == "pw.conf" ]]; then
     if [ -z "${poolname}" ]; then
         echo "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
@@ -112,16 +133,9 @@ fi
 if [[ ${partition_or_controller} == "True" ]]; then
     echo "Submitting sbatch job to ${controller}"
     session_wrapper_dir=partition
-    # Need poolworkdir to source ${poolworkdir}/pworks/remote.sh in onprem compute partitions
     if [[ ${pooltype} == "slurmshv2" ]]; then
-        poolworkdir=$(${CONDA_PYTHON_EXE} utils/get_pool_workdir.py ${poolname})
-        if [ -z "${poolworkdir}" ]; then
-            echo "ERROR: Pool workdir not found - exiting the workflow"
-            echo "${CONDA_PYTHON_EXE} utils/get_pool_workdir.py ${poolname}"
-            exit 1
-        fi
-        wfargs="${wfargs} --poolworkdir ${poolworkdir}"
-    fi  
+        wfargs="${wfargs} --remote_sh ${poolworkdir}/pworks/remote.sh"
+    fi
 else
     echo "Submitting ssh job to ${controller}"
     session_wrapper_dir=controller
@@ -156,13 +170,11 @@ if [ -f "${service_name}/kill-template.sh" ]; then
     echo
 fi
 
-# - Overwrite any argument by passing it BEFORE AND AFTER $@! E.g.: --argname argvalue $@  --argname argvalue
 bash ${session_wrapper_dir}/session_wrapper.sh $wfargs \
         --openPort ${openPort} \
         --controller ${controller} \
         --start_service_sh ${start_service_sh} \
         --kill_service_sh ${kill_service_sh} \
-        --pooltype ${pooltype} \
         --USER_CONTAINER_HOST ${USER_CONTAINER_HOST}
 
 bash kill.sh

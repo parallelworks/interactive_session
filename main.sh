@@ -107,9 +107,10 @@ fi
 
 # SET DEFAULT chdir
 if [ -z "${chdir}" ]; then 
-    wfargs="${wfargs} --chdir ${poolworkdir}/pworks/${job_number}/"
+    wfargs=$(echo ${wfargs} | sed "s|--chdir||g")
+    wfargs="${wfargs} --chdir ${poolworkdir}/pw/jobs/${job_number}/"
 elif [[ ${chdir} == "pw.conf" ]]; then
-    wfargs=$(echo ${wfargs} | sed "s|--chdir pw.conf|--chdir ${poolworkdir}/pworks/${job_number}/|g")
+    wfargs=$(echo ${wfargs} | sed "s|--chdir pw.conf|--chdir ${poolworkdir}/pw/jobs/${job_number}/|g")
 fi
 
 

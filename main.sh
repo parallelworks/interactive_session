@@ -56,7 +56,6 @@ if [[ "$openPort" == "" ]];then
     echo "ERROR - cannot find open port..."
     exit 1
 fi
-${CONDA_PYTHON_EXE}
 
 echo "Interactive Session Port: $openPort"
 

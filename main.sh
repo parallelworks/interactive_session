@@ -92,11 +92,7 @@ fi
 echo "Pool type: ${pooltype}"
 
 # POOL TYPE DEFAULTS
-if [[ ${pooltype} == "slurmshv2" ]]; then
-    USER_CONTAINER_HOST="usercontainer"
-else
-    USER_CONTAINER_HOST="usercontainer"
-fi
+#if [[ ${pooltype} == "slurmshv2" ]]; then
 
 if [ -z "${controller}" ] || [[ ${controller} == "pw.conf" ]]; then
     if [ -z "${poolname}" ]; then

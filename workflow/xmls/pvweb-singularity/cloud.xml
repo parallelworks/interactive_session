@@ -28,8 +28,6 @@
         </param>
         <param name='controller' label='Controller' type='text' value='pw.conf' help='Specify controller address (user@ip) for ssh connection.' width='50%_none'></param>
         <param name='poolname' label='Pool name' type='text' value='pw.conf' help='Specify pool name' width='50%_none'></param>
-        <param name='chdir' label='Working directory of the batch script' type='text' value='/home/__USER__/pworks/__job_number__' help='Working directory of the batch script to directory before it is executed' width='50%_none'>
-        </param>
     </section>
   </inputs>
   <outputs>

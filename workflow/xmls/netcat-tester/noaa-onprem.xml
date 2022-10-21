@@ -23,8 +23,6 @@
     <section name='advanced_options_other' type='section' title='Advanced Options' expanded='false'>
         <param name="stream" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW' width="25%_none" optional='true' float="right">
         </param>
-        <param name='chdir' label='Working directory of the batch script' type='text' value='/home/__USER__/pworks/__job_number__' help='Working directory of the batch script to directory before it is executed' width='50%_none'>
-        </param>
     </section>
   </inputs>
   <outputs>

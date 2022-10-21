@@ -87,13 +87,12 @@ fi
 
 echo "Pool type: ${pooltype}"
 
-# set USER_CONTAINER_HOST
+# set USER_CONTAINER_HOST - this has been unified now between cloud and on-prem resources
 if [[ ${pooltype} == "slurmshv2" ]]; then
-    USER_CONTAINER_HOST=${PW_USER_HOST} #${PARSL_CLIENT_HOST}  
+    USER_CONTAINER_HOST="usercontainer"
 else
-    USER_CONTAINER_HOST="localhost"
+    USER_CONTAINER_HOST="usercontainer"
 fi
-
 
 if [ -z "${controller}" ] || [[ ${controller} == "pw.conf" ]]; then
     if [ -z "${poolname}" ]; then

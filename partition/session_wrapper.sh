@@ -99,6 +99,7 @@ if [ -z "\${pubkey}" ]; then
 fi
 
 if [ -f "${remote_sh}" ]; then
+    echo "Running  ${remote_sh}"
     ${remote_sh}
 fi
 

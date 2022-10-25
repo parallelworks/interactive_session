@@ -86,7 +86,7 @@ fi
 poolname=$(echo ${poolname} | sed "s/_//g" |  tr '[:upper:]' '[:lower:]')
 
 pooltype=$(${CONDA_PYTHON_EXE} utils/get_pool_type.py ${poolname})
- if [ -z "${pooltype}" ]; then
+if [ -z "${pooltype}" ]; then
     echo "ERROR: Pool type not found - exiting the workflow"
     echo "${CONDA_PYTHON_EXE} utils/get_pool_type.py ${poolname}"
     exit 1
@@ -113,10 +113,10 @@ wfargs="$(echo ${wfargs} | sed "s|__poolworkdir__|${poolworkdir}|g")"
 
 
 # SET DEFAULT chdir
-if [ -z "${chdir}" ]; then 
+if [ -z "${chdir}" ]; then
     wfargs=$(echo ${wfargs} | sed "s|--chdir||g")
     wfargs="${wfargs} --chdir ${poolworkdir}/pw/jobs/${job_number}/"
-elif [[ ${chdir} == "pw.conf" ]]; then
+    elif [[ ${chdir} == "pw.conf" ]]; then
     wfargs=$(echo ${wfargs} | sed "s|--chdir pw.conf|--chdir ${poolworkdir}/pw/jobs/${job_number}/|g")
 fi
 
@@ -145,11 +145,11 @@ if [[ ${partition_or_controller} == "True" ]]; then
     if [[ ${pooltype} == "slurmshv2" ]]; then
         wfargs="${wfargs} --remote_sh ${poolworkdir}/pworks/remote.sh"
     fi
-
+    
     # GET JOB SCHEDULER TYPE
     if [[ " ${slurmpooltypes} " == *" ${pooltype} "* ]]; then
         jobschedulertype=slurm
-    elif [[ " ${pbspooltypes} " == *" ${pooltype} "* ]]; then
+        elif [[ " ${pbspooltypes} " == *" ${pooltype} "* ]]; then
         jobschedulertype=pbs
     else
         echo "ERROR: Pool type <${pooltype}> not present in slurm types <${slurmpooltypes}> or pbs types <${pbspooltypes}>"
@@ -191,10 +191,10 @@ if [ -f "${service_name}/kill-template.sh" ]; then
 fi
 
 bash ${session_wrapper_dir}/session_wrapper.sh $wfargs \
-        --openPort ${openPort} \
-        --controller ${controller} \
-        --start_service_sh ${start_service_sh} \
-        --kill_service_sh ${kill_service_sh} \
-        --USER_CONTAINER_HOST ${USER_CONTAINER_HOST} 
+--openPort ${openPort} \
+--controller ${controller} \
+--start_service_sh ${start_service_sh} \
+--kill_service_sh ${kill_service_sh} \
+--USER_CONTAINER_HOST ${USER_CONTAINER_HOST}
 
 bash kill.sh

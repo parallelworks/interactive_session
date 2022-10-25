@@ -176,6 +176,6 @@ bash ${session_wrapper_dir}/session_wrapper.sh $wfargs \
         --controller ${controller} \
         --start_service_sh ${start_service_sh} \
         --kill_service_sh ${kill_service_sh} \
-        --USER_CONTAINER_HOST ${USER_CONTAINER_HOST}
+        --USER_CONTAINER_HOST ${USER_CONTAINER_HOST} 
 
 bash kill.sh

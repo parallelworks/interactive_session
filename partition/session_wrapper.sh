@@ -3,7 +3,7 @@ echo
 echo Arguments:
 echo $@
 echo
-
+sdir=$(dirname $0)
 source lib.sh
 
 parseArgs $@
@@ -30,50 +30,29 @@ fi
 
 # Initiallize session batch file:
 echo "Generating session script"
-session_sh=/pw/jobs/${job_number}/session.sh
+export session_sh=/pw/jobs/${job_number}/session.sh
 echo "#!/bin/bash" > ${session_sh}
-# SET SLURM DEFAULT VALUES:
-if ! [ -z ${partition} ] && ! [[ "${partition}" == "default" ]]; then
-    echo "#SBATCH --partition=${partition}" >> ${session_sh}
-fi
 
-if ! [ -z ${account} ] && ! [[ "${account}" == "default" ]]; then
-    echo "#SBATCH --account=${account}" >> ${session_sh}
-fi
+# FIXME: Add logic to see if pooltype is slurm
+bash ${sdir}/write_slurm_directives.sh
+
+echo >> ${session_sh}
+
 
 if ! [ -z ${walltime} ] && ! [[ "${walltime}" == "default" ]]; then
-    echo "#SBATCH --time=${walltime}" >> ${session_sh}
     swalltime=$(echo "${walltime}" | awk -F: '{ print ($1 * 3600) + ($2 * 60) + $3 + 60}')
 else
     swalltime=9999
 fi
 
 if ! [ -z ${chdir} ] && ! [[ "${chdir}" == "default" ]]; then
-    chdir=$(echo ${chdir} | sed "s|__job_number__|${job_number}|g")
-    echo "#SBATCH --chdir=${chdir}" >> ${session_sh}
     ${sshcmd} mkdir -p ${chdir}
     remote_session_dir=${chdir}
 else
     remote_session_dir="./"
 fi
 
-if [ -z ${numnodes} ]; then
-    echo "#SBATCH --nodes=1" >> ${session_sh}
-else
-    echo "#SBATCH --nodes=${numnodes}" >> ${session_sh}
-fi
-
-if [[ "${exclusive}" == "True" ]]; then
-    echo "#SBATCH --exclusive" >> ${session_sh}
-fi
-
-if ! [ -z ${cpus_per_task} ]; then
-    echo "#SBATCH --cpus-per-task=${cpus_per_task}" >> ${session_sh}
-fi
-
-echo "#SBATCH --job-name=session-${job_number}" >> ${session_sh}
-echo "#SBATCH --output=session-${job_number}.out" >> ${session_sh}
-echo >> ${session_sh}
+if
 
 # ADD STREAMING
 if [[ "${stream}" == "True" ]]; then

@@ -1,4 +1,8 @@
 #!/bin/bash
+# Need to know which pool types are slurm or PBS:
+slurmpooltypes="gclusterv2 pclusterv2 azclusterv2 awsclusterv2 slurmshv2"
+pbspooltypes="pbsshv2"
+
 source lib.sh
 job_number=$(basename ${PWD})
 
@@ -137,9 +141,21 @@ fi
 if [[ ${partition_or_controller} == "True" ]]; then
     echo "Submitting sbatch job to ${controller}"
     session_wrapper_dir=partition
+    
     if [[ ${pooltype} == "slurmshv2" ]]; then
         wfargs="${wfargs} --remote_sh ${poolworkdir}/pworks/remote.sh"
     fi
+
+    # GET JOB SCHEDULER TYPE
+    if [[ " ${slurmpooltypes} " == *" ${pooltype} "* ]]; then
+        jobschedulertype=slurm
+    elif [[ " ${pbspooltypes} " == *" ${pooltype} "* ]]; then
+        jobschedulertype=pbs
+    else
+        echo "ERROR: Pool type <${pooltype}> not present in slurm types <${slurmpooltypes}> or pbs types <${pbspooltypes}>"
+        exit 1
+    fi
+    wfargs="${wfargs} --jobschedulertype ${jobschedulertype}"
 else
     echo "Submitting ssh job to ${controller}"
     session_wrapper_dir=controller

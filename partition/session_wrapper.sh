@@ -14,7 +14,7 @@ sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
 #masterIp=$($sshcmd cat '~/.ssh/masterip')
 masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usually be the internal ip
 if [ -z ${masterIp} ]; then
-    echo ERROR: masterIP variable is empty. Command:
+    echo "ERROR: masterIP variable is empty. Command:"
     echo "$sshcmd hostname -I | cut -d' ' -f1"
     echo Exiting workflow
     exit 1
@@ -33,11 +33,16 @@ echo "Generating session script"
 export session_sh=/pw/jobs/${job_number}/session.sh
 echo "#!/bin/bash" > ${session_sh}
 
-# FIXME: Add logic to see if pooltype is slurm
-bash ${sdir}/write_slurm_directives.sh
+if [[ ${jobschedulertype} == "slurm" ]]; then
+    bash ${sdir}/write_slurm_directives.sh
+elif [[ ${jobschedulertype} == "pbs" ]]; then
+    bash ${sdir}/write_pbs_directives.sh
+else
+    echo "ERROR: jobschedulertype <${jobschedulertype}> must be slurm or pbs"
+    exit 1
+fi
 
 echo >> ${session_sh}
-
 
 if ! [ -z ${walltime} ] && ! [[ "${walltime}" == "default" ]]; then
     swalltime=$(echo "${walltime}" | awk -F: '{ print ($1 * 3600) + ($2 * 60) + $3 + 60}')

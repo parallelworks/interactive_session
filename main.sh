@@ -105,6 +105,9 @@ else
     poolworkdir=${HOME}
 fi
 
+wfargs="$(echo ${poolworkdir} | sed "s|__poolworkdir__|${poolworkdir}|g")"
+
+
 # SET DEFAULT chdir
 if [ -z "${chdir}" ]; then 
     wfargs=$(echo ${wfargs} | sed "s|--chdir||g")

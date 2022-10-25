@@ -62,7 +62,7 @@ else
 fi
 
 cat >> ${chdir}/service-kill-${job_number}-main.sh <<HERE
-service_pid=\$(ps -x | grep ${server_bin} | grep ${servicePort} | awk '{print $1}')
+service_pid=\$(ps -x | grep ${server_bin} | grep ${servicePort} | awk '{print \$1}')
 kill \${service_pid}
 pkill \${service_pid}
 HERE

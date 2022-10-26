@@ -28,15 +28,15 @@ if [ ! -d "$CONDA_PATH" ] && [ "__conda_install__" == "True" ];then
     
 fi
 
-if [ -z "${conda_sh}" ] || [[ "${conda_sh}" == "__""conda_sh""__" ]]; then
+if ! [ -z "${conda_sh}" ] && ! [[ "${conda_sh}" == "__""conda_sh""__" ]]; then
     source ${conda_sh}
 fi
 
-if [ -z "${conda_env}" ] || [[ "${conda_env}" == "__""conda_env""__" ]]; then
+if ! [ -z "${conda_env}" ] && ! [[ "${conda_env}" == "__""conda_env""__" ]]; then
     conda activate ${conda_env}
 fi
 
-if [ -z "${slurm_module}" ] || [[ "${slurm_module}" == "__""slurm_module""__" ]]; then
+if ! [ -z "${slurm_module}" ] && ! [[ "${slurm_module}" == "__""slurm_module""__" ]]; then
     module load ${slurm_module}
 fi
 

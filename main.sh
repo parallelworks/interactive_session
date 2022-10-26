@@ -37,6 +37,11 @@ getOpenPort
 ###############################
 USER_CONTAINER_HOST="usercontainer"
 
+if [[ "$openPort" == "" ]];then
+    echo "ERROR - cannot find open port..."
+    exit 1
+fi
+
 # LOAD PLATFORM-SPECIFIC ENVIRONMENT:
 env_sh=platforms/${PARSL_CLIENT_HOST}/env.sh
 if ! [ -f "${env_sh}" ]; then
@@ -44,21 +49,11 @@ if ! [ -f "${env_sh}" ]; then
 fi
 source ${env_sh}
 
-if [[ "$openPort" == "" ]];then
-    echo "ERROR - cannot find open port..."
-    exit 1
-fi
-
 if ! [ -f "${CONDA_PYTHON_EXE}" ]; then
     echo "WARNING: Environment variable CONDA_PYTHON_EXE is pointing to a missing file ${CONDA_PYTHON_EXE}!"
     echo "         Modifying its value: export CONDA_PYTHON_EXE=$(which python3)"
     # Wont work unless it has requests...
     export CONDA_PYTHON_EXE=$(which python3)
-fi
-
-if [[ "$openPort" == "" ]];then
-    echo "ERROR - cannot find open port..."
-    exit 1
 fi
 
 echo "Interactive Session Port: $openPort"

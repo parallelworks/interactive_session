@@ -165,12 +165,12 @@ fi
 echo "Generating session html"
 replace_templated_inputs ${service_name}/url.sh $wfargs
 source ${service_name}/url.sh
-cp service.html.template service.html
-sed -i "s|__URLEND__|${URLEND}|g" service.html
-sed -i "s/__FORWARDPATH__/$FORWARDPATH/g" service.html
-sed -i "s/__IPADDRESS__/$IPADDRESS/g" service.html
-sed -i "s/__OPENPORT__/$openPort/g" service.html
-mv service.html /pw/jobs/${job_number}/service.html
+cp service.html.template service.html_
+sed -i "s|__URLEND__|${URLEND}|g" service.html_
+sed -i "s/__FORWARDPATH__/$FORWARDPATH/g" service.html_
+sed -i "s/__IPADDRESS__/$IPADDRESS/g" service.html_
+sed -i "s/__OPENPORT__/$openPort/g" service.html_
+mv service.html_ /pw/jobs/${job_number}/service.html
 echo
 
 # START / KILL SCRIPTS

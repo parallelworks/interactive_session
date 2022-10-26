@@ -1,0 +1,216 @@
+<html style="background:transparent">
+<style>
+  .progress_bar {
+    font-family: Lato, sans-serif;
+    position: fixed;
+    left: 0;
+    color: rgb(85 85 85);
+    bottom: 0;
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    top: 60px;
+    z-index: 999;
+    height: calc(100vh - 60px);
+  }
+
+  .progress_bar__wrapper {
+    overflow: hidden;
+    border-radius: 15px;
+    width: 250px;
+    background-color: #c4c4c4;
+    overflow: hidden;
+  }
+
+  .progress_bar__viewer {
+    background: rgb(17 45 80);
+    border-radius: 4px;
+    height: 4px;
+    transform: scaleX(0);
+    transform-origin: 0 0;
+  }
+
+  .progress_bar.animate-loader .progress_bar__viewer {
+    animation: FillAnimation 8s cubic-bezier(0.01, 1.06, 0.71, 1) forwards infinite;
+  }
+
+  .progress_bar.animate-loader .progress_bar__state::before {
+    content: "";
+    animation: TextChange 8s infinite;
+  }
+
+  .progress_bar__content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .progress_bar__state {
+    margin-top: 24px;
+    text-align: center;
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: normal;
+    color: rgb(85 85 85);
+    font-family: Lato, sans-serif;
+  }
+
+  @keyframes FillAnimation {
+    0% {
+      transform: scaleX(0.028);
+    }
+    10% {
+      transform: scaleX(0.028);
+    }
+    20% {
+      transform: scaleX(0.028);
+    }
+    25% {
+      transform: scaleX(0.24);
+    }
+    35% {
+      transform: scaleX(0.24);
+    }
+    45% {
+      transform: scaleX(0.24);
+    }
+    50% {
+      transform: scaleX(0.624);
+    }
+    60% {
+      transform: scaleX(0.624);
+    }
+    70% {
+      transform: scaleX(0.624);
+    }
+    75% {
+      transform: scaleX(0.928);
+    }
+    85% {
+      transform: scaleX(0.928);
+    }
+    95% {
+      transform: scaleX(0.928);
+    }
+    100% {
+      transform: scaleX(1);
+    }
+  }
+
+  @keyframes TextChange {
+    0% {
+      content: attr(data-start);
+    }
+    24% {
+      content: attr(data-start);
+    }
+    25% {
+      content: attr(data-middle);
+    }
+    65% {
+      content: attr(data-middle);
+    }
+    100% {
+      content: attr(data-end);
+    }
+  }
+ .popout {
+      height:24px;
+      width:24px;
+      z-index:1000;
+      right:5px;
+      top:5px;
+      position:absolute;
+      fill:#999;
+  }
+  .popout:hover {
+      fill:#333;
+  }
+</style>
+
+<body style="background:transparent;margin:0px">
+
+    <div id="popout" class="popout" style="display:none" onclick='window.open("/__FORWARDPATH__/__IPADDRESS__/__OPENPORT__/__URLEND__,"_blank")'>
+        <svg width="24px" height="24px" version="1.1" viewBox="0 0 700 700" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+            <g>
+            <path d="m576.86 66.285c0-0.57031-0.57031-1.1445-0.57031-1.7148 0-0.57031-0.57031-1.1445-0.57031-1.7148 0-0.57031-0.57031-1.1445-1.1445-1.7148 0-0.57031-0.57031-0.57031-0.57031-1.1445-1.1445-1.7148-2.8555-3.4297-4.5703-4.5703-0.57031 0-0.57031-0.57031-1.1445-0.57031-0.57031-0.57031-1.1445-0.57031-1.7148-1.1445-0.57031 0-1.1445-0.57031-1.7148-0.57031-0.57031 0-1.1445-0.57031-1.7148-0.57031-1.1445 0-2.2852-0.57031-3.4297-0.57031h-123.43c-9.7148 0-17.145 7.4297-17.145 17.145 0 9.7148 7.4297 17.145 17.145 17.145h82.855l-215.43 216c-6.8555 6.8555-6.8555 17.715 0 24 3.4297 3.4297 8 5.1445 12 5.1445s8.5703-1.7148 12-5.1445l215.43-215.43v82.855c0 9.7148 7.4297 17.145 17.145 17.145 9.7148 0 17.145-7.4297 17.145-17.145l-0.003906-124c0-1.1445 0-2.2852-0.57422-3.4297z"/>
+            <path d="m502 265.71c-9.7148 0-17.145 7.4297-17.145 17.145v190.29h-328v-328h190.29c9.7148 0 17.145-7.4297 17.145-17.145s-7.4297-17.145-17.145-17.145h-207.43c-9.7148 0-17.145 7.4297-17.145 17.145v362.29c0 9.7148 7.4297 17.145 17.145 17.145h362.29c9.7148 0 17.145-7.4297 17.145-17.145v-207.43c0-9.7109-7.4297-17.141-17.145-17.141z"/>
+            <use x="70" y="645.714844" xlink:href="#t"/>
+            <use x="90.96875" y="645.714844" xlink:href="#c"/>
+            <use x="105.058594" y="645.714844" xlink:href="#a"/>
+            <use x="124.4375" y="645.714844" xlink:href="#e"/>
+            <use x="143.714844" y="645.714844" xlink:href="#b"/>
+            <use x="157.375" y="645.714844" xlink:href="#a"/>
+            <use x="176.753906" y="645.714844" xlink:href="#j"/>
+            <use x="207.152344" y="645.714844" xlink:href="#i"/>
+            <use x="227.601562" y="645.714844" xlink:href="#h"/>
+            <use x="256.175781" y="645.714844" xlink:href="#g"/>
+            <use x="266.804688" y="645.714844" xlink:href="#e"/>
+            <use x="286.085938" y="645.714844" xlink:href="#f"/>
+            <use x="315.855469" y="645.714844" xlink:href="#a"/>
+            <use x="335.234375" y="645.714844" xlink:href="#s"/>
+            <use x="70" y="674.285156" xlink:href="#r"/>
+            <use x="82.429688" y="674.285156" xlink:href="#c"/>
+            <use x="96.519531" y="674.285156" xlink:href="#d"/>
+            <use x="116.148438" y="674.285156" xlink:href="#f"/>
+            <use x="155.867188" y="674.285156" xlink:href="#b"/>
+            <use x="169.527344" y="674.285156" xlink:href="#q"/>
+            <use x="189.867188" y="674.285156" xlink:href="#a"/>
+            <use x="219.191406" y="674.285156" xlink:href="#p"/>
+            <use x="243.101562" y="674.285156" xlink:href="#d"/>
+            <use x="262.730469" y="674.285156" xlink:href="#o"/>
+            <use x="283.070312" y="674.285156" xlink:href="#n"/>
+            <use x="313.359375" y="674.285156" xlink:href="#m"/>
+            <use x="334.300781" y="674.285156" xlink:href="#c"/>
+            <use x="348.390625" y="674.285156" xlink:href="#d"/>
+            <use x="368.019531" y="674.285156" xlink:href="#l"/>
+            <use x="377.8125" y="674.285156" xlink:href="#a"/>
+            <use x="397.191406" y="674.285156" xlink:href="#k"/>
+            <use x="414.125" y="674.285156" xlink:href="#b"/>
+            </g>
+        </svg>
+    </div>
+
+  <iframe id="frame" src="" style="display:none;width:100vw;height:100vh;border:0px"></iframe>
+
+  <div id="loader" style="background:transparent;width:100vw;height:100vh">
+
+    <div class="progress_bar animate-loader">
+      <div class="progress_bar__content">
+        <div class="progress_bar__wrapper">
+          <div class="progress_bar__viewer">
+            <div class="progress_bar__shimmer"></div>
+          </div>
+        </div>
+        <div class="progress_bar__state" data-start="Establishing connection" data-middle="Establishing connection" data-end="Establishing connection">
+        </div>
+    </div>
+  </div>
+
+  <script>
+
+    var url = "/__FORWARDPATH__/__IPADDRESS__/__OPENPORT__/__URLEND__
+
+    function httpGet() {
+      var xmlHttp = new XMLHttpRequest();
+      xmlHttp.open("GET", url, false); // false for synchronous request
+      xmlHttp.send(null);
+      console.log(xmlHttp.status)
+      if (xmlHttp.status != 200) {
+        setTimeout(function() {
+          httpGet()
+        }, 600)
+      }
+      else {
+        document.getElementById("frame").style.display = "";
+        document.getElementById("frame").src = url;
+        document.getElementById("popout").style.display = "";
+        document.getElementById("loader").style.display = "none";
+      }
+    }
+    httpGet()
+  </script>
+
+</body>
+
+</html>

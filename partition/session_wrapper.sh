@@ -35,7 +35,7 @@ echo "#!/bin/bash" > ${session_sh}
 
 if [[ ${jobschedulertype} == "slurm" ]]; then
     bash ${sdir}/write_slurm_directives.sh
-elif [[ ${jobschedulertype} == "pbs" ]]; then
+    elif [[ ${jobschedulertype} == "pbs" ]]; then
     bash ${sdir}/write_pbs_directives.sh
 else
     echo "ERROR: jobschedulertype <${jobschedulertype}> must be slurm or pbs"
@@ -59,7 +59,7 @@ fi
 
 # ADD STREAMING
 if [[ "${stream}" == "True" ]]; then
-    stream_args="--host ${USER_CONTAINER_HOST} --pushpath /pw/jobs/${job_number}/session-${job_number}.out --pushfile session-${job_number}.out --delay 30 --port 2222 --masterIp ${masterIp}"
+    stream_args="--host ${USER_CONTAINER_HOST} --pushpath /pw/jobs/${job_number}/session-${job_number}.out --pushfile session-${job_number}.out --delay 30 --masterIp ${masterIp}"
     stream_cmd="bash stream-${job_number}.sh ${stream_args} &"
     echo; echo "Streaming command:"; echo "${stream_cmd}"; echo
     echo ${stream_cmd} >> ${session_sh}

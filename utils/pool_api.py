@@ -19,3 +19,17 @@ def get_pool_info(pool_name):
                     return pool
     raise(Exception('Pool {} not found. Make sure the pool type is supported!'.format(pool_name)))
 
+
+if __name__ == '__main__':
+    pool_name = sys.argv[1]
+    pool_prop = sys.argv[2]
+
+    pool_info = get_pool_info(pool_name)
+
+    if pool_prop == "type":
+        print(pool_info['type'])
+    elif pool_prop == "workdir":
+        print(json.loads(pool_info['coasterproperties'])['workdir'])
+    else:
+        msg = 'Pool property <{}> is not supported!'.format(pool_prop)
+        raise(Exception(msg))

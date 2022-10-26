@@ -80,10 +80,10 @@ fi
 # No underscores and only lowercase
 poolname=$(echo ${poolname} | sed "s/_//g" |  tr '[:upper:]' '[:lower:]')
 
-pooltype=$(${CONDA_PYTHON_EXE} utils/get_pool_type.py ${poolname})
+pooltype=$(${CONDA_PYTHON_EXE} utils/pool_api.py ${poolname} type)
 if [ -z "${pooltype}" ]; then
     echo "ERROR: Pool type not found - exiting the workflow"
-    echo "${CONDA_PYTHON_EXE} utils/get_pool_type.py ${poolname}"
+    echo "${CONDA_PYTHON_EXE} utils/pool_api.py ${poolname} type"
     exit 1
 fi
 
@@ -94,10 +94,10 @@ echo "Pool type: ${pooltype}"
 #   1. Run in a partition of a slurmshv2 to call the remote.sh script
 #   2. If chdir is pw.conf or empty --> chdir=${poolworkdir}/pworks/__job_number__
 if [[ ${pooltype} == "slurmshv2" ]]; then
-    poolworkdir=$(${CONDA_PYTHON_EXE} utils/get_pool_workdir.py ${poolname})
+    poolworkdir=$(${CONDA_PYTHON_EXE} utils/pool_api.py ${poolname} workdir)
     if [ -z "${poolworkdir}" ]; then
         echo "ERROR: Pool workdir not found - exiting the workflow"
-        echo "${CONDA_PYTHON_EXE} utils/get_pool_workdir.py ${poolname}"
+        echo "${CONDA_PYTHON_EXE} utils/pool_api.py ${poolname} workdir"
         exit 1
     fi
 else

@@ -61,14 +61,6 @@ if [ -z ${novnc_tgz} ] || [[ "${novnc_tgz}" == "__""novnc_tgz""__" ]]; then
     novnc_tgz=/swift-pw-bin/apps/noVNC-1.3.0.tgz
 fi
 
-if [ -z ${turbovnc_dir} ] || [[ "${turbovnc_dir}" == "__""novnc_dir""__" ]]; then
-    turbovnc_dir=${HOME}/pworks/TurboVNC
-fi
-
-if [ -z ${turbovnc_tgz} ] || [[ "${turbovnc_tgz}" == "__""turbovnc_tgz""__" ]]; then
-    turbovnc_tgz=/swift-pw-bin/apps/turbovnc.tgz
-fi
-
 set -x
 
 # Find an available display port

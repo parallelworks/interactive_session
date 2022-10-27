@@ -180,6 +180,7 @@ if [ -f "${kill_service_sh}" ]; then
 fi
 echo $sshcmd scancel $slurmjob >> ${kill_sh}
 echo "echo Finished running ${kill_sh}" >> ${kill_sh}
+echo "sed -i 's/.*Job status.*/Job status: Cancelled/' service.html"  >> ${kill_sh}
 chmod 777 ${kill_sh}
 
 echo

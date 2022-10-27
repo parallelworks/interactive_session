@@ -147,5 +147,6 @@ echo
 echo "Submitting ssh job (wait for node to become available before connecting)..."
 echo "$sshcmd 'bash -s' < ${session_sh} &> /pw/jobs/${job_number}/session-${job_number}.out"
 echo
+sed -i 's/.*Job status.*/Job status: Running/' service.html
 $sshcmd 'bash -s' < ${session_sh} &> /pw/jobs/${job_number}/session-${job_number}.out
 

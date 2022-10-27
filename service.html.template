@@ -171,12 +171,46 @@
   background: rgba(0, 0, 0, .08);
   color: rgba(0, 0, 0, .3);
 }
+
+.status {
+  text-transform: uppercase;
+  flex-direction: row;
+  margin: 10px 10px;
+  align-items: center;
+  background-color:  #ffffff;
+  border: 0;
+  box-sizing: border-box;
+  color: rgb(85 85 85);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  justify-content: center;
+  line-height: 20px;
+  max-width: 480px;
+  min-height: 40px;
+  min-width: 0px;
+  overflow: hidden;
+  padding: 15px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.status-text {
+      font-weight: 9000;
+}
+
 </style>
 
 <body style="background:transparent;margin:0px">
     <button class="button-refresh" id="button-refresh" >
         Refresh Session
     </button>
+
+    <p class="status">
+        Job status: Creating
+    </p>
+
     <div id="popout" class="popout" style="display:none" onclick='window.open("/pwide/einsteinmed-user-1.parallel.works/50175/vnc.html?autoconnect=true&show_dot=true&path=websockify&password=headless&host="+window.location.host+"/pwide/einsteinmed-user-1.parallel.works/50175"+"/&dt="+(new Date()).getTime(),"_blank")'>
         <svg width="24px" height="24px" version="1.1" viewBox="0 0 700 700" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
             <g>

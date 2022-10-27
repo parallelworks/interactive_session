@@ -154,10 +154,14 @@ echo
 echo "Submitting slurm request (wait for node to become available before connecting)..."
 echo
 echo $sshcmd sbatch ${remote_session_dir}/session-${job_number}.sh
+
+sed -i 's/.*Job status.*/Job status: Submitted/' service.html
+
 slurmjob=$($sshcmd sbatch ${remote_session_dir}/session-${job_number}.sh | tail -1 | awk -F ' ' '{print $4}')
 
 if [[ "$slurmjob" == "" ]];then
     echo "ERROR submitting job - exiting the workflow"
+    sed -i 's/.*Job status.*/Job status: Failed/' service.html
     exit 1
 fi
 

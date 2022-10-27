@@ -159,7 +159,13 @@ ${vnc_exec} ${DISPLAY} -SecurityTypes None
 rm -f ${chdir}/service.pid
 touch ${chdir}/service.pid
 
-DESKTOP_CMD="mate-session"
+#=====================================
+# SFG HARDCODED CHANGES FOR TESTING
+# Original line
+#DESKTOP_CMD="mate-session"
+# Modified to test with GNOME
+DESKTOP_CMD="gnome-session"
+#=====================================
 
 if [ -z $(which $DESKTOP_CMD) ]; then
     echo "WARNING: vnc desktop not found!"

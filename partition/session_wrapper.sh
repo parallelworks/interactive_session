@@ -41,6 +41,11 @@ if ! [ -z ${account} ] && ! [[ "${account}" == "default" ]]; then
     echo "#SBATCH --account=${account}" >> ${session_sh}
 fi
 
+#============================================
+# SFG HARD CODED CHANGES FOR TESTING ONLY
+echo "#SBATCH -w=cpu-711" >> ${session_sh}
+#============================================
+
 if ! [ -z ${walltime} ] && ! [[ "${walltime}" == "default" ]]; then
     echo "#SBATCH --time=${walltime}" >> ${session_sh}
     swalltime=$(echo "${walltime}" | awk -F: '{ print ($1 * 3600) + ($2 * 60) + $3 + 60}')

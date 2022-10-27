@@ -12,9 +12,6 @@ turbovnc_dir=__turbovnc_dir__
 turbovnc_tgz=__turbovnc_tgz__
 vnc_bin=vncserver
 
-install_paths="${HOME}/pworks/*/bin /opt/*/bin /shared/*/bin"
-
-
 bootstrap_tgz() {
     tgz_path=$1
     install_dir=$2
@@ -24,7 +21,7 @@ bootstrap_tgz() {
         echo "Bootstrapping ${install_dir}"
         install_parent_dir=$(dirname ${install_dir})
         mkdir -p ${install_parent_dir}
-
+        
         # first check if the noVNC file is available on the node
         if [[ -f "/core/pworks-main/${tgz_path}" ]]; then
             cp /core/pworks-main/${tgz_path} ${install_parent_dir}
@@ -132,19 +129,17 @@ echo
 # FIND SERVER EXECUTABLE (BOOTSTRAP)
 if [ -z ${vnc_exec} ] || [[ "${vnc_exec}" == "__""vnc_exec""__" ]]; then
     # If no vnc_exec is provided
-    if ! [ -z $(which ${vnc_bin}) ]; then
-        # If server binary is in the path use it
-        vnc_exec=$(which ${vnc_bin})
-    else
-        # Else bootstrap (install) -- Does nothing unless install_dir does not exist
-        bootstrap_tgz ${turbovnc_tgz} ${turbovnc_dir}
-        vnc_exec=${turbovnc_dir}/bin/${vnc_bin}
-    fi
+    if [ -z $(which ${vnc_bin}) ]; then
+        # If no vncserver is in PATH:
+        echo "Installing tigervnc-server: sudo yum install tigervnc-server -y"
+        sudo yum install tigervnc-server -y
+        # python3 is a dependency
+        if [ -z $(which python3) ]; then
+            sudo yum install python3 -y
+        fi
 
-    # Search for the binary in install_paths
-    if [ ! -f "${vnc_exec}" ]; then
-        vnc_exec=$(find ${install_paths} -maxdepth 1 -mindepth 1 -name ${vnc_bin}  2>/dev/null | head -n1)
     fi
+    vnc_exec=$(which ${vnc_bin})
 fi
 
 if [ ! -f "${vnc_exec}" ]; then
@@ -161,11 +156,17 @@ touch ${chdir}/service.pid
 
 DESKTOP_CMD="mate-session"
 
-if [ -z $(which $DESKTOP_CMD) ]; then
-    echo "WARNING: vnc desktop not found!"
-else
-    $DESKTOP_CMD &
+if ! [ -z $(which mate-session) ]; then
+    mate-session &
     echo $! > ${chdir}/service.pid
+elif  ! [ -z $(which gnome-session) ]; then
+    gnome-session &
+    echo $! > ${chdir}/service.pid
+elif ! [ -z $(which gnome) ]; then
+    gnome &
+    echo $! > ${chdir}/service.pid
+else
+    echo "WARNING: vnc desktop not found!"
 fi
 
 bootstrap_tgz ${novnc_tgz} ${novnc_dir}
@@ -188,7 +189,7 @@ if [ -z "$(which screen)" ]; then
     echo ${pid} >> ${chdir}/service.pid
     rm -f ${portFile}
     sleep 5 # Need this specially in controller node or second software won't show up!
-
+    
     # Launch service
     if ! [ -z "${service_bin}" ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
         if [[ ${service_background} == "False" ]]; then
@@ -200,7 +201,7 @@ if [ -z "$(which screen)" ]; then
             echo $! >> ${chdir}/service.pid
         fi
     fi
-
+    
 else
     screen -S noVNC-${job_number} -d -m ./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort}
     rm -f ${portFile}
@@ -209,10 +210,10 @@ else
     pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
     echo ${pid} >> ${chdir}/service.pid
     sleep 5  # Need this specially in controller node or second software won't show up!
-
+    
     # Launch service:
     if ! [ -z "${service_bin}" ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
-
+        
         if [[ ${service_background} == "False" ]]; then
             echo "Running  ${service_bin}"
             ${service_bin}

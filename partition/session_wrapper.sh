@@ -43,7 +43,7 @@ fi
 
 #============================================
 # SFG HARD CODED CHANGES FOR TESTING ONLY
-echo "#SBATCH -w=cpu-711" >> ${session_sh}
+echo "#SBATCH -w cpu-711" >> ${session_sh}
 #============================================
 
 if ! [ -z ${walltime} ] && ! [[ "${walltime}" == "default" ]]; then

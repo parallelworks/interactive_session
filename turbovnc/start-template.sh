@@ -8,8 +8,6 @@ chdir=__chdir__
 vnc_exec=__vnc_exec__
 novnc_dir=__novnc_dir__
 novnc_tgz=__novnc_tgz__
-turbovnc_dir=__turbovnc_dir__
-turbovnc_tgz=__turbovnc_tgz__
 vnc_bin=vncserver
 
 bootstrap_tgz() {

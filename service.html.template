@@ -291,6 +291,8 @@
         document.getElementById("frame").src = url;
         document.getElementById("popout").style.display = "";
         document.getElementById("loader").style.display = "none";
+        document.getElementById("button-refresh").style.display = "";
+        document.getElementById("status").style.display = "none";
       }
     }
     httpGet()

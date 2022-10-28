@@ -148,7 +148,9 @@ if [ -f "${start_service_sh}" ]; then
     cat ${start_service_sh} >> ${session_sh}
 fi
 
+# Leave a blank line just in case!
 cat >> ${session_sh} <<HERE
+
 sacct -j ${SLURM_JOB_ID} --format=state | tail -n1 > job.status
 ssh ${ssh_options} $masterIp scp ${chdir}/job.status ${USER_CONTAINER_HOST}:/pw/jobs/${job_number}/job.status
 HERE

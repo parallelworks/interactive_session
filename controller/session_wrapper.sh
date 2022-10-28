@@ -151,3 +151,9 @@ echo
 sed -i 's/.*Job status.*/Job status: Running/' service.html
 $sshcmd 'bash -s' < ${session_sh} &> /pw/jobs/${job_number}/session-${job_number}.out
 
+if [ $? -eq 0 ]; then
+    sed -i 's/.*Job status.*/Job status: Completed/' service.html
+else
+    sed -i 's/.*Job status.*/Job status: Failed/' service.html
+fi
+

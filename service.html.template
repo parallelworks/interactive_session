@@ -203,11 +203,11 @@
 </style>
 
 <body style="background:transparent;margin:0px">
-    <button class="button-refresh" id="button-refresh" >
+    <button id="button-refresh" class="button-refresh" id="button-refresh" >
         Refresh Session
     </button>
 
-    <p class="status">
+    <p id="button-refresh" class="status">
         Job status: Creating
     </p>
 

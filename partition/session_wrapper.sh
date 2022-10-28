@@ -72,7 +72,7 @@ cat >> ${session_sh} <<HERE
 # Needed for emed
 source ~/.bashrc
 cd ${chdir}
-
+set -x
 echo RUNNING > job.status
 ssh ${ssh_options} $masterIp scp ${chdir}/job.status ${USER_CONTAINER_HOST}:/pw/jobs/${job_number}/job.status
 

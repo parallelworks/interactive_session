@@ -59,8 +59,6 @@ if [ -z ${novnc_tgz} ] || [[ "${novnc_tgz}" == "__""novnc_tgz""__" ]]; then
     novnc_tgz=/swift-pw-bin/apps/noVNC-1.3.0.tgz
 fi
 
-set -x
-
 # Find an available display port
 minPort=5901
 maxPort=5999

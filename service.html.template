@@ -207,7 +207,7 @@
         Refresh Session
     </button>
 
-    <p id="button-refresh" class="status">
+    <p id="status" class="status">
         Job status: Creating
     </p>
 
@@ -291,8 +291,8 @@
         document.getElementById("frame").src = url;
         document.getElementById("popout").style.display = "";
         document.getElementById("loader").style.display = "none";
-        document.getElementById("button-refresh").style.display = "";
-        document.getElementById("status").style.display = "none";
+        document.getElementById("button-refresh").outerHTML = "";
+        document.getElementById("status").outerHTML = "";
       }
     }
     httpGet()

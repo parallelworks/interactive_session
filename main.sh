@@ -192,4 +192,6 @@ bash ${session_wrapper_dir}/session_wrapper.sh $wfargs \
 --kill_service_sh ${kill_service_sh} \
 --USER_CONTAINER_HOST ${USER_CONTAINER_HOST}
 
+# We don't want kill.sh to change the status to cancelled!
+sed -i 's/sed//' kill.sh
 bash kill.sh

@@ -51,7 +51,7 @@ $sshcmd 'bash -s' < ${kill_tunnels_sh}
 bash ${kill_tunnels_sh}
 HERE
 echo "echo Finished running ${kill_sh}" >> ${kill_sh}
-echo "sed -i 's/.*Job status.*/Job status: Cancelled/' service.html" >> ${kill_sh}
+echo "sed -i 's/.*Job status.*/Job status: Cancelled/' /pw/jobs/${job_number}/service.html" >> ${kill_sh}
 chmod 777 ${kill_sh}
 
 # TUNNEL COMMAND:

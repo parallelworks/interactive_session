@@ -201,7 +201,7 @@ js_file="job.status"
 while true; do
     if [ -f "${js_file}" ]; then
         job_status=$(cat ${js_file})
-        sed -i 's/.*Job status.*/Job status: ${job_status}/' service.html
+        sed -i "s/.*Job status.*/Job status: ${job_status}/" service.html
         if [[ "${job_status}" != "RUNNING" ]]; then
             break
         fi 

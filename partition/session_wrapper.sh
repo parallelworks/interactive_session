@@ -73,6 +73,9 @@ cat >> ${session_sh} <<HERE
 source ~/.bashrc
 cd ${chdir}
 
+echo RUNNING > job.status
+scp job.status  ${USER_CONTAINER_HOST}:/pw/jobs/${job_number}/job.status
+
 # MAKE SURE CONTROLLER NODES HAVE SSH ACCESS TO COMPUTE NODES:
 pubkey=\$(cat ~/.ssh/authorized_keys | grep \"\$(cat id_rsa.pub)\")
 if [ -z "\${pubkey}" ]; then
@@ -145,6 +148,12 @@ if [ -f "${start_service_sh}" ]; then
     cat ${start_service_sh} >> ${session_sh}
 fi
 
+cat >> ${session_sh} <<HERE
+sacct -j ${SLURM_JOB_ID} --format=state | tail -n1 > job.status
+scp job.status  ${USER_CONTAINER_HOST}:/pw/jobs/${job_number}/job.status
+HERE
+
+
 # move the session file over
 chmod 777 ${session_sh}
 scp ${session_sh} ${controller}:${remote_session_dir}/session-${job_number}.sh
@@ -186,4 +195,17 @@ chmod 777 ${kill_sh}
 echo
 echo "Submitted slurm job: $slurmjob"
 
-sleep ${swalltime}
+
+# Job status file writen by remote script:
+js_file="job.status"
+while true; do
+    if [ -f "${js_file}" ]; then
+        job_status=$(cat ${js_file})
+        sed -i 's/.*Job status.*/Job status: ${job_status}/' service.html
+        if [[ "${job_status}" != "RUNNING" ]]; then
+            break
+        fi 
+    fi
+    sleep 30
+done
+

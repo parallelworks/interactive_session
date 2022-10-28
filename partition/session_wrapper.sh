@@ -74,7 +74,7 @@ source ~/.bashrc
 cd ${chdir}
 
 echo RUNNING > job.status
-ssh ${ssh_options} $masterIp scp job.status ${USER_CONTAINER_HOST}:/pw/jobs/${job_number}/job.status
+ssh ${ssh_options} $masterIp scp ${chdir}/job.status ${USER_CONTAINER_HOST}:/pw/jobs/${job_number}/job.status
 
 # MAKE SURE CONTROLLER NODES HAVE SSH ACCESS TO COMPUTE NODES:
 pubkey=\$(cat ~/.ssh/authorized_keys | grep \"\$(cat id_rsa.pub)\")
@@ -150,7 +150,7 @@ fi
 
 cat >> ${session_sh} <<HERE
 sacct -j ${SLURM_JOB_ID} --format=state | tail -n1 > job.status
-ssh ${ssh_options} $masterIp scp job.status ${USER_CONTAINER_HOST}:/pw/jobs/${job_number}/job.status
+ssh ${ssh_options} $masterIp scp ${chdir}/job.status ${USER_CONTAINER_HOST}:/pw/jobs/${job_number}/job.status
 HERE
 
 

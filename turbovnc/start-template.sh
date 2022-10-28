@@ -137,7 +137,13 @@ fi
 
 # Start service
 ${vnc_exec} -kill ${DISPLAY}
-${vnc_exec} ${DISPLAY} -SecurityTypes=None
+# FIXME: Need better way of doing this:
+# Turbovnc fails with "=" and tigevnc fails with " "
+{
+    ${vnc_exec} ${DISPLAY} -SecurityTypes None
+} || {
+    ${vnc_exec} ${DISPLAY} -SecurityTypes=None
+}
 
 rm -f ${chdir}/service.pid
 touch ${chdir}/service.pid

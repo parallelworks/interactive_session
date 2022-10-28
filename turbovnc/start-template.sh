@@ -164,7 +164,9 @@ touch ${chdir}/service.pid
 # Original line
 #DESKTOP_CMD="mate-session"
 # Modified to test with GNOME
-DESKTOP_CMD="gnome-session"
+#DESKTOP_CMD="gnome-session"
+# Modified to test with XFCE4
+DESKTOP_CMD="xfce4-session"
 #=====================================
 
 if [ -z $(which $DESKTOP_CMD) ]; then

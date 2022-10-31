@@ -175,6 +175,7 @@ else
         sudo systemctl set-default graphical.target
         # Start GUI
         xfce4-panel -r && xfwm4 --replace &
+        echo $! > ${chdir}/service.pid
     fi
 fi
 

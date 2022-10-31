@@ -153,6 +153,11 @@ touch ${chdir}/service.pid
 if ! [ -z $(which mate-session) ]; then
     mate-session &
     echo $! > ${chdir}/service.pid
+if ! [ -z $(which xfce4-panel) ]; then
+    # WARNING! NEEDS TO GO BEFORE GNOME BECAUSE INSTALLING XFCE FOR SOME REASON INSTALLS GNOME-SESSION
+    #          BUT THE COMMAND GNOME-SESSION FAILS!
+    xfce4-panel -r && xfwm4 --replace &
+    echo $! > ${chdir}/service.pid
 elif  ! [ -z $(which gnome-session) ]; then
     gnome-session &
     echo $! > ${chdir}/service.pid
@@ -160,24 +165,22 @@ elif ! [ -z $(which gnome) ]; then
     gnome &
     echo $! > ${chdir}/service.pid
 else
-    if [ -z  $(ps -x | grep xfce4-panel | grep -wv grep) ]; then
-        echo "WARNING: vnc desktop not found!"
-        echo "Attempting to install a desktop environment"
-        # Following https://owlhowto.com/how-to-install-xfce-on-centos-7/
-        # Install EPEL release
-        sudo yum install epel-release -y
-        # Install Window-x system
-        sudo yum groupinstall "X Window system" -y
-        # Install XFCE
-        sudo yum groupinstall "Xfce" -y
-        # Starting the GUI
-        sudo systemctl isolate graphical.target
-        # Enable GUI on boot
-        sudo systemctl set-default graphical.target
-        # Start GUI
-        xfce4-panel -r && xfwm4 --replace &
-        echo $! > ${chdir}/service.pid
-    fi
+    echo "WARNING: vnc desktop not found!"
+    echo "Attempting to install a desktop environment"
+    # Following https://owlhowto.com/how-to-install-xfce-on-centos-7/
+    # Install EPEL release
+    sudo yum install epel-release -y
+    # Install Window-x system
+    sudo yum groupinstall "X Window system" -y
+    # Install XFCE
+    sudo yum groupinstall "Xfce" -y
+    # Starting the GUI
+    sudo systemctl isolate graphical.target
+    # Enable GUI on boot
+    sudo systemctl set-default graphical.target
+    # Start GUI
+    xfce4-panel -r && xfwm4 --replace &
+    echo $! > ${chdir}/service.pid
 fi
 
 bootstrap_tgz ${novnc_tgz} ${novnc_dir}

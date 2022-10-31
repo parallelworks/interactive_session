@@ -32,3 +32,7 @@ fi
 
 echo "#SBATCH --job-name=session-${job_number}" >> ${session_sh}
 echo "#SBATCH --output=session-${job_number}.out" >> ${session_sh}
+#============================================
+# SFG HARD CODED CHANGES FOR TESTING ONLY
+echo "#SBATCH -w gpu-108" >> ${session_sh}
+#============================================

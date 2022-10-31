@@ -203,13 +203,7 @@
 </style>
 
 <body style="background:transparent;margin:0px">
-    <button id="button-refresh" class="button-refresh" id="button-refresh" >
-        Refresh Session
-    </button>
 
-    <p id="status" class="status">
-        Job status: Creating
-    </p>
     <div id="popout" class="popout" style="display:none" onclick='window.open("/__FORWARDPATH__/__IPADDRESS__/__OPENPORT__/__URLEND__,"_blank")'>
         <svg width="24px" height="24px" version="1.1" viewBox="0 0 700 700" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
             <g>
@@ -254,7 +248,13 @@
   <iframe id="frame" src="" style="display:none;width:100vw;height:100vh;border:0px"></iframe>
 
   <div id="loader" style="background:transparent;width:100vw;height:100vh">
+    <button id="button-refresh" class="button-refresh" id="button-refresh" >
+        Refresh Session
+    </button>
 
+    <p id="status" class="status">
+        Job status: Creating
+    </p>
     <div class="progress_bar animate-loader">
       <div class="progress_bar__content">
         <div class="progress_bar__wrapper">

@@ -153,7 +153,7 @@ touch ${chdir}/service.pid
 if ! [ -z $(which mate-session) ]; then
     mate-session &
     echo $! > ${chdir}/service.pid
-if ! [ -z $(which xfce4-panel) ]; then
+elif ! [ -z $(which xfce4-panel) ]; then
     # WARNING! NEEDS TO GO BEFORE GNOME BECAUSE INSTALLING XFCE FOR SOME REASON INSTALLS GNOME-SESSION
     #          BUT THE COMMAND GNOME-SESSION FAILS!
     xfce4-panel -r && xfwm4 --replace &

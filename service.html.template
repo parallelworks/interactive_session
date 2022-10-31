@@ -210,8 +210,7 @@
     <p id="status" class="status">
         Job status: Creating
     </p>
-
-    <div id="popout" class="popout" style="display:none" onclick='window.open("/pwide/einsteinmed-user-1.parallel.works/50175/vnc.html?autoconnect=true&show_dot=true&path=websockify&password=headless&host="+window.location.host+"/pwide/einsteinmed-user-1.parallel.works/50175"+"/&dt="+(new Date()).getTime(),"_blank")'>
+    <div id="popout" class="popout" style="display:none" onclick='window.open("/__FORWARDPATH__/__IPADDRESS__/__OPENPORT__/__URLEND__,"_blank")'>
         <svg width="24px" height="24px" version="1.1" viewBox="0 0 700 700" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
             <g>
             <path d="m576.86 66.285c0-0.57031-0.57031-1.1445-0.57031-1.7148 0-0.57031-0.57031-1.1445-0.57031-1.7148 0-0.57031-0.57031-1.1445-1.1445-1.7148 0-0.57031-0.57031-0.57031-0.57031-1.1445-1.1445-1.7148-2.8555-3.4297-4.5703-4.5703-0.57031 0-0.57031-0.57031-1.1445-0.57031-0.57031-0.57031-1.1445-0.57031-1.7148-1.1445-0.57031 0-1.1445-0.57031-1.7148-0.57031-0.57031 0-1.1445-0.57031-1.7148-0.57031-1.1445 0-2.2852-0.57031-3.4297-0.57031h-123.43c-9.7148 0-17.145 7.4297-17.145 17.145 0 9.7148 7.4297 17.145 17.145 17.145h82.855l-215.43 216c-6.8555 6.8555-6.8555 17.715 0 24 3.4297 3.4297 8 5.1445 12 5.1445s8.5703-1.7148 12-5.1445l215.43-215.43v82.855c0 9.7148 7.4297 17.145 17.145 17.145 9.7148 0 17.145-7.4297 17.145-17.145l-0.003906-124c0-1.1445 0-2.2852-0.57422-3.4297z"/>

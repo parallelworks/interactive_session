@@ -177,7 +177,7 @@
   flex-direction: row;
   margin: 10px 10px;
   align-items: center;
-  background-color:  #ffffff;
+  background-color:  transparent;
   border: 0;
   box-sizing: border-box;
   color: rgb(85 85 85);

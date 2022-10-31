@@ -248,11 +248,11 @@
   <iframe id="frame" src="" style="display:none;width:100vw;height:100vh;border:0px"></iframe>
 
   <div id="loader" style="background:transparent;width:100vw;height:100vh">
-    <button id="button-refresh" class="button-refresh" id="button-refresh" >
+    <button id="button-refresh" style="font-family:arial" class="button-refresh" id="button-refresh" >
         Refresh Session
     </button>
 
-    <p id="status" class="status">
+    <p id="status" style="font-family:arial" class="status">
         Job status: Creating
     </p>
     <div class="progress_bar animate-loader">

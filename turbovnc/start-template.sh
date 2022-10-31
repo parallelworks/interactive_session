@@ -160,6 +160,18 @@ elif ! [ -z $(which gnome) ]; then
     echo $! > ${chdir}/service.pid
 else
     echo "WARNING: vnc desktop not found!"
+    echo "Attempting to install a desktop environment"
+    # Following https://owlhowto.com/how-to-install-xfce-on-centos-7/
+    # Install EPEL release
+    sudo yum install epel-release -y
+    # Install Window-x system
+    sudo yum groupinstall "X Window system" -y
+    # Install XFCE
+    sudo yum groupinstall "Xfce" -y
+    # Starting the GUI
+    sudo systemctl isolate graphical.target
+    # Enable GUI on boot
+    sudo systemctl set-default graphical.target
 fi
 
 bootstrap_tgz ${novnc_tgz} ${novnc_dir}

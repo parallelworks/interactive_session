@@ -153,10 +153,10 @@ touch ${chdir}/service.pid
 if ! [ -z $(which mate-session) ]; then
     mate-session &
     echo $! > ${chdir}/service.pid
-elif ! [ -z $(which xfce4-panel) ]; then
+elif ! [ -z $(which xfce4-session) ]; then
     # WARNING! NEEDS TO GO BEFORE GNOME BECAUSE INSTALLING XFCE FOR SOME REASON INSTALLS GNOME-SESSION
     #          BUT THE COMMAND GNOME-SESSION FAILS!
-    xfce4-panel -r && xfwm4 --replace &
+    xfce4-session &
     echo $! > ${chdir}/service.pid
 elif  ! [ -z $(which gnome-session) ]; then
     gnome-session &
@@ -177,7 +177,7 @@ else
     # Starting the GUI
     sudo systemctl isolate graphical.target
     # Start GUI
-    xfce4-panel -r && xfwm4 --replace &
+    xfce4-session &
     echo $! > ${chdir}/service.pid
 fi
 

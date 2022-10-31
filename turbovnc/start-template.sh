@@ -176,8 +176,6 @@ else
     sudo yum groupinstall "Xfce" -y
     # Starting the GUI
     sudo systemctl isolate graphical.target
-    # Enable GUI on boot
-    sudo systemctl set-default graphical.target
     # Start GUI
     xfce4-panel -r && xfwm4 --replace &
     echo $! > ${chdir}/service.pid

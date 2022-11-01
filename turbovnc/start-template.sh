@@ -149,6 +149,9 @@ ${vnc_exec} -kill ${DISPLAY}
 rm -f ${chdir}/service.pid
 touch ${chdir}/service.pid
 
+# reexport display and sleep so vnc session can start
+export DISPLAY=:${displayNumber#0}
+sleep 2
 
 if ! [ -z $(which mate-session) ]; then
     mate-session &

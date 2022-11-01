@@ -232,8 +232,10 @@ else
             ${service_bin}
         else
             echo "Running ${service_bin} in the background"
-            screen -S ${service_bin}-${job_number} -d -m ${service_bin}
-            pid=$(ps -x | grep ${service_bin}-${job_number} | grep -wv grep | awk '{print $1}')
+            # Convert: /path/to/bin --and options to bin:
+            sname=$(basename ${service_bin})
+            screen -S ${sname}-${job_number} -d -m ${service_bin}
+            pid=$(ps -x | grep ${sname}-${job_number} | grep -wv grep | awk '{print $1}')
             echo ${pid} >> ${chdir}/service.pid
         fi
         echo "Done"

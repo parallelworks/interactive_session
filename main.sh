@@ -138,7 +138,7 @@ if [[ ${partition_or_controller} == "True" ]]; then
     session_wrapper_dir=partition
     
     if [[ ${pooltype} == "slurmshv2" ]]; then
-        wfargs="${wfargs} --remote_sh ${poolworkdir}/pworks/remote.sh"
+        wfargs="${wfargs} --remote_sh ${poolworkdir}/pw/remote.sh"
     fi
     
     # GET JOB SCHEDULER TYPE

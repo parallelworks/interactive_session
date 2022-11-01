@@ -92,7 +92,7 @@ echo "Pool type: ${pooltype}"
 # SET POOL WORK DIR:
 # - This is only needed to
 #   1. Run in a partition of a slurmshv2 to call the remote.sh script
-#   2. If chdir is pw.conf or empty --> chdir=${poolworkdir}/pworks/__job_number__
+#   2. If chdir is pw.conf or empty --> chdir=${poolworkdir}/pw/__job_number__
 if [[ ${pooltype} == "slurmshv2" ]]; then
     poolworkdir=$(${CONDA_PYTHON_EXE} utils/pool_api.py ${poolname} workdir)
     if [ -z "${poolworkdir}" ]; then

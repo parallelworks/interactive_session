@@ -38,14 +38,14 @@ else
 fi
 
 if [ -z ${install_dir} ] || [[ "${install_dir}" == "__""install_dir""__" ]]; then
-    install_dir=${HOME}/pworks/code-server-4.7.0-linux-amd64
+    install_dir=${HOME}/pw/code-server-4.7.0-linux-amd64
 fi
 
 if [ -z ${tgz_path} ] || [[ "${tgz_path}" == "__""tgz_path""__" ]]; then
     tgz_path=/swift-pw-bin/apps/code-server-4.7.0-linux-amd64.tar.gz
 fi
 
-install_paths="${HOME}/pworks/*/bin /opt/*/bin /shared/*/bin"
+install_paths="${HOME}/pw/*/bin /opt/*/bin /shared/*/bin"
 #server_bin="openvscode-server"
 server_bin="code-server"
 

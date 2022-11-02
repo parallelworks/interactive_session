@@ -60,7 +60,7 @@ if [[ "$USERMODE" == "k8s" ]];then
     # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
     TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST} \"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:$openPort:localhost:\$servicePort "'$(hostname)'"\""
 else
-    TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
+    TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fNT -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
 fi
 
 # Initiallize session batch file:
@@ -126,8 +126,10 @@ if [ -z "\${screen_bin}" ]; then
     echo "${TUNNELCMD} &"
     ${TUNNELCMD} &
 else
-    echo "screen -d -m ${TUNNELCMD}"
-    screen -d -m ${TUNNELCMD}
+    #echo "screen -d -m ${TUNNELCMD}"
+    #screen -d -m ${TUNNELCMD}
+    echo "${TUNNELCMD}"
+    ${TUNNELCMD}
 fi
 echo "Exit code: \$?"
 echo "Starting session..."

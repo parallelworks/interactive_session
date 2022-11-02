@@ -131,7 +131,7 @@
   flex-direction: row;
   margin: 10px 10px;
   align-items: center;
-  background-color:  #16437E;
+  background-color:  #102D50;
   border: 0;
   box-sizing: border-box;
   color: #ffffff;

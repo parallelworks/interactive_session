@@ -2,7 +2,7 @@
   <command interpreter='bash'>main.sh</command>
   <inputs>
   <param name='service_name' label='Service' type='hidden' value='jupyter-host' width='50%_none'></param>
-  <param name='notebook_dir' label='Directory to start JupyterHub GUI' type='hidden' value='__workdir__' width='50%_none'></param>
+  <param name='notebook_dir' label='Directory to start JupyterHub GUI' type='hidden' value='__poolworkdir__' width='50%_none'></param>
    <section name='service_sec' type='section' title='Jupyter Notebook Settings' expanded='true'>
         <param name='slurm_module' type='select' label='Select slurm module with Jupyter' help='List modules with module avail command in the cluster login node' width='50%_none' multiple='false'>
             <option value="python/3.10.6/gcc.7.3.1/base" selected="true">python/3.10.6/gcc.7.3.1/base</option>

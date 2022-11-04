@@ -138,7 +138,6 @@ fi
 
 # Start service
 ${vnc_exec} -kill ${DISPLAY}
-sleep 5
 # FIXME: Need better way of doing this:
 # Turbovnc fails with "=" and tigevnc fails with " "
 {
@@ -157,8 +156,6 @@ elif  ! [ -z $(which gnome-session) ]; then
     gnome-session &
     echo $! > ${chdir}/service.pid
 elif ! [ -z $(which xfce4-session) ]; then
-    # WARNING! NEEDS TO GO BEFORE GNOME BECAUSE INSTALLING XFCE FOR SOME REASON INSTALLS GNOME-SESSION
-    #          BUT THE COMMAND GNOME-SESSION FAILS!
     xfce4-session &
     echo $! > ${chdir}/service.pid
 elif ! [ -z $(which gnome) ]; then

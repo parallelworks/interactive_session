@@ -138,6 +138,7 @@ fi
 
 # Start service
 ${vnc_exec} -kill ${DISPLAY}
+sleep 5
 # FIXME: Need better way of doing this:
 # Turbovnc fails with "=" and tigevnc fails with " "
 {

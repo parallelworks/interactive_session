@@ -53,7 +53,7 @@ bootstrap_tgz() {
 }
 
 if [ -z ${novnc_dir} ] || [[ "${novnc_dir}" == "__""novnc_dir""__" ]]; then
-    novnc_dir=${HOME}/pw/noVNC-1.3.0
+    novnc_dir=${HOME}/pw/bootstrap/noVNC-1.3.0
 fi
 
 if [ -z ${novnc_tgz} ] || [[ "${novnc_tgz}" == "__""novnc_tgz""__" ]]; then

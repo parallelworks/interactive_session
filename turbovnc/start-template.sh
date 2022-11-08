@@ -149,11 +149,11 @@ ${vnc_exec} -kill ${DISPLAY}
 rm -f ${chdir}/service.pid
 touch ${chdir}/service.pid
 
-if ! [ -z $(which mate-session) ]; then
-    mate-session &
-    echo $! > ${chdir}/service.pid
-elif  ! [ -z $(which gnome-session) ]; then
+if  ! [ -z $(which gnome-session) ]; then
     gnome-session &
+    echo $! > ${chdir}/service.pid
+elif ! [ -z $(which mate-session) ]; then
+    mate-session &
     echo $! > ${chdir}/service.pid
 elif ! [ -z $(which xfce4-session) ]; then
     xfce4-session &

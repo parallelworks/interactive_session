@@ -132,15 +132,15 @@ if  [ -z $(which gnome-session) ]; then
     exit 1
 fi
 
-if  [ -z $(which rstudio) ]; then
+if  [ -z $(which R) ]; then
     echo "INSTALLING RSTUDIO"
     sudo yum install epel-release -y 
     sudo yum install R -y 
     wget https://download2.rstudio.org/server/centos7/x86_64/rstudio-server-rhel-1.4.1717-x86_64.rpm 
     sudo yum install rstudio-server-rhel-1.4.1717-x86_64.rpm -y
 fi
-if  [ -z $(which rstudio) ]; then
-    echo "ERROR: rstudio executable not found - Exiting workflow!"
+if  [ -z $(which R) ]; then
+    echo "ERROR: R executable not found - Exiting workflow!"
     exit 1
 fi
 
@@ -171,10 +171,10 @@ pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
 echo ${pid} >> ${chdir}/service.pid
 sleep 5  # Need this specially in controller node or second software won't show up!
 
-echo "Running rstudio in the background"
+echo "Running R in the background"
 # Convert: /path/to/bin --and options to bin:
-sname=rstudio
-screen -S ${sname}-${job_number} -d -m rstudio
+sname=R
+screen -S ${sname}-${job_number} -d -m R
 pid=$(ps -x | grep ${sname}-${job_number} | grep -wv grep | awk '{print $1}')
 echo ${pid} >> ${chdir}/service.pid
 echo "Done"

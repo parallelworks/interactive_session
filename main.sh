@@ -167,7 +167,7 @@ env | grep -q PW_USERCONTAINER_VERSION
 NEW_USERCONTAINER="$?"
 
 if [[ "$NEW_USERCONTAINER" == "0" ]];then
-    sed -i "s/\/__FORWARDPATH__\/__IPADDRESS__\/__OPENPORT__\//\/me\/$openPort\//g" service.html.template
+    sed -i "s/\/__FORWARDPATH__\/__IPADDRESS__\/__OPENPORT__\//\/me\/$openPort\//g" service.html_
 
 else
     sed -i "s/__FORWARDPATH__/$FORWARDPATH/g" service.html_

@@ -115,8 +115,8 @@ echo
 # CUSTOM BOOTSTRAP FOR VNCSERVER + RSTUDIO
 if  [ -z $(which ${vnc_bin}) ]; then
     echo "INSTALLING TIGERVNC SERVER"
-    sudo yum install tigervnc-server -y
-    sudo yum install python3 -y
+    sudo -n yum install tigervnc-server -y
+    sudo -n yum install python3 -y
 fi
 if  [ -z $(which ${vnc_bin}) ]; then
     echo "ERROR: ${vnc_bin} executable not found - Exiting workflow!"
@@ -125,7 +125,7 @@ fi
 
 if  [ -z $(which gnome-session) ]; then
     echo "INSTALLING GNOME DESKTOP"
-    sudo yum groupinstall "Server with GUI" -y
+    sudo -n yum groupinstall "Server with GUI" -y
 fi
 if  [ -z $(which gnome-session) ]; then
     echo "ERROR: gnome-session executable not found - Exiting workflow!"
@@ -134,12 +134,12 @@ fi
 
 if  [ -z $(which rstudio) ]; then
     echo "INSTALLING RSTUDIO"
-    sudo yum install epel-release -y 
-    sudo yum install R -y 
+    sudo -n yum install epel-release -y 
+    sudo -n yum install R -y 
     #wget https://download2.rstudio.org/server/centos7/x86_64/rstudio-server-rhel-1.4.1717-x86_64.rpm 
-    #sudo yum install rstudio-server-rhel-1.4.1717-x86_64.rpm -y
+    #sudo -n yum install rstudio-server-rhel-1.4.1717-x86_64.rpm -y
     wget https://download1.rstudio.org/desktop/centos7/x86_64/rstudio-2022.07.2-576-x86_64.rpm
-    sudo yum install rstudio-2022.07.2-576-x86_64.rpm -y
+    sudo -n yum install rstudio-2022.07.2-576-x86_64.rpm -y
 fi
 if  [ -z $(which rstudio) ]; then
     echo "ERROR: rstudio executable not found - Exiting workflow!"

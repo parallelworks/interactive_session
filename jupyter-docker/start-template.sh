@@ -11,14 +11,14 @@ fi
 
 if [[ ${partition_or_controller} == "True" ]]; then
     # Create kill script. Needs to be here because we need the hostname of the compute node.
-    echo ssh "'$(hostname)'" sudo docker stop jupyter-$servicePort > docker-kill-${job_number}.sh
+    echo ssh "'$(hostname)'" sudo -n docker stop jupyter-$servicePort > docker-kill-${job_number}.sh
 else
-    echo sudo docker stop jupyter-$servicePort > docker-kill-${job_number}.sh
+    echo sudo -n docker stop jupyter-$servicePort > docker-kill-${job_number}.sh
 fi
 
 chmod 777 docker-kill-${job_number}.sh
 
-sudo systemctl start docker
+sudo -n systemctl start docker
 
 
 # Generate sha:
@@ -27,12 +27,12 @@ if [ -z "${password}" ] || [[ "${password}" == "__""password""__" ]]; then
     sha=""
 else
     echo "Generating sha"
-    sha=$(sudo docker run --rm __docker_repo__ python3 -c "from notebook.auth.security import passwd; print(passwd('__password__', algorithm = 'sha1'))")
+    sha=$(sudo -n docker run --rm __docker_repo__ python3 -c "from notebook.auth.security import passwd; print(passwd('__password__', algorithm = 'sha1'))")
 fi
 
 # Docker supports mounting directories that do not exist (singularity does not)
 set -x
-sudo docker run ${gpu_flag} --rm \
+sudo -n docker run ${gpu_flag} --rm \
     -v /contrib:/contrib -v /lustre:/lustre -v ${HOME}:${HOME} \
     --name=jupyter-$servicePort \
     -p $servicePort:$servicePort \

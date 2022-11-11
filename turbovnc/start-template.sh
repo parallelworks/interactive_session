@@ -120,11 +120,11 @@ if [ -z ${vnc_exec} ] || [[ "${vnc_exec}" == "__""vnc_exec""__" ]]; then
     # If no vnc_exec is provided
     if [ -z $(which ${vnc_bin}) ]; then
         # If no vncserver is in PATH:
-        echo "Installing tigervnc-server: sudo yum install tigervnc-server -y"
-        sudo yum install tigervnc-server -y
+        echo "Installing tigervnc-server: sudo -n yum install tigervnc-server -y"
+        sudo -n yum install tigervnc-server -y
         # python3 is a dependency
         if [ -z $(which python3) ]; then
-            sudo yum install python3 -y
+            sudo -n yum install python3 -y
         fi
 
     fi
@@ -153,12 +153,12 @@ touch ${chdir}/service.pid
 # Permission denied.  dconf will not work properly.
 # When the session is killed the permissions of directory /run/user/$(id -u) change from drwxr-xr-x to drwxr-----
 rm -rf /run/user/$(id -u)/dconf
-sudo mkdir /run/user/$(id -u)/
-sudo chown ${USER} /run/user/$(id -u)
-sudo chgrp ${USER} /run/user/$(id -u)
-sudo mkdir /run/user/$(id -u)/dconf
-sudo chown ${USER} /run/user/$(id -u)/dconf
-sudo chgrp ${USER} /run/user/$(id -u)/dconf
+sudo -n mkdir /run/user/$(id -u)/
+sudo -n chown ${USER} /run/user/$(id -u)
+sudo -n chgrp ${USER} /run/user/$(id -u)
+sudo -n  mkdir /run/user/$(id -u)/dconf
+sudo -n  chown ${USER} /run/user/$(id -u)/dconf
+sudo -n  chgrp ${USER} /run/user/$(id -u)/dconf
 chmod og+rx /run/user/$(id -u)
 
 if  ! [ -z $(which gnome-session) ]; then
@@ -178,11 +178,11 @@ else
     echo "Attempting to install a desktop environment"
     # Following https://owlhowto.com/how-to-install-xfce-on-centos-7/
     # Install EPEL release
-    sudo yum install epel-release -y
+    sudo -n yum install epel-release -y
     # Install Window-x system
-    sudo yum groupinstall "X Window system" -y
+    sudo -n yum groupinstall "X Window system" -y
     # Install XFCE
-    sudo yum groupinstall "Xfce" -y
+    sudo -n yum groupinstall "Xfce" -y
     # Start GUI
     xfce4-session &
     echo $! > ${chdir}/service.pid

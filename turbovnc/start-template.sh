@@ -149,8 +149,9 @@ ${vnc_exec} -kill ${DISPLAY}
 rm -f ${chdir}/service.pid
 touch ${chdir}/service.pid
 
-# Wait to start session. Sometimes it won't load
-sleep 4
+# Fix bug (process:17924): dconf-CRITICAL **: 20:52:57.695: unable to create directory '/run/user/1002/dconf': 
+# Permission denied.  dconf will not work properly.
+rm -rf /user/$(id -u)/dconf
 
 if  ! [ -z $(which gnome-session) ]; then
     gnome-session &

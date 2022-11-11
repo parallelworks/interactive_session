@@ -151,6 +151,8 @@ touch ${chdir}/service.pid
 
 # Fix bug (process:17924): dconf-CRITICAL **: 20:52:57.695: unable to create directory '/run/user/1002/dconf': 
 # Permission denied.  dconf will not work properly.
+# When the session is killed the permissions of directory /run/user/$(id -u) change from drwxr-xr-x to drwxr-----
+
 #rm -rf /run/user/$(id -u)/dconf
 #sudo mkdir -p /run/user/$(id -u)/dconf
 #sudo chown ${USER} /run/user/$(id -u)/dconf -R

@@ -152,6 +152,7 @@ touch ${chdir}/service.pid
 # Fix bug (process:17924): dconf-CRITICAL **: 20:52:57.695: unable to create directory '/run/user/1002/dconf': 
 # Permission denied.  dconf will not work properly.
 rm -rf /run/user/$(id -u)/dconf
+mkdir -p /run/user/$(id -u)/dconf
 
 if  ! [ -z $(which gnome-session) ]; then
     gnome-session &

@@ -28,7 +28,7 @@ From: centos:centos7
 %help
     This is a container with centos7 and R server
 HERE
-    sudo singularity build ${path_to_sing} rserver.def
+    sudo -n singularity build ${path_to_sing} rserver.def
 fi
 
 if ! [ -f "${path_to_sing}" ]; then

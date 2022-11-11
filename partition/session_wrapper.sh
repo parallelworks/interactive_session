@@ -134,7 +134,7 @@ echo "Running blocking ssh command..."
 screen_bin=\$(which screen 2> /dev/null)
 if [ -z "\${screen_bin}" ]; then
     echo Screen not found. Attempting to install
-    sudo yum install screen -y
+    sudo -n yum install screen -y
 fi
 
 if [ -z "\${screen_bin}" ]; then

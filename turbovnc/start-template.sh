@@ -149,6 +149,9 @@ ${vnc_exec} -kill ${DISPLAY}
 rm -f ${chdir}/service.pid
 touch ${chdir}/service.pid
 
+# Wait to start session. Sometimes it won't load
+sleep 4
+
 if  ! [ -z $(which gnome-session) ]; then
     gnome-session &
     echo $! > ${chdir}/service.pid

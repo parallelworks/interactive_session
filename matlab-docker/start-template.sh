@@ -30,10 +30,17 @@ set -x
 sudo -n docker run ${gpu_flag} -i --rm \
     -v /contrib:/contrib -v /lustre:/lustre -v ${HOME}:${HOME} \
     --name=matlab-$servicePort \
-    -p 8888:$servicePort \
+    -p $servicePort:$servicePort \
     --shm-size=512M \
+    --env MWI_LOG_LEVEL=DEBUG \
+    --env MWI_ENABLE_WEB_LOGGING=True \
+    --env MWI_APP_HOST=0.0.0.0 \
+    --env MWI_APP_PORT=$servicePort \
+    --env MWI_ENABLE_TOKEN_AUTH=False \
+    --env MWI_BASE_URL="/${FORWARDPATH}/${IPADDRESS}/${openPort}/" \
     __docker_repo__ \
     -browser 
 
+#     --env MWI_CUSTOM_HTTP_HEADERS='{"Content-Security-Policy": "frame-ancestors *cloud.parallel.works:* https://cloud.parallel.works:*;"}' \
 
 sleep 9999

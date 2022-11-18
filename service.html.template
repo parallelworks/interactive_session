@@ -158,7 +158,7 @@
 
 .button-refresh:hover,
 .button-refresh:focus {
-  background-color: rgb(255, 255, 255, .7);
+  background-color: transparent;
   color:  rgb(85 85 85);
 }
 

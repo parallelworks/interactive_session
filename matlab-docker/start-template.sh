@@ -26,8 +26,8 @@ set -x
 
 # https://docs.docker.com/config/containers/container-networking/
 #    sudo docker run -it --rm -p 8888:8888 --shm-size=512M mathworks/matlab:r2022a -browser
-
-sudo -n docker run ${gpu_flag} -it --rm \
+#        cant run "-it" in the workflow! Fails with message: the input device is not a TTY
+sudo -n docker run ${gpu_flag} -i --rm \
     -v /contrib:/contrib -v /lustre:/lustre -v ${HOME}:${HOME} \
     --name=matlab-$servicePort \
     -p 8888:$servicePort \

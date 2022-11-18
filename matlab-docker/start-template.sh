@@ -34,3 +34,6 @@ sudo -n docker run ${gpu_flag} -it --rm \
     --shm-size=512M \
     __docker_repo__ \
     -browser 
+
+
+sleep 9999

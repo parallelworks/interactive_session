@@ -28,7 +28,7 @@ NEW_USERCONTAINER="$?"
 if [[ "$USERMODE" == "k8s" || "$NEW_USERCONTAINER" == "0" ]];then
     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
     # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-    TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST} \"ssh -J ${controller} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:$openPort:localhost:\$servicePort "'$(hostname)'"\""
+    TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST} \"ssh -J ${controller} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -N -L 0.0.0.0:$openPort:localhost:\$servicePort "'$(hostname)'"\""
 else
     TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
 fi

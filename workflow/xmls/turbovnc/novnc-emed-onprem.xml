@@ -8,11 +8,13 @@
       <conditional name="partition_or_controller_cond">
             <param name="partition_or_controller" type="boolean" truevalue="Partition" falsevalue="Controller" checked="True" label="Partition or controller node?" help='Choose to run the service in the controller / login or partition / compute nodes' width="25%_none" optional='true' float="right"></param>
             <when value="Partition">
-                <param name='partition' label='Slurm partition:' type='text' help='Partition to submit the interactive job to.' value='normal' width='50%_none'>
+                <param name='partition' label='SLURM partition:' type='text' help='Partition to submit the interactive job to.' value='normal' width='50%_none'>
                 </param>
                 <param name='cpus_per_task' label='CPUs per task:' type='integer' min="1" max="10" help='--cpus-per-task=value slurm parameter' value='1' width='50%_none'>
                 </param>
                 <param name='walltime' label='Walltime' type='text' help='e.g. 01:00:00 - Amount of time slurm will honor the interactive session.' value='01:00:00' width='50%_none'>
+                </param>
+                <param name='custom_directives' label='Additional SLURM directives' type='text' help='e.g. ;--mem=1000;--gpus-per-node=1 - Use the semicolon character ; before each parameter. Use no spaces.' value='' width='50%_none'>
                 </param>
             </when>
         </conditional>

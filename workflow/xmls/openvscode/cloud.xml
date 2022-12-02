@@ -13,13 +13,15 @@
       <conditional name="partition_or_controller_cond">
             <param name="partition_or_controller" type="boolean" truevalue="Partition" falsevalue="Controller" checked="False" label="Partition or controller node?" help='Choose to run the service in the controller / login or partition / compute nodes' width="25%_none" optional='true' float="right"></param>
             <when value="Partition">
-                <param name='partition' label='Slurm partition:' type='text' help='Partition to submit the interactive job to.' value='default' width='50%_none'>
+                <param name='partition' label='SLURM partition:' type='text' help='Partition to submit the interactive job to.' value='default' width='50%_none'>
                 </param>
                 <param name='numnodes' label='Number of nodes:' type='integer' min="1" max="10" help='Number of nodes to request for the interactive session.' value='1' width='50%_none'>
                 </param>
                 <param name="exclusive" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Exclusive" help='The job allocation can not share nodes with other running jobs' width="25%_none" optional='true' float="right">
                 </param>
                 <param name='walltime' label='Walltime' type='text' help='e.g. 00:10:00 - Amount of time slurm will honor the interactive session.' value='00:20:00' width='50%_none'>
+                </param>
+                <param name='custom_directives' label='Additional SLURM directives' type='text' help='e.g. ;--mem=1000;--gpus-per-node=1 - Use the semicolon character ; before each parameter. Use no spaces.' value='' width='50%_none'>
                 </param>
             </when>
         </conditional>

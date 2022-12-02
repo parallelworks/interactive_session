@@ -19,7 +19,7 @@
                 </param>
                 <param name='walltime' label='Walltime' type='text' help='e.g. 01:00:00 - Amount of time slurm will honor the interactive session.' value='01:00:00' width='50%_none'>
                 </param>
-                <param name='custom_directives' label='Custom SLURM directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate multiple parameters. Use no spaces.' value='' width='50%_none'>
+                <param name='custom_directives' label='Custom SLURM directives' type='text' help='e.g. ;--mem=1000;--gpus-per-node=1 - Use the semicolon character ; before each parameter. Use no spaces.' value='' width='50%_none'>
                 </param>
             </when>
         </conditional>

@@ -79,3 +79,5 @@ jupyter-notebook \
 --NotebookApp.tornado_settings="${tornado_settings}" \
 --NotebookApp.base_url="${base_url}" \
 --NotebookApp.allow_origin=*
+
+sleep 9999

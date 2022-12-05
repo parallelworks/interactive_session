@@ -59,6 +59,15 @@ if [ -z ${notebook_dir} ] || [[ "${notebook_dir}" == "__""notebook_dir""__" ]]; 
     notebook_dir="/"
 fi
 
+
+if [[ "$NEW_USERCONTAINER" == "0" ]];then
+    tornado_settings="{'static_url_prefix':'/me/${openPort}/static/'}"
+    base_url="/me/${openPort}/"
+else
+    tornado_settings="{'static_url_prefix':'/${FORWARDPATH}/${IPADDRESS}/${openPort}/static/'}"
+    base_url="/${FORWARDPATH}/${IPADDRESS}/${openPort}/"
+fi
+
 jupyter-notebook \
 --port=$servicePort \
 --ip=0.0.0.0 \
@@ -67,6 +76,6 @@ jupyter-notebook \
 --NotebookApp.password=$sha \
 --no-browser \
 --notebook-dir=$notebook_dir \
---NotebookApp.tornado_settings="{'static_url_prefix':'/${FORWARDPATH}/${IPADDRESS}/${openPort}/static/'}" \
---NotebookApp.base_url="/${FORWARDPATH}/${IPADDRESS}/${openPort}/" \
+--NotebookApp.tornado_settings="${tornado_settings}" \
+--NotebookApp.base_url="${base_url}" \
 --NotebookApp.allow_origin=*

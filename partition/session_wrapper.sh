@@ -94,6 +94,7 @@ if [ -f "${remote_sh}" ]; then
 fi
 
 # These are not workflow parameters but need to be available to the service on the remote node!
+NEW_USERCONTAINER=${NEW_USERCONTAINER}
 FORWARDPATH=${FORWARDPATH}
 IPADDRESS=${IPADDRESS}
 openPort=${openPort}

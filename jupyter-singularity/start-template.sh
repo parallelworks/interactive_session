@@ -50,6 +50,14 @@ else
 fi
 
 
+if [[ "$NEW_USERCONTAINER" == "0" ]];then
+    tornado_settings="{'static_url_prefix':'/me/${openPort}/static/'}"
+    base_url="/me/${openPort}/"
+else
+    tornado_settings="{'static_url_prefix':'/${FORWARDPATH}/${IPADDRESS}/${openPort}/static/'}"
+    base_url="/${FORWARDPATH}/${IPADDRESS}/${openPort}/"
+fi
+
 set -x
 singularity exec ${gpu_flag} \
     ${mount_dirs} \
@@ -62,7 +70,7 @@ singularity exec ${gpu_flag} \
     --NotebookApp.password=${sha} \
     --no-browser \
     --notebook-dir=/ \
-    --NotebookApp.tornado_settings="{'static_url_prefix':'/${FORWARDPATH}/${IPADDRESS}/${openPort}/static/'}" \
-    --NotebookApp.base_url="/${FORWARDPATH}/${IPADDRESS}/${openPort}/" \
+    --NotebookApp.tornado_settings="${tornado_settings}" \
+    --NotebookApp.base_url="${base_url}" \
     --NotebookApp.allow_origin=*
 

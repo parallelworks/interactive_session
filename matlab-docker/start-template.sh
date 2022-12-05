@@ -20,6 +20,11 @@ chmod 777 docker-kill-${job_number}.sh
 
 sudo -n systemctl start docker
 
+if [[ "$NEW_USERCONTAINER" == "0" ]];then
+    MWI_BASE_URL="/me/${openPort}/"
+else
+    MWI_BASE_URL="/${FORWARDPATH}/${IPADDRESS}/${openPort}/" 
+fi
 
 # Docker supports mounting directories that do not exist (singularity does not)
 set -x
@@ -37,7 +42,7 @@ sudo -n docker run ${gpu_flag} -i --rm \
     --env MWI_APP_HOST=0.0.0.0 \
     --env MWI_APP_PORT=$servicePort \
     --env MWI_ENABLE_TOKEN_AUTH=False \
-    --env MWI_BASE_URL="/${FORWARDPATH}/${IPADDRESS}/${openPort}/" \
+    --env MWI_BASE_URL=${MWI_BASE_URL} \
     __docker_repo__ \
     -browser 
 

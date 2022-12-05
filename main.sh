@@ -164,7 +164,8 @@ cp service.html.template service.html_
 
 # check if the user is on a new container 
 env | grep -q PW_USERCONTAINER_VERSION
-NEW_USERCONTAINER="$?"
+# Needs to be exported for services like Jupyter that require a base url --NotebookApp.base_url
+export NEW_USERCONTAINER="$?"
 sed -i "s|__URLEND__|${URLEND}|g" service.html_
 
 if [[ "$NEW_USERCONTAINER" == "0" ]];then

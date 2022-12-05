@@ -30,6 +30,14 @@ else
     sha=$(sudo -n docker run --rm __docker_repo__ python3 -c "from notebook.auth.security import passwd; print(passwd('__password__', algorithm = 'sha1'))")
 fi
 
+if [[ "$NEW_USERCONTAINER" == "0" ]];then
+    tornado_settings="{'static_url_prefix':'/me/${openPort}/static/'}"
+    base_url="/me/${openPort}/"
+else
+    tornado_settings="{'static_url_prefix':'/${FORWARDPATH}/${IPADDRESS}/${openPort}/static/'}"
+    base_url="/${FORWARDPATH}/${IPADDRESS}/${openPort}/"
+fi
+
 # Docker supports mounting directories that do not exist (singularity does not)
 set -x
 sudo -n docker run ${gpu_flag} --rm \
@@ -45,6 +53,6 @@ sudo -n docker run ${gpu_flag} --rm \
     --no-browser \
     --allow-root \
     --notebook-dir=/ \
-    --NotebookApp.tornado_settings="{'static_url_prefix':'/${FORWARDPATH}/${IPADDRESS}/${openPort}/static/'}" \
-    --NotebookApp.base_url="/${FORWARDPATH}/${IPADDRESS}/${openPort}/" \
+    --NotebookApp.tornado_settings="${tornado_settings}" \
+    --NotebookApp.base_url="${base_url}" \
     --NotebookApp.allow_origin=*

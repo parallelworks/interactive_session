@@ -86,6 +86,7 @@ echo \$$ > ${job_number}.pid
 
 # These are not workflow parameters but need to be available to the service on the remote node!
 FORWARDPATH=${FORWARDPATH}
+NEW_USERCONTAINER=${NEW_USERCONTAINER}
 IPADDRESS=${IPADDRESS}
 openPort=${openPort}
 USER_CONTAINER_HOST=${USER_CONTAINER_HOST}

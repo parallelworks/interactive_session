@@ -129,18 +129,23 @@ if [ -z "${controller}" ]; then
     exit 1
 fi
 
-# RUN IN CONTROLLER OR PARTITION NODE
-if [[ ${partition_or_controller} == "True" ]]; then
-    echo "Submitting sbatch job to ${controller}"
+# RUN IN CONTROLLER, SLURM PARTITION OR PBS QUEUE?
+if [[ ${jobschedulertype} == "controller" ]]; then
+    # FIXME: Rename to compute_or_controller
+    partition_or_controller="False"
+    echo "Submitting ssh job to ${controller}"
+    session_wrapper_dir=controller
+else
+    # FIXME: Rename to compute_or_controller
+    partition_or_controller="True"
+    echo "Submitting ${jobschedulertype} job to ${controller}"
     session_wrapper_dir=partition
-    
     if [[ ${pooltype} == "slurmshv2" ]]; then
         wfargs="${wfargs} --remote_sh ${poolworkdir}/pw/remote.sh"
     fi
-else
-    echo "Submitting ssh job to ${controller}"
-    session_wrapper_dir=controller
 fi
+wfargs="${wfargs} --partition_or_controller ${partition_or_controller}"
+
 
 # SERVICE URL
 echo "Generating session html"

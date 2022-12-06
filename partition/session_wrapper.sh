@@ -38,13 +38,19 @@ echo "Generating session script"
 export session_sh=/pw/jobs/${job_number}/session.sh
 echo "#!/bin/bash" > ${session_sh}
 
-if [[ ${jobschedulertype} == "slurm" ]]; then
-    bash ${sdir}/write_slurm_directives.sh
-elif [[ ${jobschedulertype} == "pbs" ]]; then
-    bash ${sdir}/write_pbs_directives.sh
+if [[ ${jobschedulertype} == "SLURM" ]]; then
+    directive_prefix="SBATCH"
+elif [[ ${jobschedulertype} == "PBS" ]]; then
+    directive_prefix="PBS"
 else
-    echo "ERROR: jobschedulertype <${jobschedulertype}> must be slurm or pbs"
+    echo "ERROR: jobschedulertype <${jobschedulertype}> must be SLURM or PBS"
     exit 1
+fi
+
+if ! [ -z ${scheduler_directives} ]; then
+    for sched_dir in $(echo ${scheduler_directives} | sed "s|;| |g"); do
+        echo "${directive_prefix} ${sched_dir}" >> ${session_sh}
+    done
 fi
 
 echo >> ${session_sh}

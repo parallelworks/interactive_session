@@ -55,12 +55,9 @@ fi
 
 echo >> ${session_sh}
 
-if ! [ -z ${chdir} ] && ! [[ "${chdir}" == "default" ]]; then
-    ${sshcmd} mkdir -p ${chdir}
-    remote_session_dir=${chdir}
-else
-    remote_session_dir="./"
-fi
+# SET SESSIONS' REMOTE DIRECTORY
+${sshcmd} mkdir -p ${chdir}
+remote_session_dir=${chdir}
 
 # ADD STREAMING
 if [[ "${stream}" == "True" ]]; then

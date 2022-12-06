@@ -1,7 +1,4 @@
 #!/bin/bash
-# Need to know which pool types are slurm or PBS:
-slurmpooltypes="gclusterv2 pclusterv2 azclusterv2 awsclusterv2 slurmshv2"
-pbspooltypes="pbsshv2"
 
 source lib.sh
 job_number=$(basename ${PWD})
@@ -111,7 +108,7 @@ wfargs="$(echo ${wfargs} | sed "s|__poolworkdir__|${poolworkdir}|g")"
 if [ -z "${chdir}" ]; then
     wfargs=$(echo ${wfargs} | sed "s|--chdir||g")
     wfargs="${wfargs} --chdir ${poolworkdir}/pw/jobs/${job_number}/"
-    elif [[ ${chdir} == "pw.conf" ]]; then
+elif [[ ${chdir} == "pw.conf" ]]; then
     wfargs=$(echo ${wfargs} | sed "s|--chdir pw.conf|--chdir ${poolworkdir}/pw/jobs/${job_number}/|g")
 fi
 
@@ -140,16 +137,9 @@ if [[ ${partition_or_controller} == "True" ]]; then
     if [[ ${pooltype} == "slurmshv2" ]]; then
         wfargs="${wfargs} --remote_sh ${poolworkdir}/pw/remote.sh"
     fi
-    
-    # GET JOB SCHEDULER TYPE
-    if [[ " ${slurmpooltypes} " == *" ${pooltype} "* ]]; then
-        jobschedulertype=slurm
-        elif [[ " ${pbspooltypes} " == *" ${pooltype} "* ]]; then
-        jobschedulertype=pbs
-    else
-        echo "ERROR: Pool type <${pooltype}> not present in slurm types <${slurmpooltypes}> or pbs types <${pbspooltypes}>"
-        exit 1
-    fi
+
+    # FIXME: GET JOB SCHEDULER TYPE
+    jobschedulertype=slurm
     wfargs="${wfargs} --jobschedulertype ${jobschedulertype}"
 else
     echo "Submitting ssh job to ${controller}"

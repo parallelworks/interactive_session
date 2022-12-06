@@ -40,7 +40,7 @@ echo "#!/bin/bash" > ${session_sh}
 
 if [[ ${jobschedulertype} == "slurm" ]]; then
     bash ${sdir}/write_slurm_directives.sh
-    elif [[ ${jobschedulertype} == "pbs" ]]; then
+elif [[ ${jobschedulertype} == "pbs" ]]; then
     bash ${sdir}/write_pbs_directives.sh
 else
     echo "ERROR: jobschedulertype <${jobschedulertype}> must be slurm or pbs"

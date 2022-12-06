@@ -143,6 +143,11 @@ else
     if [[ ${pooltype} == "slurmshv2" ]]; then
         wfargs="${wfargs} --remote_sh ${poolworkdir}/pw/remote.sh"
     fi
+    if [[ ${jobschedulertype} == "SLURM" ]]; then
+        # Overwrite scheduler_directives with enforced defaults:
+        pw_scheduler_directives="${scheduler_directives};--job-name=session-${job_number};--chdir=${poolworkdir}/pw/jobs/${job_number};"
+        wfargs=$(echo ${wfargs} | sed "s|--scheduler_directives ${scheduler_directives}|--scheduler_directives ${pw_scheduler_directives}|g")
+    fi
 fi
 wfargs="${wfargs} --partition_or_controller ${partition_or_controller}"
 

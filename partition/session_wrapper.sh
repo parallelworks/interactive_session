@@ -39,11 +39,11 @@ export session_sh=/pw/jobs/${job_number}/session.sh
 echo "#!/bin/bash" > ${session_sh}
 
 if [[ ${jobschedulertype} == "SLURM" ]]; then
-    directive_prefix="SBATCH"
+    directive_prefix="#SBATCH"
     submit_cmd="sbatch"
     delete_cmd="scancel"
 elif [[ ${jobschedulertype} == "PBS" ]]; then
-    directive_prefix="PBS"
+    directive_prefix="#PBS"
     submit_cmd="qsub"
     delete_cmd="qdel"
 else

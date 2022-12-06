@@ -17,7 +17,7 @@
             <option value="PBS">PBS</option>
         </param>
         <when value="SLURM">
-            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. ;--mem=1000;--gpus-per-node=1 - Use the semicolon character ; before each parameter. Do not use spaces. Do not include the SBATCH keyword.' value=';--time=00:20:00;--nodes=1;--exclusive' width='100%_none'>
+            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. ;--mem=1000;--gpus-per-node=1 - Use the semicolon character ; before each parameter. Do not use spaces. Do not include the SBATCH keyword.' value='--job-name=session-__job_number__;--chdir=__poolworkdir__/pw/jobs/__job_number__;--output=session-__job_number__.out;--time=00:20:00;--nodes=1;--exclusive' width='100%_none'>
             </param>
         </when>
         </conditional>

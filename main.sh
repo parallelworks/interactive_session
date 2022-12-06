@@ -130,7 +130,7 @@ if [ -z "${controller}" ]; then
 fi
 
 # RUN IN CONTROLLER, SLURM PARTITION OR PBS QUEUE?
-if [[ ${jobschedulertype} == "controller" ]]; then
+if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
     # FIXME: Rename to compute_or_controller
     partition_or_controller="False"
     echo "Submitting ssh job to ${controller}"

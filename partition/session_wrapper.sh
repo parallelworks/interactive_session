@@ -55,12 +55,6 @@ fi
 
 echo >> ${session_sh}
 
-if ! [ -z ${walltime} ] && ! [[ "${walltime}" == "default" ]]; then
-    swalltime=$(echo "${walltime}" | awk -F: '{ print ($1 * 3600) + ($2 * 60) + $3 + 60}')
-else
-    swalltime=9999
-fi
-
 if ! [ -z ${chdir} ] && ! [[ "${chdir}" == "default" ]]; then
     ${sshcmd} mkdir -p ${chdir}
     remote_session_dir=${chdir}

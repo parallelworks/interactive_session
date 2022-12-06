@@ -137,10 +137,6 @@ if [[ ${partition_or_controller} == "True" ]]; then
     if [[ ${pooltype} == "slurmshv2" ]]; then
         wfargs="${wfargs} --remote_sh ${poolworkdir}/pw/remote.sh"
     fi
-
-    # FIXME: GET JOB SCHEDULER TYPE
-    jobschedulertype=slurm
-    wfargs="${wfargs} --jobschedulertype ${jobschedulertype}"
 else
     echo "Submitting ssh job to ${controller}"
     session_wrapper_dir=controller

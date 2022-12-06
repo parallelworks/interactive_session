@@ -40,8 +40,12 @@ echo "#!/bin/bash" > ${session_sh}
 
 if [[ ${jobschedulertype} == "SLURM" ]]; then
     directive_prefix="SBATCH"
+    submit_cmd="sbatch"
+    delete_cmd="scancel"
 elif [[ ${jobschedulertype} == "PBS" ]]; then
     directive_prefix="PBS"
+    submit_cmd="qsub"
+    delete_cmd="qdel"
 else
     echo "ERROR: jobschedulertype <${jobschedulertype}> must be SLURM or PBS"
     exit 1
@@ -172,11 +176,11 @@ scp stream.sh ${controller}:${remote_session_dir}/stream-${job_number}.sh
 echo
 echo "Submitting slurm request (wait for node to become available before connecting)..."
 echo
-echo $sshcmd sbatch ${remote_session_dir}/session-${job_number}.sh
+echo $sshcmd ${submit_cmd} ${remote_session_dir}/session-${job_number}.sh
 
 sed -i 's/.*Job status.*/Job status: Submitted/' service.html
 
-slurmjob=$($sshcmd sbatch ${remote_session_dir}/session-${job_number}.sh | tail -1 | awk -F ' ' '{print $4}')
+slurmjob=$($sshcmd ${submit_cmd} ${remote_session_dir}/session-${job_number}.sh | tail -1 | awk -F ' ' '{print $4}')
 
 if [[ "$slurmjob" == "" ]];then
     echo "ERROR submitting job - exiting the workflow"
@@ -197,7 +201,7 @@ if [ -f "${kill_service_sh}" ]; then
     echo "Adding kill server script: ${kill_service_sh}"
     echo "$sshcmd 'bash -s' < ${kill_service_sh}" >> ${kill_sh}
 fi
-echo $sshcmd scancel $slurmjob >> ${kill_sh}
+echo $sshcmd ${delete_cmd} $slurmjob >> ${kill_sh}
 echo "echo Finished running ${kill_sh}" >> ${kill_sh}
 echo "sed -i 's/.*Job status.*/Job status: Cancelled/' /pw/jobs/${job_number}/service.html"  >> ${kill_sh}
 chmod 777 ${kill_sh}

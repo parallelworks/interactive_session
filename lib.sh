@@ -98,9 +98,11 @@ getSchedulerDirectivesFromInputForm() {
     sch_dnames=$(echo $@ | tr " " "\n" | grep -e '--_sch_' |  cut -c 3-)
     form_sch_directives=""
     for sch_dname in ${sch_dnames}; do
-	sch_dval=$(env | grep ${sch_dname} | cut -d'=' -f2)
-	sch_dname=$(echo ${sch_dname} | sed "s|_sch_||g" | sed "s|_d_|-|g" | sed "s|_dd_|--|g" | sed "s|_e_|=|g")
-	form_sched_directives="${form_sched_directives};${sch_dname}${sch_dval}"
+	    sch_dval=$(env | grep ${sch_dname} | cut -d'=' -f2)
+	    sch_dname=$(echo ${sch_dname} | sed "s|_sch_||g" | sed "s|_d_|-|g" | sed "s|_dd_|--|g" | sed "s|_e_|=|g")
+        if ! [ -z "${sch_dval}" ] && ! [[ "${sch_dval}" == "default" ]]; then
+            form_sched_directives="${form_sched_directives};${sch_dname}${sch_dval}"
+        fi
     done
     echo ${form_sched_directives}
 }

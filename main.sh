@@ -147,7 +147,12 @@ else
         # Overwrite scheduler_directives with enforced defaults:
         pw_scheduler_directives="${scheduler_directives};--job-name=session-${job_number};--chdir=${poolworkdir}/pw/jobs/${job_number};"
         wfargs=$(echo ${wfargs} | sed "s|--scheduler_directives ${scheduler_directives}|--scheduler_directives ${pw_scheduler_directives}|g")
+    elif [[ ${jobschedulertype} == "PBS" ]]; then
+        # Overwrite scheduler_directives with enforced defaults:
+        pw_scheduler_directives="${scheduler_directives};--job-name=session-${job_number};--chdir=${poolworkdir}/pw/jobs/${job_number};"
+        wfargs=$(echo ${wfargs} | sed "s|--scheduler_directives ${scheduler_directives}|--scheduler_directives ${pw_scheduler_directives}|g")
     fi
+
 fi
 wfargs="${wfargs} --partition_or_controller ${partition_or_controller}"
 

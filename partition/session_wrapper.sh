@@ -53,7 +53,8 @@ fi
 
 if ! [ -z ${scheduler_directives} ]; then
     for sched_dir in $(echo ${scheduler_directives} | sed "s|;| |g"); do
-        echo "${directive_prefix} ${sched_dir}" >> ${session_sh}
+        # Script DEFAULT_JOB_FILE_TEMPLATE.sh converts spaces to '___'. Here we undo the transformation.
+        echo "${directive_prefix} ${sched_dir}" | sed "s|___| |g" >> ${session_sh}
     done
 fi
 

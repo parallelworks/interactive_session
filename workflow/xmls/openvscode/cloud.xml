@@ -17,9 +17,9 @@
             <option value="PBS">PBS</option>
         </param>
         <when value="SLURM">
-            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. ;--mem=1000;--gpus-per-node=1 - Use the semicolon character ; before each parameter. Do not include the SBATCH keyword.' value=';--time=00:20:00;--nodes=1;--exclusive' width='100%_none'>
-            </param>
             <param name='_sch__dd_partition_e_' label='SLURM partition:' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value='' width='50%_none'>
+            </param>
+            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. ;--mem=1000;--gpus-per-node=1 - Use the semicolon character ; before each parameter. Do not include the SBATCH keyword.' value=';--time=00:20:00;--nodes=1;--exclusive' width='100%_none'>
             </param>
         </when>
         <when value="PBS">

@@ -1,5 +1,0 @@
-1. Ports race condition
-2. docker kill won't work if chdir != ${HOME}
-3. If job fails no cleaning is done!
-4. job.pid file may be deleted if script fails...
-5. Check if pkill is installed if server runs in controller and exit otherwise

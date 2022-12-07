@@ -12,7 +12,7 @@ fi
 # export a=1 b=2 d=4
 parseArgs() {
     index=1
-    args=""
+    local args=""
     for arg in $@; do
 	    prefix=$(echo "${arg}" | cut -c1-2)
 	    if [[ ${prefix} == '--' ]]; then

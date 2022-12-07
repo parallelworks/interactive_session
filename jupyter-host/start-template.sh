@@ -63,7 +63,7 @@ fi
 if [[ "$NEW_USERCONTAINER" == "0" ]];then
     # Served from 
     # https://cloud.parallel.works/api/v2/proxy/usercontainer?proxyType=api&proxyTo=/api/v1/display/pw/jobs/57147/service.html
-    tornado_settings="{'static_url_prefix':'/me/${openPort}/static/'}"
+    tornado_settings="{'static_url_prefix':'/static/'}"
     base_url="/me/${openPort}/"
 else
     # Served from:
@@ -82,7 +82,6 @@ jupyter-notebook \
 --no-browser \
 --notebook-dir=$notebook_dir \
 --NotebookApp.tornado_settings=${tornado_settings} \
---NotebookApp.base_url=${base_url} \
 --NotebookApp.allow_origin=*
 
 sleep 9999

@@ -143,15 +143,21 @@ else
     if [[ ${pooltype} == "slurmshv2" ]]; then
         wfargs="${wfargs} --remote_sh ${poolworkdir}/pw/remote.sh"
     fi
+
+    # Get scheduler directives from input form (see this function in lib.sh)
+    form_sched_directives=$(getSchedulerDirectivesFromInputForm ${wfargs})
+
+    # Get scheduler directives enforced by PW:
+    # Set job name, log paths and run directory
     if [[ ${jobschedulertype} == "SLURM" ]]; then
-        # Overwrite scheduler_directives with enforced defaults:
-        pw_scheduler_directives="${scheduler_directives};--job-name=session-${job_number};--chdir=${poolworkdir}/pw/jobs/${job_number};"
-        wfargs=$(echo ${wfargs} | sed "s|--scheduler_directives ${scheduler_directives}|--scheduler_directives ${pw_scheduler_directives}|g")
+        pw_sched_directives=";--job-name=session-${job_number};--chdir=${poolworkdir}/pw/jobs/${job_number};--output=session-${job_number}.out"
     elif [[ ${jobschedulertype} == "PBS" ]]; then
-        # Overwrite scheduler_directives with enforced defaults:
-        pw_scheduler_directives="${scheduler_directives};--job-name=session-${job_number};--chdir=${poolworkdir}/pw/jobs/${job_number};"
-        wfargs=$(echo ${wfargs} | sed "s|--scheduler_directives ${scheduler_directives}|--scheduler_directives ${pw_scheduler_directives}|g")
+        pw_sched_directives=";-N___session-${job_number};-j___oe;-o=${poolworkdir}/pw/jobs/${job_number}.out;-j___oe"
     fi
+
+    # Merge all directives in single param and in wfargs
+    final_sched_directives="${scheduler_directives};${form_sched_directives};${pw_sched_directives}"
+    wfargs=$(echo ${wfargs} | sed "s|--scheduler_directives ${scheduler_directives}|--scheduler_directives ${final_sched_directives}|g")
 
 fi
 wfargs="${wfargs} --partition_or_controller ${partition_or_controller}"

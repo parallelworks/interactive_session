@@ -76,3 +76,31 @@ replace_templated_inputs() {
         index=$((index+1))
     done
 }
+
+getSchedulerDirectivesFromInputForm() {
+    # Scheduler parameters in the input form are intercepted and formatted here.
+    #
+    # For example, it transforms arguments:
+    # --jobschedulertype slurm --_sch__d_N___1 --service jupyter-host --_sch__dd_cpus_d_per_d_task_e_ 1
+    # into:
+    # ;-N___1;--cpus-per-task=1
+    # Which is then processed out of this function to:
+    # # SBATCH -N 1
+    # # SBATCH --cpus-per-task=1
+    #
+    # Character mapping for special scheduler parameters:
+    # 1. _sch_ --> ''
+    # 1. _d_ --> '-'
+    # 2. _dd_ --> '--'
+    # 2. _e_ --> '='
+    # 3. ___ --> ' ' (Not in this function)
+    # Get special scheduler parameters
+    sch_dnames=$(echo $@ | tr " " "\n" | grep -e '--_sch_' |  cut -c 3-)
+    form_sch_directives=""
+    for sch_dname in ${sch_dnames}; do
+	sch_dval=$(env | grep ${sch_dname} | cut -d'=' -f2)
+	sch_dname=$(echo ${sch_dname} | sed "s|_sch_||g" | sed "s|_d_|-|g" | sed "s|_dd_|--|g" | sed "s|_e_|=|g")
+	form_sched_directives="${form_sched_directives};${sch_dname}${sch_dval}"
+    done
+    echo ${form_sched_directives}
+}

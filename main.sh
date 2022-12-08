@@ -152,6 +152,14 @@ else
     if [[ ${jobschedulertype} == "SLURM" ]]; then
         pw_sched_directives=";--job-name=session-${job_number};--chdir=${poolworkdir}/pw/jobs/${job_number};--output=session-${job_number}.out"
     elif [[ ${jobschedulertype} == "PBS" ]]; then
+        # PBS needs a queue to be specified!
+        if [ -z "${_sch__d_q___}" ]; then
+            is_queue_defined=$(echo ${scheduler_directives} | tr ';' '\n' | grep -e '-q___')
+            if [ -z "${is_queue_defined}" ]; then
+                echo "ERROR: PBS needs a queue to be defined! - exiting workflow"
+                exit 1
+            fi
+        fi
         pw_sched_directives=";-N___session-${job_number};-j___oe;-o=${poolworkdir}/pw/jobs/${job_number}.out"
     fi
 

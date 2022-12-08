@@ -23,7 +23,7 @@
             </param>
         </when>
         <when value="PBS">
-            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. ;-l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; before each parameter. Do not include the PBS keyword.' value=';-l walltime=00:20:00; -l nodes=1;-l naccesspolicy=SINGLEJOB -n' width='100%_none'>
+            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. ;-l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; before each parameter. Do not include the PBS keyword.' value=';-l walltime=00:20:00;-l nodes=1;-l naccesspolicy=SINGLEJOB -n' width='100%_none'>
             </param>
         </when>
         </conditional>

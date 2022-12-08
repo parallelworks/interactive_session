@@ -152,7 +152,7 @@ else
     if [[ ${jobschedulertype} == "SLURM" ]]; then
         pw_sched_directives=";--job-name=session-${job_number};--chdir=${poolworkdir}/pw/jobs/${job_number};--output=session-${job_number}.out"
     elif [[ ${jobschedulertype} == "PBS" ]]; then
-        pw_sched_directives=";-N___session-${job_number};-j___oe;-o=${poolworkdir}/pw/jobs/${job_number}.out;-j___oe"
+        pw_sched_directives=";-N___session-${job_number};-j___oe;-o=${poolworkdir}/pw/jobs/${job_number}.out"
     fi
 
     # Merge all directives in single param and in wfargs

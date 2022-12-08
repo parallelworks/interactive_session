@@ -35,6 +35,6 @@ echo "#SBATCH --output=session-${job_number}.out" >> ${session_sh}
 
 if ! [ -z ${custom_directives} ]; then
     for cusdir in $(echo ${custom_directives} | sed "s|;| |g"); do
-        echo "#SBATCH ${cusdir}" >> ${session_sh}
+        echo "#SBATCH ${cusdir}" | sed "s|___| |g" >> ${session_sh}
     done
 fi

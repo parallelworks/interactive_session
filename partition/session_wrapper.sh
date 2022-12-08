@@ -186,7 +186,7 @@ if [[ ${jobschedulertype} == "SLURM" ]]; then
     jobid=$($sshcmd ${submit_cmd} ${remote_session_dir}/session-${job_number}.sh | tail -1 | awk -F ' ' '{print $4}')
 elif [[ ${jobschedulertype} == "PBS" ]]; then
     $sshcmd ${submit_cmd} ${remote_session_dir}/session-${job_number}.sh
-    job_id=$($sshcmd qstat | grep session-${job_number} | awk '{print $1}')
+    jobid=$($sshcmd qstat | grep session-${job_number} | awk '{print $1}')
 fi
 
 if [[ "${jobid}" == "" ]];then

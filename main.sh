@@ -160,7 +160,7 @@ else
                 exit 1
             fi
         fi
-        pw_sched_directives=";-N___session-${job_number};-j___oe;-o=${poolworkdir}/pw/jobs/${job_number}.out"
+        pw_sched_directives=";-N___session-${job_number};-j___oe;-o=${poolworkdir}/pw/jobs/${job_number}/session-${job_number}.out"
     fi
 
     # Merge all directives in single param and in wfargs

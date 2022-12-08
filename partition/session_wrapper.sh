@@ -181,9 +181,15 @@ echo $sshcmd ${submit_cmd} ${remote_session_dir}/session-${job_number}.sh
 
 sed -i 's/.*Job status.*/Job status: Submitted/' service.html
 
-slurmjob=$($sshcmd ${submit_cmd} ${remote_session_dir}/session-${job_number}.sh | tail -1 | awk -F ' ' '{print $4}')
+# Submit job and get job id
+if [[ ${jobschedulertype} == "SLURM" ]]; then
+    jobid=$($sshcmd ${submit_cmd} ${remote_session_dir}/session-${job_number}.sh | tail -1 | awk -F ' ' '{print $4}')
+elif [[ ${jobschedulertype} == "PBS" ]]; then
+    $sshcmd ${submit_cmd} ${remote_session_dir}/session-${job_number}.sh
+    job_id=$($sshcmd qstat | grep session-${job_number} | awk '{print $1}')
+fi
 
-if [[ "$slurmjob" == "" ]];then
+if [[ "${jobid}" == "" ]];then
     echo "ERROR submitting job - exiting the workflow"
     sed -i 's/.*Job status.*/Job status: Failed/' service.html
     exit 1
@@ -202,13 +208,13 @@ if [ -f "${kill_service_sh}" ]; then
     echo "Adding kill server script: ${kill_service_sh}"
     echo "$sshcmd 'bash -s' < ${kill_service_sh}" >> ${kill_sh}
 fi
-echo $sshcmd ${delete_cmd} $slurmjob >> ${kill_sh}
+echo $sshcmd ${delete_cmd} ${jobid} >> ${kill_sh}
 echo "echo Finished running ${kill_sh}" >> ${kill_sh}
 echo "sed -i 's/.*Job status.*/Job status: Cancelled/' /pw/jobs/${job_number}/service.html"  >> ${kill_sh}
 chmod 777 ${kill_sh}
 
 echo
-echo "Submitted slurm job: $slurmjob"
+echo "Submitted slurm job: ${jobid}"
 
 
 # Job status file writen by remote script:

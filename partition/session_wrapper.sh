@@ -1,12 +1,8 @@
 #!/bin/bash
-echo
-echo Arguments:
-echo $@
-echo
 sdir=$(dirname $0)
-source lib.sh
+# For debugging
+env > session_wrapper.env
 
-parseArgs $@
 sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
 
 # create the script that will generate the session tunnel and run the interactive session app

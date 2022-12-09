@@ -1,7 +1,7 @@
 #!/bin/bash
 
 source lib.sh
-job_number=$(basename ${PWD})
+export job_number=$(basename ${PWD})
 
 # export the users env file (for some reason not all systems are getting these upon execution)
 while read LINE; do export "$LINE"; done < ~/.env
@@ -18,26 +18,24 @@ echo
 # change permissions of run directly so we can execute all files
 chmod 777 * -Rf
 
-source lib.sh
 # Replace special placeholder since \$(whoami) and \${PW_USER} don't work everywhere and ${job_number} is not known
-wfargs="$(echo $@ | sed "s|__job_number__|${job_number}|g" | sed "s|__USER__|${PW_USER}|g") --job_number ${job_number}"
-
+# Preserve single quota (--pname 'pval') with ${@@Q}
+wfargs="$(echo ${@@Q} | sed "s|__job_number__|${job_number}|g" | sed "s|__USER__|${PW_USER}|g")"
 
 echo "$0 $wfargs"
 
 parseArgs $wfargs
 
+# GER OPEN PORT FOR TUNNEL
 getOpenPort
-
-###############################
-# SANITY CHECKS AND DEFAULTS: #
-###############################
-USER_CONTAINER_HOST="usercontainer"
 
 if [[ "$openPort" == "" ]];then
     echo "ERROR - cannot find open port..."
     exit 1
 fi
+export openPort=${openPort}
+
+export USER_CONTAINER_HOST="usercontainer"
 
 # LOAD PLATFORM-SPECIFIC ENVIRONMENT:
 env_sh=platforms/${PARSL_CLIENT_HOST}/env.sh
@@ -104,25 +102,16 @@ fi
 wfargs="$(echo ${wfargs} | sed "s|__poolworkdir__|${poolworkdir}|g")"
 
 
-# SET DEFAULT chdir
-if [ -z "${chdir}" ]; then
-    wfargs=$(echo ${wfargs} | sed "s|--chdir||g")
-    wfargs="${wfargs} --chdir ${poolworkdir}/pw/jobs/${job_number}/"
-elif [[ ${chdir} == "pw.conf" ]]; then
-    wfargs=$(echo ${wfargs} | sed "s|--chdir pw.conf|--chdir ${poolworkdir}/pw/jobs/${job_number}/|g")
-fi
-
+# SET chdir
+export chdir=${poolworkdir}/pw/jobs/${job_number}/
 
 # GET CONTROLLER IP FROM PW API IF NOT SPECIFIED
-if [ -z "${controller}" ] || [[ ${controller} == "pw.conf" ]]; then
-    if [ -z "${poolname}" ]; then
-        echo "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
-        exit 1
-    fi
-    controller=${poolname}.clusters.pw
-    controller=$(${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py $controller)
+if [ -z "${poolname}" ]; then
+    echo "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
+    exit 1
 fi
-
+controller=${poolname}.clusters.pw
+export controller=$(${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py $controller)
 
 if [ -z "${controller}" ]; then
     echo "ERROR: No controller was specified - exiting the workflow"
@@ -132,16 +121,16 @@ fi
 # RUN IN CONTROLLER, SLURM PARTITION OR PBS QUEUE?
 if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
     # FIXME: Rename to compute_or_controller
-    partition_or_controller="False"
+    export partition_or_controller="False"
     echo "Submitting ssh job to ${controller}"
     session_wrapper_dir=controller
 else
     # FIXME: Rename to compute_or_controller
-    partition_or_controller="True"
+    export partition_or_controller="True"
     echo "Submitting ${jobschedulertype} job to ${controller}"
     session_wrapper_dir=partition
     if [[ ${pooltype} == "slurmshv2" ]]; then
-        wfargs="${wfargs} --remote_sh ${poolworkdir}/pw/remote.sh"
+        export remote_sh=${poolworkdir}/pw/remote.sh
     fi
 
     # Get scheduler directives from input form (see this function in lib.sh)
@@ -164,16 +153,12 @@ else
     fi
 
     # Merge all directives in single param and in wfargs
-    final_sched_directives="${scheduler_directives};${form_sched_directives};${pw_sched_directives}"
-    wfargs=$(echo ${wfargs} | sed "s|--scheduler_directives ${scheduler_directives}|--scheduler_directives ${final_sched_directives}|g")
-
+    export final_sched_directives="${scheduler_directives};${form_sched_directives};${pw_sched_directives}"
 fi
-wfargs="${wfargs} --partition_or_controller ${partition_or_controller}"
-
 
 # SERVICE URL
 echo "Generating session html"
-replace_templated_inputs ${service_name}/url.sh $wfargs
+replace_templated_inputs ${service_name}/url.sh "$wfargs"
 source ${service_name}/url.sh
 cp service.html.template service.html_
 
@@ -197,27 +182,23 @@ echo
 
 # START / KILL SCRIPTS
 if [ -f "${service_name}/start-template.sh" ]; then
-    start_service_sh=/pw/jobs/${job_number}/start-service.sh
+    export start_service_sh=/pw/jobs/${job_number}/start-service.sh
     echo "Generating ${start_service_sh}"
     cp ${service_name}/start-template.sh ${start_service_sh}
-    replace_templated_inputs ${start_service_sh} $wfargs
+    replace_templated_inputs ${start_service_sh} "$wfargs --job_number '${job_number}' --chdir '${chdir}'"
     echo
 fi
 
 if [ -f "${service_name}/kill-template.sh" ]; then
-    kill_service_sh=/pw/jobs/${job_number}/kill-service.sh
+    export kill_service_sh=/pw/jobs/${job_number}/kill-service.sh
     echo "Generating ${kill_service_sh}"
     cp ${service_name}/kill-template.sh ${kill_service_sh}
-    replace_templated_inputs ${kill_service_sh} $wfargs
+    replace_templated_inputs ${kill_service_sh} "$wfargs --job_number '${job_number}' --chdir '${chdir}'"
     echo
 fi
 
-bash ${session_wrapper_dir}/session_wrapper.sh $wfargs \
---openPort ${openPort} \
---controller ${controller} \
---start_service_sh ${start_service_sh} \
---kill_service_sh ${kill_service_sh} \
---USER_CONTAINER_HOST ${USER_CONTAINER_HOST}
+# RUNNING SESSION WRAPPER
+bash ${session_wrapper_dir}/session_wrapper.sh 
 
 # We don't want kill.sh to change the status to cancelled!
 sed -i 's/sed//' kill.sh

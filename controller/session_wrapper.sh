@@ -1,13 +1,8 @@
 #!/bin/bash
 sdir=$(dirname $0)
-echo
-echo Arguments:
-echo $@
-echo
+# For debugging
+env > session_wrapper.env
 
-source lib.sh
-
-parseArgs $@
 sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
 chdir=$(echo ${chdir} | sed "s|__job_number__|${job_number}|g")
 

@@ -20,7 +20,7 @@ chmod 777 * -Rf
 
 # Replace special placeholder since \$(whoami) and \${PW_USER} don't work everywhere and ${job_number} is not known
 # Preserve single quota (--pname 'pval') with ${@@Q}
-wfargs="$(echo ${@@Q} | sed "s|__job_number__|${job_number}|g" | sed "s|__USER__|${PW_USER}|g")"
+wfargs="$(echo $@ | sed "s|__job_number__|${job_number}|g" | sed "s|__USER__|${PW_USER}|g")"
 
 echo "$0 $wfargs"
 
@@ -185,7 +185,7 @@ if [ -f "${service_name}/start-template.sh" ]; then
     export start_service_sh=/pw/jobs/${job_number}/start-service.sh
     echo "Generating ${start_service_sh}"
     cp ${service_name}/start-template.sh ${start_service_sh}
-    replace_templated_inputs ${start_service_sh} "$wfargs --job_number '${job_number}' --chdir '${chdir}'"
+    replace_templated_inputs ${start_service_sh} "$wfargs --job_number ${job_number} --chdir ${chdir}"
     echo
 fi
 
@@ -193,7 +193,7 @@ if [ -f "${service_name}/kill-template.sh" ]; then
     export kill_service_sh=/pw/jobs/${job_number}/kill-service.sh
     echo "Generating ${kill_service_sh}"
     cp ${service_name}/kill-template.sh ${kill_service_sh}
-    replace_templated_inputs ${kill_service_sh} "$wfargs --job_number '${job_number}' --chdir '${chdir}'"
+    replace_templated_inputs ${kill_service_sh} "$wfargs --job_number ${job_number} --chdir ${chdir}"
     echo
 fi
 

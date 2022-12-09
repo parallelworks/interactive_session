@@ -38,10 +38,12 @@ if [[ ${jobschedulertype} == "SLURM" ]]; then
     directive_prefix="#SBATCH"
     submit_cmd="sbatch"
     delete_cmd="scancel"
+    stat_cmd="squeue"
 elif [[ ${jobschedulertype} == "PBS" ]]; then
     directive_prefix="#PBS"
     submit_cmd="qsub"
     delete_cmd="qdel"
+    stat_cmd="qstat"
 else
     echo "ERROR: jobschedulertype <${jobschedulertype}> must be SLURM or PBS"
     exit 1
@@ -77,8 +79,6 @@ cat >> ${session_sh} <<HERE
 source ~/.bashrc
 cd ${chdir}
 set -x
-echo RUNNING > job.status
-ssh ${ssh_options} $masterIp scp ${chdir}/job.status ${USER_CONTAINER_HOST}:/pw/jobs/${job_number}/job.status
 
 # MAKE SURE CONTROLLER NODES HAVE SSH ACCESS TO COMPUTE NODES:
 pubkey=\$(cat ~/.ssh/authorized_keys | grep \"\$(cat id_rsa.pub)\")
@@ -158,14 +158,6 @@ if [ -f "${start_service_sh}" ]; then
     cat ${start_service_sh} >> ${session_sh}
 fi
 
-# Leave a blank line just in case!
-cat >> ${session_sh} <<HERE
-
-sacct -j ${SLURM_JOB_ID} --format=state | tail -n1 > job.status
-ssh ${ssh_options} $masterIp scp ${chdir}/job.status ${USER_CONTAINER_HOST}:/pw/jobs/${job_number}/job.status
-HERE
-
-
 # move the session file over
 chmod 777 ${session_sh}
 scp ${session_sh} ${controller}:${remote_session_dir}/session-${job_number}.sh
@@ -215,15 +207,22 @@ echo "Submitted slurm job: ${jobid}"
 
 
 # Job status file writen by remote script:
-js_file="job.status"
-while true; do
-    if [ -f "${js_file}" ]; then
-        job_status=$(cat ${js_file})
-        sed -i "s/.*Job status.*/Job status: ${job_status}/" service.html
-        if [[ "${job_status}" != "RUNNING" ]]; then
+while true; do    
+    # squeue won't give you status of jobs that are not running or waiting to run
+    # qstat returns the status of all recent jobs
+    job_status=$($sshcmd ${stat_cmd} | grep ${jobid} | awk '{print $5}')
+    sed -i "s/.*Job status.*/Job status: ${job_status}/" service.html
+    if [[ ${jobschedulertype} == "SLURM" ]]; then
+        if [ -z ${job_status} ]; then
+            job_status=$(sacct -j ${jobid}  --format=state | tail -n1)
+            sed -i "s/.*Job status.*/Job status: ${job_status}/" service.html
             break
-        fi 
+        fi
+    elif [[ ${jobschedulertype} == "PBS" ]]; then
+        if [[ ${job_status} == "C" ]]; then
+            break
+        fi
     fi
-    sleep 30
+    sleep 60
 done
 

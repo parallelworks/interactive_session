@@ -62,7 +62,8 @@ remote_session_dir=${chdir}
 
 # ADD STREAMING
 if [[ "${stream}" == "True" ]]; then
-    stream_args="--host ${USER_CONTAINER_HOST} --pushpath /pw/jobs/${job_number}/session-${job_number}.out --pushfile session-${job_number}.out --delay 30 --masterIp ${masterIp}"
+    # Don't really know the extension of the --pushpath. Can't controll with PBS (FIXME)
+    stream_args="--host ${USER_CONTAINER_HOST} --pushpath /pw/jobs/${job_number}/session-${job_number}.o --pushfile session-${job_number}.out --delay 30 --masterIp ${masterIp}"
     stream_cmd="bash stream-${job_number}.sh ${stream_args} &"
     echo; echo "Streaming command:"; echo "${stream_cmd}"; echo
     echo ${stream_cmd} >> ${session_sh}

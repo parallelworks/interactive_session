@@ -158,7 +158,7 @@ fi
 
 # SERVICE URL
 echo "Generating session html"
-replace_templated_inputs ${service_name}/url.sh "$wfargs"
+replace_templated_inputs ${service_name}/url.sh $wfargs
 source ${service_name}/url.sh
 cp service.html.template service.html_
 
@@ -185,7 +185,7 @@ if [ -f "${service_name}/start-template.sh" ]; then
     export start_service_sh=/pw/jobs/${job_number}/start-service.sh
     echo "Generating ${start_service_sh}"
     cp ${service_name}/start-template.sh ${start_service_sh}
-    replace_templated_inputs ${start_service_sh} "$wfargs --job_number ${job_number} --chdir ${chdir}"
+    replace_templated_inputs ${start_service_sh} $wfargs --_pw_job_number ${job_number} --_pw_chdir ${chdir}
     echo
 fi
 
@@ -193,7 +193,7 @@ if [ -f "${service_name}/kill-template.sh" ]; then
     export kill_service_sh=/pw/jobs/${job_number}/kill-service.sh
     echo "Generating ${kill_service_sh}"
     cp ${service_name}/kill-template.sh ${kill_service_sh}
-    replace_templated_inputs ${kill_service_sh} "$wfargs --job_number ${job_number} --chdir ${chdir}"
+    replace_templated_inputs ${kill_service_sh} $wfargs --_pw_job_number ${job_number} --_pw_chdir ${chdir}
     echo
 fi
 

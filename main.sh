@@ -153,7 +153,7 @@ else
     fi
 
     # Merge all directives in single param and in wfargs
-    export sched_directives="${scheduler_directives};${form_sched_directives};${pw_sched_directives}"
+    export scheduler_directives="${scheduler_directives};${form_sched_directives};${pw_sched_directives}"
 fi
 
 # SERVICE URL

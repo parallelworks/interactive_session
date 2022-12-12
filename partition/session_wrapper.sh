@@ -214,7 +214,7 @@ while true; do
     sed -i "s/.*Job status.*/Job status: ${job_status}/" service.html
     if [[ ${jobschedulertype} == "SLURM" ]]; then
         if [ -z ${job_status} ]; then
-            job_status=$(sacct -j ${jobid}  --format=state | tail -n1)
+            job_status=$($sshcmd sacct -j ${jobid}  --format=state | tail -n1)
             sed -i "s/.*Job status.*/Job status: ${job_status}/" service.html
             break
         fi

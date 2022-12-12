@@ -76,6 +76,11 @@ if ! [ -z "${chdir}" ] && ! [[ "${chdir}" == "default" ]]; then
 fi
 
 cat >> ${session_sh} <<HERE
+# In some systems screen can't write to /var/run/screen
+mkdir ${chdir}/.screen
+chmod 700 ${chdir}/.screen
+export SCREENDIR=${chdir}/.screen
+
 # Note that job started running
 echo \$$ > ${job_number}.pid
 

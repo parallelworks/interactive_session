@@ -75,6 +75,11 @@ fi
 $sshcmd cp "~/.ssh/id_rsa.pub" ${remote_session_dir}
 
 cat >> ${session_sh} <<HERE
+# In some systems screen can't write to /var/run/screen
+mkdir ${chdir}/.screen
+chmod 700 ${chdir}/.screen
+export SCREENDIR=${chdir}/.screen
+
 # Needed for emed
 source ~/.bashrc
 cd ${chdir}

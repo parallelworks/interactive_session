@@ -60,7 +60,8 @@ if [ -z ${notebook_dir} ] || [[ "${notebook_dir}" == "__""notebook_dir""__" ]]; 
 fi
 
 # Custom PW plugin:
-cat >> __init__.py <<HERE
+mkdir -p pw_jupyter_proxy
+cat >> pw_jupyter_proxy/__init__.py <<HERE
 from tornado.web import StaticFileHandler
 from tornado import web
 import os
@@ -77,8 +78,7 @@ def load_jupyter_server_extension(nbapp):
     static_path = web_app.settings.get("static_path")
     path_join = url_path_join(base_url, '', 'static', '(.*)')
 
-    service_port = os.environ['SERVICE_PORT']
-    web_app.settings['base_url'] = '/me/%s/' % service_port
+    web_app.settings['base_url'] = '/me/%s/' % ${openPort}
 
     # pp.pprint(web_app.settings)
 

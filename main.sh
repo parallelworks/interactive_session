@@ -201,5 +201,5 @@ fi
 bash ${session_wrapper_dir}/session_wrapper.sh 
 
 # We don't want kill.sh to change the status to cancelled!
-sed -i 's/sed//' kill.sh
+sed -i  "s/.*sed -i.*//" kill.sh  
 bash kill.sh

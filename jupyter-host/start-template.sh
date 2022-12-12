@@ -114,8 +114,6 @@ else
     # Served from:
     # https://noaa.parallel.works /pwide-nb/noaa-user-1.parallel.works/50359/ tree?dt=1670280530105
     # https://cloud.parallel.work /api/v2/proxy/usercontainer?proxyType=api&proxyTo=/api/v1/display/pw/jobs/57147/ service.html
-    tornado_settings="{'static_url_prefix':'/${FORWARDPATH}/${IPADDRESS}/${openPort}/static/'}"
-    base_url="/${FORWARDPATH}/${IPADDRESS}/${openPort}/"
     jupyter-notebook \
         --port=$servicePort \
         --ip=0.0.0.0 \

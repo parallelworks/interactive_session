@@ -114,6 +114,7 @@ controller=${poolname}.clusters.pw
 export controller=$(${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py $controller)
 
 if [ -z "${controller}" ]; then
+    echo "controller=$(${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py $controller)"
     echo "ERROR: No controller was specified - exiting the workflow"
     exit 1
 fi

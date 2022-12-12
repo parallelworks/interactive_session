@@ -80,8 +80,6 @@ mkdir ${chdir}/.screen
 chmod 700 ${chdir}/.screen
 export SCREENDIR=${chdir}/.screen
 
-# Needed for emed
-source ~/.bashrc
 cd ${chdir}
 set -x
 

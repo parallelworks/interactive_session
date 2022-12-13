@@ -158,20 +158,23 @@ else
 fi
 
 # SERVICE URL
+# FIXME: This entire section needs cleaning. Got dirty with the new usercontainer.
+# check if the user is on a new container 
+env | grep -q PW_USERCONTAINER_VERSION
+# Needs to be exported for services like Jupyter that require a base url --NotebookApp.base_url
+export NEW_USERCONTAINER="$?"
+
 echo "Generating session html"
 replace_templated_inputs ${service_name}/url.sh $wfargs
 source ${service_name}/url.sh
 cp service.html.template service.html_
 
-# check if the user is on a new container 
-env | grep -q PW_USERCONTAINER_VERSION
-# Needs to be exported for services like Jupyter that require a base url --NotebookApp.base_url
-export NEW_USERCONTAINER="$?"
 sed -i "s|__URLEND__|${URLEND}|g" service.html_
 
 if [[ "$NEW_USERCONTAINER" == "0" ]];then
     sed -i "s/\/__FORWARDPATH__\/__IPADDRESS__\/__OPENPORT__\//\/me\/$openPort\//g" service.html_
-
+    # Needed by turbovnc service
+    sed -i "s/__OPENPORT__/$openPort/g" service.html_
 else
     sed -i "s/__FORWARDPATH__/$FORWARDPATH/g" service.html_
     sed -i "s/__IPADDRESS__/$IPADDRESS/g" service.html_

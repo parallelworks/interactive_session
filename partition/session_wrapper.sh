@@ -58,6 +58,11 @@ fi
 
 echo >> ${session_sh}
 
+# ADD RUNTIME FIXES FOR EACH PLATFORM
+if ! [ -z ${RUNTIME_FIXES} ]; then
+    echo ${RUNTIME_FIXES} | tr ';' '\n' >> ${session_sh}
+fi
+
 # SET SESSIONS' REMOTE DIRECTORY
 ${sshcmd} mkdir -p ${chdir}
 remote_session_dir=${chdir}

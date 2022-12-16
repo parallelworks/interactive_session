@@ -13,8 +13,10 @@
         <when value="SLURM">
             <param name='_pw__sch__dd_partition_e_' label='SLURM partition' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value='' width='50%_none'>
             </param>
-            <param name='_pw__sch__dd_cpus_d_per_d_task_e_' label='CPUs per task' type='integer' min="1" max="10" help='--cpus-per-task=value slurm parameter' value='1' width='50%_none'>
+            <param name='_pw__sch__dd_cpus_d_per_d_task_e_' label='CPUs per task' type='integer' min="1" max="10" help='--cpus-per-task=value slurm directive' value='1' width='50%_none'>
             </param>
+            <param name='_pw__sch__dd_mem_d_per_d_cpu_e_' label='Minimum memory required per usable allocated CPU' type='text' help='--mem-per-cpu=value slurm directive' value='8G' width='50%_none'>
+            </param>   
             <param name='_pw__sch__dd_time_e_' label='Walltime' type='text' help='e.g. 01:00:00 - Amount of time slurm will honor the interactive session.' value='01:00:00' width='50%_none'>
             </param>
             <param name='_pw_scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value='' width='100%_none'>

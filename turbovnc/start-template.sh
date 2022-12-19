@@ -181,6 +181,9 @@ else
     sudo -n yum groupinstall "X Window system" -y
     # Install XFCE
     sudo -n yum groupinstall "Xfce" -y
+    if ! [ -z $(which xfce4-session) ]; then
+        displayErrorMessage "ERROR: No desktop environment was found! Tried gnome-session, mate-session, xfce4-session and gnome"
+    fi
     # Start GUI
     xfce4-session &
     echo $! > ${chdir}/service.pid

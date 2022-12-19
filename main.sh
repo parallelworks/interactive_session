@@ -29,8 +29,8 @@ parseArgs $wfargs
 # GER OPEN PORT FOR TUNNEL
 getOpenPort
 
-if [[ "$openPort" == "" ]];then
-    echo "ERROR - cannot find open port..."
+if [[ "$openPort" == "" ]]; then
+    displayErrorMessage "ERROR - cannot find open port..."
     exit 1
 fi
 export openPort=${openPort}
@@ -54,12 +54,12 @@ fi
 echo "Interactive Session Port: $openPort"
 
 if ! [ -d "${service_name}" ]; then
-    echod "ERROR: Directory ${service_name} was not found --> Service ${service_name} is not supported --> Exiting workflow"
+    displayErrorMessage "ERROR: Directory ${service_name} was not found --> Service ${service_name} is not supported --> Exiting workflow"
     exit 1
 fi
 
 if ! [ -f "${service_name}/url.sh" ]; then
-    echod "ERROR: Directory ${service_name}/url.sh was not found --> Add URL definition script --> Exiting workflow"
+    displayErrorMessage "ERROR: Directory ${service_name}/url.sh was not found --> Add URL definition script --> Exiting workflow"
     exit 1
 fi
 
@@ -68,7 +68,7 @@ fi
 if [ -z "${poolname}" ] || [[ "${poolname}" == "pw.conf" ]]; then
     poolname=$(cat /pw/jobs/${job_number}/pw.conf | grep sites | grep -o -P '(?<=\[).*?(?=\])')
     if [ -z "${poolname}" ]; then
-        echo "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
+        displayErrorMessage "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
         exit 1
     fi
 fi
@@ -77,7 +77,7 @@ poolname=$(echo ${poolname} | sed "s/_//g" |  tr '[:upper:]' '[:lower:]')
 
 pooltype=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${poolname} type)
 if [ -z "${pooltype}" ]; then
-    echo "ERROR: Pool type not found - exiting the workflow"
+    displayErrorMessage "ERROR: Pool type not found - exiting the workflow"
     echo "${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${poolname} type"
     exit 1
 fi
@@ -91,7 +91,7 @@ echo "Pool type: ${pooltype}"
 if [[ ${pooltype} == "slurmshv2" ]]; then
     poolworkdir=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${poolname} workdir)
     if [ -z "${poolworkdir}" ]; then
-        echo "ERROR: Pool workdir not found - exiting the workflow"
+        displayErrorMessage "ERROR: Pool workdir not found - exiting the workflow"
         echo "${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${poolname} workdir"
         exit 1
     fi
@@ -107,7 +107,7 @@ export chdir=${poolworkdir}/pw/jobs/${job_number}/
 
 # GET CONTROLLER IP FROM PW API IF NOT SPECIFIED
 if [ -z "${poolname}" ]; then
-    echo "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
+    displayErrorMessage "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
     exit 1
 fi
 controller=${poolname}.clusters.pw
@@ -115,7 +115,7 @@ export controller=$(${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapp
 
 if [ -z "${controller}" ]; then
     echo "controller=\$(\${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py \$controller)"
-    echo "ERROR: No controller was specified - exiting the workflow"
+    displayErrorMessage "ERROR: No controller was specified - exiting the workflow"
     exit 1
 fi
 
@@ -146,7 +146,7 @@ else
         if [ -z "${_sch__d_q___}" ]; then
             is_queue_defined=$(echo ${scheduler_directives} | tr ';' '\n' | grep -e '-q___')
             if [ -z "${is_queue_defined}" ]; then
-                echo "ERROR: PBS needs a queue to be defined! - exiting workflow"
+                displayErrorMessage "ERROR: PBS needs a queue to be defined! - exiting workflow"
                 exit 1
             fi
         fi

@@ -4,15 +4,13 @@ sdir=$(dirname $0)
 env > session_wrapper.env
 
 sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
-
 # create the script that will generate the session tunnel and run the interactive session app
 # NOTE - in the below example there is an ~/.ssh/config definition of "localhost" control master that already points to the user container
 #masterIp=$($sshcmd cat '~/.ssh/masterip')
 masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usually be the internal ip
 if [ -z ${masterIp} ]; then
-    echo "ERROR: masterIP variable is empty. Command:"
-    echo "$sshcmd hostname -I | cut -d' ' -f1"
-    echo Exiting workflow
+    displayErrorMessage "ERROR: masterIP variable is empty - Exitig workflow"
+    echo "Command: $sshcmd hostname -I | cut -d' ' -f1"
     exit 1
 fi
 
@@ -45,7 +43,7 @@ elif [[ ${jobschedulertype} == "PBS" ]]; then
     delete_cmd="qdel"
     stat_cmd="qstat"
 else
-    echo "ERROR: jobschedulertype <${jobschedulertype}> must be SLURM or PBS"
+    displayErrorMessage "ERROR: jobschedulertype <${jobschedulertype}> must be SLURM or PBS"
     exit 1
 fi
 
@@ -186,8 +184,7 @@ elif [[ ${jobschedulertype} == "PBS" ]]; then
 fi
 
 if [[ "${jobid}" == "" ]];then
-    echo "ERROR submitting job - exiting the workflow"
-    sed -i 's/.*Job status.*/Job status: Failed/' service.html
+    displayErrorMessage "ERROR submitting job - exiting the workflow"
     exit 1
 fi
 

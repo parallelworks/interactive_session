@@ -9,9 +9,8 @@ chdir=$(echo ${chdir} | sed "s|__job_number__|${job_number}|g")
 # Is needed for bootstraps!
 masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usually be the internal ip
 if [ -z ${masterIp} ]; then
-    echo ERROR: masterIP variable is empty. Command:
-    echo "$sshcmd hostname -I | cut -d' ' -f1"
-    echo Exiting workflow
+    displayErrorMessage "ERROR: masterIP variable is empty - Exitig workflow"
+    echo "Command: $sshcmd hostname -I | cut -d' ' -f1"
     exit 1
 fi
 

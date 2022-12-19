@@ -3,21 +3,6 @@ sdir=$(dirname $0)
 # For debugging
 env > session_wrapper.env
 
-sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
-# create the script that will generate the session tunnel and run the interactive session app
-# NOTE - in the below example there is an ~/.ssh/config definition of "localhost" control master that already points to the user container
-#masterIp=$($sshcmd cat '~/.ssh/masterip')
-masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usually be the internal ip
-if [ -z ${masterIp} ]; then
-    displayErrorMessage "ERROR: masterIP variable is empty - Exitig workflow"
-    echo "Command: $sshcmd hostname -I | cut -d' ' -f1"
-    exit 1
-fi
-
-# check if the user is on a new container 
-env | grep -q PW_USERCONTAINER_VERSION
-NEW_USERCONTAINER="$?"
-
 # TUNNEL COMMAND:
 if [[ "$USERMODE" == "k8s" || "$NEW_USERCONTAINER" == "0" ]];then
     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT

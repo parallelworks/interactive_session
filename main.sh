@@ -112,10 +112,21 @@ if [ -z "${poolname}" ]; then
 fi
 controller=${poolname}.clusters.pw
 export controller=$(${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py $controller)
+export sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
+
 
 if [ -z "${controller}" ]; then
     echo "controller=\$(\${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py \$controller)"
     displayErrorMessage "ERROR: No controller was specified - exiting the workflow"
+    exit 1
+fi
+
+# GET INTERNAL IP OF CONTROLLER NODE. 
+# Compute needs to be able to access controller node through this  IP address with SSH! (ssh masterIp)
+export masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usually be the internal ip
+if [ -z ${masterIp} ]; then
+    displayErrorMessage "ERROR: masterIP variable is empty - Exitig workflow"
+    echo "Command: $sshcmd hostname -I | cut -d' ' -f1"
     exit 1
 fi
 

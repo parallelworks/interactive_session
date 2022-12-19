@@ -3,17 +3,6 @@ sdir=$(dirname $0)
 # For debugging
 env > session_wrapper.env
 
-sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
-chdir=$(echo ${chdir} | sed "s|__job_number__|${job_number}|g")
-
-# Is needed for bootstraps!
-masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usually be the internal ip
-if [ -z ${masterIp} ]; then
-    displayErrorMessage "ERROR: masterIP variable is empty - Exitig workflow"
-    echo "Command: $sshcmd hostname -I | cut -d' ' -f1"
-    exit 1
-fi
-
 # CREATE KILL FILE:
 # - NEEDS TO BE MADE BEFORE RUNNING SESSION SCRIPT!
 # - When the job is killed PW runs /pw/jobs/job-number/kill.sh

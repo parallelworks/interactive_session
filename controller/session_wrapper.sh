@@ -64,6 +64,15 @@ if ! [ -z "${chdir}" ] && ! [[ "${chdir}" == "default" ]]; then
 fi
 
 cat >> ${session_sh} <<HERE
+sshusercontainer="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST}"
+
+displayErrorMessage() {
+    echo \$(date): \$1
+    \${sshusercontainer} \"sed -i \\"s|__ERROR_MESSAGE__|$1|g\\" /pw/jobs/${job_number}/error.html\"
+    \${sshusercontainer} \"cp /pw/jobs/${job_number}/error.html /pw/jobs/${job_number}/service.html\"
+    exit 1
+}
+
 # In some systems screen can't write to /var/run/screen
 mkdir ${chdir}/.screen
 chmod 700 ${chdir}/.screen
@@ -99,8 +108,7 @@ for port in \$(seq \${minPort} \${maxPort} | shuf); do
 done
 
 if [ -z "\${servicePort}" ]; then
-    echo "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
-    exit 1
+    displayErrorMessage "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
 fi
 
 echo
@@ -116,8 +124,7 @@ if [ -z "\${screen_bin}" ]; then
     sudo -n yum install screen -y
 fi
 if [ -z "\${screen_bin}" ]; then
-    echo "ERROR: screen is not installed in the system --> Exiting workflow"
-    exit 1
+    displayErrorMessage "ERROR: screen is not installed in the system --> Exiting workflow"
     #echo "nohup ${TUNNELCMD} &"
     #nohup ${TUNNELCMD} &
     echo "${TUNNELCMD} &"

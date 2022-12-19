@@ -33,8 +33,7 @@ fi
 
 if ! [ -f "${path_to_sing}" ]; then
     # TODO: Copy file from /swift-pw-bin/apps/ ?
-    echo "ERROR: Path to singularity file <${path_to_sing}> was not found! --> Exiting workflow"
-    exit 1
+    displayErrorMessage "ERROR: Path to singularity file <${path_to_sing}> was not found! --> Exiting workflow"
 fi
 
 
@@ -64,10 +63,7 @@ fi
 
 # SANITY CHECKS!
 if ! [ -f "${path_to_sing}" ]; then
-    echo "ERROR: File $(hostname):${path_to_sing} not found!"
-    # FIXME: This error is not always streamed back
-    sleep 30
-    exit 1
+    displayErrorMessage "ERROR: File $(hostname):${path_to_sing} not found!"
 fi
 
 # RUN R SERVER
@@ -90,7 +86,5 @@ singularity run ${gpu_flag} \
     --www-proxy-localhost=0 \
     --auth-none=1 \
     --www-frame-origin=same
-
-sleep 99999 # FIXME: Remove
 
 

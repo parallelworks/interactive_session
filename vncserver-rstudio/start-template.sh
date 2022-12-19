@@ -75,8 +75,7 @@ for port in $(seq ${minPort} ${maxPort} | shuf); do
 done
 
 if [ -z "${servicePort}" ]; then
-    echo "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
-    exit 1
+    displayErrorMessage "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
 fi
 
 # Prepare kill service script
@@ -119,8 +118,7 @@ if  [ -z $(which ${vnc_bin}) ]; then
     sudo -n yum install python3 -y
 fi
 if  [ -z $(which ${vnc_bin}) ]; then
-    echo "ERROR: ${vnc_bin} executable not found - Exiting workflow!"
-    exit 1
+    displayErrorMessage "ERROR: ${vnc_bin} executable not found - Exiting workflow!"
 fi
 
 if  [ -z $(which gnome-session) ]; then
@@ -128,8 +126,7 @@ if  [ -z $(which gnome-session) ]; then
     sudo -n yum groupinstall "Server with GUI" -y
 fi
 if  [ -z $(which gnome-session) ]; then
-    echo "ERROR: gnome-session executable not found - Exiting workflow!"
-    exit 1
+    displayErrorMessage "ERROR: gnome-session executable not found - Exiting workflow!"
 fi
 
 if  [ -z $(which rstudio) ]; then
@@ -142,8 +139,7 @@ if  [ -z $(which rstudio) ]; then
     sudo -n yum install rstudio-2022.07.2-576-x86_64.rpm -y
 fi
 if  [ -z $(which rstudio) ]; then
-    echo "ERROR: rstudio executable not found - Exiting workflow!"
-    exit 1
+    displayErrorMessage "ERROR: rstudio executable not found - Exiting workflow!"
 fi
 
 # FIND SERVER EXECUTABLE (BOOTSTRAP)

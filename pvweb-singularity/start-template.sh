@@ -32,10 +32,7 @@ fi
 
 # SANITY CHECKS!
 if ! [ -f "${path_to_sing}" ]; then
-    echo "ERROR: File $(hostname):${path_to_sing} not found!"
-    # FIXME: This error is not always streamed back
-    sleep 30
-    exit 1
+    displayErrorMessage "ERROR: File $(hostname):${path_to_sing} not found!"
 fi
 
 set -x
@@ -50,5 +47,3 @@ singularity run ${gpu_flag} \
     --viewport-max-width ${viewport_max_width} \
     --viewport-max-height ${viewport_max_height} \
     --timeout 99999
-
-sleep 99999

@@ -79,8 +79,7 @@ for port in $(seq ${minPort} ${maxPort} | shuf); do
 done
 
 if [ -z "${servicePort}" ]; then
-    echo "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
-    exit 1
+    displayErrorMessage "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
 fi
 
 # Prepare kill service script
@@ -132,8 +131,7 @@ if [ -z ${vnc_exec} ] || [[ "${vnc_exec}" == "__""vnc_exec""__" ]]; then
 fi
 
 if [ ! -f "${vnc_exec}" ]; then
-    echo ERROR: vnc_exec=${vnc_exec} file not found! - Existing workflow!
-    exit 1
+    displayErrorMessage "ERROR: vnc_exec=${vnc_exec} file not found! - Existing workflow!"
 fi
 
 # Start service

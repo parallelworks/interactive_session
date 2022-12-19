@@ -68,8 +68,8 @@ sshusercontainer="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/nul
 
 displayErrorMessage() {
     echo \$(date): \$1
-    \${sshusercontainer} \"sed -i \\"s|__ERROR_MESSAGE__|$1|g\\" /pw/jobs/${job_number}/error.html\"
-    \${sshusercontainer} \"cp /pw/jobs/${job_number}/error.html /pw/jobs/${job_number}/service.html\"
+    \${sshusercontainer} "sed -i \\"s|__ERROR_MESSAGE__|\$1|g\\" ${PW_PATH}/pw/jobs/${job_number}/error.html"
+    \${sshusercontainer} "cp /pw/jobs/${job_number}/error.html ${PW_PATH}/pw/jobs/${job_number}/service.html"
     exit 1
 }
 

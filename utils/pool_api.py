@@ -35,10 +35,11 @@ if __name__ == '__main__':
         print(pool_info['type'])
     elif pool_prop == "workdir":
         print(json.loads(pool_info['coasterproperties'])['workdir'])
-    elif pool_prop == "internalNetworkName":
-        if 'internalNetworkName' in json.loads(pool_info['coasterproperties']):
-            print(json.loads(pool_info['coasterproperties'])[
-                  'internalNetworkName'])
+    elif pool_prop == "status":
+        print(pool_info['status'])
+    elif pool_prop == "internalIp":
+        if 'internalIp' in json.loads(pool_info['coasterproperties']):
+            print(json.loads(pool_info['coasterproperties'])['internalIp'])
     else:
         msg = 'Pool property <{}> is not supported!'.format(pool_prop)
         raise (Exception(msg))

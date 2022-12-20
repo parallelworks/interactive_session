@@ -17,8 +17,8 @@ echo
 
 # change permissions of run directly so we can execute all files
 chmod 777 * -Rf
-# Need to move files from workflow directory to avoid updating the sparse checkout
-mv workflow/error.html .
+# Need to move files from utils directory to avoid updating the sparse checkout
+mv utils/error.html .
 
 # Replace special placeholder since \$(whoami) and \${PW_USER} don't work everywhere and ${job_number} is not known
 # Preserve single quota (--pname 'pval') with ${@@Q}

@@ -128,7 +128,7 @@ poolInternalNetworkName=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${poolnam
 if [ -z "${poolInternalNetworkName}" ]; then
     export masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usually be the internal ip
 else
-    export masterIp=$($sshcmd "ifconfig eth1" | grep inet | head -n1 | awk '{print $2}')
+    export masterIp=$($sshcmd "ifconfig ${poolInternalNetworkName}" | grep inet | head -n1 | awk '{print $2}')
 fi
 # Compute needs to be able to access controller node through this  IP address with SSH! (ssh masterIp)
 export masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usually be the internal ip

@@ -172,6 +172,9 @@ elif ! [ -z $(which gnome) ]; then
     gnome &
     echo $! > ${chdir}/service.pid
 else
+    # Exit script here
+    displayErrorMessage "ERROR: No desktop environment was found! Tried gnome-session, mate-session, xfce4-session and gnome"
+    # The lines below do not run
     echo "WARNING: vnc desktop not found!"
     echo "Attempting to install a desktop environment"
     # Following https://owlhowto.com/how-to-install-xfce-on-centos-7/

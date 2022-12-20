@@ -30,7 +30,8 @@ parseArgs() {
 # get a unique open port
 # - try end point
 # - if not works --> use random
-getOpenPort() {
+# Original getOpenPort function. Was replaced because only odd ports work in emed
+getOpenPort_() {
     minPort=50000
     maxPort=59999
 
@@ -44,6 +45,35 @@ getOpenPort() {
             if [[ "$out" == "" ]];then
                 openPort=$(echo $i)
                 (( ++ count ))
+            fi
+            if [[ "$count" == "$qty" ]];then
+                break
+            fi
+        done
+    fi
+}
+
+getOpenPort() {
+    minPort=50000
+    maxPort=59999
+
+    # Loop until an odd number is found
+    while true; do
+        openPort=$(curl -s "https://${PARSL_CLIENT_HOST}/api/v2/usercontainer/getSingleOpenPort?minPort=${minPort}&maxPort=${maxPort}&key=${PW_API_KEY}")
+        # Check if the number is odd
+        if [[ $(($openPort % 2)) -eq 1 ]]; then
+            break
+        fi
+    done
+    # Check if openPort variable is a port
+    if ! [[ ${openPort} =~ ^[0-9]+$ ]] ; then
+        qty=1
+        count=0
+        for i in $(seq $minPort $maxPort | shuf); do
+            out=$(netstat -aln | grep LISTEN | grep $i)
+            if [[ "$out" == "" ]] && [[ $(($i % 2)) -eq 1 ]]; then
+                    openPort=$(echo $i)
+                    (( ++ count ))
             fi
             if [[ "$count" == "$qty" ]];then
                 break

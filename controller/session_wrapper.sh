@@ -3,18 +3,6 @@ sdir=$(dirname $0)
 # For debugging
 env > session_wrapper.env
 
-sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
-chdir=$(echo ${chdir} | sed "s|__job_number__|${job_number}|g")
-
-# Is needed for bootstraps!
-masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usually be the internal ip
-if [ -z ${masterIp} ]; then
-    echo ERROR: masterIP variable is empty. Command:
-    echo "$sshcmd hostname -I | cut -d' ' -f1"
-    echo Exiting workflow
-    exit 1
-fi
-
 # CREATE KILL FILE:
 # - NEEDS TO BE MADE BEFORE RUNNING SESSION SCRIPT!
 # - When the job is killed PW runs /pw/jobs/job-number/kill.sh
@@ -76,6 +64,15 @@ if ! [ -z "${chdir}" ] && ! [[ "${chdir}" == "default" ]]; then
 fi
 
 cat >> ${session_sh} <<HERE
+sshusercontainer="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST}"
+
+displayErrorMessage() {
+    echo \$(date): \$1
+    \${sshusercontainer} "sed -i \\"s|__ERROR_MESSAGE__|\$1|g\\" ${PW_PATH}/pw/jobs/${job_number}/error.html"
+    \${sshusercontainer} "cp /pw/jobs/${job_number}/error.html ${PW_PATH}/pw/jobs/${job_number}/service.html"
+    exit 1
+}
+
 # In some systems screen can't write to /var/run/screen
 mkdir ${chdir}/.screen
 chmod 700 ${chdir}/.screen
@@ -111,8 +108,7 @@ for port in \$(seq \${minPort} \${maxPort} | shuf); do
 done
 
 if [ -z "\${servicePort}" ]; then
-    echo "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
-    exit 1
+    displayErrorMessage "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
 fi
 
 echo
@@ -128,8 +124,7 @@ if [ -z "\${screen_bin}" ]; then
     sudo -n yum install screen -y
 fi
 if [ -z "\${screen_bin}" ]; then
-    echo "ERROR: screen is not installed in the system --> Exiting workflow"
-    exit 1
+    displayErrorMessage "ERROR: screen is not installed in the system --> Exiting workflow"
     #echo "nohup ${TUNNELCMD} &"
     #nohup ${TUNNELCMD} &
     echo "${TUNNELCMD} &"

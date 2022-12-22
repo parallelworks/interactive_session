@@ -7,3 +7,6 @@ export USER_CONTAINER_HOST=${PW_USER_HOST}
 
 # Separate multiple lines with ;#
 export RUNTIME_FIXES="source ~/.bashrc"
+
+# Path to /pw
+export PW_PATH=${HOME}

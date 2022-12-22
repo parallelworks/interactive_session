@@ -3,23 +3,6 @@ sdir=$(dirname $0)
 # For debugging
 env > session_wrapper.env
 
-sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
-
-# create the script that will generate the session tunnel and run the interactive session app
-# NOTE - in the below example there is an ~/.ssh/config definition of "localhost" control master that already points to the user container
-#masterIp=$($sshcmd cat '~/.ssh/masterip')
-masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usually be the internal ip
-if [ -z ${masterIp} ]; then
-    echo "ERROR: masterIP variable is empty. Command:"
-    echo "$sshcmd hostname -I | cut -d' ' -f1"
-    echo Exiting workflow
-    exit 1
-fi
-
-# check if the user is on a new container 
-env | grep -q PW_USERCONTAINER_VERSION
-NEW_USERCONTAINER="$?"
-
 # TUNNEL COMMAND:
 if [[ "$USERMODE" == "k8s" || "$NEW_USERCONTAINER" == "0" ]];then
     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
@@ -45,8 +28,7 @@ elif [[ ${jobschedulertype} == "PBS" ]]; then
     delete_cmd="qdel"
     stat_cmd="qstat"
 else
-    echo "ERROR: jobschedulertype <${jobschedulertype}> must be SLURM or PBS"
-    exit 1
+    displayErrorMessage "ERROR: jobschedulertype <${jobschedulertype}> must be SLURM or PBS"
 fi
 
 if ! [ -z ${scheduler_directives} ]; then
@@ -80,6 +62,15 @@ fi
 $sshcmd cp "~/.ssh/id_rsa.pub" ${remote_session_dir}
 
 cat >> ${session_sh} <<HERE
+sshusercontainer="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST}"
+
+displayErrorMessage() {
+    echo \$(date): \$1
+    \${sshusercontainer} "sed -i \\"s|__ERROR_MESSAGE__|\$1|g\\" ${PW_PATH}/pw/jobs/${job_number}/error.html"
+    \${sshusercontainer} "cp /pw/jobs/${job_number}/error.html ${PW_PATH}/pw/jobs/${job_number}/service.html"
+    exit 1
+}
+
 # In some systems screen can't write to /var/run/screen
 mkdir ${chdir}/.screen
 chmod 700 ${chdir}/.screen
@@ -126,8 +117,7 @@ for port in \$(seq \${minPort} \${maxPort} | shuf); do
 done
 
 if [ -z "\${servicePort}" ]; then
-    echo "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
-    exit 1
+    displayErrorMessage "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
 fi
 
 echo
@@ -146,8 +136,7 @@ if [ -z "\${screen_bin}" ]; then
 fi
 
 if [ -z "\${screen_bin}" ]; then
-    echo "ERROR: screen is not installed in the system --> Exiting workflow"
-    exit 1
+    displayErrorMessage "ERROR: screen is not installed in the system --> Exiting workflow"
     #echo "nohup ${TUNNELCMD} &"
     #nohup ${TUNNELCMD} &
     echo "${TUNNELCMD} &"
@@ -186,9 +175,7 @@ elif [[ ${jobschedulertype} == "PBS" ]]; then
 fi
 
 if [[ "${jobid}" == "" ]];then
-    echo "ERROR submitting job - exiting the workflow"
-    sed -i 's/.*Job status.*/Job status: Failed/' service.html
-    exit 1
+    displayErrorMessage "ERROR submitting job - exiting the workflow"
 fi
 
 # CREATE KILL FILE:
@@ -220,6 +207,7 @@ while true; do
     job_status=$($sshcmd ${stat_cmd} | grep ${jobid} | awk '{print $5}')
     sed -i "s/.*Job status.*/Job status: ${job_status}/" service.html
     if [[ ${jobschedulertype} == "SLURM" ]]; then
+        # If job status is empty job is no longer running
         if [ -z ${job_status} ]; then
             job_status=$($sshcmd sacct -j ${jobid}  --format=state | tail -n1)
             sed -i "s/.*Job status.*/Job status: ${job_status}/" service.html

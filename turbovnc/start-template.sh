@@ -79,8 +79,7 @@ for port in $(seq ${minPort} ${maxPort} | shuf); do
 done
 
 if [ -z "${servicePort}" ]; then
-    echo "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
-    exit 1
+    displayErrorMessage "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
 fi
 
 # Prepare kill service script
@@ -132,8 +131,7 @@ if [ -z ${vnc_exec} ] || [[ "${vnc_exec}" == "__""vnc_exec""__" ]]; then
 fi
 
 if [ ! -f "${vnc_exec}" ]; then
-    echo ERROR: vnc_exec=${vnc_exec} file not found! - Existing workflow!
-    exit 1
+    displayErrorMessage "ERROR: vnc_exec=${vnc_exec} file not found! - Existing workflow!"
 fi
 
 # Start service
@@ -174,6 +172,9 @@ elif ! [ -z $(which gnome) ]; then
     gnome &
     echo $! > ${chdir}/service.pid
 else
+    # Exit script here
+    displayErrorMessage "ERROR: No desktop environment was found! Tried gnome-session, mate-session, xfce4-session and gnome"
+    # The lines below do not run
     echo "WARNING: vnc desktop not found!"
     echo "Attempting to install a desktop environment"
     # Following https://owlhowto.com/how-to-install-xfce-on-centos-7/
@@ -183,6 +184,9 @@ else
     sudo -n yum groupinstall "X Window system" -y
     # Install XFCE
     sudo -n yum groupinstall "Xfce" -y
+    if ! [ -z $(which xfce4-session) ]; then
+        displayErrorMessage "ERROR: No desktop environment was found! Tried gnome-session, mate-session, xfce4-session and gnome"
+    fi
     # Start GUI
     xfce4-session &
     echo $! > ${chdir}/service.pid

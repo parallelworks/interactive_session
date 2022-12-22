@@ -3,6 +3,8 @@ sdir=$(dirname $0)
 # For debugging
 env > session_wrapper.env
 
+source lib.sh
+
 # TUNNEL COMMAND:
 if [[ "$USERMODE" == "k8s" || "$NEW_USERCONTAINER" == "0" ]];then
     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT

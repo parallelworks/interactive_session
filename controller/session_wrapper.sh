@@ -3,6 +3,8 @@ sdir=$(dirname $0)
 # For debugging
 env > session_wrapper.env
 
+source lib.sh
+
 # CREATE KILL FILE:
 # - NEEDS TO BE MADE BEFORE RUNNING SESSION SCRIPT!
 # - When the job is killed PW runs /pw/jobs/job-number/kill.sh

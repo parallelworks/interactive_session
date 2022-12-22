@@ -207,6 +207,7 @@ while true; do
     job_status=$($sshcmd ${stat_cmd} | grep ${jobid} | awk '{print $5}')
     sed -i "s/.*Job status.*/Job status: ${job_status}/" service.html
     if [[ ${jobschedulertype} == "SLURM" ]]; then
+        # If job status is empty job is no longer running
         if [ -z ${job_status} ]; then
             job_status=$($sshcmd sacct -j ${jobid}  --format=state | tail -n1)
             sed -i "s/.*Job status.*/Job status: ${job_status}/" service.html

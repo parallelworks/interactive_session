@@ -186,16 +186,12 @@ replace_templated_inputs ${service_name}/url.sh $wfargs
 source ${service_name}/url.sh
 cp service.html.template service.html_
 
-sed -i "s|__URLEND__|${URLEND}|g" service.html_
-
 if [[ "$NEW_USERCONTAINER" == "0" ]];then
-    sed -i "s/\/__FORWARDPATH__\/__IPADDRESS__\/__OPENPORT__\//\/me\/$openPort\//g" service.html_
+    URL="\"/me/${openPort}/${URLEND}"
 else
-    sed -i "s/__FORWARDPATH__/$FORWARDPATH/g" service.html_
-    sed -i "s/__IPADDRESS__/$IPADDRESS/g" service.html_
-    sed -i "s/__OPENPORT__/$openPort/g" service.html_
+    URL="\"/${FORWARDPATH}/${IPADDRESS}/${openPort}/${URLEND}"
 fi
-
+sed -i "s|__URL__|${URL}|g" service.html_
 mv service.html_ /pw/jobs/${job_number}/service.html
 echo
 

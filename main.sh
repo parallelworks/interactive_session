@@ -192,6 +192,7 @@ else
     URL="\"/${FORWARDPATH}/${IPADDRESS}/${openPort}/${URLEND}"
 fi
 sed -i "s|__URL__|${URL}|g" service.html_
+sed -i "s/.*URL.*/    \"URL\": \"${URL}\"/" service.json
 mv service.html_ /pw/jobs/${job_number}/service.html
 echo
 

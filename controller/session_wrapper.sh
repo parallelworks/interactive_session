@@ -37,6 +37,7 @@ bash ${kill_tunnels_sh}
 HERE
 echo "echo Finished running ${kill_sh}" >> ${kill_sh}
 echo "sed -i 's/.*Job status.*/Job status: Cancelled/' /pw/jobs/${job_number}/service.html" >> ${kill_sh}
+echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\"/\"" service.json >> ${kill_sh}
 chmod 777 ${kill_sh}
 
 # check if the user is on a new container 
@@ -72,6 +73,7 @@ displayErrorMessage() {
     echo \$(date): \$1
     \${sshusercontainer} "sed -i \\"s|__ERROR_MESSAGE__|\$1|g\\" ${PW_PATH}/pw/jobs/${job_number}/error.html"
     \${sshusercontainer} "cp /pw/jobs/${job_number}/error.html ${PW_PATH}/pw/jobs/${job_number}/service.html"
+    \${sshusercontainer} "sed -i \"s|.*ERROR_MESSAGE.*|    \\\\\"ERROR_MESSAGE\\\\\": \\\\\"\$1\\\\\"|\" /pw/jobs/57236/service.json"
     exit 1
 }
 
@@ -155,11 +157,14 @@ echo "Submitting ssh job (wait for node to become available before connecting)..
 echo "$sshcmd 'bash -s' < ${session_sh} &> /pw/jobs/${job_number}/session-${job_number}.out"
 echo
 sed -i 's/.*Job status.*/Job status: Running/' service.html
+sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Running\"/" service.json
 $sshcmd 'bash -s' < ${session_sh} &> /pw/jobs/${job_number}/session-${job_number}.out
 
 if [ $? -eq 0 ]; then
     sed -i 's/.*Job status.*/Job status: Completed/' service.html
+    sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Completed\"/" service.json
 else
     sed -i 's/.*Job status.*/Job status: Failed/' service.html
+    sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Failed\"/" service.json
 fi
 

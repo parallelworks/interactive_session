@@ -190,8 +190,6 @@ sed -i "s|__URLEND__|${URLEND}|g" service.html_
 
 if [[ "$NEW_USERCONTAINER" == "0" ]];then
     sed -i "s/\/__FORWARDPATH__\/__IPADDRESS__\/__OPENPORT__\//\/me\/$openPort\//g" service.html_
-    # Needed by turbovnc service
-    sed -i "s/__OPENPORT__/$openPort/g" service.html_
 else
     sed -i "s/__FORWARDPATH__/$FORWARDPATH/g" service.html_
     sed -i "s/__IPADDRESS__/$IPADDRESS/g" service.html_

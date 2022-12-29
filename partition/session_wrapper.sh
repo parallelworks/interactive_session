@@ -169,7 +169,7 @@ echo
 echo $sshcmd ${submit_cmd} ${remote_session_dir}/session-${job_number}.sh
 
 sed -i 's/.*Job status.*/Job status: Submitted/' service.html
-sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Submitted\"/" service.json
+sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Submitted\",/" service.json
 
 # Submit job and get job id
 if [[ ${jobschedulertype} == "SLURM" ]]; then
@@ -198,7 +198,7 @@ fi
 echo $sshcmd ${delete_cmd} ${jobid} >> ${kill_sh}
 echo "echo Finished running ${kill_sh}" >> ${kill_sh}
 echo "sed -i 's/.*Job status.*/Job status: Cancelled/' /pw/jobs/${job_number}/service.html"  >> ${kill_sh}
-echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\"/\"" service.json >> ${kill_sh}
+echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" service.json >> ${kill_sh}
 chmod 777 ${kill_sh}
 
 echo
@@ -211,13 +211,13 @@ while true; do
     # qstat returns the status of all recent jobs
     job_status=$($sshcmd ${stat_cmd} | grep ${jobid} | awk '{print $5}')
     sed -i "s/.*Job status.*/Job status: ${job_status}/" service.html
-    sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"${job_status}\"/" service.json
+    sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"${job_status}\",/" service.json
     if [[ ${jobschedulertype} == "SLURM" ]]; then
         # If job status is empty job is no longer running
         if [ -z ${job_status} ]; then
             job_status=$($sshcmd sacct -j ${jobid}  --format=state | tail -n1)
             sed -i "s/.*Job status.*/Job status: ${job_status}/" service.html
-            sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"${job_status}\"/" service.json
+            sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"${job_status}\",/" service.json
             break
         fi
     elif [[ ${jobschedulertype} == "PBS" ]]; then

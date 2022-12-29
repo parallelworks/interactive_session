@@ -19,6 +19,7 @@ echo
 chmod 777 * -Rf
 # Need to move files from utils directory to avoid updating the sparse checkout
 mv utils/error.html .
+mv utils/service.json .
 
 # Replace special placeholder since \$(whoami) and \${PW_USER} don't work everywhere and ${job_number} is not known
 # Preserve single quota (--pname 'pval') with ${@@Q}
@@ -186,18 +187,15 @@ replace_templated_inputs ${service_name}/url.sh $wfargs
 source ${service_name}/url.sh
 cp service.html.template service.html_
 
-sed -i "s|__URLEND__|${URLEND}|g" service.html_
-
 if [[ "$NEW_USERCONTAINER" == "0" ]];then
-    sed -i "s/\/__FORWARDPATH__\/__IPADDRESS__\/__OPENPORT__\//\/me\/$openPort\//g" service.html_
-    # Needed by turbovnc service
-    sed -i "s/__OPENPORT__/$openPort/g" service.html_
+    URL="\"/me/${openPort}/${URLEND}"
 else
-    sed -i "s/__FORWARDPATH__/$FORWARDPATH/g" service.html_
-    sed -i "s/__IPADDRESS__/$IPADDRESS/g" service.html_
-    sed -i "s/__OPENPORT__/$openPort/g" service.html_
+    URL="\"/${FORWARDPATH}/${IPADDRESS}/${openPort}/${URLEND}"
 fi
-
+sed -i "s|__URL__|${URL}|g" service.html_
+# JSON values cannot contain quotes "
+URL_JSON=$(echo ${URL} | sed 's|\"|\\\\\"|g')
+sed -i "s|.*URL.*|    \"URL\": \"${URL_JSON}\",|" service.json
 mv service.html_ /pw/jobs/${job_number}/service.html
 echo
 

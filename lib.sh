@@ -113,6 +113,7 @@ displayErrorMessage() {
     echo $(date): $1
     sed -i "s|__ERROR_MESSAGE__|$1|g" error.html
     cp error.html service.html
+    sed -i "s/.*ERROR_MESSAGE.*/    \"ERROR_MESSAGE\": \"$1\"/" service.json
 }
 
 getSchedulerDirectivesFromInputForm() {

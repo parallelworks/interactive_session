@@ -125,12 +125,20 @@ if [ -z "${controller}" ]; then
 fi
 
 # GET INTERNAL IP OF CONTROLLER NODE. 
+# Get resource definition entry: Empty, internal ip or network name
 export masterIp=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${poolname} internalIp)
-if [ -z "${poolInternalNetworkName}" ]; then
-    export masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usually be the internal ip
+
+if [[ "${masterIp}" != "" ]] && [[ "${masterIp}" != *"."* ]];then
+    # If not empty and not an ip --> netowrk name
+    masterIp=$($sshcmd "ifconfig ${masterIp} | sed -En -e 's/.*inet ([0-9.]+).*/\1/p'")
+    echo "Using masterIp from interface: $masterIp"
 fi
-# Compute needs to be able to access controller node through this  IP address with SSH! (ssh masterIp)
-export masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usually be the internal ip
+
+if [ -z "${masterIp}" ]; then
+    # If empty use first internal ip
+    export masterIp=$($sshcmd hostname -I | cut -d' ' -f1) 
+fi
+
 if [ -z ${masterIp} ]; then
     displayErrorMessage "ERROR: masterIP variable is empty - Exitig workflow"
     echo "Command: $sshcmd hostname -I | cut -d' ' -f1"

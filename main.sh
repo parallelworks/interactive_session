@@ -166,7 +166,7 @@ else
     # Get scheduler directives enforced by PW:
     # Set job name, log paths and run directory
     if [[ ${jobschedulertype} == "SLURM" ]]; then
-        pw_sched_directives=";--job-name=session-${job_number};--chdir=${poolworkdir}/pw/jobs/${job_number};--output=session-${job_number}.out"
+        pw_sched_directives=";--job-name=session-${job_number};--chdir=${chdir};--output=session-${job_number}.out"
     elif [[ ${jobschedulertype} == "PBS" ]]; then
         # PBS needs a queue to be specified!
         if [ -z "${_sch__d_q___}" ]; then
@@ -176,7 +176,7 @@ else
                 exit 1
             fi
         fi
-        pw_sched_directives=";-N___session-${job_number};-o___session-${job_number}.out;-e___session-${job_number}.out;-S___/bin/bash"
+        pw_sched_directives=";-N___session-${job_number};-o___${chdir}/session-${job_number}.out;-e___${chdir}/session-${job_number}.out;-S___/bin/bash"
     fi
 
     # Merge all directives in single param and in wfargs

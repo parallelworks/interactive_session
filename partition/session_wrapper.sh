@@ -125,6 +125,7 @@ done
 if [ -z "\${servicePort}" ]; then
     displayErrorMessage "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
 fi
+echo \${servicePort} > service.port
 
 echo
 echo Starting interactive session - sessionPort: \$servicePort tunnelPort: $openPort

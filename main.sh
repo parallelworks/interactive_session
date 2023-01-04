@@ -125,12 +125,20 @@ if [ -z "${controller}" ]; then
 fi
 
 # GET INTERNAL IP OF CONTROLLER NODE. 
+# Get resource definition entry: Empty, internal ip or network name
 export masterIp=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${poolname} internalIp)
-if [ -z "${poolInternalNetworkName}" ]; then
-    export masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usually be the internal ip
+
+if [[ "${masterIp}" != "" ]] && [[ "${masterIp}" != *"."* ]];then
+    # If not empty and not an ip --> netowrk name
+    masterIp=$($sshcmd "ifconfig ${masterIp} | sed -En -e 's/.*inet ([0-9.]+).*/\1/p'")
+    echo "Using masterIp from interface: $masterIp"
 fi
-# Compute needs to be able to access controller node through this  IP address with SSH! (ssh masterIp)
-export masterIp=$($sshcmd hostname -I | cut -d' ' -f1) # Matthew: Master ip would usually be the internal ip
+
+if [ -z "${masterIp}" ]; then
+    # If empty use first internal ip
+    export masterIp=$($sshcmd hostname -I | cut -d' ' -f1) 
+fi
+
 if [ -z ${masterIp} ]; then
     displayErrorMessage "ERROR: masterIP variable is empty - Exitig workflow"
     echo "Command: $sshcmd hostname -I | cut -d' ' -f1"
@@ -158,7 +166,7 @@ else
     # Get scheduler directives enforced by PW:
     # Set job name, log paths and run directory
     if [[ ${jobschedulertype} == "SLURM" ]]; then
-        pw_sched_directives=";--job-name=session-${job_number};--chdir=${poolworkdir}/pw/jobs/${job_number};--output=session-${job_number}.out"
+        pw_sched_directives=";--job-name=session-${job_number};--chdir=${chdir};--output=session-${job_number}.out"
     elif [[ ${jobschedulertype} == "PBS" ]]; then
         # PBS needs a queue to be specified!
         if [ -z "${_sch__d_q___}" ]; then
@@ -168,7 +176,7 @@ else
                 exit 1
             fi
         fi
-        pw_sched_directives=";-N___session-${job_number};-j___oe;-S___/bin/bash"
+        pw_sched_directives=";-N___session-${job_number};-o___${chdir}/session-${job_number}.out;-e___${chdir}/session-${job_number}.out;-S___/bin/bash"
     fi
 
     # Merge all directives in single param and in wfargs

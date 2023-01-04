@@ -147,8 +147,8 @@ if [ -z "\${screen_bin}" ]; then
     echo "${TUNNELCMD} &"
     ${TUNNELCMD} &
 else
-    echo "screen -d -m ${TUNNELCMD}"
-    screen -d -m ${TUNNELCMD}
+    echo "\${screen_bin} -d -m ${TUNNELCMD}"
+    \${screen_bin} -d -m ${TUNNELCMD}
 fi
 echo "Exit code: \$?"
 echo "Starting session..."

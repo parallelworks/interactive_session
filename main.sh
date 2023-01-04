@@ -208,7 +208,7 @@ sed -i "s|__URL__|${URL}|g" service.html_
 #sed -i "s|.*URL.*|    \"URL\": \"${URL_JSON}\",|" service.json
 sed -i "s|.*PORT.*|    \"PORT\": \"${openPort}\",|" service.json
 SLUG=$(echo {URLEND} | sed 's|\"|\\\\\"|g')
-sed -i "s|.*SLUG.*|    \"PORT\": \"${SLUG}\",|" service.json
+sed -i "s|.*SLUG.*|    \"SLUG\": \"${SLUG}\",|" service.json
 
 mv service.html_ /pw/jobs/${job_number}/service.html
 echo

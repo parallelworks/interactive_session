@@ -196,10 +196,10 @@ source ${service_name}/url.sh
 cp service.html.template service.html_
 
 if [[ "$NEW_USERCONTAINER" == "0" ]];then
-    #URL="\"/me/${openPort}/${URLEND}"
+    URL="\"/me/${openPort}/${URLEND}"
     sed -i "s|.*URL.*|    \"URL\": \"/me\",|" service.json
 else
-    #URL="\"/${FORWARDPATH}/${IPADDRESS}/${openPort}/${URLEND}"
+    URL="\"/${FORWARDPATH}/${IPADDRESS}/${openPort}/${URLEND}"
     sed -i "s|.*URL.*|    \"URL\": \"/${FORWARDPATH}/${IPADDRESS}\",|" service.json
 fi
 sed -i "s|__URL__|${URL}|g" service.html_

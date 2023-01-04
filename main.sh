@@ -196,14 +196,20 @@ source ${service_name}/url.sh
 cp service.html.template service.html_
 
 if [[ "$NEW_USERCONTAINER" == "0" ]];then
-    URL="\"/me/${openPort}/${URLEND}"
+    #URL="\"/me/${openPort}/${URLEND}"
+    sed -i "s|.*URL.*|    \"URL\": \"/me\",|" service.json
 else
-    URL="\"/${FORWARDPATH}/${IPADDRESS}/${openPort}/${URLEND}"
+    #URL="\"/${FORWARDPATH}/${IPADDRESS}/${openPort}/${URLEND}"
+    sed -i "s|.*URL.*|    \"URL\": \"/${FORWARDPATH}/${IPADDRESS}\",|" service.json
 fi
 sed -i "s|__URL__|${URL}|g" service.html_
 # JSON values cannot contain quotes "
-URL_JSON=$(echo ${URL} | sed 's|\"|\\\\\"|g')
-sed -i "s|.*URL.*|    \"URL\": \"${URL_JSON}\",|" service.json
+#URL_JSON=$(echo ${URL} | sed 's|\"|\\\\\"|g')
+#sed -i "s|.*URL.*|    \"URL\": \"${URL_JSON}\",|" service.json
+sed -i "s|.*PORT.*|    \"PORT\": \"${openPort}\",|" service.json
+SLUG=$(echo {URLEND} | sed 's|\"|\\\\\"|g')
+sed -i "s|.*SLUG.*|    \"PORT\": \"${SLUG}\",|" service.json
+
 mv service.html_ /pw/jobs/${job_number}/service.html
 echo
 

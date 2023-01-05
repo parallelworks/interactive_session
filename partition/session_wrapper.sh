@@ -130,20 +130,15 @@ echo
 echo "Running blocking ssh command..."
 screen_bin=\$(which screen 2> /dev/null)
 if [ -z "\${screen_bin}" ]; then
-    screen_bin=\$(dirname ${remote_sh})/screen
-    #echo Screen not found. Attempting to install
-    #sudo -n yum install screen -y
+    screen_bin=${chdir}/screen
 fi
 
-if [ -z "\${screen_bin}" ]; then
-    displayErrorMessage "ERROR: screen is not installed in the system --> Exiting workflow"
-    #nohup ${TUNNELCMD} &
-    echo "${TUNNELCMD} &"
-    ${TUNNELCMD} &
-else
-    echo "\${screen_bin} -L -d -m ${TUNNELCMD}"
-    \${screen_bin} -L -d -m ${TUNNELCMD}
+if ! [ -f "\${screen_bin}" ]; then
+    displayErrorMessage "ERROR: screen is not installed in the system and not found in \${screen_bin} --> Exiting workflow"
 fi
+echo "\${screen_bin} -L -d -m ${TUNNELCMD}"
+\${screen_bin} -L -d -m ${TUNNELCMD}
+
 echo "Exit code: \$?"
 echo "Starting session..."
 rm -f \${portFile}

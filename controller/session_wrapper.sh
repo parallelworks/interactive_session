@@ -114,18 +114,12 @@ echo
 echo "Running blocking ssh command..."
 screen_bin=\$(which screen 2> /dev/null)
 if [ -z "\${screen_bin}" ]; then
-    echo Screen not found. Attempting to install
-    sudo -n yum install screen -y
-fi
-if [ -z "\${screen_bin}" ]; then
+    # Needs to be installed in the controller even before running interactive sessions or provider wont work
     displayErrorMessage "ERROR: screen is not installed in the system --> Exiting workflow"
-    #echo "nohup ${TUNNELCMD} &"
-    #nohup ${TUNNELCMD} &
-    echo "${TUNNELCMD} &"
-    ${TUNNELCMD} &
-else
-    echo "screen -d -m ${TUNNELCMD}"
-    screen -L -d -m ${TUNNELCMD}
+fi
+echo "screen -d -m ${TUNNELCMD}"
+screen -L -d -m ${TUNNELCMD}
+
 fi
 echo "Exit code: \$?"
 echo "Starting session..."

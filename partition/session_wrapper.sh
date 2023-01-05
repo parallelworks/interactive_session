@@ -6,13 +6,7 @@ env > session_wrapper.env
 source lib.sh
 
 # TUNNEL COMMAND:
-if [[ "$USERMODE" == "k8s" || "$NEW_USERCONTAINER" == "0" ]];then
-    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
-    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-    TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST} \"ssh -J ${controller} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:$openPort:localhost:\$servicePort "\${USER}@'$(hostname)'"\""
-else
-    TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
-fi
+TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:0.0.0.0:\$servicePort ${USER_CONTAINER_HOST}"
 
 # Initiallize session batch file:
 echo "Generating session script"
@@ -123,6 +117,7 @@ done
 if [ -z "\${servicePort}" ]; then
     displayErrorMessage "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
 fi
+echo \${servicePort} > service.port
 
 echo
 echo Starting interactive session - sessionPort: \$servicePort tunnelPort: $openPort
@@ -135,20 +130,15 @@ echo
 echo "Running blocking ssh command..."
 screen_bin=\$(which screen 2> /dev/null)
 if [ -z "\${screen_bin}" ]; then
-    echo Screen not found. Attempting to install
-    sudo -n yum install screen -y
+    screen_bin=${chdir}/screen
 fi
 
-if [ -z "\${screen_bin}" ]; then
-    displayErrorMessage "ERROR: screen is not installed in the system --> Exiting workflow"
-    #echo "nohup ${TUNNELCMD} &"
-    #nohup ${TUNNELCMD} &
-    echo "${TUNNELCMD} &"
-    ${TUNNELCMD} &
-else
-    echo "screen -d -m ${TUNNELCMD}"
-    screen -d -m ${TUNNELCMD}
+if ! [ -f "\${screen_bin}" ]; then
+    displayErrorMessage "ERROR: screen is not installed in the system and not found in \${screen_bin} --> Exiting workflow"
 fi
+echo "\${screen_bin} -L -d -m ${TUNNELCMD}"
+\${screen_bin} -L -d -m ${TUNNELCMD}
+
 echo "Exit code: \$?"
 echo "Starting session..."
 rm -f \${portFile}

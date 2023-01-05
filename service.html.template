@@ -276,13 +276,23 @@
     }
 
     var url = __URL__
+    var responseCount=0
+
+
+    var responseCount=0
 
     function httpGet() {
+
+      responseCount+=1
+
       var xmlHttp = new XMLHttpRequest();
       xmlHttp.open("GET", url, false); // false for synchronous request
       xmlHttp.send(null);
       console.log(xmlHttp.status)
       if (xmlHttp.status != 200) {
+        if (responseCount > 20) {
+            window.location.reload()
+        }
         setTimeout(function() {
           httpGet()
         }, 600)

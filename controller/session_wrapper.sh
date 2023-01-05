@@ -40,18 +40,8 @@ echo "sed -i 's/.*Job status.*/Job status: Cancelled/' /pw/jobs/${job_number}/se
 echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" /pw/jobs/${job_number}/service.json >> ${kill_sh}
 chmod 777 ${kill_sh}
 
-# check if the user is on a new container 
-env | grep -q PW_USERCONTAINER_VERSION
-NEW_USERCONTAINER="$?"
-
 # TUNNEL COMMAND:
-if [[ "$USERMODE" == "k8s" || "$NEW_USERCONTAINER" == "0" ]];then
-    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
-    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-    TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST} \"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:$openPort:localhost:\$servicePort ${controller}\""
-else
-    TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
-fi
+TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
 
 # Initiallize session batch file:
 echo "Generating session script"
@@ -135,7 +125,7 @@ if [ -z "\${screen_bin}" ]; then
     ${TUNNELCMD} &
 else
     echo "screen -d -m ${TUNNELCMD}"
-    screen -d -m ${TUNNELCMD}
+    screen -L -d -m ${TUNNELCMD}
 fi
 echo "Exit code: \$?"
 echo "Starting session..."

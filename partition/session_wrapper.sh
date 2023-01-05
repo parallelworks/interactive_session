@@ -6,16 +6,7 @@ env > session_wrapper.env
 source lib.sh
 
 # TUNNEL COMMAND:
-if [[ "$USERMODE" == "k8s" || "$NEW_USERCONTAINER" == "0" ]];then
-    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
-    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-    TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST} \"ssh -J ${controller} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:$openPort:127.0.0.1:\$servicePort "\${USER}@'$(hostname)'"\""
-else
-    TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:127.0.0.1:\$servicePort ${USER_CONTAINER_HOST}"
-fi
 TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:0.0.0.0:\$servicePort ${USER_CONTAINER_HOST}"
-#TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:\$servicePort:0.0.0.0:$openPort ${USER_CONTAINER_HOST}"
-
 
 # Initiallize session batch file:
 echo "Generating session script"
@@ -146,7 +137,6 @@ fi
 
 if [ -z "\${screen_bin}" ]; then
     displayErrorMessage "ERROR: screen is not installed in the system --> Exiting workflow"
-    #echo "nohup ${TUNNELCMD} &"
     #nohup ${TUNNELCMD} &
     echo "${TUNNELCMD} &"
     ${TUNNELCMD} &

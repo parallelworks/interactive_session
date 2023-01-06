@@ -120,7 +120,6 @@ fi
 echo "screen -d -m ${TUNNELCMD}"
 screen -L -d -m ${TUNNELCMD}
 
-fi
 echo "Exit code: \$?"
 echo "Starting session..."
 rm -f \${portFile}

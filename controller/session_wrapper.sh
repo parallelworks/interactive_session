@@ -114,6 +114,10 @@ echo
 echo "Running blocking ssh command..."
 screen_bin=\$(which screen 2> /dev/null)
 if [ -z "\${screen_bin}" ]; then
+    screen_bin=${chdir}/screen
+fi
+
+if [ -z "\${screen_bin}" ]; then
     # Needs to be installed in the controller even before running interactive sessions or provider wont work
     displayErrorMessage "ERROR: screen is not installed in the system --> Exiting workflow"
 fi

@@ -92,14 +92,14 @@ echo "Pool type: ${pooltype}"
 #   1. Run in a partition of a slurmshv2 to call the remote.sh script
 #   2. If chdir is pw.conf or empty --> chdir=${poolworkdir}/pw/__job_number__
 if [[ ${pooltype} == "slurmshv2" ]]; then
-    poolworkdir=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${poolname} workdir)
+    export poolworkdir=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${poolname} workdir)
     if [ -z "${poolworkdir}" ]; then
         displayErrorMessage "ERROR: Pool workdir not found - exiting the workflow"
         echo "${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${poolname} workdir"
         exit 1
     fi
 else
-    poolworkdir=${HOME}
+    export poolworkdir=${HOME}
 fi
 
 wfargs="$(echo ${wfargs} | sed "s|__poolworkdir__|${poolworkdir}|g")"

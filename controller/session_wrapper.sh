@@ -114,7 +114,7 @@ echo
 echo "Running blocking ssh command..."
 screen_bin=\$(which screen 2> /dev/null)
 if [ -z "\${screen_bin}" ]; then
-    screen_bin=${poolworkdir}/screen
+    screen_bin=${poolworkdir}/pw/screen
 fi
 
 if [ -z "\${screen_bin}" ]; then

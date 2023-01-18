@@ -155,7 +155,7 @@ scp ${session_sh} ${controller}:${remote_session_dir}/session-${job_number}.sh
 scp stream.sh ${controller}:${remote_session_dir}/stream-${job_number}.sh
 
 echo
-echo "Submitting slurm request (wait for node to become available before connecting)..."
+echo "Submitting ${submit_cmd} request (wait for node to become available before connecting)..."
 echo
 echo $sshcmd ${submit_cmd} ${remote_session_dir}/session-${job_number}.sh
 

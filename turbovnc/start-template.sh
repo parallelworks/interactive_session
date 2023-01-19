@@ -159,6 +159,7 @@ sudo -n  chown ${USER} /run/user/$(id -u)/dconf
 sudo -n  chgrp ${USER} /run/user/$(id -u)/dconf
 chmod og+rx /run/user/$(id -u)
 
+
 if  ! [ -z $(which gnome-session) ]; then
     gnome-session &
     echo $! > ${chdir}/service.pid
@@ -169,8 +170,11 @@ elif ! [ -z $(which xfce4-session) ]; then
     xfce4-session &
     echo $! > ${chdir}/service.pid
 elif ! [ -z $(which icewm-session) ]; then
-    icewm-session &
-    echo $! > ${chdir}/service.pid
+    # FIXME: Code below fails to launch desktop session
+    #        Use case in onyx automatically launches the session when visual apps are launched
+    echo Found icewm-session
+    #icewm-session &
+    #echo $! > ${chdir}/service.pid
 elif ! [ -z $(which gnome) ]; then
     gnome &
     echo $! > ${chdir}/service.pid

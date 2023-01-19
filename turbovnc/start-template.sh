@@ -3,7 +3,7 @@ set -x
 partition_or_controller=__partition_or_controller__
 job_number=__job_number__
 slurm_module=__slurm_module__
-service_bin="$(echo __service_bin__  | sed "s|---| |g")"
+service_bin="$(echo __service_bin__  | sed "s|---| |g" | sed "s|___| |g")"
 service_background=__service_background__ # Launch service as a background process (! or screen)
 chdir=__chdir__
 vnc_exec=__vnc_exec__

@@ -97,6 +97,7 @@ openPort=${openPort}
 masterIp=${masterIp}
 USER_CONTAINER_HOST=${USER_CONTAINER_HOST}
 controller=${controller}
+export PATH=\$PATH=\$PATH:~/pw
 
 # Find an available servicePort
 minPort=6000

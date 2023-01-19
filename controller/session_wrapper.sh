@@ -83,6 +83,7 @@ openPort=${openPort}
 USER_CONTAINER_HOST=${USER_CONTAINER_HOST}
 USERMODE=${USERMODE}
 masterIp=${masterIp}
+export PATH=\$PATH=\$PATH:~/pw
 
 
 # Find an available servicePort

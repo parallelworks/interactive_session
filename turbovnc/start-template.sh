@@ -168,6 +168,9 @@ elif ! [ -z $(which mate-session) ]; then
 elif ! [ -z $(which xfce4-session) ]; then
     xfce4-session &
     echo $! > ${chdir}/service.pid
+elif ! [ -z $(which icewm-session) ]; then
+    icewm-session &
+    echo $! > ${chdir}/service.pid
 elif ! [ -z $(which gnome) ]; then
     gnome &
     echo $! > ${chdir}/service.pid

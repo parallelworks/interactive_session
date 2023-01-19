@@ -1,4 +1,5 @@
 export CONDA_PYTHON_EXE=/public/apps/conda3/bin/python3
+export PATH=$PATH:/tmp/screen
 
 mkdir -p  ~/pw/bootstrap
 rsync /swift-pw-bin/apps/* ~/pw/bootstrap

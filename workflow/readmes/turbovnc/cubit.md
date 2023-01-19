@@ -1,6 +1,6 @@
-## Forge Interactive Session
+## Ansys Interactive Session
 
-This workflow starts an interactive session for Forge in a desktop environment. The services are started in the selected slurm partition using an sbatch command.
+This workflow starts an interactive session for Ansys in a desktop environment. The services are started in the selected slurm partition using an sbatch command.
 
 #### Instructions
 

@@ -1,5 +1,6 @@
 #!/bin/bash
 sdir=$(dirname $0)
+EXPORT_ALIASES="$1"
 # For debugging
 env > session_wrapper.env
 

@@ -231,7 +231,7 @@ if [ -f "${service_name}/kill-template.sh" ]; then
 fi
 
 # RUNNING SESSION WRAPPER
-bash ${session_wrapper_dir}/session_wrapper.sh $EXPAND_ALIASES
+bash ${session_wrapper_dir}/session_wrapper.sh "$EXPAND_ALIASES"
 
 # We don't want kill.sh to change the status to cancelled!
 sed -i  "s/.*sed -i.*//" kill.sh  

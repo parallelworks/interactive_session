@@ -8,7 +8,7 @@
       <param name='_pw_slurm_module' label='Module name' type='text' help='Module to load with [module load]' value='ansys' width='50%_none'></param>
       <param name='_pw_service_bin' label='Launch command' type='text' value='launcher' help='' width='50%_none'></param>
     </section>
-    <section name='host' type='section' title='Matlab Host' expanded='true'>
+    <section name='host' type='section' title='Host' expanded='true'>
        <conditional name="jobschedulertype_cond">
           <param name='_pw_jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively' width='50%_none' multiple='false'>
             <option value="CONTROLLER" selected="true">Controller</option>

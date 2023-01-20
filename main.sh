@@ -99,7 +99,11 @@ if [[ ${pooltype} == "slurmshv2" ]]; then
         exit 1
     fi
 else
-    export poolworkdir=${HOME}
+   if [[ ${jobschedulertype} == "LOCAL" ]]; then
+        export poolworkdir=/pw
+    else
+        export poolworkdir=${HOME}
+    fi
 fi
 
 wfargs="$(echo ${wfargs} | sed "s|__poolworkdir__|${poolworkdir}|g")"
@@ -151,6 +155,10 @@ if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
     export partition_or_controller="False"
     echo "Submitting ssh job to ${controller}"
     session_wrapper_dir=controller
+elif [[ ${jobschedulertype} == "LOCAL" ]]; then
+    export partition_or_controller="False"
+    echo "Submitting ssh job to user container"
+    session_wrapper_dir=local
 else
     # FIXME: Rename to compute_or_controller
     export partition_or_controller="True"

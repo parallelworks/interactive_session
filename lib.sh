@@ -114,6 +114,7 @@ displayErrorMessage() {
     sed -i "s|__ERROR_MESSAGE__|$1|g" error.html
     cp error.html service.html
     sed -i "s/.*ERROR_MESSAGE.*/    \"ERROR_MESSAGE\": \"$1\"/" service.json
+    exit 1
 }
 
 getSchedulerDirectivesFromInputForm() {

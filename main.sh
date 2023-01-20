@@ -99,11 +99,11 @@ if [[ ${pooltype} == "slurmshv2" ]]; then
         exit 1
     fi
 else
-   if [[ ${jobschedulertype} == "LOCAL" ]]; then
-        export poolworkdir=/pw
-    else
-        export poolworkdir=${HOME}
-    fi
+    export poolworkdir=${HOME}
+fi
+
+ if [[ ${jobschedulertype} == "LOCAL" ]]; then
+    export poolworkdir=/pw
 fi
 
 wfargs="$(echo ${wfargs} | sed "s|__poolworkdir__|${poolworkdir}|g")"

@@ -130,7 +130,7 @@ if [ -z ${server_exec} ] || [[ "${server_exec}" == "__""server_exec""__" ]]; the
 fi
 
 if [ ! -f "${server_exec}" ]; then
-    displayErrorMessage "ERROR: server_exec=${server_exec} file not found! - Existing workflow!"
+    displayErrorMessage "ERROR: server_exec=${server_exec} file not found! - Exiting workflow!"
     exit 1
 fi
 

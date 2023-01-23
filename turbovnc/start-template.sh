@@ -131,7 +131,7 @@ if [ -z ${vnc_exec} ] || [[ "${vnc_exec}" == "__""vnc_exec""__" ]]; then
 fi
 
 if [ ! -f "${vnc_exec}" ]; then
-    displayErrorMessage "ERROR: vnc_exec=${vnc_exec} file not found! - Existing workflow!"
+    displayErrorMessage "ERROR: vnc_exec=${vnc_exec} file not found! - Exiting workflow!"
 fi
 
 # Start service

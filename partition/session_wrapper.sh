@@ -15,9 +15,9 @@ echo "#!/bin/bash" > ${session_sh}
 
 if [[ ${jobschedulertype} == "SLURM" ]]; then
     directive_prefix="#SBATCH"
-    submit_cmd="$EXPAND_ALIASE sbatch"
-    delete_cmd="$EXPAND_ALIASES scancel"
-    stat_cmd="$EXPAND_ALIASE squeue"
+    submit_cmd="sbatch"
+    delete_cmd="scancel"
+    stat_cmd="squeue"
 elif [[ ${jobschedulertype} == "PBS" ]]; then
     directive_prefix="#PBS"
     submit_cmd="qsub"

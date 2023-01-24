@@ -1,6 +1,6 @@
-## Rstudio Interactive Session
+## RStudio Interactive Session
 
-This workflow starts Rstudio in an a desktop environment. The workflow may take 10/15 minutes to install TigerVNC, Gnome Desktop and Rstudio if this are not installed in the base image.
+This workflow starts an interactive session for RStudio in a desktop environment. The services are started in the selected slurm partition using an sbatch command.
 
 #### Instructions
 

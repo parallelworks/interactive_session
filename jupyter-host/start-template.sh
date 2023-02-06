@@ -3,14 +3,9 @@ set -x
 
 password="__password__"
 notebook_dir="__notebook_dir__"
-CONDA_PATH=$(echo __conda_sh__ | sed "s|etc/profile.d/conda.sh||g")
 conda_sh=__conda_sh__
 conda_env=__conda_env__
 slurm_module=__slurm_module__
-
-CONDA_DIR="$(basename $CONDA_PATH)"
-INSTALL_DIR="$(dirname $CONDA_PATH)"
-
 
 f_install_miniconda() {
     install_dir=$1
@@ -32,7 +27,8 @@ if ! [ -z "${conda_sh}" ] && ! [[ "${conda_sh}" == "__""conda_sh""__" ]]; then
         {
             source ${conda_sh}
         } || {
-            f_install_miniconda ${INSTALL_DIR}
+            conda_dir=$(echo ${conda_sh} | sed "s|etc/profile.d/conda.sh||g" )
+            f_install_miniconda ${conda_dir}
             source ${conda_sh}
         }
         {

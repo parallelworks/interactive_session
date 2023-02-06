@@ -34,10 +34,6 @@ if ! [ -z "${conda_sh}" ] && ! [[ "${conda_sh}" == "__""conda_sh""__" ]]; then
         } || {
             f_install_miniconda ${INSTALL_DIR}
             source ${conda_sh}
-            if [ -z "${conda_env}" ] || [ "${conda_env}" == "base" ]; then
-                conda activate base
-                conda install -c anaconda jupyter -y
-            fi
         }
         {
             conda activate ${conda_env}
@@ -45,6 +41,9 @@ if ! [ -z "${conda_sh}" ] && ! [[ "${conda_sh}" == "__""conda_sh""__" ]]; then
             conda create -n ${conda_env} jupyter -y
             conda activate ${conda_env}
         }
+        if [ -z $(which ${jupyter-notebook} 2> /dev/null) ]; then
+            conda install -c anaconda jupyter -y
+        fi
     fi
 fi
 

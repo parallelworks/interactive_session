@@ -11,29 +11,36 @@ slurm_module=__slurm_module__
 CONDA_DIR="$(basename $CONDA_PATH)"
 INSTALL_DIR="$(dirname $CONDA_PATH)"
 
-if [ ! -d "$CONDA_PATH" ] && [ "__conda_install__" == "True" ];then
-    
-    echo "No conda environment found - provisioning miniconda the first time..."
-    
-    mkdir -p $INSTALL_DIR
-    wget -O $INSTALL_DIR/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-    bash $INSTALL_DIR/miniconda.sh -b -p $CONDA_PATH
-    rm $INSTALL_DIR/miniconda.sh -f
-    
-    source $CONDA_PATH/etc/profile.d/conda.sh
-    conda activate __conda_env__
-    conda install -c anaconda jupyter
-    
-    echo "Conda now installed..."
-    
-fi
+
+f_install_miniconda() {
+    install_dir=$1
+    echo "Installing Miniconda3-py39_4.9.2"
+    conda_repo="https://repo.anaconda.com/miniconda/Miniconda3-py39_4.9.2-Linux-x86_64.sh"
+    ID=$(date +%s)-${RANDOM} # This script may run at the same time!
+    nohup wget ${conda_repo} -O /tmp/miniconda-${ID}.sh 2>&1 > /tmp/miniconda_wget-${ID}.out
+    rm -rf ${install_dir}
+    mkdir -p $(dirname ${install_dir})
+    nohup bash /tmp/miniconda-${ID}.sh -b -p ${install_dir} 2>&1 > /tmp/miniconda_sh-${ID}.out
+}
+
 
 if ! [ -z "${conda_sh}" ] && ! [[ "${conda_sh}" == "__""conda_sh""__" ]]; then
-    source ${conda_sh}
-fi
-
-if ! [ -z "${conda_env}" ] && ! [[ "${conda_env}" == "__""conda_env""__" ]]; then
-    conda activate ${conda_env}
+    {
+        source ${conda_sh}
+    } || {
+        f_install_miniconda ${INSTALL_DIR}
+        source ${conda_sh}
+        if [ -z "${conda_env}" ] || [ "${conda_env}" == "base" ]; then
+            conda activate base
+            conda install -c anaconda jupyter -y
+        fi
+    }
+    {
+        conda activate ${conda_env}
+    } || {
+        conda create -n ${conda_env} jupyter -y
+        conda activate ${conda_env}
+    }
 fi
 
 if ! [ -z "${slurm_module}" ] && ! [[ "${slurm_module}" == "__""slurm_module""__" ]]; then

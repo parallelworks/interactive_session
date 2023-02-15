@@ -1,10 +1,12 @@
 #!/bin/bash
-
 source lib.sh
 export job_number=$(basename ${PWD})
 
 # export the users env file (for some reason not all systems are getting these upon execution)
 while read LINE; do export "$LINE"; done < ~/.env
+
+# Initialize service.html to prevent error from showing when you click in the eye icon
+cp service.html.template service.html
 
 echo
 echo "JOB NUMBER:  ${job_number}"

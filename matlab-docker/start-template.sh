@@ -20,11 +20,7 @@ chmod 777 docker-kill-${job_number}.sh
 
 sudo -n systemctl start docker
 
-if [[ "$NEW_USERCONTAINER" == "0" ]];then
-    MWI_BASE_URL="/me/${openPort}/"
-else
-    MWI_BASE_URL="/${FORWARDPATH}/${IPADDRESS}/${openPort}/" 
-fi
+MWI_BASE_URL="/me/${openPort}/"
 
 # Docker supports mounting directories that do not exist (singularity does not)
 set -x

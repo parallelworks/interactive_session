@@ -194,24 +194,14 @@ else
 fi
 
 # SERVICE URL
-# FIXME: This entire section needs cleaning. Got dirty with the new usercontainer.
-# check if the user is on a new container 
-env | grep -q PW_USERCONTAINER_VERSION
-# Needs to be exported for services like Jupyter that require a base url --NotebookApp.base_url
-export NEW_USERCONTAINER="$?"
 
 echo "Generating session html"
 replace_templated_inputs ${service_name}/url.sh $wfargs
 source ${service_name}/url.sh
 cp service.html.template service.html_
 
-if [[ "$NEW_USERCONTAINER" == "0" ]];then
-    URL="\"/me/${openPort}/${URLEND}"
-    sed -i "s|.*URL.*|    \"URL\": \"/me\",|" service.json
-else
-    URL="\"/${FORWARDPATH}/${IPADDRESS}/${openPort}/${URLEND}"
-    sed -i "s|.*URL.*|    \"URL\": \"/${FORWARDPATH}/${IPADDRESS}\",|" service.json
-fi
+URL="\"/me/${openPort}/${URLEND}"
+sed -i "s|.*URL.*|    \"URL\": \"/me\",|" service.json
 sed -i "s|__URL__|${URL}|g" service.html_
 # JSON values cannot contain quotes "
 #URL_JSON=$(echo ${URL} | sed 's|\"|\\\\\"|g')

@@ -99,8 +99,10 @@ service_pid=\$(cat ${chdir}/service.pid)
 if [ -z \${service_pid} ]; then
     echo "ERROR: No service pid was found!"
 else
-    echo "$(hostname) - Killing process: ${service_pid}"
-    pkill -P \${service_pid}
+    echo "$(hostname) - Killing process: \${service_pid}"
+    for spid in \${service_pid}; do
+        pkill -P \${spid}
+    done
     kill \${service_pid}
 fi
 echo "~/.vnc/\${HOSTNAME}${DISPLAY}.pid:"

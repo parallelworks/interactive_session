@@ -23,7 +23,7 @@
             </param>   
             <param name='_pw__sch__dd_time_e_' label='Walltime' type='text' help='e.g. 01:00:00 - Amount of time slurm will honor the interactive session.' value='01:00:00' width='50%_none'>
             </param>
-            <param name='_pw_scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value='' width='100%_none'>
+            <param name='_pw_scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value='--get-user-env;--export=ALL' width='100%_none'>
             </param>
         </when>
       </conditional>

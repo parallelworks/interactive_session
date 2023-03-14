@@ -136,7 +136,7 @@ echo "\${screen_bin} -L -d -m ${SERVER_TUNNEL_CMD}"
 
 if ! [ -z "${license_env}" ]; then
     # Export license environment variable
-    export ${license_env}=\${license_server_port}@localhost
+    export ${license_env}=${license_server_port}@localhost
     # Create tunnel
     echo "\${screen_bin} -L -d -m ${LICENSE_TUNNEL_CMD}"
     \${screen_bin} -L -d -m ${LICENSE_TUNNEL_CMD}

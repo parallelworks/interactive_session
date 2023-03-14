@@ -69,6 +69,29 @@ displayErrorMessage() {
     exit 1
 }
 
+findAvailablePort() {
+    # Find an available availablePort
+    minPort=6000
+    maxPort=9000
+    for port in \$(seq \${minPort} \${maxPort} | shuf); do
+        out=\$(netstat -aln | grep LISTEN | grep \${port})
+        if [ -z "\${out}" ]; then
+            # To prevent multiple users from using the same available port --> Write file to reserve it
+            portFile=/tmp/\${port}.port.used
+            if ! [ -f "\${portFile}" ]; then
+                touch \${portFile}
+                availablePort=\${port}
+                echo \${port}
+                break
+            fi
+        fi
+    done
+
+    if [ -z "\${availablePort}" ]; then
+        displayErrorMessage "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
+    fi
+}
+
 # In some systems screen can't write to /var/run/screen
 mkdir ${chdir}/.screen
 chmod 700 ${chdir}/.screen
@@ -98,24 +121,7 @@ USER_CONTAINER_HOST=${USER_CONTAINER_HOST}
 controller=${controller}
 
 # Find an available servicePort
-minPort=6000
-maxPort=9000
-for port in \$(seq \${minPort} \${maxPort} | shuf); do
-    out=\$(netstat -aln | grep LISTEN | grep \${port})
-    if [ -z "\${out}" ]; then
-        # To prevent multiple users from using the same available port --> Write file to reserve it
-        portFile=/tmp/\${port}.port.used
-        if ! [ -f "\${portFile}" ]; then
-            touch \${portFile}
-            export servicePort=\${port}
-            break
-        fi
-    fi
-done
-
-if [ -z "\${servicePort}" ]; then
-    displayErrorMessage "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
-fi
+servicePort=\$(findAvailablePort)
 echo \${servicePort} > service.port
 
 echo

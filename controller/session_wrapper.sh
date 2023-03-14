@@ -5,9 +5,17 @@ env > session_wrapper.env
 
 source lib.sh
 
+kill_ports=$openPort
 # CREATE KILL FILE:
 # - NEEDS TO BE MADE BEFORE RUNNING SESSION SCRIPT!
 # - When the job is killed PW runs /pw/jobs/job-number/kill.sh
+if [ -z "${license_ports}" ]; then
+    kill_ports=$openPort
+else
+    license_ports="$(echo ${license_ports} | sed "s|___| |g")"
+    kill_ports="${openPort} ${license_ports}"
+fi
+
 # Initialize kill.sh
 kill_sh=/pw/jobs/${job_number}/kill.sh
 kill_tunnels_sh=/pw/jobs/${job_number}/kill_tunnels_template.sh
@@ -25,7 +33,7 @@ fi
 cp ${sdir}/kill_tunnels_template.sh ${kill_tunnels_sh}
 cp ${sdir}/kill_session_template.sh ${kill_controller_session_sh}
 
-sed -i "s/__OPENPORT__/$openPort/g" ${kill_tunnels_sh}
+sed -i "s/__KILL_PORTS__/${kill_ports}/g" ${kill_tunnels_sh}
 
 sed -i "s/__job_number__/${job_number}/g" ${kill_controller_session_sh}
 sed -i "s|__chdir__|${chdir}|g" ${kill_controller_session_sh}

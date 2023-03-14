@@ -5,16 +5,10 @@ env > session_wrapper.env
 
 source lib.sh
 
-kill_ports=$openPort
 # CREATE KILL FILE:
 # - NEEDS TO BE MADE BEFORE RUNNING SESSION SCRIPT!
 # - When the job is killed PW runs /pw/jobs/job-number/kill.sh
-if [ -z "${license_ports}" ]; then
-    kill_ports=$openPort
-else
-    license_ports="$(echo ${license_ports} | sed "s|___| |g")"
-    kill_ports="${openPort} ${license_ports}"
-fi
+kill_ports="${openPort} ${license_server_port} ${license_daemon_port}"
 
 # Initialize kill.sh
 kill_sh=/pw/jobs/${job_number}/kill.sh
@@ -48,8 +42,9 @@ echo "sed -i 's/.*Job status.*/Job status: Cancelled/' /pw/jobs/${job_number}/se
 echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" /pw/jobs/${job_number}/service.json >> ${kill_sh}
 chmod 777 ${kill_sh}
 
-# TUNNEL COMMAND:
-TUNNELCMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
+# TUNNEL COMMANDS:
+SERVER_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
+LICENSE_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:${license_server_port}:localhost:\$license_server_port -L 0.0.0.0:${license_daemon_port}:localhost:\$license_daemon_port ${USER_CONTAINER_HOST}"
 
 # Initiallize session batch file:
 echo "Generating session script"
@@ -135,12 +130,25 @@ if [ -z "\${screen_bin}" ]; then
     # Needs to be installed in the controller even before running interactive sessions or provider wont work
     displayErrorMessage "ERROR: screen is not installed in the system --> Exiting workflow"
 fi
-echo "\${screen_bin} -L -d -m ${TUNNELCMD}"
-\${screen_bin} -L -d -m ${TUNNELCMD}
+echo "\${screen_bin} -L -d -m ${SERVER_TUNNEL_CMD}"
+\${screen_bin} -L -d -m ${SERVER_TUNNEL_CMD}
+
+if ! [ -z "${license_env}" ]; then
+    # Get available ports
+    license_server_port=\$(findAvailablePort)
+    echo \${license_server_port} > license_server_port.port
+    license_daemon_port=\$(findAvailablePort)
+    echo \${license_daemon_port} > license_daemon_port.port
+    # Export license environment variable
+    export ${license_env}=\${license_server_port}@localhost
+    # Create tunnel
+    echo "\${screen_bin} -L -d -m ${SERVER_TUNNEL_CMD}"
+    \${screen_bin} -L -d -m ${LICENSE_TUNNEL_CMD}
+fi
 
 echo "Exit code: \$?"
 echo "Starting session..."
-rm -f \${portFile}
+rm -f /tmp/\${servicePort}.port.used /tmp/\${license_server_port}.port.used /tmp/\${license_daemon_port}.port.used
 HERE
 
 # Add application-specific code

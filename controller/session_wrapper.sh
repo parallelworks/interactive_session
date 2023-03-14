@@ -44,8 +44,8 @@ chmod 777 ${kill_sh}
 
 # TUNNEL COMMANDS:
 SERVER_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
-#LICENSE_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:${license_server_port}:localhost:\$license_server_port -L 0.0.0.0:${license_daemon_port}:localhost:\$license_daemon_port ${USER_CONTAINER_HOST}"
-LICENSE_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:\${license_server_port}:localhost:${license_server_port} -L 0.0.0.0:\${license_daemon_port}:localhost:${license_daemon_port} ${USER_CONTAINER_HOST}"
+LICENSE_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:${license_server_port}:localhost:\$license_server_port -L 0.0.0.0:${license_daemon_port}:localhost:\$license_daemon_port ${USER_CONTAINER_HOST}"
+#LICENSE_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:\${license_server_port}:localhost:${license_server_port} -L 0.0.0.0:\${license_daemon_port}:localhost:${license_daemon_port} ${USER_CONTAINER_HOST}"
 
 # Initiallize session batch file:
 echo "Generating session script"

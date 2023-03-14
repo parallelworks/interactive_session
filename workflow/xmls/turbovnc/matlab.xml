@@ -32,9 +32,11 @@
     <section name='advanced_options_other' type='section' title='Advanced Options' expanded='false'>
         <param name="_pw_stream" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW' width="25%_none" optional='true' float="right">
         </param>
-        <param name='_pw_license_ports' label='License ports' type='text' help='License ports to create tunnel' value='' width='50%_none'>
+        <param name='_pw_license_server_port' label='License server port' type='text' help='License server port' value='' width='25%_none'>
         </param>
-        <param name='_pw_license_env' label='License environment variable' type='text' help='MLM_LICENSE_FILE=<server_port>@localhost' value='' width='50%_none'>
+        <param name='_pw_license_daemon_port' label='License daemon port' type='text' help='License daemon port' value='' width='25%_none'>
+        </param>
+        <param name='_pw_license_env' label='License environment variable name' type='text' help='MLM_LICENSE_FILE' value='' width='25%_none'>
         </param>
     </section>
   </inputs>

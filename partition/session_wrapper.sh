@@ -6,7 +6,9 @@ env > session_wrapper.env
 source lib.sh
 
 # TUNNEL COMMAND:
-TUNNELCMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:0.0.0.0:\$servicePort ${USER_CONTAINER_HOST}"
+SERVER_TUNNEL_CMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:0.0.0.0:\$servicePort ${USER_CONTAINER_HOST}"
+# Cannot have different port numbers on client and server or license checkout fails!
+LICENSE_TUNNEL_CMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:${license_server_port}:localhost:${license_server_port} -L 0.0.0.0:${license_daemon_port}:localhost:${license_daemon_port} ${USER_CONTAINER_HOST}"
 
 # Initiallize session batch file:
 echo "Generating session script"
@@ -141,8 +143,18 @@ fi
 if ! [ -f "\${screen_bin}" ]; then
     displayErrorMessage "ERROR: screen is not installed in the system and not found in \${screen_bin} --> Exiting workflow"
 fi
-echo "\${screen_bin} -L -d -m ${TUNNELCMD}"
-\${screen_bin} -L -d -m ${TUNNELCMD}
+echo "\${screen_bin} -L -d -m ${SERVER_TUNNEL_CMD}"
+\${screen_bin} -L -d -m ${SERVER_TUNNEL_CMD}
+
+if ! [ -z "${license_env}" ]; then
+    # Export license environment variable
+    export ${license_env}=${license_server_port}@localhost
+    # Create tunnel
+    echo "\${screen_bin} -L -d -m ${LICENSE_TUNNEL_CMD}"
+    \${screen_bin} -L -d -m ${LICENSE_TUNNEL_CMD}
+fi
+
+
 
 echo "Exit code: \$?"
 echo "Starting session..."

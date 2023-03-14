@@ -44,8 +44,8 @@ chmod 777 ${kill_sh}
 
 # TUNNEL COMMANDS:
 SERVER_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
-LICENSE_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:${license_server_port}:localhost:\$license_server_port -L 0.0.0.0:${license_daemon_port}:localhost:\$license_daemon_port ${USER_CONTAINER_HOST}"
-#LICENSE_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:\${license_server_port}:localhost:${license_server_port} -L 0.0.0.0:\${license_daemon_port}:localhost:${license_daemon_port} ${USER_CONTAINER_HOST}"
+# Cannot have different port numbers on client and server or license checkout fails!
+LICENSE_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:${license_server_port}:localhost:${license_server_port} -L 0.0.0.0:${license_daemon_port}:localhost:${license_daemon_port} ${USER_CONTAINER_HOST}"
 
 # Initiallize session batch file:
 echo "Generating session script"
@@ -135,11 +135,6 @@ echo "\${screen_bin} -L -d -m ${SERVER_TUNNEL_CMD}"
 \${screen_bin} -L -d -m ${SERVER_TUNNEL_CMD}
 
 if ! [ -z "${license_env}" ]; then
-    # Get available ports
-    license_server_port=\$(findAvailablePort)
-    echo \${license_server_port} > license_server_port.port
-    license_daemon_port=\$(findAvailablePort)
-    echo \${license_daemon_port} > license_daemon_port.port
     # Export license environment variable
     export ${license_env}=\${license_server_port}@localhost
     # Create tunnel
@@ -149,7 +144,7 @@ fi
 
 echo "Exit code: \$?"
 echo "Starting session..."
-rm -f /tmp/\${servicePort}.port.used /tmp/\${license_server_port}.port.used /tmp/\${license_daemon_port}.port.used
+rm -f /tmp/\${servicePort}.port.used 
 HERE
 
 # Add application-specific code

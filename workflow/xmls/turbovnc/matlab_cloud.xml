@@ -35,8 +35,7 @@
         </param>
         <param name='_pw_license_daemon_port' label='License daemon port' type='text' help='License daemon port' value='1711' width='25%_none'>
         </param>
-        <param name='_pw_license_env' label='License environment variable name' type='text' help='MLM_LICENSE_FILE' value='MLM_LICENSE_FILE' width='25%_none'>
-        </param>
+        <param name='_pw_license_env' label='License environment variable name' type='hidden' value='MLM_LICENSE_FILE' width='50%_none'></param>
     </section>
   </inputs>
   <outputs>

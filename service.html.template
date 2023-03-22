@@ -275,7 +275,7 @@
         location.assign(document.location);
     }
 
-    var url = ""
+    var url = "null"
     try { 
       url = __URL__
     } catch(e) {}

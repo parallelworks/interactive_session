@@ -275,7 +275,11 @@
         location.assign(document.location);
     }
 
-    var url = __URL__
+    var url = ""
+    try { 
+      url = __URL__
+    } catch(e) {}
+    
     var responseCount=0
 
 

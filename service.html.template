@@ -295,7 +295,7 @@
         }
         setTimeout(function() {
           httpGet()
-        }, 600)
+        }, 200)
       }
       else {
         document.getElementById("frame").style.display = "";

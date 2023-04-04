@@ -7,8 +7,6 @@ if ! [ -z "${CONDA_PREFIX}" ]; then
     echo "Deactivating conda environment"
     source ${CONDA_PREFIX}/etc/profile.d/conda.sh
     conda deactivate
-    #cp ~/.bashrc .
-    #echo "conda deactivate" >> ~/.bashrc
 fi
 
 
@@ -275,5 +273,4 @@ else
     fi
 fi
 
-#cp bashrc ~/.bashrc
 sleep 99999

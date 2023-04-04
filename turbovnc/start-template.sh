@@ -3,12 +3,12 @@
 export $(env | grep CONDA_PREFIX)
 echo ${CONDA_PREFIX}
 
-if [ -z "${CONDA_PREFIX}" ]; then
+if ! [ -z "${CONDA_PREFIX}" ]; then
     echo "Deactivating conda environment"
     source ${CONDA_PREFIX}/etc/profile.d/conda.sh
     conda deactivate
-    cp ~/.bashrc .
-    echo "conda deactivate" >> ~/.bashrc
+    #cp ~/.bashrc .
+    #echo "conda deactivate" >> ~/.bashrc
 fi
 
 
@@ -275,5 +275,5 @@ else
     fi
 fi
 
-cp bashrc ~/.bashrc
+#cp bashrc ~/.bashrc
 sleep 99999

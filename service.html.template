@@ -126,52 +126,6 @@
   .popout:hover {
       fill:#333;
   }
-.button-refresh {
-  text-transform: uppercase;
-  flex-direction: row;
-  margin: 10px 10px;
-  align-items: center;
-  background-color:  #102D50;
-  border: 0;
-  box-sizing: border-box;
-  color: #ffffff;
-  border-radius: 10px;
-  cursor: pointer;
-  display: inline-flex;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  justify-content: center;
-  line-height: 20px;
-  max-width: 480px;
-  min-height: 40px;
-  min-width: 0px;
-  overflow: hidden;
-  padding: 15px;
-  text-align: center;
-  touch-action: manipulation;
-  transition: background-color 0.167s cubic-bezier(0.4, 0, 0.2, 1) 0s, box-shadow 0.167s cubic-bezier(0.4, 0, 0.2, 1) 0s, color 0.167s cubic-bezier(0.4, 0, 0.2, 1) 0s;
-  user-select: none;
-  -webkit-user-select: none;
-  vertical-align: middle;
-}
-
-.button-refresh:hover,
-.button-refresh:focus {
-  background-color: transparent;
-  color:  rgb(85 85 85);
-}
-
-.button-refresh:active {
-  background: #09223b;
-  color: rgb(255, 255, 255, .7);
-}
-
-.button-refresh:disabled {
-  cursor: pointer;
-  background: rgba(0, 0, 0, .08);
-  color: rgba(0, 0, 0, .3);
-}
 
 .status {
   text-transform: uppercase;
@@ -250,9 +204,6 @@
   <iframe id="frame" src="" style="display:none;width:100vw;height:100vh;border:0px"></iframe>
 
   <div id="loader" style="background:transparent;width:100vw;height:100vh">
-    <button id="button-refresh" style="font-family:arial" class="button-refresh" id="button-refresh" >
-        Refresh Session
-    </button>
 
     <p id="status" style="font-family:arial" class="status">
         Job status: Creating
@@ -270,11 +221,6 @@
   </div>
 
   <script>
-    var button_refresh = document.getElementById('button-refresh');
-    button_refresh.onclick = function() {
-        location.assign(document.location);
-    }
-
     var url = "null"
     try { 
       url = __URL__
@@ -306,7 +252,6 @@
         document.getElementById("frame").src = url;
         document.getElementById("popout").style.display = "";
         document.getElementById("loader").style.display = "none";
-        document.getElementById("button-refresh").outerHTML = "";
         document.getElementById("status").outerHTML = "";
       }
     }

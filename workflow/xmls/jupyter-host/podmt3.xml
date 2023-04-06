@@ -22,7 +22,7 @@
             <option value="pytorch/1.8.2/rocm.4.2.0">pytorch/1.8.2/rocm.4.2.0</option>
             <option value="pytorch/1.9.0/rocm.4.2.0">pytorch/1.9.0/rocm.4.2.0</option>
         </param>
-        <param name='_pw_password' label='Password for notebook session:' type='text' value='' help='Enter password or leave blank for no password' width='50%_none'></param>
+        <param name='_pw_password' label='Password for notebook session:' type='hidden' value='' help='Enter password or leave blank for no password' width='50%_none'></param>
    </section>
     <section name='host' type='section' title='Jupyter Server Host' expanded='true'>
 <conditional name="jobschedulertype_cond">

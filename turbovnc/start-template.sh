@@ -233,8 +233,9 @@ if [ -z "$(which screen)" ]; then
     echo ${pid} >> ${chdir}/service.pid
     rm -f ${portFile}
     sleep 5 # Need this specially in controller node or second software won't show up!
-    
+
     # Launch service
+    cd
     if ! [ -z "${service_bin}" ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
         if [[ ${service_background} == "False" ]]; then
             echo "Running ${service_bin}"
@@ -254,8 +255,9 @@ else
     pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
     echo ${pid} >> ${chdir}/service.pid
     sleep 5  # Need this specially in controller node or second software won't show up!
-    
+
     # Launch service:
+    cd
     if ! [ -z "${service_bin}" ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
         
         if [[ ${service_background} == "False" ]]; then

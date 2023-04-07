@@ -226,53 +226,24 @@ if ! [ -z ${slurm_module} ] && ! [[ "${slurm_module}" == "__""slurm_module""__" 
 fi
 echo
 
-if [ -z "$(which screen)" ]; then
-    ./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort} &
-    echo $! >> ${chdir}/service.pid
-    pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
-    echo ${pid} >> ${chdir}/service.pid
-    rm -f ${portFile}
-    sleep 5 # Need this specially in controller node or second software won't show up!
+./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort} </dev/null &>/dev/null &
+echo $! >> ${chdir}/service.pid
+pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
+echo ${pid} >> ${chdir}/service.pid
+rm -f ${portFile}
+sleep 5 # Need this specially in controller node or second software won't show up!
 
-    # Launch service
-    cd
-    if ! [ -z "${service_bin}" ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
-        if [[ ${service_background} == "False" ]]; then
-            echo "Running ${service_bin}"
-            ${service_bin}
-        else
-            echo "Running ${service_bin} in the background"
-            ${service_bin} &
-            echo $! >> ${chdir}/service.pid
-        fi
-    fi
-    
-else
-    screen -S noVNC-${job_number} -d -m ./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort}
-    rm -f ${portFile}
-    pid=$(ps -x | grep noVNC-${job_number} | grep -wv grep | awk '{print $1}')
-    echo ${pid} >> ${chdir}/service.pid
-    pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
-    echo ${pid} >> ${chdir}/service.pid
-    sleep 5  # Need this specially in controller node or second software won't show up!
-
-    # Launch service:
-    cd
-    if ! [ -z "${service_bin}" ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
-        
-        if [[ ${service_background} == "False" ]]; then
-            echo "Running  ${service_bin}"
-            ${service_bin}
-        else
-            echo "Running ${service_bin} in the background"
-            # Convert: /path/to/bin --and options to bin:
-            sname=$(basename ${service_bin})
-            screen -S ${sname}-${job_number} -d -m ${service_bin}
-            pid=$(ps -x | grep ${sname}-${job_number} | grep -wv grep | awk '{print $1}')
-            echo ${pid} >> ${chdir}/service.pid
-        fi
-        echo "Done"
+# Launch service
+cd
+if ! [ -z "${service_bin}" ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
+    if [[ ${service_background} == "False" ]]; then
+        echo "Running ${service_bin}"
+        ${service_bin}
+    else
+        echo "Running ${service_bin} in the background"
+        ${service_bin} </dev/null &>/dev/null &
+        echo $! >> ${chdir}/service.pid
     fi
 fi
-
+    
 sleep 99999

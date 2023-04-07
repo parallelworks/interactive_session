@@ -231,7 +231,7 @@ echo $! >> ${chdir}/service.pid
 pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
 echo ${pid} >> ${chdir}/service.pid
 rm -f ${portFile}
-sleep 15 # Need this specially in controller node or second software won't show up!
+sleep 5 # Need this specially in controller node or second software won't show up!
 
 # Launch service
 cd
@@ -241,7 +241,7 @@ if ! [ -z "${service_bin}" ] && ! [[ "${service_bin}" == "__""service_bin""__" ]
         ${service_bin}
     else
         echo "Running ${service_bin} in the background"
-        ${service_bin} </dev/null &>/dev/null &
+        ${service_bin} &
         echo $! >> ${chdir}/service.pid
     fi
 fi

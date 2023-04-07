@@ -241,7 +241,7 @@ if ! [ -z "${service_bin}" ] && ! [[ "${service_bin}" == "__""service_bin""__" ]
         ${service_bin}
     else
         echo "Running ${service_bin} in the background"
-        nohup ${service_bin} &
+        ${service_bin} &
         echo $! >> ${chdir}/service.pid
     fi
 fi

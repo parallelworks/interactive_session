@@ -43,9 +43,9 @@ echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" /
 chmod 777 ${kill_sh}
 
 # TUNNEL COMMANDS:
-SERVER_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
+SERVER_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
 # Cannot have different port numbers on client and server or license checkout fails!
-LICENSE_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -L 0.0.0.0:${license_server_port}:localhost:${license_server_port} -L 0.0.0.0:${license_daemon_port}:localhost:${license_daemon_port} ${USER_CONTAINER_HOST}"
+LICENSE_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -L 0.0.0.0:${license_server_port}:localhost:${license_server_port} -L 0.0.0.0:${license_daemon_port}:localhost:${license_daemon_port} ${USER_CONTAINER_HOST}"
 
 # Initiallize session batch file:
 echo "Generating session script"
@@ -94,10 +94,6 @@ findAvailablePort() {
     fi
 }
 
-# In some systems screen can't write to /var/run/screen
-mkdir ${chdir}/.screen
-chmod 700 ${chdir}/.screen
-export SCREENDIR=${chdir}/.screen
 
 # Note that job started running
 echo \$$ > ${job_number}.pid
@@ -120,26 +116,15 @@ echo Starting interactive session - sessionPort: \$servicePort tunnelPort: $open
 echo Test command to run in user container: telnet localhost $openPort
 echo
 
-# run this in a screen so the blocking tunnel cleans up properly
-echo "Running blocking ssh command..."
-screen_bin=\$(which screen 2> /dev/null)
-if [ -z "\${screen_bin}" ]; then
-    screen_bin=${poolworkdir}/pw/screen
-fi
-
-if [ -z "\${screen_bin}" ]; then
-    # Needs to be installed in the controller even before running interactive sessions or provider wont work
-    displayErrorMessage "ERROR: screen is not installed in the system --> Exiting workflow"
-fi
-echo "\${screen_bin} -L -d -m ${SERVER_TUNNEL_CMD}"
-\${screen_bin} -L -d -m ${SERVER_TUNNEL_CMD}
+echo "${SERVER_TUNNEL_CMD} </dev/null &>/dev/null &"
+${SERVER_TUNNEL_CMD} </dev/null &>/dev/null &
 
 if ! [ -z "${license_env}" ]; then
     # Export license environment variable
     export ${license_env}=${license_server_port}@localhost
     # Create tunnel
-    echo "\${screen_bin} -L -d -m ${LICENSE_TUNNEL_CMD}"
-    \${screen_bin} -L -d -m ${LICENSE_TUNNEL_CMD}
+    echo "${LICENSE_TUNNEL_CMD} </dev/null &>/dev/null &"
+    ${LICENSE_TUNNEL_CMD} </dev/null &>/dev/null &
 fi
 
 echo "Exit code: \$?"

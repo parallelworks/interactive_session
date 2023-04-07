@@ -105,11 +105,10 @@ if [ -z "\${pubkey}" ]; then
 fi
 
 if [ -f "${poolworkdir}/pw/.pw/remote.sh" ]; then
+    # NEW VERSION OF SLURMSHV2 PROVIDER
     echo "Running ${poolworkdir}/pw/.pw/remote.sh"
     ${poolworkdir}/pw/.pw/remote.sh
-fi
-
-if [ -f "${poolworkdir}/pw/remote.sh" ]; then
+elif [ -f "${poolworkdir}/pw/remote.sh" ]; then
     echo "Running ${poolworkdir}/pw/remote.sh"
     ${poolworkdir}/pw/remote.sh
 fi

@@ -94,11 +94,6 @@ findAvailablePort() {
     fi
 }
 
-# In some systems screen can't write to /var/run/screen
-mkdir ${chdir}/.screen
-chmod 700 ${chdir}/.screen
-export SCREENDIR=${chdir}/.screen
-
 cd ${chdir}
 set -x
 
@@ -133,25 +128,13 @@ echo
 
 # Create a port tunnel from the allocated compute node to the user container (or user node in some cases)
 
-# run this in a screen so the blocking tunnel cleans up properly
-echo "Running blocking ssh command..."
-screen_bin=\$(which screen 2> /dev/null)
-if [ -z "\${screen_bin}" ]; then
-    screen_bin=${poolworkdir}/pw/screen
-fi
-
-if ! [ -f "\${screen_bin}" ]; then
-    displayErrorMessage "ERROR: screen is not installed in the system and not found in \${screen_bin} --> Exiting workflow"
-fi
-echo "\${screen_bin} -L -d -m ${SERVER_TUNNEL_CMD}"
-\${screen_bin} -L -d -m ${SERVER_TUNNEL_CMD}
 
 if ! [ -z "${license_env}" ]; then
     # Export license environment variable
     export ${license_env}=${license_server_port}@localhost
     # Create tunnel
-    echo "\${screen_bin} -L -d -m ${LICENSE_TUNNEL_CMD}"
-    \${screen_bin} -L -d -m ${LICENSE_TUNNEL_CMD}
+    echo "${LICENSE_TUNNEL_CMD} </dev/null &>/dev/null &"
+    ${LICENSE_TUNNEL_CMD} </dev/null &>/dev/null &
 fi
 
 

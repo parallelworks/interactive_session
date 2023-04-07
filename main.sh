@@ -166,9 +166,6 @@ else
     export partition_or_controller="True"
     echo "Submitting ${jobschedulertype} job to ${controller}"
     session_wrapper_dir=partition
-    if [[ ${pooltype} == "slurmshv2" ]]; then
-        export remote_sh=${poolworkdir}/pw/remote.sh
-    fi
 
     # Get scheduler directives from input form (see this function in lib.sh)
     form_sched_directives=$(getSchedulerDirectivesFromInputForm ${wfargs})

@@ -231,7 +231,7 @@ echo $! >> ${chdir}/service.pid
 pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
 echo ${pid} >> ${chdir}/service.pid
 rm -f ${portFile}
-sleep 5 # Need this specially in controller node or second software won't show up!
+sleep 60 # Need this specially in controller node or second software won't show up!
 
 # Launch service
 cd

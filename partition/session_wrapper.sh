@@ -127,7 +127,8 @@ echo Test command to run in user container: telnet localhost $openPort
 echo
 
 # Create a port tunnel from the allocated compute node to the user container (or user node in some cases)
-
+echo "${SERVER_TUNNEL_CMD} </dev/null &>/dev/null &"
+${SERVER_TUNNEL_CMD} </dev/null &>/dev/null &
 
 if ! [ -z "${license_env}" ]; then
     # Export license environment variable

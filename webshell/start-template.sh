@@ -63,17 +63,9 @@ if ! [ -d "$(echo ~/pw/noVNC-1.3.0)" ]; then
 fi
 chmod +x ./pw/noVNC-1.3.0/ttyd.x86_64
 
-#screen -wipe
-#screen -S tty -d -m  ./pw/noVNC-1.3.0/ttyd.x86_64 -p $servicePort bash
 rm -rf ${job_dir}/service.pid
 
-if [ -z "$(which screen)" ]; then
-    ./pw/noVNC-1.3.0/ttyd.x86_64 -p $servicePort bash &
-    echo $! >> ${job_dir}/service.pid
-else
-    screen -S tty-${job_number} -d -m ./pw/noVNC-1.3.0/ttyd.x86_64 -p $servicePort bash
-    pid=$(ps -x | grep tty-${job_number} | grep -wv grep | awk '{print $1}')
-    echo ${pid} >> ${job_dir}/service.pid
-fi
+./pw/noVNC-1.3.0/ttyd.x86_64 -p $servicePort bash &
+echo $! >> ${job_dir}/service.pid
 
 sleep 99999

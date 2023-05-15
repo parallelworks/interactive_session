@@ -141,7 +141,7 @@ sudo systemctl restart dcvserver
 #####################
 # STARTING NICE DCV #
 #####################
-if [ -z $(which dcv) ] then;
+if [ -z $(which dcv) ]; then
     displayErrorMessage "ERROR: dcv is not installed or not in the PATH - Exiting workflow!"
 fi
 dcv create-session --storage-root %home% ${job_number}

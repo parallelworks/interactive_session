@@ -115,7 +115,7 @@ virtual-session-xdcv-args=\"-listen tcp\"
 #target-fps = 30
 
 [connectivity]
-web-listen-endpoints=['0.0.0.0:8443','[::]:8443']
+web-listen-endpoints=['0.0.0.0:${servicePort}','[::]:${servicePort}']
 web-x-frame-options=\"ALLOW-FROM https://0.0.0.0\"
 web-extra-http-headers=[(\"Content-Security-Policy\", \"frame-ancestors 'self' https://*\")]
 web-port=${servicePort}

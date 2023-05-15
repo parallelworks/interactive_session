@@ -197,8 +197,14 @@ replace_templated_inputs ${service_name}/url.sh $wfargs
 source ${service_name}/url.sh
 cp service.html.template service.html_
 
-URL="\"/me/${openPort}/${URLEND}"
-sed -i "s|.*URL.*|    \"URL\": \"/me\",|" service.json
+# FIXME: Move this to <service-name>/url.sh
+if [ -z "${use_https}" ]; then
+    URL="\"/me/${openPort}/${URLEND}"
+    sed -i "s|.*URL.*|    \"URL\": \"/me\",|" service.json
+else
+    URL="\"/sme/${openPort}/${URLEND}"
+    sed -i "s|.*URL.*|    \"URL\": \"/sme\",|" service.json
+fi
 sed -i "s|__URL__|${URL}|g" service.html_
 # JSON values cannot contain quotes "
 #URL_JSON=$(echo ${URL} | sed 's|\"|\\\\\"|g')

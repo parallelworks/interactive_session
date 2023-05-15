@@ -92,7 +92,7 @@ sudo yum install pulseaudio-utils -y
 #############################
 # CREATE CONFIGURATION FILE #
 #############################
-sudo bash -c "cat > /tmp/dcv.conf <<HERE
+sudo bash -c "cat > /etc/dcv/dcv.conf <<HERE
 [license]
 #license-file = \"\"
 

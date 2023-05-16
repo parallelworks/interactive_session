@@ -1,15 +1,5 @@
 # Make sure no conda environment is activated! 
 # https://github.com/parallelworks/issues/issues/1081
-export $(env | grep CONDA_PREFIX)
-echo ${CONDA_PREFIX}
-
-if ! [ -z "${CONDA_PREFIX}" ]; then
-    echo "Deactivating conda environment"
-    source ${CONDA_PREFIX}/etc/profile.d/conda.sh
-    conda deactivate
-fi
-
-
 set -x
 # Runs via ssh + sbatch
 partition_or_controller=__partition_or_controller__
@@ -91,7 +81,7 @@ Section "Screen"
 EndSection
 HERE'
         sudo systemctl isolate multi-user.target
-        
+
     # On non-GPU Linux server software rendendering is supported using Mesa drivers
     # On     GPU Linux server software rendendering is supported using NVIDIA drivers
     # To verify that OpenGL software rendering is available: 

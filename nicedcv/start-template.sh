@@ -19,33 +19,35 @@ service_bin="$(echo __service_bin__  | sed "s|---| |g" | sed "s|___| |g")"
 service_background=__service_background__ # Launch service as a background process
 chdir=__chdir__
 
-#####################
-# CPU PREREQUISITES #
-#####################
-# NICE DCV doesn't support the Wayland protocol. If you're using the GDM3 desktop manager, 
-# you must disable the Wayland protocol. If you aren't using GDM3, skip this step.
-sudo sed -i '/^\[daemon\]$/a WaylandEnable=false' /etc/gdm/custom.conf
-sudo systemctl restart gdm
+if [ -z $(which dcv) ]; then
+    echo "Installing Nice DCV"
+    #####################
+    # CPU PREREQUISITES #
+    #####################
+    # NICE DCV doesn't support the Wayland protocol. If you're using the GDM3 desktop manager, 
+    # you must disable the Wayland protocol. If you aren't using GDM3, skip this step.
+    sudo sed -i '/^\[daemon\]$/a WaylandEnable=false' /etc/gdm/custom.conf
+    sudo systemctl restart gdm
+    
+    # The glxinfo utility provides information about your Linux server's OpenGL configuration
+    sudo yum install glx-utils -y
 
-# The glxinfo utility provides information about your Linux server's OpenGL configuration
-sudo yum install glx-utils -y
+    # On non-GPU Linux server software rendendering is supported using Mesa drivers
+    # To verify that OpenGL software rendering is available: 
+    sudo DISPLAY=:0 XAUTHORITY=$(ps aux | grep "X.*\-auth" | grep -v grep | sed -n 's/.*-auth \([^ ]\+\).*/\1/p') glxinfo | grep -i "opengl.*version"
+    sudo yum install xorg-x11-drv-dummy -y
+    # On non-GPU Linux servers: Dummy driver allows the X server to run with a virtual framebuffer when no real GPU is present.
+    sudo yum install xorg-x11-drv-dummy -y
 
-# On non-GPU Linux server software rendendering is supported using Mesa drivers
-# To verify that OpenGL software rendering is available: 
-sudo DISPLAY=:0 XAUTHORITY=$(ps aux | grep "X.*\-auth" | grep -v grep | sed -n 's/.*-auth \([^ ]\+\).*/\1/p') glxinfo | grep -i "opengl.*version"
-sudo yum install xorg-x11-drv-dummy -y
-# On non-GPU Linux servers: Dummy driver allows the X server to run with a virtual framebuffer when no real GPU is present.
-sudo yum install xorg-x11-drv-dummy -y
-
-# On non-GPU
-sudo bash -c 'cat >> /etc/X11/xorg.conf <<HERE
+    # On non-GPU
+    sudo bash -c 'cat >> /etc/X11/xorg.conf <<HERE
 cat Section "Device"
-    Identifier "DummyDevice"
-    Driver "dummy"
-    Option "ConstantDPI" "true"
-    Option "IgnoreEDID" "true"
-    Option "NoDDC" "true"
-    VideoRam 2048000
+Identifier "DummyDevice"
+Driver "dummy"
+Option "ConstantDPI" "true"
+Option "IgnoreEDID" "true"
+Option "NoDDC" "true"
+VideoRam 2048000
 EndSection
 
 Section "Monitor"
@@ -73,26 +75,25 @@ Section "Screen"
     EndSubSection
 EndSection
 HERE'
-sudo systemctl isolate multi-user.target
-
-
-###############
-# CPU INSTALL #
-###############
-sudo rpm --import https://d1uj6qtbmh3dt5.cloudfront.net/NICE-GPG-KEY
-wget https://d1uj6qtbmh3dt5.cloudfront.net/2023.0/Servers/nice-dcv-2023.0-15065-el7-x86_64.tgz
-tar -xvzf nice-dcv-2023.0-15065-el7-x86_64.tgz && cd nice-dcv-2023.0-15065-el7-x86_64
-sudo yum install nice-dcv-server-2023.0.15065-1.el7.x86_64.rpm -y
-sudo yum install nice-dcv-web-viewer-2023.0.15065-1.el7.x86_64.rpm -y
-sudo yum install nice-xdcv-2023.0.547-1.el7.x86_64.rpm -y
-# GPUs
-# sudo yum install nice-dcv-gl-2023.0.1027-1.el7.x86_64.rpm
-sudo yum install pulseaudio-utils -y
-
-#############################
-# CREATE CONFIGURATION FILE #
-#############################
-sudo bash -c "cat > /etc/dcv/dcv.conf <<HERE
+    sudo systemctl isolate multi-user.target
+    
+    ###############
+    # CPU INSTALL #
+    ###############
+    sudo rpm --import https://d1uj6qtbmh3dt5.cloudfront.net/NICE-GPG-KEY
+    wget https://d1uj6qtbmh3dt5.cloudfront.net/2023.0/Servers/nice-dcv-2023.0-15065-el7-x86_64.tgz
+    tar -xvzf nice-dcv-2023.0-15065-el7-x86_64.tgz && cd nice-dcv-2023.0-15065-el7-x86_64
+    sudo yum install nice-dcv-server-2023.0.15065-1.el7.x86_64.rpm -y
+    sudo yum install nice-dcv-web-viewer-2023.0.15065-1.el7.x86_64.rpm -y
+    sudo yum install nice-xdcv-2023.0.547-1.el7.x86_64.rpm -y
+    # GPUs
+    # sudo yum install nice-dcv-gl-2023.0.1027-1.el7.x86_64.rpm
+    sudo yum install pulseaudio-utils -y
+    
+    #############################
+    # CREATE CONFIGURATION FILE #
+    #############################
+    sudo bash -c "cat > /etc/dcv/dcv.conf <<HERE
 [license]
 #license-file = \"\"
 
@@ -134,16 +135,18 @@ primary-selection-paste=true
 primary-selection-copy=true
 
 HERE"
+    if [ -z $(which dcv) ]; then
+        displayErrorMessage "ERROR: dcv is not installed or not in the PATH - Exiting workflow!"
+    fi
+fi
+
 # FIXME: This may kill running sessions! 
-#        Need to pass the config paraeters as input arguments (if possible)
-# FIXME: Kill previous sessions
+#        Need to pass the config parameters as input arguments (if possible)
 sudo systemctl restart dcvserver
 #####################
 # STARTING NICE DCV #
 #####################
-if [ -z $(which dcv) ]; then
-    displayErrorMessage "ERROR: dcv is not installed or not in the PATH - Exiting workflow!"
-fi
+
 dcv create-session --storage-root %home% ${job_number}
 rm -f ${portFile}
 

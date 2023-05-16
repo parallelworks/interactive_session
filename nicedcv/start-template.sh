@@ -140,8 +140,16 @@ HERE"
     fi
 fi
 
-# FIXME: This may kill running sessions! 
-#        Need to pass the config parameters as input arguments (if possible)
+# Check the status of dcvserver
+status=$(sudo systemctl is-active dcvserver)
+
+if [ "$status" != "active" ]; then
+    echo "dcvserver is not running. Restarting..."
+    sudo systemctl restart dcvserver
+else
+    echo "dcvserver is already running. No action needed."
+fi
+
 sudo systemctl restart dcvserver
 #####################
 # STARTING NICE DCV #

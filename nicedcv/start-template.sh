@@ -21,26 +21,42 @@ chdir=__chdir__
 
 if [ -z $(which dcv) ]; then
     echo "Installing Nice DCV"
-    #####################
-    # CPU PREREQUISITES #
-    #####################
+    #################
+    # PREREQUISITES #
+    #################
+    # https://docs.aws.amazon.com/dcv/latest/adminguide/setting-up-installing-linux-prereq.html
     # NICE DCV doesn't support the Wayland protocol. If you're using the GDM3 desktop manager, 
     # you must disable the Wayland protocol. If you aren't using GDM3, skip this step.
     sudo sed -i '/^\[daemon\]$/a WaylandEnable=false' /etc/gdm/custom.conf
     sudo systemctl restart gdm
-    
     # The glxinfo utility provides information about your Linux server's OpenGL configuration
     sudo yum install glx-utils -y
+    if nvidia-smi &>/dev/null; then
+        # GPU
+        # Configure the X server to start automatically when the Linux server boots.
+        if [[ $(sudo systemctl get-default) == "multi-user.target" ]]; then
+            sudo systemctl set-default graphical.target  
+        fi
+        # Start the X server.
+        sudo systemctl isolate graphical.target
+        # Verify that the X server is running.
+        ps aux | grep X | grep -v grep
 
-    # On non-GPU Linux server software rendendering is supported using Mesa drivers
-    # To verify that OpenGL software rendering is available: 
-    sudo DISPLAY=:0 XAUTHORITY=$(ps aux | grep "X.*\-auth" | grep -v grep | sed -n 's/.*-auth \([^ ]\+\).*/\1/p') glxinfo | grep -i "opengl.*version"
-    sudo yum install xorg-x11-drv-dummy -y
-    # On non-GPU Linux servers: Dummy driver allows the X server to run with a virtual framebuffer when no real GPU is present.
-    sudo yum install xorg-x11-drv-dummy -y
-
-    # On non-GPU
-    sudo bash -c 'cat >> /etc/X11/xorg.conf <<HERE
+        # Generate an updated xorg.conf
+        sudo rm -rf /etc/X11/XF86Config*
+        sudo nvidia-xconfig --preserve-busid --enable-all-gpus
+        # If you're using a G3 or G4 Amazon EC2 instance and you want to use a multi-monitor console session
+        # sudo nvidia-xconfig --preserve-busid --enable-all-gpus --connected-monitor=DFP-0,DFP-1,DFP-2,DFP-3
+        # Restart the X server for the changes to take effect
+        sudo systemctl isolate multi-user.target
+        sudo systemctl isolate graphical.target
+    else
+        # CPU
+        sudo yum install xorg-x11-drv-dummy -y
+        # On non-GPU Linux servers: Dummy driver allows the X server to run with a virtual framebuffer when no real GPU is present.
+        sudo yum install xorg-x11-drv-dummy -y
+        # On non-GPU
+        sudo bash -c 'cat >> /etc/X11/xorg.conf <<HERE
 cat Section "Device"
 Identifier "DummyDevice"
 Driver "dummy"
@@ -75,11 +91,16 @@ Section "Screen"
     EndSubSection
 EndSection
 HERE'
-    sudo systemctl isolate multi-user.target
-    
-    ###############
-    # CPU INSTALL #
-    ###############
+        sudo systemctl isolate multi-user.target
+    fi
+    # On non-GPU Linux server software rendendering is supported using Mesa drivers
+    # On     GPU Linux server software rendendering is supported using NVIDIA drivers
+    # To verify that OpenGL software rendering is available: 
+    sudo DISPLAY=:0 XAUTHORITY=$(ps aux | grep "X.*\-auth" | grep -v grep | sed -n 's/.*-auth \([^ ]\+\).*/\1/p') glxinfo | grep -i "opengl.*version"
+
+    ###########
+    # INSTALL #
+    ###########
     sudo rpm --import https://d1uj6qtbmh3dt5.cloudfront.net/NICE-GPG-KEY
     wget https://d1uj6qtbmh3dt5.cloudfront.net/2023.0/Servers/nice-dcv-2023.0-15065-el7-x86_64.tgz
     tar -xvzf nice-dcv-2023.0-15065-el7-x86_64.tgz && cd nice-dcv-2023.0-15065-el7-x86_64
@@ -87,7 +108,7 @@ HERE'
     sudo yum install nice-dcv-web-viewer-2023.0.15065-1.el7.x86_64.rpm -y
     sudo yum install nice-xdcv-2023.0.547-1.el7.x86_64.rpm -y
     # GPUs
-    # sudo yum install nice-dcv-gl-2023.0.1027-1.el7.x86_64.rpm
+    sudo yum install nice-dcv-gl-2023.0.1027-1.el7.x86_64.rpm -y
     sudo yum install pulseaudio-utils -y
     
     #############################

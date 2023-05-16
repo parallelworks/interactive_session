@@ -29,6 +29,10 @@
       </conditional>
     </section>
     <section name='advanced_options_other' type='section' title='Advanced Options' expanded='false'>
+        <param name='_pw_service_name' type='select' label='Select remote display protocol'  width='50%_none' multiple='false'>
+            <option value="turbovnc" selected="true">VNC Server</option>
+            <option value="nicedcv">Nice DCV</option>
+        </param>
         <param name="_pw_stream" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW' width="25%_none" optional='true' float="right">
         </param>
         <param name='_pw_license_server_port' label='License server port' type='text' help='License server port' value='27010' width='25%_none'>

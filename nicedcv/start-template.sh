@@ -110,11 +110,27 @@ HERE'
     # GPUs
     sudo yum install nice-dcv-gl-2023.0.1027-1.el7.x86_64.rpm -y
     sudo yum install pulseaudio-utils -y
-    
-    #############################
-    # CREATE CONFIGURATION FILE #
-    #############################
-    sudo bash -c "cat > /etc/dcv/dcv.conf <<HERE
+
+    if [ -z $(which dcv) ]; then
+        displayErrorMessage "ERROR: dcv is not installed or not in the PATH - Exiting workflow!"
+    fi
+fi
+
+# Exit workflow if user has an active session
+#     The port is chosen in the /etc/dcv/dcv.conf file and requires
+#     restarting the service to take effect. Therefore, we can't have
+#     two sessions on different ports.
+# FIXME: What if two users of the same cluster want two sessions on the controller node?
+session_list=$(dcv list-sessions)
+if [[ $session_list == *"(owner:${USER}"* ]]; then
+    echo "User ${USER} has an active session on ${HOSTNAME}. Exiting workflow."
+    exit 0
+fi
+
+#############################
+# CREATE CONFIGURATION FILE #
+#############################
+sudo bash -c "cat > /etc/dcv/dcv.conf <<HERE
 [license]
 #license-file = \"\"
 
@@ -156,21 +172,6 @@ primary-selection-paste=true
 primary-selection-copy=true
 
 HERE"
-    if [ -z $(which dcv) ]; then
-        displayErrorMessage "ERROR: dcv is not installed or not in the PATH - Exiting workflow!"
-    fi
-fi
-
-# Exit workflow if user has an active session
-#     The port is chosen in the /etc/dcv/dcv.conf file and requires
-#     restarting the service to take effect. Therefore, we can't have
-#     two sessions on different ports.
-# FIXME: What if two users of the same cluster want two sessions on the controller node?
-session_list=$(dcv list-sessions)
-if [[ $session_list == *"(owner:${USER}"* ]]; then
-    echo "User ${USER} has an active session on ${HOSTNAME}. Exiting workflow."
-    exit 0
-fi
 
 #####################
 # STARTING NICE DCV #

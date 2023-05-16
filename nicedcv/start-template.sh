@@ -33,9 +33,9 @@ if [ -z $(which dcv) ]; then
     ps aux | grep X | grep -v grep
     # Generate an updated xorg.conf
     sudo rm -rf /etc/X11/XF86Config*
-    sudo nvidia-xconfig --preserve-busid --enable-all-gpus
+    #sudo nvidia-xconfig --preserve-busid --enable-all-gpus
     # If you're using a G3 or G4 Amazon EC2 instance and you want to use a multi-monitor console session
-    # sudo nvidia-xconfig --preserve-busid --enable-all-gpus --connected-monitor=DFP-0,DFP-1,DFP-2,DFP-3
+    sudo nvidia-xconfig --preserve-busid --enable-all-gpus --connected-monitor=DFP-0,DFP-1,DFP-2,DFP-3
     # Restart the X server for the changes to take effect
     sudo systemctl isolate multi-user.target
     sudo systemctl isolate graphical.target

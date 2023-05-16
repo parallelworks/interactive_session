@@ -167,6 +167,7 @@ HERE"
 #####################
 # Need to restart after changing the port
 sudo systemctl restart dcvserver
+export DISPLAY=:0
 dcv create-session --storage-root %home% ${job_number}
 rm -f ${portFile}
 

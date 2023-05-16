@@ -199,11 +199,11 @@ cp service.html.template service.html_
 
 # FIXME: Move this to <service-name>/url.sh
 if [[ "${service_name}" == "nicedcv" ]]; then
-    URL="\"/me/${openPort}/${URLEND}"
-    sed -i "s|.*URL.*|    \"URL\": \"/me\",|" service.json
-else
     URL="\"/sme/${openPort}/${URLEND}"
     sed -i "s|.*URL.*|    \"URL\": \"/sme\",|" service.json
+else
+    URL="\"/me/${openPort}/${URLEND}"
+    sed -i "s|.*URL.*|    \"URL\": \"/me\",|" service.json
 fi
 sed -i "s|__URL__|${URL}|g" service.html_
 # JSON values cannot contain quotes "

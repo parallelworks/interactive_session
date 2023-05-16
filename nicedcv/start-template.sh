@@ -140,21 +140,22 @@ HERE"
     fi
 fi
 
-# Check the status of dcvserver
-status=$(sudo systemctl is-active dcvserver)
-
-if [ "$status" != "active" ]; then
-    echo "dcvserver is not running. Restarting..."
-    sudo systemctl restart dcvserver
-else
-    echo "dcvserver is already running. No action needed."
+# Exit workflow if user has an active session
+#     The port is chosen in the /etc/dcv/dcv.conf file and requires
+#     restarting the service to take effect. Therefore, we can't have
+#     two sessions on different ports.
+# FIXME: What if two users of the same cluster want two sessions on the controller node?
+session_list=$(dcv list-sessions)
+if [[ $session_list == *"(owner:${USER}"* ]]; then
+    echo "User ${USER} has an active session on ${HOSTNAME}. Exiting workflow."
+    exit 0
 fi
 
-sudo systemctl restart dcvserver
 #####################
 # STARTING NICE DCV #
 #####################
-
+# Need to restart after changing the port
+sudo systemctl restart dcvserver
 dcv create-session --storage-root %home% ${job_number}
 rm -f ${portFile}
 

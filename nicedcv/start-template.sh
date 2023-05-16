@@ -21,31 +21,31 @@ if [ -z $(which dcv) ]; then
     sudo systemctl restart gdm
     # The glxinfo utility provides information about your Linux server's OpenGL configuration
     sudo yum install glx-utils -y
-    
-    # GPU Support
-    # Configure the X server to start automatically when the Linux server boots.
-    if [[ $(sudo systemctl get-default) == "multi-user.target" ]]; then
-        sudo systemctl set-default graphical.target  
-    fi
-    # Start the X server.
-    sudo systemctl isolate graphical.target
-    # Verify that the X server is running.
-    ps aux | grep X | grep -v grep
-    # Generate an updated xorg.conf
-    sudo rm -rf /etc/X11/XF86Config*
-    #sudo nvidia-xconfig --preserve-busid --enable-all-gpus
-    # If you're using a G3 or G4 Amazon EC2 instance and you want to use a multi-monitor console session
-    sudo nvidia-xconfig --preserve-busid --enable-all-gpus --connected-monitor=DFP-0,DFP-1,DFP-2,DFP-3
-    # Restart the X server for the changes to take effect
-    sudo systemctl isolate multi-user.target
-    sudo systemctl isolate graphical.target
-    
-    # CPU SUPPORT
-    sudo yum install xorg-x11-drv-dummy -y
-    # On non-GPU Linux servers: Dummy driver allows the X server to run with a virtual framebuffer when no real GPU is present.
-    sudo yum install xorg-x11-drv-dummy -y
-    # On non-GPU
-    sudo bash -c 'cat >> /etc/X11/xorg.conf <<HERE
+
+    if nvidia-smi &>/dev/null; then
+        # GPU Support
+        # Configure the X server to start automatically when the Linux server boots.
+        if [[ $(sudo systemctl get-default) == "multi-user.target" ]]; then
+            sudo systemctl set-default graphical.target  
+        fi
+        # Start the X server.
+        sudo systemctl isolate graphical.target
+        # Verify that the X server is running.
+        ps aux | grep X | grep -v grep
+        # Generate an updated xorg.conf
+        sudo rm -rf /etc/X11/XF86Config*
+        #sudo nvidia-xconfig --preserve-busid --enable-all-gpus
+        # If you're using a G3 or G4 Amazon EC2 instance and you want to use a multi-monitor console session
+        sudo nvidia-xconfig --preserve-busid --enable-all-gpus --connected-monitor=DFP-0,DFP-1,DFP-2,DFP-3
+        # Restart the X server for the changes to take effect
+        sudo systemctl isolate multi-user.target
+        sudo systemctl isolate graphical.target
+    else
+        # CPU SUPPORT
+        # On non-GPU Linux servers: Dummy driver allows the X server to run with a virtual framebuffer when no real GPU is present.
+        sudo yum install xorg-x11-drv-dummy -y
+        # On non-GPU
+        sudo bash -c 'cat >> /etc/X11/xorg.conf <<HERE
 cat Section "Device"
 Identifier "DummyDevice"
 Driver "dummy"
@@ -81,7 +81,7 @@ Section "Screen"
 EndSection
 HERE'
         sudo systemctl isolate multi-user.target
-
+    fi
     # On non-GPU Linux server software rendendering is supported using Mesa drivers
     # On     GPU Linux server software rendendering is supported using NVIDIA drivers
     # To verify that OpenGL software rendering is available: 

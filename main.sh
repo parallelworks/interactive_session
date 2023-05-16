@@ -198,7 +198,7 @@ source ${service_name}/url.sh
 cp service.html.template service.html_
 
 # FIXME: Move this to <service-name>/url.sh
-if [ -z "${use_https}" ]; then
+if [[ "${service_name}" == "nicedcv" ]]; then
     URL="\"/me/${openPort}/${URLEND}"
     sed -i "s|.*URL.*|    \"URL\": \"/me\",|" service.json
 else

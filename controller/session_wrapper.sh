@@ -16,21 +16,19 @@ kill_tunnels_sh=/pw/jobs/${job_number}/kill_tunnels_template.sh
 kill_controller_session_sh=/pw/jobs/${job_number}/kill_session.sh
 
 echo "#!/bin/bash" > ${kill_sh}
+cat inputs.sh >> ${kill_sh}
 echo "echo Running ${kill_sh}" >> ${kill_sh}
 # Add application-specific code
 # WARNING: if part runs in a different directory than bash command! --> Use absolute paths!!
-if [ -f "${kill_service_sh}" ]; then
-    echo "Adding kill server script: ${kill_service_sh}"
-    echo "$sshcmd 'bash -s' < ${kill_service_sh}" >> ${kill_sh}
+if [ -f "${service_name}/kill-template.sh" ]; then
+    echo "Adding kill server script: ${service_name}/kill-template.sh"
+    echo "$sshcmd 'bash -s' < ${service_name}/kill-template.sh" >> ${kill_sh}
 fi
 # Kill tunnels and child processes
 cp ${sdir}/kill_tunnels_template.sh ${kill_tunnels_sh}
 cp ${sdir}/kill_session_template.sh ${kill_controller_session_sh}
 
 sed -i "s/__KILL_PORTS__/${kill_ports}/g" ${kill_tunnels_sh}
-
-sed -i "s/__job_number__/${job_number}/g" ${kill_controller_session_sh}
-sed -i "s|__chdir__|${chdir}|g" ${kill_controller_session_sh}
 
 cat >> ${kill_sh} <<HERE
 $sshcmd 'bash -s' < ${kill_controller_session_sh}
@@ -51,6 +49,7 @@ LICENSE_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/n
 echo "Generating session script"
 session_sh=/pw/jobs/${job_number}/session.sh
 echo "#!/bin/bash" > ${session_sh}
+cat inputs.sh >> ${session_sh}
 # Need this on some systems when running code with ssh
 # - CAREFUL! This command can change your ${PWD} directory
 echo "source ~/.bashrc" >>  ${session_sh}
@@ -133,8 +132,8 @@ rm -f /tmp/\${servicePort}.port.used
 HERE
 
 # Add application-specific code
-if [ -f "${start_service_sh}" ]; then
-    cat ${start_service_sh} >> ${session_sh}
+if [ -f "${service_name}/start-template.sh" ]; then
+    cat "${service_name}/start-template.sh" >> ${session_sh}
 fi
 
 # Note that job is no longer running

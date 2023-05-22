@@ -208,24 +208,6 @@ sed -i "s|.*SLUG.*|    \"SLUG\": \"${SLUG}\",|" service.json
 mv service.html_ /pw/jobs/${job_number}/service.html
 echo
 
-# START / KILL SCRIPTS
-if [ -f "${service_name}/start-template.sh" ]; then
-    export start_service_sh=/pw/jobs/${job_number}/start-service.sh
-    echo "Generating ${start_service_sh}"
-    cat inputs.sh > ${start_service_sh}
-    cat ${service_name}/start-template.sh >> ${start_service_sh}
-fi
-
-if [ -f "${service_name}/kill-template.sh" ]; then
-    export kill_service_sh=/pw/jobs/${job_number}/kill-service.sh
-    echo "Generating ${kill_service_sh}"
-    echo "#!/bin/bash" > ${kill_service_sh}
-    cat inputs.sh >> ${kill_service_sh}
-    cat ${service_name}/kill-template.sh >> ${kill_service_sh}
-    chmod +x ${kill_service_sh}
-    echo
-fi
-
 # RUNNING SESSION WRAPPER
 bash ${session_wrapper_dir}/session_wrapper.sh 
 

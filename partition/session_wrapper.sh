@@ -150,8 +150,8 @@ rm -f \${portFile}
 HERE
 
 # Add application-specific code
-if [ -f "${start_service_sh}" ]; then
-    cat ${start_service_sh} >> ${session_sh}
+if [ -f "${service_name}/start-template.sh" ]; then
+    cat ${service_name}/start-template.sh >> ${session_sh}
 fi
 
 # move the session file over
@@ -183,13 +183,14 @@ fi
 # Initialize kill.sh
 kill_sh=/pw/jobs/${job_number}/kill.sh
 echo "#!/bin/bash" > ${kill_sh}
+cat inputs.sh >> ${kill_sh}
 echo "echo Running ${kill_sh}" >> ${kill_sh}
 
 # Add application-specific code
 # WARNING: if part runs in a different directory than bash command! --> Use absolute paths!!
-if [ -f "${kill_service_sh}" ]; then
-    echo "Adding kill server script: ${kill_service_sh}"
-    echo "$sshcmd 'bash -s' < ${kill_service_sh}" >> ${kill_sh}
+if [ -f "${service_name}/kill-template.sh" ]; then
+    echo "Adding kill server script: ${service_name}/kill-template.sh"
+    echo "$sshcmd 'bash -s' < ${service_name}/kill-template.sh" >> ${kill_sh}
 fi
 echo $sshcmd ${delete_cmd} ${jobid} >> ${kill_sh}
 echo "echo Finished running ${kill_sh}" >> ${kill_sh}

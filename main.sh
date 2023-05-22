@@ -149,17 +149,12 @@ fi
 
 # RUN IN CONTROLLER, SLURM PARTITION OR PBS QUEUE?
 if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
-    # FIXME: Rename to compute_or_controller
-    export partition_or_controller="False"
     echo "Submitting ssh job to ${controller}"
     session_wrapper_dir=controller
 elif [[ ${jobschedulertype} == "LOCAL" ]]; then
-    export partition_or_controller="False"
     echo "Submitting ssh job to user container"
     session_wrapper_dir=local
 else
-    # FIXME: Rename to compute_or_controller
-    export partition_or_controller="True"
     echo "Submitting ${jobschedulertype} job to ${controller}"
     session_wrapper_dir=partition
 

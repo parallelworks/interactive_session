@@ -38,7 +38,7 @@
         </when>
       </conditional>
     </section>
-    <section name='advanced_options_other' type='section' title='Advanced Options' expanded='false'>
+    <section name='advanced_options' type='section' title='Advanced Options' expanded='false'>
         <param name="stream" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW' width="25%_none" optional='true' float="right">
         </param>
     </section>

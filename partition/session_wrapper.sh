@@ -49,7 +49,7 @@ ${sshcmd} mkdir -p ${chdir}
 remote_session_dir=${chdir}
 
 # ADD STREAMING
-if [[ "${stream}" == "True" ]]; then
+if [[ "${advanced_options_stream}" == "True" ]]; then
     # Don't really know the extension of the --pushpath. Can't controll with PBS (FIXME)
     stream_args="--host ${USER_CONTAINER_HOST} --pushpath /pw/jobs/${job_number}/session-${job_number}.o --pushfile session-${job_number}.out --delay 30 --masterIp ${masterIp}"
     stream_cmd="bash stream-${job_number}.sh ${stream_args} &"

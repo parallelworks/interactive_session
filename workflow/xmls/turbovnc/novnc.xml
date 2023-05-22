@@ -24,7 +24,7 @@
         </when>
       </conditional>
     </section>
-    <section name='advanced_options_other' type='section' title='Advanced Options' expanded='false'>
+    <section name='advanced_options' type='section' title='Advanced Options' expanded='false'>
         <param name='service_name' type='select' label='Select remote display protocol'  width='50%_none' multiple='false'>
             <option value="turbovnc" selected="true">VNC Server</option>
             <option value="nicedcv">Nice DCV</option>

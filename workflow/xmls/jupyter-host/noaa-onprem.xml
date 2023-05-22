@@ -1,33 +1,33 @@
 <tool id='Matthew.Shaxted_interactive_session' name='Matthew.Shaxted_interactive_session'>
   <command interpreter='bash'>main.sh</command>
   <inputs>
-  <param name='_pw_service_name' label='Service' type='hidden' value='jupyter-host' width='50%_none'></param>
+  <param name='service_name' label='Service' type='hidden' value='jupyter-host' width='50%_none'></param>
    <section name='service_sec' type='section' title='Jupyter Notebook Settings' expanded='true'>
-        <param name='_pw_conda_sh' label='Path to conda environment' type='text' value='~/pw/miniconda/etc/profile.d/conda.sh' help='Path to use in source /path/to/conda.sh' width='50%_none'></param>
-        <param name="_pw_conda_install" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Install miniconda if not there?" help='Select Yes to install miniconda if the above directory does not exist' width="25%_none" optional='true' float="right">
+        <param name='conda_sh' label='Path to conda environment' type='text' value='~/pw/miniconda/etc/profile.d/conda.sh' help='Path to use in source /path/to/conda.sh' width='50%_none'></param>
+        <param name="conda_install" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Install miniconda if not there?" help='Select Yes to install miniconda if the above directory does not exist' width="25%_none" optional='true' float="right">
         </param>
-        <param name='_pw_conda_env' label='Conda environment (recommended: base)' type='text' value='base' help='Environment to active. The base environment enables changing kernel to other environments!' width='50%_none'></param>
-        <param name='_pw_password' label='Password for notebook session:' type='hidden' value='' help='Enter password or leave blank for no password' width='50%_none'></param>
-        <param name='_pw_notebook_dir' label='Directory to start JupyterHub GUI' type='text' value='~/' help='This is the directory that you start with when the JupyterHub graphical user interface starts.' width='100%_none'></param>
+        <param name='conda_env' label='Conda environment (recommended: base)' type='text' value='base' help='Environment to active. The base environment enables changing kernel to other environments!' width='50%_none'></param>
+        <param name='password' label='Password for notebook session:' type='hidden' value='' help='Enter password or leave blank for no password' width='50%_none'></param>
+        <param name='notebook_dir' label='Directory to start JupyterHub GUI' type='text' value='~/' help='This is the directory that you start with when the JupyterHub graphical user interface starts.' width='100%_none'></param>
    </section>
     <section name='host' type='section' title='Jupyter Server Host' expanded='true'>
       <conditional name="jobschedulertype_cond">
-          <param name='_pw_jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively' width='50%_none' multiple='false'>
+          <param name='jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively' width='50%_none' multiple='false'>
             <option value="CONTROLLER" selected="true">Controller</option>
             <option value="SLURM">SLURM Partition</option>
         </param>
         <when value="SLURM">
-            <param name='_pw__sch__dd_account_e_' label='SLURM account' type='text' help='Account to submit the interactive job' value='nesccmgmt' width='50%_none'>
+            <param name='_sch__dd_account_e_' label='SLURM account' type='text' help='Account to submit the interactive job' value='nesccmgmt' width='50%_none'>
             </param>
-            <param name='_pw__sch__dd_partition_e_' label='SLURM partition' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value='' width='50%_none'>
+            <param name='_sch__dd_partition_e_' label='SLURM partition' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value='' width='50%_none'>
             </param>
-            <param name='_pw_scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value='--time=00:45:00;--nodes=1;--exclusive' width='100%_none'>
+            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value='--time=00:45:00;--nodes=1;--exclusive' width='100%_none'>
             </param>
         </when>
       </conditional>
     </section>
     <section name='advanced_options_other' type='section' title='Advanced Options' expanded='false'>
-        <param name="_pw_stream" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW' width="25%_none" optional='true' float="right">
+        <param name="stream" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW' width="25%_none" optional='true' float="right">
         </param>
     </section>
   </inputs>

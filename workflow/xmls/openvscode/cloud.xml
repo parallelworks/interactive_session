@@ -1,37 +1,38 @@
 <tool id='Matthew.Shaxted_interactive_session' name='Matthew.Shaxted_interactive_session'>
   <command interpreter='bash'>main.sh</command>
   <inputs>
-  <param name='_pw_service_name' label='Service' type='hidden' value='openvscode' width='50%_none'></param>
-  <param name='_pw_install_dir' label='Default OpenVSCode installation directory' type='hidden' value='__poolworkdir__/pw/bootstrap/code-server-4.7.0-linux-amd64' width='50%_none'></param>
-  <param name='_pw_tgz_path' label='Path to bootstrap TGZ' type='hidden' value='/swift-pw-bin/apps/code-server-4.7.0-linux-amd64.tar.gz' width='50%_none'></param>
+  <param name='service_exec' label='Service' type='hidden' value='' width='50%_none'></param>
+  <param name='service_name' label='Service' type='hidden' value='openvscode' width='50%_none'></param>
+  <param name='install_dir' label='Default OpenVSCode installation directory' type='hidden' value='__poolworkdir__/pw/bootstrap/code-server-4.7.0-linux-amd64' width='50%_none'></param>
+  <param name='tgz_path' label='Path to bootstrap TGZ' type='hidden' value='/swift-pw-bin/apps/code-server-4.7.0-linux-amd64.tar.gz' width='50%_none'></param>
     <section name='service_sec' type='section' title='OpenVSCode Settings' expanded='true'>
-        <param name='_pw_password' label='Password for IDE session' type='text' value='' help='Enter password or leave blank for no password' width='50%_none'></param>
-        <param name='_pw_server_dir' label='Directory to open in VS code' type='text' value='~/' help='' width='50%_none'></param>
-        <param name='_pw_github_token' label='GitHub authentication token (optional)' type='text' value='' help='' width='50%_none'></param>
+        <param name='password' label='Password for IDE session' type='text' value='' help='Enter password or leave blank for no password' width='50%_none'></param>
+        <param name='server_dir' label='Directory to open in VS code' type='text' value='~/' help='' width='50%_none'></param>
+        <param name='github_token' label='GitHub authentication token (optional)' type='text' value='' help='' width='50%_none'></param>
    </section>
     <section name='host' type='section' title='Server Host' expanded='true'>
       <conditional name="jobschedulertype_cond">
-          <param name='_pw_jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively' width='50%_none' multiple='false'>
+          <param name='jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively' width='50%_none' multiple='false'>
             <option value="CONTROLLER" selected="true">Controller</option>
             <option value="SLURM">SLURM Partition</option>
             <option value="PBS">PBS Queue</option>
         </param>
         <when value="SLURM">
-            <param name='_pw__sch__dd_partition_e_' label='SLURM partition' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value='' width='50%_none'>
+            <param name='_sch__dd_partition_e_' label='SLURM partition' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value='' width='50%_none'>
             </param>
-            <param name='_pw_scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value='--time=00:20:00;--nodes=1;--exclusive' width='100%_none'>
+            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value='--time=00:20:00;--nodes=1;--exclusive' width='100%_none'>
             </param>
         </when>
         <when value="PBS">
-            <param name='_pw__sch__d_q___' label='PBS queue' type='text' help='Queue to submit the interactive job. Must select one! Use [qstat -f -Q] to list all queues on the system' value='' width='50%_none'>
+            <param name='_sch__d_q___' label='PBS queue' type='text' help='Queue to submit the interactive job. Must select one! Use [qstat -f -Q] to list all queues on the system' value='' width='50%_none'>
             </param>
-            <param name='_pw_scheduler_directives' label='Scheduler directives' type='text' help='e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to separate parameters. Do not include the PBS keyword.' value='-l walltime=00:20:00;-l nodes=1;-l naccesspolicy=SINGLEJOB -n' width='100%_none'>
+            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to separate parameters. Do not include the PBS keyword.' value='-l walltime=00:20:00;-l nodes=1;-l naccesspolicy=SINGLEJOB -n' width='100%_none'>
             </param>
         </when>
       </conditional>
     </section>
     <section name='advanced_options_other' type='section' title='Advanced Options' expanded='false'>
-        <param name="_pw_stream" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW' width="25%_none" optional='true' float="right">
+        <param name="stream" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW' width="25%_none" optional='true' float="right">
         </param>
     </section>
   </inputs>

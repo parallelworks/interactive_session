@@ -8,7 +8,7 @@ set -x
 #     2.2: Else --> bootstrap TGZ
 #     2.3: Else --> Search in install paths
 
-server_exec=__server_exec__
+server_exec=__server_exec__ # Normally em
 partition_or_controller=__partition_or_controller__
 chdir=__chdir__
 job_number=__job_number__
@@ -17,6 +17,10 @@ password=__password__
 github_token=__github_token__
 install_dir=__install_dir__
 tgz_path=__tgz_path__
+
+#server_bin="openvscode-server"
+server_bin="code-server"
+
 
 # SET DEFAULTS:
 if [ -z ${server_dir} ] || [[ "${server_dir}" == "__""server_dir""__" ]]; then
@@ -46,8 +50,6 @@ if [ -z ${tgz_path} ] || [[ "${tgz_path}" == "__""tgz_path""__" ]]; then
 fi
 
 install_paths="${HOME}/pw/*/bin /opt/*/bin /shared/*/bin"
-#server_bin="openvscode-server"
-server_bin="code-server"
 
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.

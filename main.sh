@@ -12,6 +12,8 @@ echo
 echo "JOB NUMBER:  ${job_number}"
 echo "USER:        ${PW_USER}"
 echo "DATE:        $(date)"
+echo "DIRECTORY:   ${PWD}"
+echo "COMMAND:     $0"
 # Very useful to rerun a workflow with the exact same code version!
 #commit_hash=$(git --git-dir=clone/.git log --pretty=format:'%h' -n 1)
 #echo "COMMIT HASH: ${commit_hash}"
@@ -23,13 +25,7 @@ chmod 777 * -Rf
 mv utils/error.html .
 mv utils/service.json .
 
-# Replace special placeholder since \$(whoami) and \${PW_USER} don't work everywhere and ${job_number} is not known
-# Preserve single quota (--pname 'pval') with ${@@Q}
-wfargs="$(echo $@ | sed "s|__job_number__|${job_number}|g" | sed "s|__USER__|${PW_USER}|g")"
-
-echo "$0 $wfargs"
-
-parseArgs $wfargs
+source inputs.sh
 
 # GER OPEN PORT FOR TUNNEL
 getOpenPort
@@ -220,16 +216,15 @@ echo
 if [ -f "${service_name}/start-template.sh" ]; then
     export start_service_sh=/pw/jobs/${job_number}/start-service.sh
     echo "Generating ${start_service_sh}"
-    cp ${service_name}/start-template.sh ${start_service_sh}
-    replace_templated_inputs ${start_service_sh} $wfargs --_pw_job_number ${job_number} --_pw_chdir ${chdir} --_pw_partition_or_controller ${partition_or_controller}
-    echo
+    cat inputs.sh > ${start_service_sh}
+    cat ${service_name}/start-template.sh >> ${start_service_sh}
 fi
 
 if [ -f "${service_name}/kill-template.sh" ]; then
     export kill_service_sh=/pw/jobs/${job_number}/kill-service.sh
     echo "Generating ${kill_service_sh}"
     cp ${service_name}/kill-template.sh ${kill_service_sh}
-    replace_templated_inputs ${kill_service_sh} $wfargs --_pw_job_number ${job_number} --_pw_chdir ${chdir} --_pw_partition_or_controller ${partition_or_controller}
+    replace_templated_inputs ${kill_service_sh} $wfargs --job_number ${job_number} --chdir ${chdir} --partition_or_controller ${partition_or_controller}
     echo
 fi
 

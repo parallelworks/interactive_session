@@ -5,28 +5,6 @@ else
 fi
 
 
-# Exports inputs in the formart
-# --a 1 --b 2 --c --d 4
-# to:
-# export a=1 b=2 d=4
-parseArgs() {
-    index=1
-    local args=""
-    for arg in $@; do
-	    prefix=$(echo "${arg}" | cut -c1-6)
-	    if [[ ${prefix} == '--_pw_' ]]; then
-	        pname=$(echo $@ | cut -d ' ' -f${index} | sed 's/--_pw_//g')
-	        pval=$(echo $@ | cut -d ' ' -f$((index + 1)))
-		    # To support empty inputs (--a 1 --b --c 3)
-		    if [ ${pval:0:6} != "--_pw_" ]; then
-	            echo "export ${pname}=${pval}" >> $(dirname $0)/env.sh
-	            export "${pname}=${pval}"
-            fi
-	    fi
-        index=$((index+1))
-    done
-}
-
 # get a unique open port
 # - try end point
 # - if not works --> use random
@@ -93,11 +71,11 @@ replace_templated_inputs() {
     index=1
     for arg in $@; do
         prefix=$(echo "${arg}" | cut -c1-6)
-	    if [[ ${prefix} == '--_pw_' ]]; then
-	        pname=$(echo $@ | cut -d ' ' -f${index} | sed 's/--_pw_//g')
+	    if [[ ${prefix} == '--' ]]; then
+	        pname=$(echo $@ | cut -d ' ' -f${index} | sed 's/--//g')
 	        pval=$(echo $@ | cut -d ' ' -f$((index + 1)))
 	        # To support empty inputs (--a 1 --b --c 3)
-	        if [ ${pval:0:6} != "--_pw_" ]; then
+	        if [ ${pval:0:6} != "--" ]; then
                 echo "    sed -i \"s|__${pname}__|${pval}|g\" ${script}"
 		        sed -i "s|__${pname}__|${pval}|g" ${script}
 	        else
@@ -136,7 +114,7 @@ getSchedulerDirectivesFromInputForm() {
     # 2. _e_ --> '='
     # 3. ___ --> ' ' (Not in this function)
     # Get special scheduler parameters
-    sch_dnames=$(echo $@ | tr " " "\n" | grep -e '--_pw__sch_' |  cut -c 7-)
+    sch_dnames=$(echo $@ | tr " " "\n" | grep -e '--_sch_' |  cut -c 7-)
     form_sch_directives=""
     for sch_dname in ${sch_dnames}; do
 	    sch_dval=$(env | grep ${sch_dname} | cut -d'=' -f2)

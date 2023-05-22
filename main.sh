@@ -1,6 +1,9 @@
 #!/bin/bash
 source lib.sh
+source inputs.sh
+
 export job_number=$(basename ${PWD})
+echo "export job_number=${job_number}" >> inputs.sh
 
 # export the users env file (for some reason not all systems are getting these upon execution)
 while read LINE; do export "$LINE"; done < ~/.env
@@ -24,8 +27,6 @@ chmod 777 * -Rf
 # Need to move files from utils directory to avoid updating the sparse checkout
 mv utils/error.html .
 mv utils/service.json .
-
-source inputs.sh
 
 # GER OPEN PORT FOR TUNNEL
 getOpenPort
@@ -109,6 +110,7 @@ wfargs="$(echo ${wfargs} | sed "s|__poolworkdir__|${poolworkdir}|g")"
 
 # SET chdir
 export chdir=${poolworkdir}/pw/jobs/${job_number}/
+echo "export chdir=${chdir}" >> inputs.sh
 
 # GET CONTROLLER IP FROM PW API IF NOT SPECIFIED
 if [ -z "${poolname}" ]; then
@@ -184,7 +186,6 @@ fi
 # SERVICE URL
 
 echo "Generating session html"
-replace_templated_inputs ${service_name}/url.sh $wfargs
 source ${service_name}/url.sh
 cp service.html.template service.html_
 
@@ -218,8 +219,10 @@ fi
 if [ -f "${service_name}/kill-template.sh" ]; then
     export kill_service_sh=/pw/jobs/${job_number}/kill-service.sh
     echo "Generating ${kill_service_sh}"
-    cp ${service_name}/kill-template.sh ${kill_service_sh}
-    replace_templated_inputs ${kill_service_sh} $wfargs --job_number ${job_number} --chdir ${chdir}
+    echo "#!/bin/bash" > ${kill_service_sh}
+    cat inputs.sh >> ${kill_service_sh}
+    cat ${service_name}/kill-template.sh >> ${kill_service_sh}
+    chmod +x ${kill_service_sh}
     echo
 fi
 

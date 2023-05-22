@@ -8,34 +8,26 @@ set -x
 #     2.2: Else --> bootstrap TGZ
 #     2.3: Else --> Search in install paths
 
-chdir=__chdir__
-job_number=__job_number__
-server_dir=__server_dir__
-password=__password__
-github_token=__github_token__
-install_dir=__install_dir__
-tgz_path=__tgz_path__
-
 #server_bin="openvscode-server"
 server_bin="code-server"
 
 
 # SET DEFAULTS:
-if [ -z ${server_dir} ] || [[ "${server_dir}" == "__""server_dir""__" ]]; then
-    server_dir=~/
+if [ -z ${service_directory} ]; then
+    service_directory=~/
 fi
 
-if [ -z ${github_token} ] || [[ "${github_token}" == "__""github_token""__" ]]; then
+if [ -z ${service_github_token} ]; then
     gh_flag=""
 else
-    export GITHUB_TOKEN=${github_token}
+    export GITHUB_TOKEN=${service_github_token}
     gh_flag="--github-auth"
 fi
 
-if [ -z ${password} ] || [[ "${password}" == "__""password""__" ]]; then
+if [ -z ${service_password} ]; then
     password_flag="--auth=none"
 else
-    export PASSWORD=${password}
+    export PASSWORD=${service_password}
     password_flag="--auth=password"
 fi
 
@@ -138,7 +130,7 @@ ${server_exec} \
     --bind-addr=localhost:${servicePort} \
     ${gh_flag} \
     ${password_flag} \
-    ${server_dir}
+    ${service_directory}
 
 
 exit 0

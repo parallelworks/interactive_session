@@ -97,15 +97,6 @@ findAvailablePort() {
 # Note that job started running
 echo \$$ > ${job_number}.pid
 
-# These are not workflow parameters but need to be available to the service on the remote node!
-FORWARDPATH=${FORWARDPATH}
-IPADDRESS=${IPADDRESS}
-openPort=${openPort}
-USER_CONTAINER_HOST=${USER_CONTAINER_HOST}
-USERMODE=${USERMODE}
-masterIp=${masterIp}
-
-
 # Find an available servicePort
 servicePort=\$(findAvailablePort)
 echo \${servicePort} > service.port

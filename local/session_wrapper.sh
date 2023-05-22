@@ -28,18 +28,12 @@ chmod 777 ${kill_sh}
 echo "Generating session script"
 session_sh=/pw/jobs/${job_number}/session.sh
 echo "#!/bin/bash" > ${session_sh}
+cat inputs.sh >> ${session_sh}
 cat >> ${session_sh} <<HERE
 source lib.sh
 # Note that job started running
 echo \$$ > ${job_number}.pid
 
-# These are not workflow parameters but need to be available to the service on the remote node!
-FORWARDPATH=${FORWARDPATH}
-IPADDRESS=${IPADDRESS}
-openPort=${openPort}
-USER_CONTAINER_HOST=${USER_CONTAINER_HOST}
-USERMODE=${USERMODE}
-masterIp=${masterIp}
 # When running apps locally there is no tunnel and ports are the same
 servicePort=${openPort} 
 

@@ -36,8 +36,10 @@ if [[ "$openPort" == "" ]]; then
     exit 1
 fi
 export openPort=${openPort}
+echo "export openPort=${openPort}" >> inputs.sh
 
 export USER_CONTAINER_HOST="usercontainer"
+echo "export USER_CONTAINER_HOST=${USER_CONTAINER_HOST}" >> inputs.sh
 
 # LOAD PLATFORM-SPECIFIC ENVIRONMENT:
 env_sh=platforms/${PARSL_CLIENT_HOST}/env.sh
@@ -131,6 +133,7 @@ fi
 # GET INTERNAL IP OF CONTROLLER NODE. 
 # Get resource definition entry: Empty, internal ip or network name
 export masterIp=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${poolname} internalIp)
+echo "export masterIp=${masterIp}" >> inputs.sh
 
 if [[ "${masterIp}" != "" ]] && [[ "${masterIp}" != *"."* ]];then
     # If not empty and not an ip --> netowrk name
@@ -187,6 +190,8 @@ fi
 
 echo "Generating session html"
 source ${service_name}/url.sh
+echo "export FORWARDPATH=${FORWARDPATH}" >> inputs.sh
+echo "export IPADDRESS=${IPADDRESS}" >> inputs.sh
 cp service.html.template service.html_
 
 # FIXME: Move this to <service-name>/url.sh

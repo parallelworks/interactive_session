@@ -37,6 +37,7 @@ if ! [ -z ${scheduler_directives} ]; then
 fi
 
 echo >> ${session_sh}
+cat inputs.sh >> ${session_sh}
 
 # ADD RUNTIME FIXES FOR EACH PLATFORM
 if ! [ -z ${RUNTIME_FIXES} ]; then
@@ -112,14 +113,6 @@ elif [ -f "${poolworkdir}/pw/remote.sh" ]; then
     echo "Running ${poolworkdir}/pw/remote.sh"
     ${poolworkdir}/pw/remote.sh
 fi
-
-# These are not workflow parameters but need to be available to the service on the remote node!
-FORWARDPATH=${FORWARDPATH}
-IPADDRESS=${IPADDRESS}
-openPort=${openPort}
-masterIp=${masterIp}
-USER_CONTAINER_HOST=${USER_CONTAINER_HOST}
-controller=${controller}
 
 # Find an available servicePort
 servicePort=\$(findAvailablePort)

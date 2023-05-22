@@ -219,7 +219,7 @@ if [ -f "${service_name}/kill-template.sh" ]; then
     export kill_service_sh=/pw/jobs/${job_number}/kill-service.sh
     echo "Generating ${kill_service_sh}"
     cp ${service_name}/kill-template.sh ${kill_service_sh}
-    replace_templated_inputs ${kill_service_sh} $wfargs --job_number ${job_number} --chdir ${chdir} --partition_or_controller ${partition_or_controller}
+    replace_templated_inputs ${kill_service_sh} $wfargs --job_number ${job_number} --chdir ${chdir}
     echo
 fi
 

@@ -15,18 +15,18 @@ echo "Generating session script"
 export session_sh=/pw/jobs/${job_number}/session.sh
 echo "#!/bin/bash" > ${session_sh}
 
-if [[ ${jobschedulertype} == "SLURM" ]]; then
+if [[ ${host_jobschedulertype} == "SLURM" ]]; then
     directive_prefix="#SBATCH"
     submit_cmd="sbatch"
     delete_cmd="scancel"
     stat_cmd="squeue"
-elif [[ ${jobschedulertype} == "PBS" ]]; then
+elif [[ ${host_jobschedulertype} == "PBS" ]]; then
     directive_prefix="#PBS"
     submit_cmd="qsub"
     delete_cmd="qdel"
     stat_cmd="qstat"
 else
-    displayErrorMessage "ERROR: jobschedulertype <${jobschedulertype}> must be SLURM or PBS"
+    displayErrorMessage "ERROR: host_jobschedulertype <${host_jobschedulertype}> must be SLURM or PBS"
 fi
 
 if ! [ -z ${scheduler_directives} ]; then
@@ -161,9 +161,9 @@ sed -i 's/.*Job status.*/Job status: Submitted/' service.html
 sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Submitted\",/" service.json
 
 # Submit job and get job id
-if [[ ${jobschedulertype} == "SLURM" ]]; then
+if [[ ${host_jobschedulertype} == "SLURM" ]]; then
     jobid=$($sshcmd ${submit_cmd} ${remote_session_dir}/session-${job_number}.sh | tail -1 | awk -F ' ' '{print $4}')
-elif [[ ${jobschedulertype} == "PBS" ]]; then
+elif [[ ${host_jobschedulertype} == "PBS" ]]; then
     jobid=$($sshcmd ${submit_cmd} ${remote_session_dir}/session-${job_number}.sh)
 fi
 
@@ -202,7 +202,7 @@ while true; do
     job_status=$($sshcmd ${stat_cmd} | grep ${jobid} | awk '{print $5}')
     sed -i "s/.*Job status.*/Job status: ${job_status}/" service.html
     sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"${job_status}\",/" service.json
-    if [[ ${jobschedulertype} == "SLURM" ]]; then
+    if [[ ${host_jobschedulertype} == "SLURM" ]]; then
         # If job status is empty job is no longer running
         if [ -z ${job_status} ]; then
             job_status=$($sshcmd sacct -j ${jobid}  --format=state | tail -n1)
@@ -210,7 +210,7 @@ while true; do
             sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"${job_status}\",/" service.json
             break
         fi
-    elif [[ ${jobschedulertype} == "PBS" ]]; then
+    elif [[ ${host_jobschedulertype} == "PBS" ]]; then
         if [[ ${job_status} == "C" ]]; then
             break
         fi

@@ -103,7 +103,7 @@ else
     export poolworkdir=${HOME}
 fi
 
- if [[ ${jobschedulertype} == "LOCAL" ]]; then
+ if [[ ${host_jobschedulertype} == "LOCAL" ]]; then
     export poolworkdir=/pw
 fi
 
@@ -153,14 +153,14 @@ if [ -z ${masterIp} ]; then
 fi
 
 # RUN IN CONTROLLER, SLURM PARTITION OR PBS QUEUE?
-if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
+if [[ ${host_jobschedulertype} == "CONTROLLER" ]]; then
     echo "Submitting ssh job to ${controller}"
     session_wrapper_dir=controller
-elif [[ ${jobschedulertype} == "LOCAL" ]]; then
+elif [[ ${host_jobschedulertype} == "LOCAL" ]]; then
     echo "Submitting ssh job to user container"
     session_wrapper_dir=local
 else
-    echo "Submitting ${jobschedulertype} job to ${controller}"
+    echo "Submitting ${host_jobschedulertype} job to ${controller}"
     session_wrapper_dir=partition
 
     # Get scheduler directives from input form (see this function in lib.sh)
@@ -168,9 +168,9 @@ else
 
     # Get scheduler directives enforced by PW:
     # Set job name, log paths and run directory
-    if [[ ${jobschedulertype} == "SLURM" ]]; then
+    if [[ ${host_jobschedulertype} == "SLURM" ]]; then
         pw_sched_directives=";--job-name=session-${job_number};--chdir=${chdir};--output=session-${job_number}.out"
-    elif [[ ${jobschedulertype} == "PBS" ]]; then
+    elif [[ ${host_jobschedulertype} == "PBS" ]]; then
         # PBS needs a queue to be specified!
         if [ -z "${_sch__d_q___}" ]; then
             is_queue_defined=$(echo ${scheduler_directives} | tr ';' '\n' | grep -e '-q___')

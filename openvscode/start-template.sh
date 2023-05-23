@@ -45,7 +45,7 @@ install_paths="${HOME}/pw/*/bin /opt/*/bin /shared/*/bin"
 # - Needs to be here because we need the hostname of the compute node.
 # - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
 echo "Creating file ${chdir}/service-kill-${job_number}-main.sh from directory ${PWD}"
-if [[ ${jobschedulertype} != "CONTROLLER" ]]; then
+if [[ ${host_jobschedulertype} != "CONTROLLER" ]]; then
     # Remove .cluster.local for einteinmed!
     hname=$(hostname | sed "s/.cluster.local//g")
     echo "ssh ${hname} 'bash -s' < ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
@@ -75,7 +75,7 @@ bootstrap_tgz() {
             cp /core/pworks-main/${tgz_path} ${install_parent_dir}
         else
             ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-            if [[ ${jobschedulertype} != "CONTROLLER" ]]; then
+            if [[ ${host_jobschedulertype} != "CONTROLLER" ]]; then
                 # Running in a compute partition
                 if [[ "$USERMODE" == "k8s" ]]; then
                     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT

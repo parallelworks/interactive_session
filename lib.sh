@@ -97,11 +97,14 @@ displayErrorMessage() {
 }
 
 getSchedulerDirectivesFromInputForm() {
-    # WARNING: Only works after calling parseArgs
+    # WARNING: Only works after sourcing inputs.sh
     # Scheduler parameters in the input form are intercepted and formatted here.
     #
     # For example, it transforms arguments:
-    # --jobschedulertype slurm --_sch__d_N___ 1 --service jupyter-host --_sch__dd_cpus_d_per_d_task_e_ 1
+    # export host_jobschedulertype=slurm
+    # export host__sch__d_N___=1
+    # export service=jupyter-host
+    # export host__sch__dd_cpus_d_per_d_task_e_=1
     # into:
     # ;-N___1;--cpus-per-task=1
     # Which is then processed out of this function to:
@@ -115,11 +118,12 @@ getSchedulerDirectivesFromInputForm() {
     # 2. _e_ --> '='
     # 3. ___ --> ' ' (Not in this function)
     # Get special scheduler parameters
-    sch_dnames=$(echo $@ | tr " " "\n" | grep -e '--_sch_' |  cut -c 7-)
-    form_sch_directives=""
-    for sch_dname in ${sch_dnames}; do
-	    sch_dval=$(env | grep ${sch_dname} | cut -d'=' -f2)
-	    sch_dname=$(echo ${sch_dname} | sed "s|_sch_||g" | sed "s|_d_|-|g" | sed "s|_dd_|--|g" | sed "s|_e_|=|g")
+    sch_inputs=$(env | grep -e 'host__sch_' |  cut -c 10-)
+    echo ${sch_inputs}
+    for sch_inp in ${sch_inputs}; do
+        sch_dname=$(echo ${sch_inp} | cut -d'=' -f1)
+	    sch_dval=$(echo ${sch_inp} | cut -d'=' -f2)
+	    sch_dname=$(echo ${sch_dname} | sed "s|host__sch_||g" | sed "s|_d_|-|g" | sed "s|_dd_|--|g" | sed "s|_e_|=|g")
         if ! [ -z "${sch_dval}" ] && ! [[ "${sch_dval}" == "default" ]]; then
             form_sched_directives="${form_sched_directives};${sch_dname}${sch_dval}"
         fi

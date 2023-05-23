@@ -22,6 +22,9 @@ echo "COMMAND:     $0"
 #echo "COMMIT HASH: ${commit_hash}"
 echo
 
+sed -i "s/__job_number__/${job_number}/g" inputs.sh
+sed -i "s/__USER__/${PW_USER}/g" inputs.sh
+
 # change permissions of run directly so we can execute all files
 chmod 777 * -Rf
 # Need to move files from utils directory to avoid updating the sparse checkout
@@ -107,8 +110,7 @@ fi
     export poolworkdir=/pw
 fi
 
-wfargs="$(echo ${wfargs} | sed "s|__poolworkdir__|${poolworkdir}|g")"
-
+sed -i "s|__poolworkdir__|${poolworkdir}|g" inputs.sh
 
 # SET chdir
 export chdir=${poolworkdir}/pw/jobs/${job_number}/
@@ -164,7 +166,7 @@ else
     session_wrapper_dir=partition
 
     # Get scheduler directives from input form (see this function in lib.sh)
-    form_sched_directives=$(getSchedulerDirectivesFromInputForm ${wfargs})
+    form_sched_directives=$(getSchedulerDirectivesFromInputForm)
 
     # Get scheduler directives enforced by PW:
     # Set job name, log paths and run directory
@@ -182,7 +184,7 @@ else
         pw_sched_directives=";-N___session-${job_number};-o___${chdir}/session-${job_number}.out;-e___${chdir}/session-${job_number}.out;-S___/bin/bash"
     fi
 
-    # Merge all directives in single param and in wfargs
+    # Merge all directives in single param
     export scheduler_directives="${host_scheduler_directives};${form_sched_directives};${pw_sched_directives}"
     echo "export scheduler_directives=${scheduler_directived}"
 fi

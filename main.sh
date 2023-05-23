@@ -173,7 +173,7 @@ else
     elif [[ ${host_jobschedulertype} == "PBS" ]]; then
         # PBS needs a queue to be specified!
         if [ -z "${_sch__d_q___}" ]; then
-            is_queue_defined=$(echo ${scheduler_directives} | tr ';' '\n' | grep -e '-q___')
+            is_queue_defined=$(echo ${host_scheduler_directives} | tr ';' '\n' | grep -e '-q___')
             if [ -z "${is_queue_defined}" ]; then
                 displayErrorMessage "ERROR: PBS needs a queue to be defined! - exiting workflow"
                 exit 1
@@ -183,7 +183,8 @@ else
     fi
 
     # Merge all directives in single param and in wfargs
-    export scheduler_directives="${scheduler_directives};${form_sched_directives};${pw_sched_directives}"
+    export scheduler_directives="${host_scheduler_directives};${form_sched_directives};${pw_sched_directives}"
+    echo "export scheduler_directives=${scheduler_directived}"
 fi
 
 # SERVICE URL

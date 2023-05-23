@@ -173,19 +173,22 @@ fi
 
 # CREATE KILL FILE:
 # - When the job is killed PW runs /pw/jobs/job-number/kill.sh
+# KILL_SSH: Part of the kill_sh that runs on the remote host with ssh
+kill_ssh=/pw/jobs/${job_number}/kill_ssh.sh
+echo "#!/bin/bash" > ${kill_ssh}
+cat inputs.sh >> ${kill_ssh} 
+if [ -f "${service_name}/kill-template.sh" ]; then
+    echo "Adding kill server script ${service_name}/kill-template.sh to ${kill_ssh}"
+    cat ${service_name}/kill-template.sh >> ${kill_ssh}
+fi
+echo ${delete_cmd} ${jobid} >> ${kill_ssh}
+
 # Initialize kill.sh
 kill_sh=/pw/jobs/${job_number}/kill.sh
 echo "#!/bin/bash" > ${kill_sh}
 cat inputs.sh >> ${kill_sh}
 echo "echo Running ${kill_sh}" >> ${kill_sh}
-
-# Add application-specific code
-# WARNING: if part runs in a different directory than bash command! --> Use absolute paths!!
-if [ -f "${service_name}/kill-template.sh" ]; then
-    echo "Adding kill server script: ${service_name}/kill-template.sh"
-    echo "$sshcmd 'bash -s' < ${service_name}/kill-template.sh" >> ${kill_sh}
-fi
-echo $sshcmd ${delete_cmd} ${jobid} >> ${kill_sh}
+echo "$sshcmd 'bash -s' < ${kill_ssh}" >> ${kill_sh}
 echo "echo Finished running ${kill_sh}" >> ${kill_sh}
 echo "sed -i 's/.*Job status.*/Job status: Cancelled/' /pw/jobs/${job_number}/service.html"  >> ${kill_sh}
 echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" /pw/jobs/${job_number}/service.json >> ${kill_sh}

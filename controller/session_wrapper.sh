@@ -32,9 +32,9 @@ cat >> ${kill_sh} <<HERE
 $sshcmd 'bash -s' < ${kill_ssh}
 bash ${sdir}/kill_tunnels.sh
 echo Finished running ${kill_sh}
-sed -i 's/.*Job status.*/Job status: Cancelled/' /pw/jobs/${job_number}/service.html
-sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" /pw/jobs/${job_number}/service.json
 HERE
+echo "sed -i 's/.*Job status.*/Job status: Cancelled/' /pw/jobs/${job_number}/service.html" >> ${kill_sh}
+echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" /pw/jobs/${job_number}/service.json >> ${kill_sh}
 chmod 777 ${kill_sh}
 
 # TUNNEL COMMANDS:

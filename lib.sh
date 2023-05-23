@@ -119,7 +119,6 @@ getSchedulerDirectivesFromInputForm() {
     # 3. ___ --> ' ' (Not in this function)
     # Get special scheduler parameters
     sch_inputs=$(env | grep -e 'host__sch_' |  cut -c 10-)
-    echo ${sch_inputs}
     for sch_inp in ${sch_inputs}; do
         sch_dname=$(echo ${sch_inp} | cut -d'=' -f1)
 	    sch_dval=$(echo ${sch_inp} | cut -d'=' -f2)

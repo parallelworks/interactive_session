@@ -10,34 +10,31 @@ source lib.sh
 # - When the job is killed PW runs /pw/jobs/job-number/kill.sh
 kill_ports="${openPort} ${license_server_port} ${license_daemon_port}"
 
-# Initialize kill.sh
-kill_sh=/pw/jobs/${job_number}/kill.sh
-kill_tunnels_sh=/pw/jobs/${job_number}/kill_tunnels_template.sh
-kill_controller_session_sh=/pw/jobs/${job_number}/kill_session.sh
+# KILL_SSH: Part of the kill_sh that runs on the remote host with ssh
+kill_ssh=/pw/jobs/${job_number}/kill_ssh.sh
+echo "#!/bin/bash" > ${kill_ssh}
+cat inputs.sh >> ${kill_ssh} 
+if [ -f "${service_name}/kill-template.sh" ]; then
+    echo "Adding kill server script ${service_name}/kill-template.sh to ${kill_ssh}"
+    cat ${service_name}/kill-template.sh >> ${kill_ssh}
+fi
+cat ${sdir}/kill_tunnels.sh >> ${kill_ssh}
+cat ${sdir}/kill_session.sh >> ${kill_ssh}
+sed -i "s/__KILL_PORTS__/${kill_ports}/g" ${kill_ssh}
 
+# KILL_SH: File that runs on the user space
+kill_sh=/pw/jobs/${job_number}/kill.sh
 echo "#!/bin/bash" > ${kill_sh}
 cat inputs.sh >> ${kill_sh}
 echo "echo Running ${kill_sh}" >> ${kill_sh}
-# Add application-specific code
-# WARNING: if part runs in a different directory than bash command! --> Use absolute paths!!
-if [ -f "${service_name}/kill-template.sh" ]; then
-    echo "Adding kill server script: ${service_name}/kill-template.sh"
-    echo "$sshcmd 'bash -s' < ${service_name}/kill-template.sh" >> ${kill_sh}
-fi
-# Kill tunnels and child processes
-cp ${sdir}/kill_tunnels_template.sh ${kill_tunnels_sh}
-cp ${sdir}/kill_session_template.sh ${kill_controller_session_sh}
-
-sed -i "s/__KILL_PORTS__/${kill_ports}/g" ${kill_tunnels_sh}
-
+# Add kill_ssh
 cat >> ${kill_sh} <<HERE
-$sshcmd 'bash -s' < ${kill_controller_session_sh}
-$sshcmd 'bash -s' < ${kill_tunnels_sh}
-bash ${kill_tunnels_sh}
+$sshcmd 'bash -s' < ${kill_ssh}
+bash ${sdir}/kill_tunnels.sh
+echo Finished running ${kill_sh}
+sed -i 's/.*Job status.*/Job status: Cancelled/' /pw/jobs/${job_number}/service.html
+sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" /pw/jobs/${job_number}/service.json
 HERE
-echo "echo Finished running ${kill_sh}" >> ${kill_sh}
-echo "sed -i 's/.*Job status.*/Job status: Cancelled/' /pw/jobs/${job_number}/service.html" >> ${kill_sh}
-echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" /pw/jobs/${job_number}/service.json >> ${kill_sh}
 chmod 777 ${kill_sh}
 
 # TUNNEL COMMANDS:

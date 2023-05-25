@@ -39,6 +39,11 @@ if ! [ -z "${conda_sh}" ] && ! [[ "${conda_sh}" == "__""conda_sh""__" ]]; then
         }
         if [ -z $(which ${jupyter-notebook} 2> /dev/null) ]; then
             conda install -c anaconda jupyter -y
+            # For connecting kernels from other envs
+            conda install nb_conda_kernels -y
+            conda install -c anaconda jinja2 -y
+            #conda install requests -y
+            #pip install remote_ikernel
         fi
     fi
 fi

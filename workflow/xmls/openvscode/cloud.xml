@@ -11,7 +11,7 @@
         <param name='github_token' label='GitHub authentication token (optional)' type='text' value='' help='' width='50%_none'></param>
    </section>
     <section name='host' type='section' title='Server Host' expanded='true'>
-      <param name='resource_name' type='computeResource' label='Resource name' help='Name of the resource to host the service'></param>
+      <param name='resource' type='computeResource' label='Resource name' help='Name of the resource to host the service'></param>
       <conditional name="jobschedulertype_cond">
           <param name='jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively' width='50%_none' multiple='false'>
             <option value="CONTROLLER" selected="true">Controller</option>

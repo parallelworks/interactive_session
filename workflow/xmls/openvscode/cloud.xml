@@ -2,11 +2,11 @@
   <command interpreter='bash'>main.sh</command>
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
-  <param name='service_exec' label='Service' type='hidden' value='' width='50%_none'></param>
-  <param name='service_name' label='Service' type='hidden' value='openvscode' width='50%_none'></param>
   <param name='install_dir' label='Default OpenVSCode installation directory' type='hidden' value='__poolworkdir__/pw/bootstrap/code-server-4.7.0-linux-amd64' width='50%_none'></param>
   <param name='tgz_path' label='Path to bootstrap TGZ' type='hidden' value='/swift-pw-bin/apps/code-server-4.7.0-linux-amd64.tar.gz' width='50%_none'></param>
     <section name='service' type='section' title='OpenVSCode Settings' expanded='true'>
+        <param name='name' label='Service' type='hidden' value='openvscode' width='50%_none'></param>
+        <param name='exec' label='Service' type='hidden' value='' width='50%_none'></param>
         <param name='password' label='Password for IDE session' type='text' value='' help='Enter password or leave blank for no password' width='50%_none'></param>
         <param name='directory' label='Directory to open in VS code' type='text' value='~/' help='' width='50%_none'></param>
         <param name='github_token' label='GitHub authentication token (optional)' type='text' value='' help='' width='50%_none'></param>

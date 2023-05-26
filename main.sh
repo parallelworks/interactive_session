@@ -47,6 +47,9 @@ echo "export openPort=${openPort}" >> inputs.sh
 export USER_CONTAINER_HOST="usercontainer"
 echo "export USER_CONTAINER_HOST=${USER_CONTAINER_HOST}" >> inputs.sh
 
+source /pw/.miniconda3/etc/profile.d/conda.sh
+conda activate
+
 # LOAD PLATFORM-SPECIFIC ENVIRONMENT:
 env_sh=platforms/${PARSL_CLIENT_HOST}/env.sh
 if ! [ -f "${env_sh}" ]; then

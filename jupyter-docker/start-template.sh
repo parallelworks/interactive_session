@@ -67,7 +67,7 @@ HERE
 
 
 # Served from 
-# https://cloud.parallel.works/api/v2/proxy/usercontainer?proxyType=api&proxyTo=/api/v1/display/pw/jobs/57147/service.html
+# https://cloud.parallel.works/api/v2/proxy/usercontainer?proxyType=api&proxyTo=/api/v1/display/${PW_JOB_PATH}/service.html
 export PYTHONPATH=${PWD}
 sudo -n docker run ${gpu_flag} --rm \
     -v /contrib:/contrib -v /lustre:/lustre -v ${HOME}:${HOME} \

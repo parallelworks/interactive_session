@@ -12,7 +12,7 @@ LICENSE_TUNNEL_CMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHos
 
 # Initiallize session batch file:
 echo "Generating session script"
-export session_sh=/pw/jobs/${job_number}/session.sh
+export session_sh=${PW_JOB_PATH}/session.sh
 echo "#!/bin/bash" > ${session_sh}
 
 if [[ ${host_jobschedulertype} == "SLURM" ]]; then
@@ -51,7 +51,7 @@ remote_session_dir=${chdir}
 # ADD STREAMING
 if [[ "${advanced_options_stream}" == "True" ]]; then
     # Don't really know the extension of the --pushpath. Can't controll with PBS (FIXME)
-    stream_args="--host ${USER_CONTAINER_HOST} --pushpath /pw/jobs/${job_number}/session-${job_number}.o --pushfile session-${job_number}.out --delay 30 --masterIp ${masterIp}"
+    stream_args="--host ${USER_CONTAINER_HOST} --pushpath ${PW_JOB_PATH}/session-${job_number}.o --pushfile session-${job_number}.out --delay 30 --masterIp ${masterIp}"
     stream_cmd="bash stream-${job_number}.sh ${stream_args} &"
     echo; echo "Streaming command:"; echo "${stream_cmd}"; echo
     echo ${stream_cmd} >> ${session_sh}
@@ -66,9 +66,9 @@ sshusercontainer="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHosts
 
 displayErrorMessage() {
     echo \$(date): \$1
-    \${sshusercontainer} "sed -i \\"s|__ERROR_MESSAGE__|\$1|g\\" ${PW_PATH}/pw/jobs/${job_number}/error.html"
-    \${sshusercontainer} "cp /pw/jobs/${job_number}/error.html ${PW_PATH}/pw/jobs/${job_number}/service.html"
-    \${sshusercontainer} "sed -i \"s|.*ERROR_MESSAGE.*|    \\\\\"ERROR_MESSAGE\\\\\": \\\\\"\$1\\\\\"|\" /pw/jobs/57236/service.json"
+    \${sshusercontainer} "sed -i \\"s|__ERROR_MESSAGE__|\$1|g\\" ${PW_PATH}${PW_JOB_PATH}/error.html"
+    \${sshusercontainer} "cp ${PW_JOB_PATH}/error.html ${PW_PATH}${PW_JOB_PATH}/service.html"
+    \${sshusercontainer} "sed -i \"s|.*ERROR_MESSAGE.*|    \\\\\"ERROR_MESSAGE\\\\\": \\\\\"\$1\\\\\"|\" ${PW_JOB_PATH}/service.json"
     exit 1
 }
 
@@ -172,9 +172,9 @@ if [[ "${jobid}" == "" ]];then
 fi
 
 # CREATE KILL FILE:
-# - When the job is killed PW runs /pw/jobs/job-number/kill.sh
+# - When the job is killed PW runs ${PW_JOB_PATH}/job-number/kill.sh
 # KILL_SSH: Part of the kill_sh that runs on the remote host with ssh
-kill_ssh=/pw/jobs/${job_number}/kill_ssh.sh
+kill_ssh=${PW_JOB_PATH}/kill_ssh.sh
 echo "#!/bin/bash" > ${kill_ssh}
 cat inputs.sh >> ${kill_ssh} 
 if [ -f "${service_name}/kill-template.sh" ]; then
@@ -184,14 +184,14 @@ fi
 echo ${delete_cmd} ${jobid} >> ${kill_ssh}
 
 # Initialize kill.sh
-kill_sh=/pw/jobs/${job_number}/kill.sh
+kill_sh=${PW_JOB_PATH}/kill.sh
 echo "#!/bin/bash" > ${kill_sh}
 cat inputs.sh >> ${kill_sh}
 echo "echo Running ${kill_sh}" >> ${kill_sh}
 echo "$sshcmd 'bash -s' < ${kill_ssh}" >> ${kill_sh}
 echo "echo Finished running ${kill_sh}" >> ${kill_sh}
-echo "sed -i 's/.*Job status.*/Job status: Cancelled/' /pw/jobs/${job_number}/service.html"  >> ${kill_sh}
-echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" /pw/jobs/${job_number}/service.json >> ${kill_sh}
+echo "sed -i 's/.*Job status.*/Job status: Cancelled/' ${PW_JOB_PATH}/service.html"  >> ${kill_sh}
+echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" ${PW_JOB_PATH}/service.json >> ${kill_sh}
 chmod 777 ${kill_sh}
 
 echo

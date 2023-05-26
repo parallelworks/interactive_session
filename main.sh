@@ -22,6 +22,9 @@ echo "COMMAND:     $0"
 #echo "COMMIT HASH: ${commit_hash}"
 echo
 
+export PW_JOB_PATH=$(pwd | sed "s|${HOME}||g")
+echo "export PW_JOB_PATH=${PW_JOB_PATH}" >> inputs.sh
+
 sed -i "s/__job_number__/${job_number}/g" inputs.sh
 sed -i "s/__USER__/${PW_USER}/g" inputs.sh
 
@@ -104,12 +107,12 @@ fi
 sed -i "s|__poolworkdir__|${poolworkdir}|g" inputs.sh
 
 # SET chdir
-export chdir=${poolworkdir}/pw/jobs/${job_number}/
+export chdir=${poolworkdir}${PW_JOB_PATH}
 echo "export chdir=${chdir}" >> inputs.sh
 
 # GET CONTROLLER IP FROM PW API IF NOT SPECIFIED
 if [ -z "${host_resource_name}" ]; then
-    displayErrorMessage "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
+    displayErrorMessage "ERROR: No service host was defined - exiting the workflow"
     exit 1
 fi
 controller=${host_resource_name}.clusters.pw
@@ -204,7 +207,7 @@ sed -i "s|.*PORT.*|    \"PORT\": \"${openPort}\",|" service.json
 SLUG=$(echo ${URLEND} | sed 's|\"|\\\\\"|g')
 sed -i "s|.*SLUG.*|    \"SLUG\": \"${SLUG}\",|" service.json
 
-mv service.html_ /pw/jobs/${job_number}/service.html
+mv service.html_ service.html
 echo
 
 # RUNNING SESSION WRAPPER

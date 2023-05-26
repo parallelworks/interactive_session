@@ -82,7 +82,7 @@ HERE
 
 
 # Served from 
-# https://cloud.parallel.works/api/v2/proxy/usercontainer?proxyType=api&proxyTo=/api/v1/display/pw/jobs/57147/service.html
+# https://cloud.parallel.works/api/v2/proxy/usercontainer?proxyType=api&proxyTo=/api/v1/display/${PW_JOB_PATH}/service.html
 export PYTHONPATH=${PWD}
 singularity exec ${gpu_flag} \
     ${mount_dirs} \

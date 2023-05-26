@@ -7,11 +7,11 @@ source lib.sh
 
 # CREATE KILL FILE:
 # - NEEDS TO BE MADE BEFORE RUNNING SESSION SCRIPT!
-# - When the job is killed PW runs /pw/jobs/job-number/kill.sh
+# - When the job is killed PW runs ${PW_JOB_PATH}/kill.sh
 kill_ports="${openPort} ${license_server_port} ${license_daemon_port}"
 
 # KILL_SSH: Part of the kill_sh that runs on the remote host with ssh
-kill_ssh=/pw/jobs/${job_number}/kill_ssh.sh
+kill_ssh=${PW_JOB_PATH}/kill_ssh.sh
 echo "#!/bin/bash" > ${kill_ssh}
 cat inputs.sh >> ${kill_ssh} 
 if [ -f "${service_name}/kill-template.sh" ]; then
@@ -23,7 +23,7 @@ cat ${sdir}/kill_session.sh >> ${kill_ssh}
 sed -i "s/__KILL_PORTS__/${kill_ports}/g" ${kill_ssh}
 
 # KILL_SH: File that runs on the user space
-kill_sh=/pw/jobs/${job_number}/kill.sh
+kill_sh=${PW_JOB_PATH}/kill.sh
 echo "#!/bin/bash" > ${kill_sh}
 cat inputs.sh >> ${kill_sh}
 echo "echo Running ${kill_sh}" >> ${kill_sh}
@@ -33,8 +33,8 @@ $sshcmd 'bash -s' < ${kill_ssh}
 bash ${sdir}/kill_tunnels.sh
 echo Finished running ${kill_sh}
 HERE
-echo "sed -i 's/.*Job status.*/Job status: Cancelled/' /pw/jobs/${job_number}/service.html" >> ${kill_sh}
-echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" /pw/jobs/${job_number}/service.json >> ${kill_sh}
+echo "sed -i 's/.*Job status.*/Job status: Cancelled/' ${PW_JOB_PATH}/service.html" >> ${kill_sh}
+echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" ${PW_JOB_PATH}/service.json >> ${kill_sh}
 chmod 777 ${kill_sh}
 
 # TUNNEL COMMANDS:
@@ -44,7 +44,7 @@ LICENSE_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/n
 
 # Initiallize session batch file:
 echo "Generating session script"
-session_sh=/pw/jobs/${job_number}/session.sh
+session_sh=${PW_JOB_PATH}/session.sh
 echo "#!/bin/bash" > ${session_sh}
 cat inputs.sh >> ${session_sh}
 # Need this on some systems when running code with ssh
@@ -61,9 +61,9 @@ sshusercontainer="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/nul
 
 displayErrorMessage() {
     echo \$(date): \$1
-    \${sshusercontainer} "sed -i \\"s|__ERROR_MESSAGE__|\$1|g\\" ${PW_PATH}/pw/jobs/${job_number}/error.html"
-    \${sshusercontainer} "cp /pw/jobs/${job_number}/error.html ${PW_PATH}/pw/jobs/${job_number}/service.html"
-    \${sshusercontainer} "sed -i \"s|.*ERROR_MESSAGE.*|    \\\\\"ERROR_MESSAGE\\\\\": \\\\\"\$1\\\\\"|\" /pw/jobs/57236/service.json"
+    \${sshusercontainer} "sed -i \\"s|__ERROR_MESSAGE__|\$1|g\\" ${PW_PATH}${PW_JOB_PATH}/error.html"
+    \${sshusercontainer} "cp ${PW_JOB_PATH}/error.html ${PW_PATH}${PW_JOB_PATH}/service.html"
+    \${sshusercontainer} "sed -i \"s|.*ERROR_MESSAGE.*|    \\\\\"ERROR_MESSAGE\\\\\": \\\\\"\$1\\\\\"|\" ${PW_JOB_PATH}/service.json"
     exit 1
 }
 
@@ -131,11 +131,11 @@ chmod 777 ${session_sh}
 
 echo
 echo "Submitting ssh job (wait for node to become available before connecting)..."
-echo "$sshcmd 'bash -s' < ${session_sh} &> /pw/jobs/${job_number}/session-${job_number}.out"
+echo "$sshcmd 'bash -s' < ${session_sh} &> ${PW_JOB_PATH}/session-${job_number}.out"
 echo
 sed -i 's/.*Job status.*/Job status: Running/' service.html
 sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Running\",/" service.json
-$sshcmd 'bash -s' < ${session_sh} &> /pw/jobs/${job_number}/session-${job_number}.out
+$sshcmd 'bash -s' < ${session_sh} &> ${PW_JOB_PATH}/session-${job_number}.out
 
 if [ $? -eq 0 ]; then
     sed -i 's/.*Job status.*/Job status: Completed/' service.html

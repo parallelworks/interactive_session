@@ -7,9 +7,9 @@ source lib.sh
 
 # CREATE KILL FILE:
 # - NEEDS TO BE MADE BEFORE RUNNING SESSION SCRIPT!
-# - When the job is killed PW runs /pw/jobs/job-number/kill.sh
+# - When the job is killed PW runs ${PW_JOB_PATH}/kill.sh
 # Initialize kill.sh
-kill_sh=/pw/jobs/${job_number}/kill.sh
+kill_sh=${PW_JOB_PATH}/kill.sh
 
 echo "#!/bin/bash" > ${kill_sh}
 echo "echo Running ${kill_sh}" >> ${kill_sh}
@@ -20,13 +20,13 @@ if [ -f "${service_name}/kill-template.sh" ]; then
     echo "bash ${service_name}/kill-template.sh" >> ${kill_sh}
 fi
 echo "echo Finished running ${kill_sh}" >> ${kill_sh}
-echo "sed -i 's/.*Job status.*/Job status: Cancelled/' /pw/jobs/${job_number}/service.html" >> ${kill_sh}
-echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" /pw/jobs/${job_number}/service.json >> ${kill_sh}
+echo "sed -i 's/.*Job status.*/Job status: Cancelled/' ${PW_JOB_PATH}/service.html" >> ${kill_sh}
+echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" ${PW_JOB_PATH}/service.json >> ${kill_sh}
 chmod 777 ${kill_sh}
 
 # Initiallize session batch file:
 echo "Generating session script"
-session_sh=/pw/jobs/${job_number}/session.sh
+session_sh=${PW_JOB_PATH}/session.sh
 echo "#!/bin/bash" > ${session_sh}
 cat inputs.sh >> ${session_sh}
 cat >> ${session_sh} <<HERE
@@ -59,11 +59,11 @@ chmod 777 ${session_sh}
 
 echo
 echo "Submitting job:"
-echo "bash ${session_sh} &> /pw/jobs/${job_number}/session-${job_number}.out"
+echo "bash ${session_sh} &> ${PW_JOB_PATH}/session-${job_number}.out"
 echo
 sed -i 's/.*Job status.*/Job status: Running/' service.html
 sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Running\",/" service.json
-bash ${session_sh} &> /pw/jobs/${job_number}/session-${job_number}.out
+bash ${session_sh} &> ${PW_JOB_PATH}/session-${job_number}.out
 
 if [ $? -eq 0 ]; then
     sed -i 's/.*Job status.*/Job status: Completed/' service.html

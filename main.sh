@@ -71,21 +71,12 @@ if ! [ -f "${service_name}/url.sh" ]; then
 fi
 
 #  CONTROLLER INFO
-# We need to know the poolname to get the pooltype (always) and the controller IP address (sometimes)
-if [ -z "${poolname}" ] || [[ "${poolname}" == "pw.conf" ]]; then
-    poolname=$(cat /pw/jobs/${job_number}/pw.conf | grep sites | grep -o -P '(?<=\[).*?(?=\])')
-    if [ -z "${poolname}" ]; then
-        displayErrorMessage "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
-        exit 1
-    fi
-fi
-# No underscores and only lowercase
-poolname=$(echo ${poolname} | sed "s/_//g" |  tr '[:upper:]' '[:lower:]')
+host_resource_name=$(echo ${host_resource_name} | sed "s/_//g" |  tr '[:upper:]' '[:lower:]')
 
-pooltype=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${poolname} type)
+pooltype=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} type)
 if [ -z "${pooltype}" ]; then
     displayErrorMessage "ERROR: Pool type not found - exiting the workflow"
-    echo "${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${poolname} type"
+    echo "${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} type"
     exit 1
 fi
 
@@ -96,10 +87,10 @@ echo "Pool type: ${pooltype}"
 #   1. Run in a partition of a slurmshv2 to call the remote.sh script
 #   2. If chdir is pw.conf or empty --> chdir=${poolworkdir}/pw/__job_number__
 if [[ ${pooltype} == "slurmshv2" ]]; then
-    export poolworkdir=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${poolname} workdir)
+    export poolworkdir=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} workdir)
     if [ -z "${poolworkdir}" ]; then
         displayErrorMessage "ERROR: Pool workdir not found - exiting the workflow"
-        echo "${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${poolname} workdir"
+        echo "${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} workdir"
         exit 1
     fi
 else
@@ -117,11 +108,11 @@ export chdir=${poolworkdir}/pw/jobs/${job_number}/
 echo "export chdir=${chdir}" >> inputs.sh
 
 # GET CONTROLLER IP FROM PW API IF NOT SPECIFIED
-if [ -z "${poolname}" ]; then
+if [ -z "${host_resource_name}" ]; then
     displayErrorMessage "ERROR: Pool name not found in /pw/jobs/${job_number}/pw.conf - exiting the workflow"
     exit 1
 fi
-controller=${poolname}.clusters.pw
+controller=${host_resource_name}.clusters.pw
 export controller=$(${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py $controller)
 export sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
 
@@ -134,7 +125,7 @@ fi
 
 # GET INTERNAL IP OF CONTROLLER NODE. 
 # Get resource definition entry: Empty, internal ip or network name
-export masterIp=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${poolname} internalIp)
+export masterIp=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} internalIp)
 echo "export masterIp=${masterIp}" >> inputs.sh
 
 if [[ "${masterIp}" != "" ]] && [[ "${masterIp}" != *"."* ]];then

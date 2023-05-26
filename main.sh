@@ -77,6 +77,11 @@ if ! [ -f "${service_name}/url.sh" ]; then
 fi
 
 #  CONTROLLER INFO
+if [[ ${host_resource_name} == "user_workspace" ]]; then
+    # Unless the user workspace has PBS or SLURM installed the only supported scheduler type is LOCAL
+    export host_jobschedulertype="LOCAL"
+    echo "export host_jobschedulertype=LOCAL" >> inputs.sh
+fi
 host_resource_name=$(echo ${host_resource_name} | sed "s/_//g" |  tr '[:upper:]' '[:lower:]')
 
 pooltype=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} type)

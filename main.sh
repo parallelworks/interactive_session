@@ -5,15 +5,14 @@ chmod 777 * -Rf
 mv utils/error.html .
 mv utils/service.json .
 
-source lib.sh
 source inputs.sh
+source lib.sh
 checkInputParameters
 
 export job_number=$(basename ${PWD})
 echo "export job_number=${job_number}" >> inputs.sh
 
 # Obtain the service_name from any section of the XML
-echo; cat inputs.sh; echo
 service_name=$(cat inputs.sh | grep service_name | cut -d'=' -f2 | tr -d '"')
 export service_name=${service_name}
 echo "export service_name=${service_name}" >> inputs.sh

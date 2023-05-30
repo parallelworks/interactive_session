@@ -1,5 +1,6 @@
 <tool id='Matthew.Shaxted_interactive_session' name='Matthew.Shaxted_interactive_session'>
   <command interpreter='bash'>main.sh</command>
+  <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
   <param name='service_name' label='Service' type='hidden' value='jupyter-host' width='50%_none'></param>
    <section name='service' type='section' title='Jupyter Notebook Settings' expanded='true'>

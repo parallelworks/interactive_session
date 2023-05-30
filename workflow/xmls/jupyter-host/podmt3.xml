@@ -1,5 +1,6 @@
 <tool id='Matthew.Shaxted_interactive_session' name='Matthew.Shaxted_interactive_session'>
   <command interpreter='bash'>main.sh</command>
+  <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
   <param name='service_name' label='Service' type='hidden' value='jupyter-host' width='50%_none'></param>
   <param name='notebook_dir' label='Directory to start JupyterHub GUI' type='hidden' value='__host_resource_workdir__' width='50%_none'></param>

@@ -6,6 +6,9 @@ checkInputParameters
 export job_number=$(basename ${PWD})
 echo "export job_number=${job_number}" >> inputs.sh
 
+export service_name=$(env | grep service_name | cut -d'=' -f2)
+echo "export service_name=${service_name}" >> inputs.sh
+
 # export the users env file (for some reason not all systems are getting these upon execution)
 while read LINE; do export "$LINE"; done < ~/.env
 

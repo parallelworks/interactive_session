@@ -22,7 +22,7 @@ if ! [ -z "${service_conda_sh}" ]; then
             source ${service_conda_sh}
         } || {
             conda_dir=$(echo ${service_conda_sh} | sed "s|etc/profile.d/conda.sh||g" )
-            f_install_miniconda ${service_conda_dir}
+            f_install_miniconda ${conda_dir}
             source ${service_conda_sh}
         }
         {

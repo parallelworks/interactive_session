@@ -1,4 +1,10 @@
 #!/bin/bash
+# change permissions of run directly so we can execute all files
+chmod 777 * -Rf
+# Need to move files from utils directory to avoid updating the sparse checkout
+mv utils/error.html .
+mv utils/service.json .
+
 source lib.sh
 source inputs.sh
 checkInputParameters
@@ -7,6 +13,7 @@ export job_number=$(basename ${PWD})
 echo "export job_number=${job_number}" >> inputs.sh
 
 # Obtain the service_name from any section of the XML
+echo; cat inputs.sh; echo
 service_name=$(cat inputs.sh | grep service_name | cut -d'=' -f2 | tr -d '"')
 export service_name=${service_name}
 echo "export service_name=${service_name}" >> inputs.sh
@@ -33,12 +40,6 @@ echo "export PW_JOB_PATH=${PW_JOB_PATH}" >> inputs.sh
 
 sed -i "s/__job_number__/${job_number}/g" inputs.sh
 sed -i "s/__USER__/${PW_USER}/g" inputs.sh
-
-# change permissions of run directly so we can execute all files
-chmod 777 * -Rf
-# Need to move files from utils directory to avoid updating the sparse checkout
-mv utils/error.html .
-mv utils/service.json .
 
 # GER OPEN PORT FOR TUNNEL
 getOpenPort

@@ -14,7 +14,7 @@ f_install_miniconda() {
 
 
 if ! [ -z "${service_conda_sh}" ]; then
-    if [[ "${service_conda_install}" != "True" ]]; then
+    if [[ "${service_conda_install}" != "true" ]]; then
         source ${service_conda_sh}
         conda activate ${service_conda_env}
     else

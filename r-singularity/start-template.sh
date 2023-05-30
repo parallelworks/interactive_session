@@ -50,7 +50,7 @@ fi
 echo ${mdirs_cmd}
 
 # GPU SUPPORT
-if [[ __use_gpus__ == "True" ]]; then
+if [[ __use_gpus__ == "true" ]]; then
     gpu_flag="--nv"
     # This is only needed in PW clusters
     if [ -d "/usr/share/nvidia/" ]; then

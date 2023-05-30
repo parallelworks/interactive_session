@@ -175,12 +175,12 @@ rm -f ${portFile}
 # - Needs to be here because we need the hostname of the compute node.
 # - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
 echo "Creating file ${chdir}/service-kill-${job_number}-main.sh from directory ${PWD}"
-if [[ ${partition_or_controller} == "True" ]]; then
+if [[ ${host_jobschedulertype} == "CONTROLLER" ]]; then
+    echo "bash ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
+else
     # Remove .cluster.local for einteinmed!
     hname=$(hostname | sed "s/.cluster.local//g")
     echo "ssh ${hname} 'bash -s' < ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
-else
-    echo "bash ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
 fi
 
 cat >> ${chdir}/service-kill-${job_number}-main.sh <<HERE

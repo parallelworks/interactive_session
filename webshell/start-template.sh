@@ -9,12 +9,12 @@ job_dir=${PWD}
 # - Needs to be here because we need the hostname of the compute node.
 # - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
 
-if [[ ${partition_or_controller} == "True" ]]; then
+if [[ ${host_jobschedulertype} == "CONTROLLER" ]]; then
+    echo "bash ${PWD}/service-kill-${job_number}-main.sh" > service-kill-${job_number}.sh
+else
     # Remove .cluster.local for einteinmed!
     hname=$(hostname | sed "s/.cluster.local//g")
     echo "ssh ${hname} 'bash -s' < ${PWD}/service-kill-${job_number}-main.sh" > service-kill-${job_number}.sh
-else
-    echo "bash ${PWD}/service-kill-${job_number}-main.sh" > service-kill-${job_number}.sh
 fi
 
 cat >> service-kill-${job_number}-main.sh <<HERE
@@ -37,7 +37,16 @@ if ! [ -d "$(echo ~/pw/noVNC-1.3.0)" ]; then
     set -x
     mkdir -p ~/pw
     ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-    if [[ ${partition_or_controller} == "True" ]]; then
+    if [[ ${host_jobschedulertype} == "CONTROLLER" ]]; then
+        # Running in a controller node
+        if [[ "$USERMODE" == "k8s" ]]; then
+            # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
+            # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
+            scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pw
+        else # Docker mode
+            scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pw
+        fi
+    else
         # Running in a compute partition
         if [[ "$USERMODE" == "k8s" ]]; then
             # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
@@ -47,15 +56,6 @@ if ! [ -d "$(echo ~/pw/noVNC-1.3.0)" ]; then
         else # Docker mode
             # Works because home directory is shared!
             ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pw
-        fi
-    else
-        # Running in a controller node
-        if [[ "$USERMODE" == "k8s" ]]; then
-            # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
-            # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-            scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pw
-        else # Docker mode
-            scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pw
         fi
     fi
     tar -zxf ~/pw/noVNC-1.3.0.tgz -C ~/pw

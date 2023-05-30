@@ -35,6 +35,7 @@ echo Finished running ${kill_sh}
 HERE
 echo "sed -i 's/.*Job status.*/Job status: Cancelled/' ${PW_JOB_PATH}/service.html" >> ${kill_sh}
 echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" ${PW_JOB_PATH}/service.json >> ${kill_sh}
+echo "exit 0" >> ${kill_sh}
 chmod 777 ${kill_sh}
 
 # TUNNEL COMMANDS:

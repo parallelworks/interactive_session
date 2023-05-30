@@ -221,6 +221,10 @@ echo
 # RUNNING SESSION WRAPPER
 bash ${session_wrapper_dir}/session_wrapper.sh 
 
-# We don't want kill.sh to change the status to cancelled!
-sed -i  "s/.*sed -i.*//" kill.sh  
-bash kill.sh
+if [ -f "kill.sh" ]; then
+    # Only run if file exists. The kill.sh file is moved to _kill.sh after execution.
+    # This is done to prevent the file form running twice which would generate errors.
+    # We don't want kill.sh to change the status to cancelled!
+    sed -i  "s/.*sed -i.*//" kill.sh  
+    bash kill.sh
+fi

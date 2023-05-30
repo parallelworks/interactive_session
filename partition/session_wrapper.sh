@@ -186,6 +186,7 @@ echo ${delete_cmd} ${jobid} >> ${kill_ssh}
 # Initialize kill.sh
 kill_sh=${PW_JOB_PATH}/kill.sh
 echo "#!/bin/bash" > ${kill_sh}
+echo "mv ${kill_sh} ${kill_sh}.completed" >> ${kill_sh}
 cat inputs.sh >> ${kill_sh}
 echo "echo Running ${kill_sh}" >> ${kill_sh}
 echo "$sshcmd 'bash -s' < ${kill_ssh}" >> ${kill_sh}

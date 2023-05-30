@@ -28,6 +28,7 @@ chmod 777 ${kill_sh}
 echo "Generating session script"
 session_sh=${PW_JOB_PATH}/session.sh
 echo "#!/bin/bash" > ${session_sh}
+echo "mv ${kill_sh} ${kill_sh}.completed" >> ${kill_sh}
 cat inputs.sh >> ${session_sh}
 cat >> ${session_sh} <<HERE
 source lib.sh

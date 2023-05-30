@@ -25,6 +25,7 @@ sed -i "s/__KILL_PORTS__/${kill_ports}/g" ${kill_ssh}
 # KILL_SH: File that runs on the user space
 kill_sh=${PW_JOB_PATH}/kill.sh
 echo "#!/bin/bash" > ${kill_sh}
+echo "mv ${kill_sh} ${kill_sh}.completed" >> ${kill_sh}
 cat inputs.sh >> ${kill_sh}
 echo "echo Running ${kill_sh}" >> ${kill_sh}
 # Add kill_ssh

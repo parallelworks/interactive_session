@@ -5,17 +5,15 @@ chmod 777 * -Rf
 mv utils/error.html .
 mv utils/service.json .
 
-source inputs.sh
 source lib.sh
+source inputs.sh
+# Obtain the service_name from any section of the XML
+export service_name=$(cat inputs.sh | grep service_name | cut -d'=' -f2 | tr -d '"')
+echo "export service_name=${service_name}" >> inputs.sh
 checkInputParameters
 
 export job_number=$(basename ${PWD})
 echo "export job_number=${job_number}" >> inputs.sh
-
-# Obtain the service_name from any section of the XML
-service_name=$(cat inputs.sh | grep service_name | cut -d'=' -f2 | tr -d '"')
-export service_name=${service_name}
-echo "export service_name=${service_name}" >> inputs.sh
 
 # export the users env file (for some reason not all systems are getting these upon execution)
 while read LINE; do export "$LINE"; done < ~/.env

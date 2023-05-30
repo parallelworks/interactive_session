@@ -1,6 +1,7 @@
 #!/bin/bash
 source lib.sh
 source inputs.sh
+checkInputParameters
 
 export job_number=$(basename ${PWD})
 echo "export job_number=${job_number}" >> inputs.sh
@@ -66,95 +67,22 @@ fi
 
 echo "Interactive Session Port: $openPort"
 
-if ! [ -d "${service_name}" ]; then
-    displayErrorMessage "ERROR: Directory ${service_name} was not found --> Service ${service_name} is not supported --> Exiting workflow"
-    exit 1
-fi
-
-if ! [ -f "${service_name}/url.sh" ]; then
-    displayErrorMessage "ERROR: Directory ${service_name}/url.sh was not found --> Add URL definition script --> Exiting workflow"
-    exit 1
-fi
-
 #  CONTROLLER INFO
-if [[ ${host_resource_name} == "user_workspace" ]]; then
+host_resource_name=$(echo ${host_resource_name} | sed "s/_//g" |  tr '[:upper:]' '[:lower:]')
+if [[ ${host_resource_name} == "userworkspace" ]]; then
     # Unless the user workspace has PBS or SLURM installed the only supported scheduler type is LOCAL
     export host_jobschedulertype="LOCAL"
     echo "export host_jobschedulertype=LOCAL" >> inputs.sh
-fi
-host_resource_name=$(echo ${host_resource_name} | sed "s/_//g" |  tr '[:upper:]' '[:lower:]')
-
-pooltype=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} type)
-if [ -z "${pooltype}" ]; then
-    displayErrorMessage "ERROR: Pool type not found - exiting the workflow"
-    echo "${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} type"
-    exit 1
-fi
-
-echo "Pool type: ${pooltype}"
-
-# SET POOL WORK DIR:
-# - This is only needed to
-#   1. Run in a partition of a slurmshv2 to call the remote.sh script
-#   2. If chdir is pw.conf or empty --> chdir=${poolworkdir}/pw/__job_number__
-if [[ ${pooltype} == "slurmshv2" ]]; then
-    export poolworkdir=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} workdir)
-    if [ -z "${poolworkdir}" ]; then
-        displayErrorMessage "ERROR: Pool workdir not found - exiting the workflow"
-        echo "${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} workdir"
-        exit 1
-    fi
 else
-    export poolworkdir=${HOME}
+    # GET HOST INFORMATION FROM API
+    getRemoteHostInfoFromAPI
 fi
 
- if [[ ${host_jobschedulertype} == "LOCAL" ]]; then
-    export poolworkdir=/pw
-fi
-
-sed -i "s|__poolworkdir__|${poolworkdir}|g" inputs.sh
+sed -i "s|__host_resource_workdir__|${host_resource_workdir}|g" inputs.sh
 
 # SET chdir
-export chdir=${poolworkdir}${PW_JOB_PATH}
+export chdir=${host_resource_workdir}${PW_JOB_PATH}
 echo "export chdir=${chdir}" >> inputs.sh
-
-# GET CONTROLLER IP FROM PW API IF NOT SPECIFIED
-if [ -z "${host_resource_name}" ]; then
-    displayErrorMessage "ERROR: No service host was defined - exiting the workflow"
-    exit 1
-fi
-controller=${host_resource_name}.clusters.pw
-export controller=$(${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py $controller)
-export sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
-
-
-if [ -z "${controller}" ]; then
-    echo "controller=\$(\${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py \$controller)"
-    displayErrorMessage "ERROR: No controller was specified - exiting the workflow"
-    exit 1
-fi
-
-# GET INTERNAL IP OF CONTROLLER NODE. 
-# Get resource definition entry: Empty, internal ip or network name
-export masterIp=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} internalIp)
-echo "export masterIp=${masterIp}" >> inputs.sh
-
-if [[ "${masterIp}" != "" ]] && [[ "${masterIp}" != *"."* ]];then
-    # If not empty and not an ip --> netowrk name
-    masterIp=$($sshcmd "ifconfig ${masterIp} | sed -En -e 's/.*inet ([0-9.]+).*/\1/p'")
-    echo "Using masterIp from interface: $masterIp"
-fi
-
-if [ -z "${masterIp}" ]; then
-    # If empty use first internal ip
-    export masterIp=$($sshcmd hostname -I | cut -d' ' -f1) 
-fi
-
-if [ -z ${masterIp} ]; then
-    displayErrorMessage "ERROR: masterIP variable is empty - Exitig workflow"
-    echo "Command: $sshcmd hostname -I | cut -d' ' -f1"
-    exit 1
-fi
 
 # RUN IN CONTROLLER, SLURM PARTITION OR PBS QUEUE?
 if [[ ${host_jobschedulertype} == "CONTROLLER" ]]; then

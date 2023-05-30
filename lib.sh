@@ -5,33 +5,6 @@ else
 fi
 echo "export USERMODE=${USERMODE}" >> inputs.sh
 
-
-# get a unique open port
-# - try end point
-# - if not works --> use random
-# Original getOpenPort function. Was replaced because only odd ports work in emed
-getOpenPort_() {
-    minPort=50000
-    maxPort=59999
-
-    openPort=$(curl -s "https://${PARSL_CLIENT_HOST}/api/v2/usercontainer/getSingleOpenPort?minPort=${minPort}&maxPort=${maxPort}&key=${PW_API_KEY}")
-    # Check if openPort variable is a port
-    if ! [[ ${openPort} =~ ^[0-9]+$ ]] ; then
-        qty=1
-        count=0
-        for i in $(seq $minPort $maxPort | shuf); do
-            out=$(netstat -aln | grep LISTEN | grep $i)
-            if [[ "$out" == "" ]];then
-                openPort=$(echo $i)
-                (( ++ count ))
-            fi
-            if [[ "$count" == "$qty" ]];then
-                break
-            fi
-        done
-    fi
-}
-
 getOpenPort() {
     minPort=50000
     maxPort=59999
@@ -66,27 +39,6 @@ echod() {
     echo $(date): $@
 }
 
-replace_templated_inputs() {
-    echo Replacing templated inputs
-    script=$1
-    index=1
-    for arg in $@; do
-        prefix=$(echo "${arg}" | cut -c1-6)
-	    if [[ ${prefix} == '--' ]]; then
-	        pname=$(echo $@ | cut -d ' ' -f${index} | sed 's/--//g')
-	        pval=$(echo $@ | cut -d ' ' -f$((index + 1)))
-	        # To support empty inputs (--a 1 --b --c 3)
-	        if [ ${pval:0:6} != "--" ]; then
-                echo "    sed -i \"s|__${pname}__|${pval}|g\" ${script}"
-		        sed -i "s|__${pname}__|${pval}|g" ${script}
-	        else
-                echo "    sed -i \"s|__${pname}__||g\" ${script}"
-                sed -i "s|__${pname}__||g" ${script}		    
-		    fi
-	    fi
-        index=$((index+1))
-    done
-}
 
 displayErrorMessage() {
     echo $(date): $1
@@ -128,4 +80,67 @@ getSchedulerDirectivesFromInputForm() {
         fi
     done
     echo ${form_sched_directives}
+}
+
+getRemoteHostInfoFromAPI() {
+    # GET HOST INFORMATION FROM API
+    # Pooltype
+    pooltype=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} type)
+    if [ -z "${pooltype}" ]; then
+        displayErrorMessage "ERROR: Pool type not found - exiting the workflow"
+        echo "${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} type"
+        exit 1
+    fi
+    echo "Pool type: ${pooltype}"
+
+    # External IP address
+    controller=${host_resource_name}.clusters.pw
+    export controller=$(${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py $controller)
+    export sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
+
+    # GET INTERNAL IP OF CONTROLLER NODE. 
+    # Get resource definition entry: Empty, internal ip or network name
+    export masterIp=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} internalIp)
+    echo "export masterIp=${masterIp}" >> inputs.sh
+
+    if [[ "${masterIp}" != "" ]] && [[ "${masterIp}" != *"."* ]];then
+        # If not empty and not an ip --> netowrk name
+        masterIp=$($sshcmd "ifconfig ${masterIp} | sed -En -e 's/.*inet ([0-9.]+).*/\1/p'")
+        echo "Using masterIp from interface: $masterIp"
+    fi
+
+    if [ -z "${masterIp}" ]; then
+        # If empty use first internal ip
+        export masterIp=$($sshcmd hostname -I | cut -d' ' -f1) 
+    fi
+
+    if [ -z ${masterIp} ]; then
+        displayErrorMessage "ERROR: masterIP variable is empty - Exitig workflow"
+        echo "Command: $sshcmd hostname -I | cut -d' ' -f1"
+        exit 1
+    fi
+}
+
+checkInputParameters() {
+    if ! [ -d "${service_name}" ]; then
+        displayErrorMessage "ERROR: Directory ${service_name} was not found --> Service ${service_name} is not supported --> Exiting workflow"
+        exit 1
+    fi
+
+    if ! [ -f "${service_name}/url.sh" ]; then
+        displayErrorMessage "ERROR: Directory ${service_name}/url.sh was not found --> Add URL definition script --> Exiting workflow"
+        exit 1
+    fi
+
+    # GET CONTROLLER IP FROM PW API IF NOT SPECIFIED
+    if [ -z "${host_resource_name}" ]; then
+        displayErrorMessage "ERROR: No service host was defined - exiting the workflow"
+        exit 1
+    fi
+
+    if [ -z "${host_resource_workdir}" ]; then
+        displayErrorMessage "ERROR: Pool workdir not found - exiting the workflow"
+        echo "${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} workdir"
+        exit 1
+    fi
 }

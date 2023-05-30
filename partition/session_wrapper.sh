@@ -105,13 +105,13 @@ if [ -z "\${pubkey}" ]; then
     cat id_rsa.pub >> ~/.ssh/authorized_keys
 fi
 
-if [ -f "${poolworkdir}/pw/.pw/remote.sh" ]; then
+if [ -f "${host_resource_workdir}/pw/.pw/remote.sh" ]; then
     # NEW VERSION OF SLURMSHV2 PROVIDER
-    echo "Running ${poolworkdir}/pw/.pw/remote.sh"
-    ${poolworkdir}/pw/.pw/remote.sh
-elif [ -f "${poolworkdir}/pw/remote.sh" ]; then
-    echo "Running ${poolworkdir}/pw/remote.sh"
-    ${poolworkdir}/pw/remote.sh
+    echo "Running ${host_resource_workdir}/pw/.pw/remote.sh"
+    ${host_resource_workdir}/pw/.pw/remote.sh
+elif [ -f "${host_resource_workdir}/pw/remote.sh" ]; then
+    echo "Running ${host_resource_workdir}/pw/remote.sh"
+    ${host_resource_workdir}/pw/remote.sh
 fi
 
 # Find an available servicePort

@@ -228,3 +228,5 @@ if [ -f "kill.sh" ]; then
     sed -i  "s/.*sed -i.*//" kill.sh  
     bash kill.sh
 fi
+
+exit 0

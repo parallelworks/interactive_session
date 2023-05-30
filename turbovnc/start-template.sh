@@ -12,15 +12,6 @@ fi
 
 set -x
 # Runs via ssh + sbatch
-partition_or_controller=__partition_or_controller__
-job_number=__job_number__
-slurm_module=__slurm_module__
-service_bin="$(echo __service_bin__  | sed "s|---| |g" | sed "s|___| |g")"
-service_background=__service_background__ # Launch service as a background process
-chdir=__chdir__
-vnc_exec=__vnc_exec__
-novnc_dir=__novnc_dir__
-novnc_tgz=__novnc_tgz__
 vnc_bin=vncserver
 
 bootstrap_tgz() {
@@ -64,11 +55,11 @@ bootstrap_tgz() {
     fi
 }
 
-if [ -z ${novnc_dir} ] || [[ "${novnc_dir}" == "__""novnc_dir""__" ]]; then
+if [ -z ${novnc_dir} ]; then
     novnc_dir=${HOME}/pw/bootstrap/noVNC-1.3.0
 fi
 
-if [ -z ${novnc_tgz} ] || [[ "${novnc_tgz}" == "__""novnc_tgz""__" ]]; then
+if [ -z ${novnc_tgz} ]; then
     novnc_tgz=/swift-pw-bin/apps/noVNC-1.3.0.tgz
 fi
 
@@ -129,7 +120,7 @@ HERE
 echo
 
 # FIND SERVER EXECUTABLE (BOOTSTRAP)
-if [ -z ${vnc_exec} ] || [[ "${vnc_exec}" == "__""vnc_exec""__" ]]; then
+if [ -z ${vnc_exec} ]; then
     # If no vnc_exec is provided
     if [ -z $(which ${vnc_bin}) ]; then
         # If no vncserver is in PATH:
@@ -218,11 +209,10 @@ cd ${novnc_dir}
 
 echo
 # Load slurm module
-# - multiple quotes are used to prevent replacement of __varname__ !!!
-if ! [ -z ${slurm_module} ] && ! [[ "${slurm_module}" == "__""slurm_module""__" ]]; then
-    echo "module load ${slurm_module}"
-    module avail ${slurm_module}
-    module load ${slurm_module}
+if ! [ -z ${service_slurm_module} ]; then
+    echo "module load ${service_slurm_module}"
+    module avail ${service_slurm_module}
+    module load ${service_slurm_module}
 fi
 echo
 
@@ -235,7 +225,7 @@ sleep 5 # Need this specially in controller node or second software won't show u
 
 # Launch service
 cd
-if ! [ -z "${service_bin}" ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
+if ! [ -z "${service_bin}" ]; then
     if [[ ${service_background} == "False" ]]; then
         echo "Running ${service_bin}"
         ${service_bin}

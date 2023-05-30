@@ -31,12 +31,12 @@ else
     password_flag="--auth=password"
 fi
 
-if [ -z ${install_dir} ] || [[ "${install_dir}" == "__""install_dir""__" ]]; then
-    install_dir=${HOME}/pw/code-server-4.7.0-linux-amd64
+if [ -z ${service_install_dir} ]; then
+    service_install_dir=${HOME}/pw/code-server-4.7.0-linux-amd64
 fi
 
-if [ -z ${tgz_path} ] || [[ "${tgz_path}" == "__""tgz_path""__" ]]; then
-    tgz_path=/swift-pw-bin/apps/code-server-4.7.0-linux-amd64.tar.gz
+if [ -z ${service_tgz_path} ]; then
+    service_tgz_path=/swift-pw-bin/apps/code-server-4.7.0-linux-amd64.tar.gz
 fi
 
 install_paths="${HOME}/pw/*/bin /opt/*/bin /shared/*/bin"
@@ -111,8 +111,8 @@ if [ -z ${server_exec} ] || [[ "${server_exec}" == "__""server_exec""__" ]]; the
         server_exec=$(which ${server_bin})
     else
         # Else bootstrap (install) -- Does nothing unless install_dir does not exist
-        bootstrap_tgz ${tgz_path} ${install_dir}
-        server_exec=${install_dir}/bin/${server_bin}
+        bootstrap_tgz ${service_tgz_path} ${service_install_dir}
+        server_exec=${service_install_dir}/bin/${server_bin}
     fi
 
     # Search for the binary in install_paths

@@ -1,4 +1,7 @@
 #!/bin/bash
+source /pw/.miniconda3/etc/profile.d/conda.sh
+conda activate
+
 # change permissions of run directly so we can execute all files
 chmod 777 * -Rf
 # Need to move files from utils directory to avoid updating the sparse checkout
@@ -50,9 +53,6 @@ echo "export openPort=${openPort}" >> inputs.sh
 
 export USER_CONTAINER_HOST="usercontainer"
 echo "export USER_CONTAINER_HOST=${USER_CONTAINER_HOST}" >> inputs.sh
-
-source /pw/.miniconda3/etc/profile.d/conda.sh
-conda activate
 
 # LOAD PLATFORM-SPECIFIC ENVIRONMENT:
 env_sh=platforms/${PARSL_CLIENT_HOST}/env.sh

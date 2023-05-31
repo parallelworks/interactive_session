@@ -2,7 +2,6 @@
 # https://github.com/parallelworks/issues/issues/1081
 set -x
 # Runs via ssh + sbatch
-partition_or_controller=__partition_or_controller__
 job_number=__job_number__
 slurm_module=__slurm_module__
 service_bin="$(echo __service_bin__  | sed "s|---| |g" | sed "s|___| |g")"

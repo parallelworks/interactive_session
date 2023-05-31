@@ -1,6 +1,5 @@
 # Runs via ssh + sbatch
 
-partition_or_controller=__partition_or_controller__
 job_number=__job_number__
 job_dir=${PWD}
 

@@ -1,7 +1,6 @@
 echo "$(date): $(hostname):${PWD} $0 $@"
 
 job_number=__job_number__
-partition_or_controller=__partition_or_controller__
 
 if [[ ${use_gpus} == "true" ]]; then
     gpu_flag="--gpus all"

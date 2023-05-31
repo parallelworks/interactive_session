@@ -2,11 +2,6 @@
 # https://github.com/parallelworks/issues/issues/1081
 set -x
 # Runs via ssh + sbatch
-job_number=__job_number__
-slurm_module=__slurm_module__
-service_bin="$(echo __service_bin__  | sed "s|---| |g" | sed "s|___| |g")"
-service_background=__service_background__ # Launch service as a background process
-chdir=__chdir__
 
 if [ -z $(which dcv) ]; then
     echo "Installing Nice DCV"
@@ -204,10 +199,10 @@ touch ${chdir}/service.pid
 echo
 # Load slurm module
 # - multiple quotes are used to prevent replacement of __varname__ !!!
-if ! [ -z ${slurm_module} ] && ! [[ "${slurm_module}" == "__""slurm_module""__" ]]; then
-    echo "module load ${slurm_module}"
-    module avail ${slurm_module}
-    module load ${slurm_module}
+if ! [ -z ${service_slurm_module} ]; then
+    echo "module load ${service_slurm_module}"
+    module avail ${service_slurm_module}
+    module load ${service_slurm_module}
 fi
 echo
 

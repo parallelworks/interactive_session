@@ -89,14 +89,14 @@ waitForControllerSSH() {
         {
             ssh -o StrictHostKeyChecking=no ${host_resource_publicIp} exit
             echo "SSH connection is ready"
-            break
+            return 0
         } || {
             echo "Waiting for SSH connection"
             # IP address can change and be different from that in inputs.sh!
             export host_resource_publicIp=$(${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py ${host_resource_name}.clusters.pw)
         }
     done
-    displayErrorMessage "ERROR: Failed to establish SSH connection to ${host_resource_publicIp} - Exitig workflow"
+    displayErrorMessage "ERROR: Failed to establish SSH connection to ${host_resource_publicIp} - Exiting workflow"
     exit 1
 }
 
@@ -110,7 +110,7 @@ getRemoteHostInfoFromAPI() {
 
 
     if [ -z ${host_resource_publicIp} ]; then
-        displayErrorMessage "ERROR: host_resource_publicIp variable is empty - Exitig workflow"
+        displayErrorMessage "ERROR: host_resource_publicIp variable is empty - Exiting workflow"
         exit 1
     fi
 
@@ -139,7 +139,7 @@ getRemoteHostInfoFromAPI() {
     fi
 
     if [ -z ${host_resource_privateIp} ]; then
-        displayErrorMessage "ERROR: masterIP variable is empty - Exitig workflow"
+        displayErrorMessage "ERROR: masterIP variable is empty - Exiting workflow"
         echo "Command: $sshcmd hostname -I | cut -d' ' -f1"
         exit 1
     fi

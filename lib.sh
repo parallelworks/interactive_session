@@ -88,8 +88,15 @@ getRemoteHostInfoFromAPI() {
     if [ -z ${host_resource_publicIp} ]; then
         host_resource_publicIp=${host_resource_name}.clusters.pw
         export host_resource_publicIp=$(${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py ${host_resource_publicIp})
-        export sshcmd="ssh -o StrictHostKeyChecking=no ${host_resource_publicIp}"
     fi
+
+    if [ -z ${host_resource_publicIp} ]; then
+        displayErrorMessage "ERROR: host_resource_publicIp variable is empty - Exitig workflow"
+        exit 1
+    fi
+
+    export sshcmd="ssh -o StrictHostKeyChecking=no ${host_resource_publicIp}"
+    echo "export sshcmd=${sshcmd}" >> inputs.sh 
 
     if [ -z ${host_resource_privateIp} ]; then
         # GET INTERNAL IP OF CONTROLLER NODE. 

@@ -82,6 +82,22 @@ getSchedulerDirectivesFromInputForm() {
     echo ${form_sched_directives}
 }
 
+waitForControllerSSH() {
+    echo "Checking SSH connection to ${host_resource_publicIp}"
+    retries=100
+    for i in $(seq 1 ${retries}); do
+        {
+            ssh -o StrictHostKeyChecking=no ${host_resource_publicIp} exit
+        } || {
+            echo "Waiting for SSH connection, retrying in 5 seconds"
+            sleep 5
+        }
+    done
+    displayErrorMessage "ERROR: Failed to establish SSH connection to ${host_resource_publicIp} - Exitig workflow"
+    exit 1
+}
+
+
 getRemoteHostInfoFromAPI() {
     # GET HOST INFORMATION FROM API
     # External IP address
@@ -97,6 +113,8 @@ getRemoteHostInfoFromAPI() {
 
     export sshcmd="ssh -o StrictHostKeyChecking=no ${host_resource_publicIp}"
     echo "export sshcmd=${sshcmd}" >> inputs.sh 
+
+    waitForControllerSSH
 
     if [ -z ${host_resource_privateIp} ]; then
         # GET INTERNAL IP OF CONTROLLER NODE. 

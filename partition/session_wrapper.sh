@@ -8,7 +8,7 @@ source lib.sh
 # TUNNEL COMMAND:
 SERVER_TUNNEL_CMD="ssh -J ${host_resource_privateIp} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 0.0.0.0:$openPort:0.0.0.0:\$servicePort ${USER_CONTAINER_HOST}"
 # Cannot have different port numbers on client and server or license checkout fails!
-LICENSE_TUNNEL_CMD="ssh -J ${host_resource_privateIp} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -L 0.0.0.0:${license_server_port}:localhost:${license_server_port} -L 0.0.0.0:${license_daemon_port}:localhost:${license_daemon_port} ${USER_CONTAINER_HOST}"
+LICENSE_TUNNEL_CMD="ssh -J ${host_resource_privateIp} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -L 0.0.0.0:${advanced_options_license_server_port}:localhost:${advanced_options_license_server_port} -L 0.0.0.0:${advanced_options_license_daemon_port}:localhost:${advanced_options_license_daemon_port} ${USER_CONTAINER_HOST}"
 
 # Initiallize session batch file:
 echo "Generating session script"
@@ -127,9 +127,9 @@ echo
 echo "${SERVER_TUNNEL_CMD} </dev/null &>/dev/null &"
 ${SERVER_TUNNEL_CMD} </dev/null &>/dev/null &
 
-if ! [ -z "${license_env}" ]; then
+if ! [ -z "${advanced_options_license_env}" ]; then
     # Export license environment variable
-    export ${license_env}=${license_server_port}@localhost
+    export ${advanced_options_license_env}=${advanced_options_license_server_port}@localhost
     # Create tunnel
     echo "${LICENSE_TUNNEL_CMD} </dev/null &>/dev/null &"
     ${LICENSE_TUNNEL_CMD} </dev/null &>/dev/null &

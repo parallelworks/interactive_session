@@ -8,7 +8,7 @@ source lib.sh
 # CREATE KILL FILE:
 # - NEEDS TO BE MADE BEFORE RUNNING SESSION SCRIPT!
 # - When the job is killed PW runs ${PW_JOB_PATH}/kill.sh
-kill_ports="${openPort} ${license_server_port} ${license_daemon_port}"
+kill_ports="${openPort} ${advanced_options_license_server_port} ${advanced_options_license_daemon_port}"
 
 # KILL_SSH: Part of the kill_sh that runs on the remote host with ssh
 kill_ssh=${PW_JOB_PATH}/kill_ssh.sh
@@ -42,7 +42,7 @@ chmod 777 ${kill_sh}
 # TUNNEL COMMANDS:
 SERVER_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
 # Cannot have different port numbers on client and server or license checkout fails!
-LICENSE_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -L 0.0.0.0:${license_server_port}:localhost:${license_server_port} -L 0.0.0.0:${license_daemon_port}:localhost:${license_daemon_port} ${USER_CONTAINER_HOST}"
+LICENSE_TUNNEL_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -L 0.0.0.0:${advanced_options_license_server_port}:localhost:${advanced_options_license_server_port} -L 0.0.0.0:${advanced_options_license_daemon_port}:localhost:${advanced_options_license_daemon_port} ${USER_CONTAINER_HOST}"
 
 # Initiallize session batch file:
 echo "Generating session script"
@@ -108,9 +108,9 @@ echo
 echo "${SERVER_TUNNEL_CMD} </dev/null &>/dev/null &"
 ${SERVER_TUNNEL_CMD} </dev/null &>/dev/null &
 
-if ! [ -z "${license_env}" ]; then
+if ! [ -z "${advanced_options_license_env}" ]; then
     # Export license environment variable
-    export ${license_env}=${license_server_port}@localhost
+    export ${advanced_options_license_env}=${advanced_options_license_server_port}@localhost
     # Create tunnel
     echo "${LICENSE_TUNNEL_CMD} </dev/null &>/dev/null &"
     ${LICENSE_TUNNEL_CMD} </dev/null &>/dev/null &

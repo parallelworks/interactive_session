@@ -84,37 +84,33 @@ getSchedulerDirectivesFromInputForm() {
 
 getRemoteHostInfoFromAPI() {
     # GET HOST INFORMATION FROM API
-    # Pooltype
-    pooltype=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} type)
-    if [ -z "${pooltype}" ]; then
-        displayErrorMessage "ERROR: Pool type not found - exiting the workflow"
-        echo "${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} type"
-        exit 1
-    fi
-    echo "Pool type: ${pooltype}"
-
     # External IP address
-    controller=${host_resource_name}.clusters.pw
-    export controller=$(${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py $controller)
-    export sshcmd="ssh -o StrictHostKeyChecking=no ${controller}"
+    if [ -z ${host_resource_publicIp} ]; then
+        host_resource_publicIp=${host_resource_name}.clusters.pw
+        export host_resource_publicIp=$(${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py ${host_resource_publicIp})
+        export sshcmd="ssh -o StrictHostKeyChecking=no ${host_resource_publicIp}"
+    fi
 
-    # GET INTERNAL IP OF CONTROLLER NODE. 
-    # Get resource definition entry: Empty, internal ip or network name
-    export masterIp=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} internalIp)
-    echo "export masterIp=${masterIp}" >> inputs.sh
+    if [ -z ${host_resource_privateIp} ]; then
+        # GET INTERNAL IP OF CONTROLLER NODE. 
+        # Get resource definition entry: Empty, internal ip or network name
+        export host_resource_privateIp=$(${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} internalIp)
+        echo "export host_resource_privateIp=${host_resource_privateIp}" >> inputs.sh
+    fi
 
-    if [[ "${masterIp}" != "" ]] && [[ "${masterIp}" != *"."* ]];then
+    if [[ "${host_resource_privateIp}" != "" ]] && [[ "${host_resource_privateIp}" != *"."* ]];then
         # If not empty and not an ip --> netowrk name
-        masterIp=$($sshcmd "ifconfig ${masterIp} | sed -En -e 's/.*inet ([0-9.]+).*/\1/p'")
-        echo "Using masterIp from interface: $masterIp"
+        host_resource_privateIp=$($sshcmd "ifconfig ${host_resource_privateIp} | sed -En -e 's/.*inet ([0-9.]+).*/\1/p'")
+        echo "Using host_resource_privateIp from interface: ${host_resource_privateIp}"
+        echo "export host_resource_privateIp=${host_resource_privateIp}" >> inputs.sh
     fi
 
-    if [ -z "${masterIp}" ]; then
+    if [ -z "${host_resource_privateIp}" ]; then
         # If empty use first internal ip
-        export masterIp=$($sshcmd hostname -I | cut -d' ' -f1) 
+        export host_resource_privateIp=$($sshcmd hostname -I | cut -d' ' -f1) 
     fi
 
-    if [ -z ${masterIp} ]; then
+    if [ -z ${host_resource_privateIp} ]; then
         displayErrorMessage "ERROR: masterIP variable is empty - Exitig workflow"
         echo "Command: $sshcmd hostname -I | cut -d' ' -f1"
         exit 1

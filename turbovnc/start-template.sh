@@ -44,10 +44,10 @@ bootstrap_tgz() {
                     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
                     # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
                     # Works because home directory is shared!
-                    ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                    ssh ${ssh_options} ${host_resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
                 else # Docker mode
                     # Works because home directory is shared!
-                    ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                    ssh ${ssh_options} ${host_resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
                 fi
             fi
         fi

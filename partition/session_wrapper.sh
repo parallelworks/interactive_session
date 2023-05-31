@@ -6,9 +6,9 @@ env > session_wrapper.env
 source lib.sh
 
 # TUNNEL COMMAND:
-SERVER_TUNNEL_CMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 0.0.0.0:$openPort:0.0.0.0:\$servicePort ${USER_CONTAINER_HOST}"
+SERVER_TUNNEL_CMD="ssh -J ${host_resource_privateIp} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 0.0.0.0:$openPort:0.0.0.0:\$servicePort ${USER_CONTAINER_HOST}"
 # Cannot have different port numbers on client and server or license checkout fails!
-LICENSE_TUNNEL_CMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -L 0.0.0.0:${license_server_port}:localhost:${license_server_port} -L 0.0.0.0:${license_daemon_port}:localhost:${license_daemon_port} ${USER_CONTAINER_HOST}"
+LICENSE_TUNNEL_CMD="ssh -J ${host_resource_privateIp} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -L 0.0.0.0:${license_server_port}:localhost:${license_server_port} -L 0.0.0.0:${license_daemon_port}:localhost:${license_daemon_port} ${USER_CONTAINER_HOST}"
 
 # Initiallize session batch file:
 echo "Generating session script"
@@ -51,7 +51,7 @@ remote_session_dir=${chdir}
 # ADD STREAMING
 if [[ "${advanced_options_stream}" == "true" ]]; then
     # Don't really know the extension of the --pushpath. Can't controll with PBS (FIXME)
-    stream_args="--host ${USER_CONTAINER_HOST} --pushpath ${PW_JOB_PATH}/session-${job_number}.o --pushfile session-${job_number}.out --delay 30 --masterIp ${masterIp}"
+    stream_args="--host ${USER_CONTAINER_HOST} --pushpath ${PW_JOB_PATH}/session-${job_number}.o --pushfile session-${job_number}.out --delay 30 --masterIp ${host_resource_privateIp}"
     stream_cmd="bash stream-${job_number}.sh ${stream_args} &"
     echo; echo "Streaming command:"; echo "${stream_cmd}"; echo
     echo ${stream_cmd} >> ${session_sh}
@@ -62,7 +62,7 @@ $sshcmd cp "~/.ssh/id_rsa.pub" ${remote_session_dir}
 
 cat >> ${session_sh} <<HERE
 echo "Running in host \$(hostname)"
-sshusercontainer="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST}"
+sshusercontainer="ssh -J ${host_resource_privateIp} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST}"
 
 displayErrorMessage() {
     echo \$(date): \$1
@@ -149,8 +149,8 @@ fi
 
 # move the session file over
 chmod 777 ${session_sh}
-scp ${session_sh} ${controller}:${remote_session_dir}/session-${job_number}.sh
-scp stream.sh ${controller}:${remote_session_dir}/stream-${job_number}.sh
+scp ${session_sh} ${host_resource_publicIp}:${remote_session_dir}/session-${job_number}.sh
+scp stream.sh ${host_resource_publicIp}:${remote_session_dir}/stream-${job_number}.sh
 
 echo
 echo "Submitting ${submit_cmd} request (wait for node to become available before connecting)..."

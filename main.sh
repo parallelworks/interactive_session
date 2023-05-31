@@ -89,13 +89,13 @@ echo "export chdir=${chdir}" >> inputs.sh
 
 # RUN IN CONTROLLER, SLURM PARTITION OR PBS QUEUE?
 if [[ ${host_jobschedulertype} == "CONTROLLER" ]]; then
-    echo "Submitting ssh job to ${controller}"
+    echo "Submitting ssh job to ${host_resource_publicIp}"
     session_wrapper_dir=controller
 elif [[ ${host_jobschedulertype} == "LOCAL" ]]; then
     echo "Submitting ssh job to user container"
     session_wrapper_dir=local
 else
-    echo "Submitting ${host_jobschedulertype} job to ${controller}"
+    echo "Submitting ${host_jobschedulertype} job to ${host_resource_publicIp}"
     session_wrapper_dir=partition
 
     # Get scheduler directives from input form (see this function in lib.sh)

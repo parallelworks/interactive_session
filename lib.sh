@@ -117,7 +117,7 @@ getRemoteHostInfoFromAPI() {
     echo "export host_resource_publicIp=${host_resource_publicIp}" >> inputs.sh
 
     export sshcmd="ssh -o StrictHostKeyChecking=no ${host_resource_publicIp}"
-    echo "export sshcmd=${sshcmd}" >> inputs.sh 
+    echo "export sshcmd=\"${sshcmd}\"" >> inputs.sh 
 
     if [ -z ${host_resource_privateIp} ]; then
         # GET INTERNAL IP OF CONTROLLER NODE. 

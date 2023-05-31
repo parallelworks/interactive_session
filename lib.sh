@@ -89,6 +89,7 @@ waitForControllerSSH() {
         {
             ssh -o StrictHostKeyChecking=no ${host_resource_publicIp} exit
             echo "SSH connection is ready"
+            echo "export host_resource_publicIp=${host_resource_publicIp}" >> inputs.sh
             return 0
         } || {
             echo "Waiting for SSH connection"
@@ -114,7 +115,6 @@ getRemoteHostInfoFromAPI() {
     fi
 
     waitForControllerSSH
-    echo "export host_resource_publicIp=${host_resource_publicIp}" >> inputs.sh
 
     export sshcmd="ssh -o StrictHostKeyChecking=no ${host_resource_publicIp}"
     echo "export sshcmd=\"${sshcmd}\"" >> inputs.sh 

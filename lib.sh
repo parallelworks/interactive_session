@@ -86,17 +86,17 @@ waitForControllerSSH() {
     echo "Checking SSH accesibility to ${host_resource_publicIp}"
     retries=10
     for i in $(seq 1 ${retries}); do
-        {
-            echo "ssh -o StrictHostKeyChecking=no ${host_resource_publicIp} exit"
-            ssh -o StrictHostKeyChecking=no ${host_resource_publicIp} exit
-            echo "SSH connection is ready"
-            echo "export host_resource_publicIp=${host_resource_publicIp}" >> inputs.sh
-            return 0
-        } || {
+        echo "ssh -o StrictHostKeyChecking=no ${host_resource_publicIp} hostname"
+        hname=$(ssh -o StrictHostKeyChecking=no ${host_resource_publicIp} hostname)
+        if [ -z ${hname} ]; then
             echo "Waiting for SSH connection"
             # IP address can change and be different from that in inputs.sh!
             export host_resource_publicIp=$(${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py ${host_resource_name}.clusters.pw)
-        }
+        else
+            echo "SSH connection is ready"
+            echo "export host_resource_publicIp=${host_resource_publicIp}" >> inputs.sh
+            return 0
+        fi
     done
     displayErrorMessage "ERROR: Failed to establish SSH connection to ${host_resource_publicIp} - Exiting workflow"
     exit 1

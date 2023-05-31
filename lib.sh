@@ -87,6 +87,7 @@ waitForControllerSSH() {
     retries=10
     for i in $(seq 1 ${retries}); do
         {
+            echo "ssh -o StrictHostKeyChecking=no ${host_resource_publicIp} exit"
             ssh -o StrictHostKeyChecking=no ${host_resource_publicIp} exit
             echo "SSH connection is ready"
             echo "export host_resource_publicIp=${host_resource_publicIp}" >> inputs.sh

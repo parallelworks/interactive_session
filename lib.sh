@@ -88,6 +88,7 @@ waitForControllerSSH() {
     for i in $(seq 1 ${retries}); do
         echo "ssh -o StrictHostKeyChecking=no ${host_resource_publicIp} hostname"
         hname=$(ssh -o StrictHostKeyChecking=no ${host_resource_publicIp} hostname)
+        echo "Hostname=${hname}"
         if [ -z ${hname} ]; then
             echo "Waiting for SSH connection"
             # IP address can change and be different from that in inputs.sh!

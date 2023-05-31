@@ -83,14 +83,17 @@ getSchedulerDirectivesFromInputForm() {
 }
 
 waitForControllerSSH() {
-    echo "Checking SSH connection to ${host_resource_publicIp}"
-    retries=100
+    echo "Checking SSH accesibility to ${host_resource_address}"
+    retries=10
     for i in $(seq 1 ${retries}); do
         {
             ssh -o StrictHostKeyChecking=no ${host_resource_publicIp} exit
+            echo "SSH connection is ready"
+            break
         } || {
-            echo "Waiting for SSH connection, retrying in 5 seconds"
-            sleep 5
+            echo "Waiting for SSH connection"
+            # IP address can change and be different from that in inputs.sh!
+            export host_resource_publicIp=$(${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py ${host_resource_name}.clusters.pw)
         }
     done
     displayErrorMessage "ERROR: Failed to establish SSH connection to ${host_resource_publicIp} - Exitig workflow"
@@ -102,9 +105,9 @@ getRemoteHostInfoFromAPI() {
     # GET HOST INFORMATION FROM API
     # External IP address
     if [ -z ${host_resource_publicIp} ]; then
-        host_resource_publicIp=${host_resource_name}.clusters.pw
-        export host_resource_publicIp=$(${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py ${host_resource_publicIp})
+        export host_resource_publicIp=$(${CONDA_PYTHON_EXE} /swift-pw-bin/utils/cluster-ip-api-wrapper.py ${host_resource_name}.clusters.pw)
     fi
+
 
     if [ -z ${host_resource_publicIp} ]; then
         displayErrorMessage "ERROR: host_resource_publicIp variable is empty - Exitig workflow"

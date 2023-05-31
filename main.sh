@@ -119,7 +119,7 @@ else
 
     # Merge all directives in single param
     export scheduler_directives="${host_scheduler_directives};${form_sched_directives};${pw_sched_directives}"
-    echo "export scheduler_directives=${scheduler_directived}"
+    echo "export scheduler_directives=${scheduler_directives}" 
 fi
 
 # SERVICE URL

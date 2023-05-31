@@ -83,7 +83,7 @@ getSchedulerDirectivesFromInputForm() {
 }
 
 waitForControllerSSH() {
-    echo "Checking SSH accesibility to ${host_resource_address}"
+    echo "Checking SSH accesibility to ${host_resource_publicIp}"
     retries=10
     for i in $(seq 1 ${retries}); do
         {

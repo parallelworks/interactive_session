@@ -3,7 +3,7 @@
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
     <section name='service' type='section' title='Jupyter Server' expanded='true'>
-        <param name='service_name' label='Service' type='hidden' value='pvweb-singularity' width='50%_none'></param>
+        <param name='name' label='Service' type='hidden' value='pvweb-singularity' width='50%_none'></param>
         <param name='path_to_sing' label='Path to singularity container' type='text' value='/contrib/__USER__/paraviewweb-pv-osmesa-v5.6.0.sif' help='Path to the singularity container in the execution host' width='50%_none'></param>
         <param name='viewport_max_width' label='Width of viewport' type='text' value='1920' help='--viewport-max-width parameter in pvw-visualizer.py' width='50%_none'></param>
         <param name='viewport_max_height' label='Height of viewport' type='text' value='1080' help='--viewport-max-height parameter in pvw-visualizer.py' width='50%_none'></param>

@@ -4,6 +4,7 @@
   <inputs>
   <param name='service_name' label='Service' type='hidden' value='novnc-docker' width='50%_none'></param>
    <section name='service' type='section' title='Jupyter Notebook Settings' expanded='true'>
+        <param name='name' label='Service' type='hidden' value='novnc-docker' width='50%_none'></param>
         <param name='docker_repo' type='select' label='noVNC Docker Container' help='Docker container to serve for the noVNC session' width='50%_none' multiple='false'>
             <option value="accetto/ubuntu-vnc-xfce-opengl-g3" selected="true">Ubuntu 20.04 Xfce OpenGL</option>
             <option value="accetto/ubuntu-vnc-xfce-python-g3">Ubuntu 20.04 Xfce Python</option>

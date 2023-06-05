@@ -1,8 +1,6 @@
 echo "$(date): $(hostname):${PWD} $0 $@"
 
-job_number=__job_number__
-
-if [[ ${use_gpus} == "true" ]]; then
+if [[ ${service_use_gpus} == "true" ]]; then
     gpu_flag="--gpus all"
 else
     gpu_flag=""
@@ -26,4 +24,4 @@ sudo -n systemctl start docker
 set -x
 sudo -n docker run ${gpu_flag} --rm \
     -v /contrib:/contrib -v /lustre:/lustre -v ${HOME}:${HOME} \
-    --name=novnc-$servicePort -p $servicePort:6901 __docker_repo__
+    --name=novnc-$servicePort -p $servicePort:6901 ${service_docker_repo}

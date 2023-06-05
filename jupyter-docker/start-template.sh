@@ -24,7 +24,7 @@ if [ -z "${service_password}" ]; then
     sha=""
 else
     echo "Generating sha"
-    sha=$(sudo -n docker run --rm ${service_docker_repo} python3 -c "from notebook.auth.security import passwd; print(passwd('__password__', algorithm = 'sha1'))")
+    sha=$(sudo -n docker run --rm ${service_docker_repo} python3 -c "from notebook.auth.security import passwd; print(passwd('${service_password}', algorithm = 'sha1'))")
 fi
 
 

@@ -1,11 +1,10 @@
 echo "$(date): $(hostname):${PWD} $0 $@"
 
-mount_dirs="$(echo  __mount_dirs__ | sed "s|___| |g" | sed "s|__mount_dirs__||g" )"
-path_to_sing="__path_to_sing__"
+mount_dirs="$(echo  ${service_mount_dirs} | sed "s|___| |g")"
 
 # Bootstrap singularity file if it does not exist
-if ! [ -f "${path_to_sing}" ]; then
-    echo "WARNING: Path to singularity file <${path_to_sing}> was not found!"
+if ! [ -f "${service_path_to_sing}" ]; then
+    echo "WARNING: Path to singularity file <${service_path_to_sing}> was not found!"
     echo "Trying to build singularity container from definition file ..."
 cat >> rserver.def <<HERE
 BootStrap: docker
@@ -28,12 +27,12 @@ From: centos:centos7
 %help
     This is a container with centos7 and R server
 HERE
-    sudo -n singularity build ${path_to_sing} rserver.def
+    sudo -n singularity build ${service_path_to_sing} rserver.def
 fi
 
-if ! [ -f "${path_to_sing}" ]; then
+if ! [ -f "${service_path_to_sing}" ]; then
     # TODO: Copy file from /swift-pw-bin/apps/ ?
-    displayErrorMessage "ERROR: Path to singularity file <${path_to_sing}> was not found! --> Exiting workflow"
+    displayErrorMessage "ERROR: Path to singularity file <${service_path_to_sing}> was not found! --> Exiting workflow"
 fi
 
 
@@ -50,7 +49,7 @@ fi
 echo ${mdirs_cmd}
 
 # GPU SUPPORT
-if [[ __use_gpus__ == "true" ]]; then
+if [[ ${service_use_gpus} == "true" ]]; then
     gpu_flag="--nv"
     # This is only needed in PW clusters
     if [ -d "/usr/share/nvidia/" ]; then
@@ -62,8 +61,8 @@ fi
 
 
 # SANITY CHECKS!
-if ! [ -f "${path_to_sing}" ]; then
-    displayErrorMessage "ERROR: File $(hostname):${path_to_sing} not found!"
+if ! [ -f "${service_path_to_sing}" ]; then
+    displayErrorMessage "ERROR: File $(hostname):${service_path_to_sing} not found!"
 fi
 
 # RUN R SERVER
@@ -79,7 +78,7 @@ set -x
 singularity run ${gpu_flag} \
     --bind run:/run,var-lib-rstudio-server:/var/lib/rstudio-server,database.conf:/etc/rstudio/database.conf \
     ${mount_dirs} \
-    ${path_to_sing} \
+    ${service_path_to_sing} \
     /usr/lib/rstudio-server/bin/rserver \
     --www-address=0.0.0.0 \
     --www-port=${servicePort}  \

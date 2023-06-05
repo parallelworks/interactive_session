@@ -1,8 +1,6 @@
 echo "$(date): $(hostname):${PWD} $0 $@"
 
-job_number=__job_number__
-
-if [[ __use_gpus__ == "true" ]]; then
+if [[ ${service_use_gpus} == "true" ]]; then
     gpu_flag="--gpus all"
 else
     gpu_flag=""
@@ -38,7 +36,7 @@ sudo -n docker run ${gpu_flag} -i --rm \
     --env MWI_APP_PORT=$servicePort \
     --env MWI_ENABLE_TOKEN_AUTH=False \
     --env MWI_BASE_URL=${MWI_BASE_URL} \
-    __docker_repo__ \
+    ${service_docker_repo} \
     -browser 
 
 #     --env MWI_CUSTOM_HTTP_HEADERS='{"Content-Security-Policy": "frame-ancestors *cloud.parallel.works:* https://cloud.parallel.works:*;"}' \

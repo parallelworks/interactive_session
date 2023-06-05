@@ -2,7 +2,7 @@
   <command interpreter='bash'>main.sh</command>
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
-    <section name='service_sec' type='section' title='Jupyter Server' expanded='true'>
+    <section name='service' type='section' title='Jupyter Server' expanded='true'>
         <param name='service_name' label='Service' type='hidden' value='jupyter-singularity' width='50%_none'></param>
         <param name='password' label='Password for notebook session:' type='text' value='' help='Enter password or leave blank for no password' width='50%_none'></param>
         <param name='path_to_sing' label='Path to singularity container' type='text' value='/contrib/__USER__/tensorflow_latest-gpu-jupyter-extra.sif' help='Path to the singularity container in the execution host' width='50%_none'></param>

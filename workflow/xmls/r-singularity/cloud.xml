@@ -3,7 +3,7 @@
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
     <param name='service_name' label='Service' type='hidden' value='r-singularity' width='50%_none'></param>
-    <section name='service_sec' type='section' title='Jupyter Server' expanded='true'>
+    <section name='service' type='section' title='Jupyter Server' expanded='true'>
         <param name='path_to_sing' label='Path to singularity container' type='text' value='/contrib/\${USER}/rserver.sif' help='Path to the singularity container in the execution host' width='50%_none'></param>
         <param name="use_gpus" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Use GPUs?" help='Select Yes to run a CUDA application inside a container' width="25%_none" optional='true' float="right"></param>
     </section>

@@ -1,6 +1,6 @@
 echo "$(date): $(hostname):${PWD} $0 $@"
 
-if [[ __use_gpus__ == "true" ]]; then
+if [[ ${service_use_gpus} == "true" ]]; then
     gpu_flag="--gpus all"
 else
     gpu_flag=""
@@ -19,12 +19,12 @@ sudo -n systemctl start docker
 
 
 # Generate sha:
-if [ -z "${password}" ] || [[ "${password}" == "__""password""__" ]]; then
+if [ -z "${service_password}" ]; then
     echo "No password was specified"
     sha=""
 else
     echo "Generating sha"
-    sha=$(sudo -n docker run --rm __docker_repo__ python3 -c "from notebook.auth.security import passwd; print(passwd('__password__', algorithm = 'sha1'))")
+    sha=$(sudo -n docker run --rm ${service_docker_repo} python3 -c "from notebook.auth.security import passwd; print(passwd('__password__', algorithm = 'sha1'))")
 fi
 
 
@@ -70,7 +70,7 @@ sudo -n docker run ${gpu_flag} --rm \
     -v /contrib:/contrib -v /lustre:/lustre -v ${HOME}:${HOME} \
     --name=jupyter-$servicePort \
     -p $servicePort:$servicePort \
-    __docker_repo__ jupyter-notebook \
+    ${service_docker_repo} jupyter-notebook \
         --port=${servicePort} \
         --ip=0.0.0.0 \
         --NotebookApp.default_url="/me/${openPort}/tree" \
@@ -91,7 +91,7 @@ sudo -n docker run ${gpu_flag} --rm \
     -v /contrib:/contrib -v /lustre:/lustre -v ${HOME}:${HOME} \
     --name=jupyter-$servicePort \
     -p $servicePort:$servicePort \
-    __docker_repo__ jupyter-notebook \
+    ${service_docker_repo} jupyter-notebook \
     --port=$servicePort \
     --ip=0.0.0.0 \
     --NotebookApp.iopub_data_rate_limit=10000000000 \

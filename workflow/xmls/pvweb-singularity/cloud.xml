@@ -1,5 +1,6 @@
 <tool id='Matthew.Shaxted_paraview_web_singularity' name='Matthew.Shaxted_paraview_web_singularity'>
   <command interpreter='bash'>main.sh</command>
+  <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
     <section name='service_sec' type='section' title='Jupyter Server' expanded='true'>
         <param name='service_name' label='Service' type='hidden' value='pvweb-singularity' width='50%_none'></param>

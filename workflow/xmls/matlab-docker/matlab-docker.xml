@@ -1,5 +1,6 @@
 <tool id='User.Demo_jupyter_docker_tensorflow_cloud' name='User.Demo_jupyter_docker_tensorflow_cloud'>
   <command interpreter='bash'>main.sh</command>
+  <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
     <section name='service_sec' type='section' title='Jupyter Server' expanded='true'>
         <param name='service_name' label='Service' type='hidden' value='matlab-docker' width='50%_none'></param>

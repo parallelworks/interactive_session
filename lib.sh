@@ -145,6 +145,18 @@ getRemoteHostInfoFromAPI() {
         echo "Command: $sshcmd hostname -I | cut -d' ' -f1"
         exit 1
     fi
+
+    if [ -z "${host_resource_workdir}" ]; then
+        export host_resource_workdir=$(${sshcmd} pwd)
+        echo "export host_resource_workdir=${host_resource_workdir}" >> inputs.sh 
+    fi
+
+    if [ -z "${host_resource_workdir}" ]; then
+        displayErrorMessage "ERROR: Pool workdir not found - exiting the workflow"
+        echo "${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} workdir"
+        exit 1
+    fi
+
 }
 
 checkInputParameters() {
@@ -161,12 +173,6 @@ checkInputParameters() {
     # GET CONTROLLER IP FROM PW API IF NOT SPECIFIED
     if [ -z "${host_resource_name}" ]; then
         displayErrorMessage "ERROR: No service host was defined - exiting the workflow"
-        exit 1
-    fi
-
-    if [ -z "${host_resource_workdir}" ]; then
-        displayErrorMessage "ERROR: Pool workdir not found - exiting the workflow"
-        echo "${CONDA_PYTHON_EXE} ${PWD}/utils/pool_api.py ${host_resource_name} workdir"
         exit 1
     fi
 }

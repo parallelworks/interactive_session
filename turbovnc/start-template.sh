@@ -120,7 +120,7 @@ HERE
 echo
 
 # FIND SERVER EXECUTABLE (BOOTSTRAP)
-if [ -z ${vnc_exec} ]; then
+if [ -z ${service_vnc_exec} ]; then
     # If no vnc_exec is provided
     if [ -z $(which ${vnc_bin}) ]; then
         # If no vncserver is in PATH:
@@ -132,21 +132,21 @@ if [ -z ${vnc_exec} ]; then
         fi
 
     fi
-    vnc_exec=$(which ${vnc_bin})
+    service_vnc_exec=$(which ${vnc_bin})
 fi
 
 if [ ! -f "${vnc_exec}" ]; then
-    displayErrorMessage "ERROR: vnc_exec=${vnc_exec} file not found! - Exiting workflow!"
+    displayErrorMessage "ERROR: service_vnc_exec=${service_vnc_exec} file not found! - Exiting workflow!"
 fi
 
 # Start service
-${vnc_exec} -kill ${DISPLAY}
+${service_vnc_exec} -kill ${DISPLAY}
 # FIXME: Need better way of doing this:
 # Turbovnc fails with "=" and tigevnc fails with " "
 {
-    ${vnc_exec} ${DISPLAY} -SecurityTypes=None
+    ${service_vnc_exec} ${DISPLAY} -SecurityTypes=None
 } || {
-    ${vnc_exec} ${DISPLAY} -SecurityTypes None
+    ${service_vnc_exec} ${DISPLAY} -SecurityTypes None
 }
 
 rm -f ${chdir}/service.pid

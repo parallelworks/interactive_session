@@ -75,7 +75,6 @@ getSchedulerDirectivesFromInputForm() {
         sch_dname=$(echo ${sch_inp} | cut -d'=' -f1)
 	    sch_dval=$(echo ${sch_inp} | cut -d'=' -f2)
 	    sch_dname=$(echo ${sch_dname} | sed "s|_d_|-|g" | sed "s|_dd_|--|g" | sed "s|_e_|=|g")
-        echo ${sch_dname}
         if ! [ -z "${sch_dval}" ] && ! [[ "${sch_dval}" == "default" ]]; then
             form_sched_directives="${form_sched_directives};${sch_dname}${sch_dval}"
         fi

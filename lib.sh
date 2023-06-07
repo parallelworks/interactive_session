@@ -70,11 +70,12 @@ getSchedulerDirectivesFromInputForm() {
     # 2. _e_ --> '='
     # 3. ___ --> ' ' (Not in this function)
     # Get special scheduler parameters
-    sch_inputs=$(env | grep -e 'host__sch_' |  cut -c 10-)
+    sch_inputs=$(env | grep -e '__sch_' | sed 's/.*__sch_//')
     for sch_inp in ${sch_inputs}; do
         sch_dname=$(echo ${sch_inp} | cut -d'=' -f1)
 	    sch_dval=$(echo ${sch_inp} | cut -d'=' -f2)
-	    sch_dname=$(echo ${sch_dname} | sed "s|host__sch_||g" | sed "s|_d_|-|g" | sed "s|_dd_|--|g" | sed "s|_e_|=|g")
+	    sch_dname=$(echo ${sch_dname} | sed "s|_d_|-|g" | sed "s|_dd_|--|g" | sed "s|_e_|=|g")
+        echo ${sch_dname}
         if ! [ -z "${sch_dval}" ] && ! [[ "${sch_dval}" == "default" ]]; then
             form_sched_directives="${form_sched_directives};${sch_dname}${sch_dval}"
         fi

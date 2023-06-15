@@ -135,7 +135,7 @@ if [ -z ${service_vnc_exec} ]; then
     service_vnc_exec=$(which ${vnc_bin})
 fi
 
-if [ ! -f "${vnc_exec}" ]; then
+if [ ! -f "${service_vnc_exec}" ]; then
     displayErrorMessage "ERROR: service_vnc_exec=${service_vnc_exec} file not found! - Exiting workflow!"
 fi
 

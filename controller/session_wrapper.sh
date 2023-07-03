@@ -141,9 +141,11 @@ job_dir=$(pwd | rev | cut -d'/' -f1-2 | rev)
 workflow_name=$(echo ${job_dir} | cut -d'/' -f1)
 job_number=$(echo ${job_dir} | cut -d'/' -f2)
 url="/workflows/${workflow_name}/${job_number}/view"
-curl -X POST -H "Content-Type: application/json" \
+# needed for now to get the PW_PLATFORM_HOST and PW_API_KEY
+source /etc/profile.d/parallelworks-env.sh
+curl -s -X POST -H "Content-Type: application/json" \
     -d "{\"title\": \"Interactive workflow ${workflow_name} job ${job_number} is running\", \"href\": \"${url}\"}" \
-    https://${PW_PLATFORM_HOST}/api/v2/notifications
+    https://${PW_PLATFORM_HOST}/api/v2/notifications?key=${PW_API_KEY} &> /dev/null
 $sshcmd 'bash -s' < ${session_sh} &> ${PW_JOB_PATH}/session-${job_number}.out
 
 if [ $? -eq 0 ]; then

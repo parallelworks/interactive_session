@@ -143,11 +143,9 @@ job_number=$(echo ${job_dir} | cut -d'/' -f2)
 url="/workflows/${workflow_name}/${job_number}/view"
 # needed for now to get the PW_PLATFORM_HOST and PW_API_KEY
 source /etc/profile.d/parallelworks-env.sh
-set -x
 curl -s -X POST -H "Content-Type: application/json" \
     -d "{\"title\": \"Interactive workflow ${workflow_name} job ${job_number} is running\", \"href\": \"${url}\"}" \
     https://${PW_PLATFORM_HOST}/api/v2/notifications?key=${PW_API_KEY} &> /dev/null
-set +x
 $sshcmd 'bash -s' < ${session_sh} &> ${PW_JOB_PATH}/session-${job_number}.out
 if [ $? -eq 0 ]; then
     sed -i 's/.*Job status.*/Job status: Completed/' service.html

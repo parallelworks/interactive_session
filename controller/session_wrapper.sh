@@ -145,7 +145,7 @@ url="/workflows/${workflow_name}/${job_number}/view"
 source /etc/profile.d/parallelworks-env.sh
 curl -X POST -H "Content-Type: application/json" \
     -d "{\"title\": \"Interactive workflow ${workflow_name} job ${job_number} is running\", \"href\": \"${url}\"}" \
-    https://${PW_PLATFORM_HOST}/api/v2/notifications?key=${PW_API_KEY} &
+    https://${PW_PLATFORM_HOST}/api/v2/notifications?key=${PW_API_KEY}
 $sshcmd 'bash -s' < ${session_sh} &> ${PW_JOB_PATH}/session-${job_number}.out
 
 if [ $? -eq 0 ]; then

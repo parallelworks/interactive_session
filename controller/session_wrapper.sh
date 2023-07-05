@@ -137,8 +137,17 @@ echo "$sshcmd 'bash -s' < ${session_sh} &> ${PW_JOB_PATH}/session-${job_number}.
 echo
 sed -i 's/.*Job status.*/Job status: Running/' service.html
 sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Running\",/" service.json
+job_dir=$(pwd | rev | cut -d'/' -f1-2 | rev)
+workflow_name=$(echo ${job_dir} | cut -d'/' -f1)
+job_number=$(echo ${job_dir} | cut -d'/' -f2)
+url="/workflows/${workflow_name}/${job_number}/view"
+# needed for now to get the PW_PLATFORM_HOST and PW_API_KEY
+source /etc/profile.d/parallelworks-env.sh
+curl -s \
+    -X POST -H "Content-Type: application/json" \
+    -d "{\"title\": \"Interactive workflow ${workflow_name} job ${job_number} is running\", \"href\": \"${url}\"}" \
+    https://${PW_PLATFORM_HOST}/api/v2/notifications?key=${PW_API_KEY} &> /dev/null
 $sshcmd 'bash -s' < ${session_sh} &> ${PW_JOB_PATH}/session-${job_number}.out
-
 if [ $? -eq 0 ]; then
     sed -i 's/.*Job status.*/Job status: Completed/' service.html
     sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Completed\",/" service.json

@@ -1,0 +1,19 @@
+<tool id='Matthew.Shaxted_interactive_session' name='Matthew.Shaxted_interactive_session'>
+  <command interpreter='bash'>main.sh</command>
+  <cancel interpreter='bash'>kill.sh</cancel>
+  <inputs>
+    <param name='service_name' label='Service Name' type='hidden' value='nicedcv' width='50%_none'></param>
+    <param name='servicePort' label='Service Port' type='hidden' value='8443' width='50%_none'></param>
+    <param name='service_display' label='Service Display' type='hidden' value='2' width='50%_none'></param>
+    <param name='service_is_running' label='Service Is Running' type='hidden' value='True' width='50%_none'></param>
+    <param name='resource_jobschedulertype' label='Service Scheduler Type' type='hidden' value='SLURM' width='50%_none'></param>
+    <param name='resource_sch__dd_partition_e_' label='Service Partition' type='hidden' value='vnc' width='50%_none'></param>
+    <param name='resource_scheduler_directives' label='Service Directives' type='hidden' value='--exclusive' width='50%_none'></param>
+    <section name='advanced_options' type='section' title='Advanced Options' expanded='false'>
+        <param name="stream" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW' width="25%_none" optional='true' float="right">
+        </param>
+    </section>
+  </inputs>
+  <outputs>
+  </outputs>
+</tool>

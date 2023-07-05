@@ -6,7 +6,11 @@ env > session_wrapper.env
 source lib.sh
 
 # TUNNEL COMMAND:
-SERVER_TUNNEL_CMD="ssh -J ${host_resource_privateIp} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 0.0.0.0:$openPort:0.0.0.0:\$servicePort ${USER_CONTAINER_HOST}"
+if [ -z "$servicePort" ]; then
+    SERVER_TUNNEL_CMD="ssh -J ${host_resource_privateIp} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 0.0.0.0:$openPort:0.0.0.0:\$servicePort ${USER_CONTAINER_HOST}"
+else
+    SERVER_TUNNEL_CMD="ssh -J ${host_resource_privateIp} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 0.0.0.0:$openPort:0.0.0.0:$servicePort ${USER_CONTAINER_HOST}"
+fi
 # Cannot have different port numbers on client and server or license checkout fails!
 LICENSE_TUNNEL_CMD="ssh -J ${host_resource_privateIp} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -L 0.0.0.0:${advanced_options_license_server_port}:localhost:${advanced_options_license_server_port} -L 0.0.0.0:${advanced_options_license_daemon_port}:localhost:${advanced_options_license_daemon_port} ${USER_CONTAINER_HOST}"
 
@@ -115,7 +119,10 @@ elif [ -f "${host_resource_workdir}/pw/remote.sh" ]; then
 fi
 
 # Find an available servicePort
-servicePort=\$(findAvailablePort)
+servicePort=${servicePort}
+if [ -z "${servicePort}" ]; then
+    servicePort=\$(findAvailablePort)
+fi
 echo \${servicePort} > service.port
 
 echo

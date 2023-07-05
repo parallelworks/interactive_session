@@ -99,21 +99,24 @@ HERE'
     fi
 fi
 
-# Exit workflow if user has an active session
-#     The port is chosen in the /etc/dcv/dcv.conf file and requires
-#     restarting the service to take effect. Therefore, we can't have
-#     two sessions on different ports.
-# FIXME: What if two users of the same cluster want two sessions on the controller node?
-session_list=$(dcv list-sessions)
-if [[ $session_list == *"(owner:${USER}"* ]]; then
-    echo "User ${USER} has an active session on ${HOSTNAME}. Exiting workflow."
-    exit 0
-fi
-
-#############################
-# CREATE CONFIGURATION FILE #
-#############################
-sudo bash -c "cat > /etc/dcv/dcv.conf <<HERE
+if [[ ${service_is_running} == "True" ]]; then
+    export DISPLAY=:${service_display}
+else
+    # Exit workflow if user has an active session
+    #     The port is chosen in the /etc/dcv/dcv.conf file and requires
+    #     restarting the service to take effect. Therefore, we can't have
+    #     two sessions on different ports.
+    # FIXME: What if two users of the same cluster want two sessions on the controller node?
+    session_list=$(dcv list-sessions)
+    if [[ $session_list == *"(owner:${USER}"* ]]; then
+        echo "User ${USER} has an active session on ${HOSTNAME}. Exiting workflow."
+        exit 0
+    fi
+    
+    #############################
+    # CREATE CONFIGURATION FILE #
+    #############################
+    sudo bash -c "cat > /etc/dcv/dcv.conf <<HERE
 [license]
 #license-file = \"\"
 
@@ -156,13 +159,14 @@ primary-selection-copy=true
 
 HERE"
 
-#####################
-# STARTING NICE DCV #
-#####################
-# Need to restart after changing the port
-sudo systemctl restart dcvserver
-export DISPLAY=:0
-dcv create-session --storage-root %home% ${job_number}
+    #####################
+    # STARTING NICE DCV #
+    #####################
+    # Need to restart after changing the port
+    sudo systemctl restart dcvserver
+    export DISPLAY=:0
+    dcv create-session --storage-root %home% ${job_number}
+fi
 rm -f ${portFile}
 
 # Prepare kill service script
@@ -189,9 +193,12 @@ else
     kill \${service_pid}
 fi
 # FIXME: check ~/.dcv to see if there are any logs to print (see turbovnc)
-dcv close-session ${job_number}
 HERE
 echo
+
+if [[ ${service_is_running} != "True" ]]; then
+    dcv close-session ${job_number}
+fi
 
 rm -f ${chdir}/service.pid
 touch ${chdir}/service.pid

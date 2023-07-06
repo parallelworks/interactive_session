@@ -14,7 +14,7 @@ kill_sh=${PW_JOB_PATH}/kill.sh
 
 echo "#!/bin/bash" > ${kill_sh}
 echo "echo Running ${kill_sh}" >> ${kill_sh}
-cat inputs.sh >> ${kill_ssh} 
+cat inputs.sh >> ${kill_sh} 
 # Add application-specific code
 # WARNING: if part runs in a different directory than bash command! --> Use absolute paths!!
 if [ -f "${service_name}/kill-template.sh" ]; then

@@ -23,6 +23,7 @@ if [ -f "${service_name}/kill-template.sh" ]; then
 fi
 cat  ${sdir}/clear_ports.sh  >> ${kill_sh}
 sed -i "s/__KILL_PORTS__/${kill_ports}/g" ${kill_sh}
+echo "kill \$(ps -x | grep ${job_dir} | grep -v grep | awk '{print \$1}')" >> ${kill_sh}
 echo "echo Finished running ${kill_sh}" >> ${kill_sh}
 echo "sed -i 's/.*Job status.*/Job status: Cancelled/' ${PW_JOB_PATH}/service.html" >> ${kill_sh}
 echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" ${PW_JOB_PATH}/service.json >> ${kill_sh}

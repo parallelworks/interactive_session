@@ -8,17 +8,21 @@ source lib.sh
 # CREATE KILL FILE:
 # - NEEDS TO BE MADE BEFORE RUNNING SESSION SCRIPT!
 # - When the job is killed PW runs ${PW_JOB_PATH}/kill.sh
+kill_ports="${openPort}"
 # Initialize kill.sh
 kill_sh=${PW_JOB_PATH}/kill.sh
 
 echo "#!/bin/bash" > ${kill_sh}
 echo "echo Running ${kill_sh}" >> ${kill_sh}
+cat inputs.sh >> ${kill_ssh} 
 # Add application-specific code
 # WARNING: if part runs in a different directory than bash command! --> Use absolute paths!!
 if [ -f "${service_name}/kill-template.sh" ]; then
     echo "Adding kill server script: ${service_name}/kill-template.sh"
     echo "bash ${service_name}/kill-template.sh" >> ${kill_sh}
 fi
+cat  ${sdir}/clear_ports.sh  >> ${kill_sh}
+sed -i "s/__KILL_PORTS__/${kill_ports}/g" ${kill_sh}
 echo "echo Finished running ${kill_sh}" >> ${kill_sh}
 echo "sed -i 's/.*Job status.*/Job status: Cancelled/' ${PW_JOB_PATH}/service.html" >> ${kill_sh}
 echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" ${PW_JOB_PATH}/service.json >> ${kill_sh}

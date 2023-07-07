@@ -1,7 +1,5 @@
 echo "$(date): $(hostname):${PWD} $0 $@"
 
-path_to_sing="__path_to_sing__"
-
 # MOUNT DIR DEFAULTS
 mount_dirs="${mount_dirs} -B ${HOME}:${HOME}"
 if [ -d "/contrib" ]; then
@@ -16,7 +14,7 @@ echo ${mdirs_cmd}
 
 
 # GPU SUPPORT
-if [[ __use_gpus__ == "True" ]]; then
+if [[ ${service_use_gpus} == "true" ]]; then
     gpu_flag="--nv"
     # This is only needed in PW clusters
     if [ -d "/usr/share/nvidia/" ]; then
@@ -28,8 +26,8 @@ fi
 
 
 # SANITY CHECKS!
-if ! [ -f "${path_to_sing}" ]; then
-    displayErrorMessage "ERROR: File $(hostname):${path_to_sing} not found!"
+if ! [ -f "${service_path_to_sing}" ]; then
+    displayErrorMessage "ERROR: File $(hostname):${service_path_to_sing} not found!"
 fi
 
 # WEB ADDRESS ISSUES:
@@ -38,12 +36,12 @@ fi
 
 
 # Generate sha:
-if [ -z "${password}" ] || [[ "${password}" == "__""password""__" ]]; then
+if [ -z "${service_password}" ]; then
     echo "No password was specified"
     sha=""
 else
     echo "Generating sha"
-    sha=$(singularity exec ${path_to_sing} python3 -c "from notebook.auth.security import passwd; print(passwd('__password__', algorithm = 'sha1'))")
+    sha=$(singularity exec ${service_path_to_sing} python3 -c "from notebook.auth.security import passwd; print(passwd('${service_password}', algorithm = 'sha1'))")
 fi
 
 # Custom PW plugin:
@@ -82,11 +80,11 @@ HERE
 
 
 # Served from 
-# https://cloud.parallel.works/api/v2/proxy/usercontainer?proxyType=api&proxyTo=/api/v1/display/pw/jobs/57147/service.html
+# https://cloud.parallel.works/api/v2/proxy/usercontainer?proxyType=api&proxyTo=/api/v1/display/${PW_JOB_PATH}/service.html
 export PYTHONPATH=${PWD}
 singularity exec ${gpu_flag} \
     ${mount_dirs} \
-    ${path_to_sing} \
+    ${service_path_to_sing} \
     jupyter-notebook \
         --port=${servicePort} \
         --ip=0.0.0.0 \

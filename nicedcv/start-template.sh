@@ -2,12 +2,6 @@
 # https://github.com/parallelworks/issues/issues/1081
 set -x
 # Runs via ssh + sbatch
-partition_or_controller=__partition_or_controller__
-job_number=__job_number__
-slurm_module=__slurm_module__
-service_bin="$(echo __service_bin__  | sed "s|---| |g" | sed "s|___| |g")"
-service_background=__service_background__ # Launch service as a background process
-chdir=__chdir__
 
 if [ -z $(which dcv) ]; then
     echo "Installing Nice DCV"
@@ -105,21 +99,24 @@ HERE'
     fi
 fi
 
-# Exit workflow if user has an active session
-#     The port is chosen in the /etc/dcv/dcv.conf file and requires
-#     restarting the service to take effect. Therefore, we can't have
-#     two sessions on different ports.
-# FIXME: What if two users of the same cluster want two sessions on the controller node?
-session_list=$(dcv list-sessions)
-if [[ $session_list == *"(owner:${USER}"* ]]; then
-    echo "User ${USER} has an active session on ${HOSTNAME}. Exiting workflow."
-    exit 0
-fi
-
-#############################
-# CREATE CONFIGURATION FILE #
-#############################
-sudo bash -c "cat > /etc/dcv/dcv.conf <<HERE
+if [[ ${service_is_running} == "True" ]]; then
+    export DISPLAY=:${service_display}
+else
+    # Exit workflow if user has an active session
+    #     The port is chosen in the /etc/dcv/dcv.conf file and requires
+    #     restarting the service to take effect. Therefore, we can't have
+    #     two sessions on different ports.
+    # FIXME: What if two users of the same cluster want two sessions on the controller node?
+    session_list=$(dcv list-sessions)
+    if [[ $session_list == *"(owner:${USER}"* ]]; then
+        echo "User ${USER} has an active session on ${HOSTNAME}. Exiting workflow."
+        exit 0
+    fi
+    
+    #############################
+    # CREATE CONFIGURATION FILE #
+    #############################
+    sudo bash -c "cat > /etc/dcv/dcv.conf <<HERE
 [license]
 #license-file = \"\"
 
@@ -162,25 +159,26 @@ primary-selection-copy=true
 
 HERE"
 
-#####################
-# STARTING NICE DCV #
-#####################
-# Need to restart after changing the port
-sudo systemctl restart dcvserver
-export DISPLAY=:0
-dcv create-session --storage-root %home% ${job_number}
+    #####################
+    # STARTING NICE DCV #
+    #####################
+    # Need to restart after changing the port
+    sudo systemctl restart dcvserver
+    export DISPLAY=:0
+    dcv create-session --storage-root %home% ${job_number}
+fi
 rm -f ${portFile}
 
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
 # - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
 echo "Creating file ${chdir}/service-kill-${job_number}-main.sh from directory ${PWD}"
-if [[ ${partition_or_controller} == "True" ]]; then
+if [[ ${host_jobschedulertype} == "CONTROLLER" ]]; then
+    echo "bash ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
+else
     # Remove .cluster.local for einteinmed!
     hname=$(hostname | sed "s/.cluster.local//g")
     echo "ssh ${hname} 'bash -s' < ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
-else
-    echo "bash ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
 fi
 
 cat >> ${chdir}/service-kill-${job_number}-main.sh <<HERE
@@ -195,9 +193,12 @@ else
     kill \${service_pid}
 fi
 # FIXME: check ~/.dcv to see if there are any logs to print (see turbovnc)
-dcv close-session ${job_number}
 HERE
 echo
+
+if [[ ${service_is_running} != "True" ]]; then
+    dcv close-session ${job_number}
+fi
 
 rm -f ${chdir}/service.pid
 touch ${chdir}/service.pid
@@ -205,10 +206,10 @@ touch ${chdir}/service.pid
 echo
 # Load slurm module
 # - multiple quotes are used to prevent replacement of __varname__ !!!
-if ! [ -z ${slurm_module} ] && ! [[ "${slurm_module}" == "__""slurm_module""__" ]]; then
-    echo "module load ${slurm_module}"
-    module avail ${slurm_module}
-    module load ${slurm_module}
+if ! [ -z ${service_slurm_module} ]; then
+    echo "module load ${service_slurm_module}"
+    module avail ${service_slurm_module}
+    module load ${service_slurm_module}
 fi
 echo
 

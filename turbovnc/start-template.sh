@@ -12,15 +12,6 @@ fi
 
 set -x
 # Runs via ssh + sbatch
-partition_or_controller=__partition_or_controller__
-job_number=__job_number__
-slurm_module=__slurm_module__
-service_bin="$(echo __service_bin__  | sed "s|---| |g" | sed "s|___| |g")"
-service_background=__service_background__ # Launch service as a background process
-chdir=__chdir__
-vnc_exec=__vnc_exec__
-novnc_dir=__novnc_dir__
-novnc_tgz=__novnc_tgz__
 vnc_bin=vncserver
 
 bootstrap_tgz() {
@@ -38,18 +29,7 @@ bootstrap_tgz() {
             cp /core/pworks-main/${tgz_path} ${install_parent_dir}
         else
             ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-            if [[ ${partition_or_controller} == "True" ]]; then
-                # Running in a compute partition
-                if [[ "$USERMODE" == "k8s" ]]; then
-                    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
-                    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-                    # Works because home directory is shared!
-                    ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
-                else # Docker mode
-                    # Works because home directory is shared!
-                    ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
-                fi
-            else
+            if [[ ${host_jobschedulertype} == "CONTROLLER" ]]; then
                 # Running in a controller node
                 if [[ "$USERMODE" == "k8s" ]]; then
                     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
@@ -58,17 +38,28 @@ bootstrap_tgz() {
                 else # Docker mode
                     scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
                 fi
+            else
+                # Running in a compute partition
+                if [[ "$USERMODE" == "k8s" ]]; then
+                    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
+                    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
+                    # Works because home directory is shared!
+                    ssh ${ssh_options} ${host_resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                else # Docker mode
+                    # Works because home directory is shared!
+                    ssh ${ssh_options} ${host_resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                fi
             fi
         fi
         tar -zxf ${install_parent_dir}/$(basename ${tgz_path}) -C ${install_parent_dir}
     fi
 }
 
-if [ -z ${novnc_dir} ] || [[ "${novnc_dir}" == "__""novnc_dir""__" ]]; then
+if [ -z ${novnc_dir} ]; then
     novnc_dir=${HOME}/pw/bootstrap/noVNC-1.3.0
 fi
 
-if [ -z ${novnc_tgz} ] || [[ "${novnc_tgz}" == "__""novnc_tgz""__" ]]; then
+if [ -z ${novnc_tgz} ]; then
     novnc_tgz=/swift-pw-bin/apps/noVNC-1.3.0.tgz
 fi
 
@@ -98,12 +89,12 @@ fi
 # - Needs to be here because we need the hostname of the compute node.
 # - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
 echo "Creating file ${chdir}/service-kill-${job_number}-main.sh from directory ${PWD}"
-if [[ ${partition_or_controller} == "True" ]]; then
+if [[ ${host_jobschedulertype} == "CONTROLLER" ]]; then
+    echo "bash ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
+else
     # Remove .cluster.local for einteinmed!
     hname=$(hostname | sed "s/.cluster.local//g")
     echo "ssh ${hname} 'bash -s' < ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
-else
-    echo "bash ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
 fi
 
 cat >> ${chdir}/service-kill-${job_number}-main.sh <<HERE
@@ -129,7 +120,7 @@ HERE
 echo
 
 # FIND SERVER EXECUTABLE (BOOTSTRAP)
-if [ -z ${vnc_exec} ] || [[ "${vnc_exec}" == "__""vnc_exec""__" ]]; then
+if [ -z ${service_vnc_exec} ]; then
     # If no vnc_exec is provided
     if [ -z $(which ${vnc_bin}) ]; then
         # If no vncserver is in PATH:
@@ -141,21 +132,21 @@ if [ -z ${vnc_exec} ] || [[ "${vnc_exec}" == "__""vnc_exec""__" ]]; then
         fi
 
     fi
-    vnc_exec=$(which ${vnc_bin})
+    service_vnc_exec=$(which ${vnc_bin})
 fi
 
-if [ ! -f "${vnc_exec}" ]; then
-    displayErrorMessage "ERROR: vnc_exec=${vnc_exec} file not found! - Exiting workflow!"
+if [ ! -f "${service_vnc_exec}" ]; then
+    displayErrorMessage "ERROR: service_vnc_exec=${service_vnc_exec} file not found! - Exiting workflow!"
 fi
 
 # Start service
-${vnc_exec} -kill ${DISPLAY}
+${service_vnc_exec} -kill ${DISPLAY}
 # FIXME: Need better way of doing this:
 # Turbovnc fails with "=" and tigevnc fails with " "
 {
-    ${vnc_exec} ${DISPLAY} -SecurityTypes=None
+    ${service_vnc_exec} ${DISPLAY} -SecurityTypes=None
 } || {
-    ${vnc_exec} ${DISPLAY} -SecurityTypes None
+    ${service_vnc_exec} ${DISPLAY} -SecurityTypes None
 }
 
 rm -f ${chdir}/service.pid
@@ -218,11 +209,10 @@ cd ${novnc_dir}
 
 echo
 # Load slurm module
-# - multiple quotes are used to prevent replacement of __varname__ !!!
-if ! [ -z ${slurm_module} ] && ! [[ "${slurm_module}" == "__""slurm_module""__" ]]; then
-    echo "module load ${slurm_module}"
-    module avail ${slurm_module}
-    module load ${slurm_module}
+if ! [ -z ${service_slurm_module} ]; then
+    echo "module load ${service_slurm_module}"
+    module avail ${service_slurm_module}
+    module load ${service_slurm_module}
 fi
 echo
 
@@ -235,7 +225,7 @@ sleep 5 # Need this specially in controller node or second software won't show u
 
 # Launch service
 cd
-if ! [ -z "${service_bin}" ] && ! [[ "${service_bin}" == "__""service_bin""__" ]]; then
+if ! [ -z "${service_bin}" ]; then
     if [[ ${service_background} == "False" ]]; then
         echo "Running ${service_bin}"
         ${service_bin}

@@ -1,12 +1,6 @@
 # Runs via ssh + sbatch
 set -x
 
-password="__password__"
-notebook_dir="__notebook_dir__"
-conda_sh=__conda_sh__
-conda_env=__conda_env__
-slurm_module=__slurm_module__
-
 f_install_miniconda() {
     install_dir=$1
     echo "Installing Miniconda3-py39_4.9.2"
@@ -19,23 +13,23 @@ f_install_miniconda() {
 }
 
 
-if ! [ -z "${conda_sh}" ] && ! [[ "${conda_sh}" == "__""conda_sh""__" ]]; then
-    if [[ "__conda_install__" != "True" ]]; then
-        source ${conda_sh}
-        conda activate ${conda_env}
+if ! [ -z "${service_conda_sh}" ]; then
+    if [[ "${service_conda_install}" != "true" ]]; then
+        source ${service_conda_sh}
+        conda activate ${service_conda_env}
     else
         {
-            source ${conda_sh}
+            source ${service_conda_sh}
         } || {
-            conda_dir=$(echo ${conda_sh} | sed "s|etc/profile.d/conda.sh||g" )
+            conda_dir=$(echo ${service_conda_sh} | sed "s|etc/profile.d/conda.sh||g" )
             f_install_miniconda ${conda_dir}
-            source ${conda_sh}
+            source ${service_conda_sh}
         }
         {
-            conda activate ${conda_env}
+            conda activate ${service_conda_env}
         } || {
-            conda create -n ${conda_env} jupyter -y
-            conda activate ${conda_env}
+            conda create -n ${service_conda_env} jupyter -y
+            conda activate ${service_conda_env}
         }
         if [ -z $(which ${jupyter-notebook} 2> /dev/null) ]; then
             conda install -c anaconda jupyter -y
@@ -43,8 +37,8 @@ if ! [ -z "${conda_sh}" ] && ! [[ "${conda_sh}" == "__""conda_sh""__" ]]; then
     fi
 fi
 
-if ! [ -z "${slurm_module}" ] && ! [[ "${slurm_module}" == "__""slurm_module""__" ]]; then
-    module load ${slurm_module}
+if ! [ -z "${service_slurm_module}" ]; then
+    module load ${service_slurm_module}
 fi
 
 echo "starting notebook on $servicePort..."
@@ -52,18 +46,18 @@ echo "starting notebook on $servicePort..."
 export XDG_RUNTIME_DIR=""
 
 # Generate sha:
-if [ -z "${password}" ] || [[ "${password}" == "__""password""__" ]]; then
+if [ -z "${service_password}" ]; then
     echo "No password was specified"
     sha=""
 else
     echo "Generating sha"
-    sha=$(python3 -c "from notebook.auth.security import passwd; print(passwd('${password}', algorithm = 'sha1'))")
+    sha=$(python3 -c "from notebook.auth.security import passwd; print(passwd('${service_password}', algorithm = 'sha1'))")
 fi
 # Set the launch directory for JupyterHub
 # If notebook_dir is not set or set to a templated value,
 # use the default value of "/".
-if [ -z ${notebook_dir} ] || [[ "${notebook_dir}" == "__""notebook_dir""__" ]]; then
-    notebook_dir="/"
+if [ -z ${service_notebook_dir} ]; then
+    service_notebook_dir="/"
 fi
 
 # Custom PW plugin:
@@ -101,7 +95,7 @@ def load_jupyter_server_extension(nbapp):
 HERE
 
 # Served from 
-# https://cloud.parallel.works/api/v2/proxy/usercontainer?proxyType=api&proxyTo=/api/v1/display/pw/jobs/57147/service.html
+# https://cloud.parallel.works/api/v2/proxy/usercontainer?proxyType=api&proxyTo=/api/v1/display/${PW_JOB_PATH}/service.html
 export PYTHONPATH=${PWD}
 jupyter-notebook \
     --port=${servicePort} \
@@ -111,7 +105,7 @@ jupyter-notebook \
     --NotebookApp.token= \
     --NotebookApp.password=$sha \
     --no-browser \
-    --notebook-dir=$notebook_dir \
+    --notebook-dir=${service_notebook_dir} \
     --NotebookApp.nbserver_extensions "pw_jupyter_proxy=True" \
     --NotebookApp.tornado_settings="{\"static_url_prefix\":\"/me/${openPort}/static/\"}" \
     --NotebookApp.allow_origin=*

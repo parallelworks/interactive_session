@@ -8,52 +8,44 @@ set -x
 #     2.2: Else --> bootstrap TGZ
 #     2.3: Else --> Search in install paths
 
-server_exec=__server_exec__
-partition_or_controller=__partition_or_controller__
-chdir=__chdir__
-job_number=__job_number__
-server_dir=__server_dir__
-password=__password__
-github_token=__github_token__
-install_dir=__install_dir__
-tgz_path=__tgz_path__
+#server_bin="openvscode-server"
+server_bin="code-server"
+
 
 # SET DEFAULTS:
-if [ -z ${server_dir} ] || [[ "${server_dir}" == "__""server_dir""__" ]]; then
-    server_dir=~/
+if [ -z ${service_directory} ]; then
+    service_directory=~/
 fi
 
-if [ -z ${github_token} ] || [[ "${github_token}" == "__""github_token""__" ]]; then
+if [ -z ${service_github_token} ]; then
     gh_flag=""
 else
-    export GITHUB_TOKEN=${github_token}
+    export GITHUB_TOKEN=${service_github_token}
     gh_flag="--github-auth"
 fi
 
-if [ -z ${password} ] || [[ "${password}" == "__""password""__" ]]; then
+if [ -z ${service_password} ]; then
     password_flag="--auth=none"
 else
-    export PASSWORD=${password}
+    export PASSWORD=${service_password}
     password_flag="--auth=password"
 fi
 
-if [ -z ${install_dir} ] || [[ "${install_dir}" == "__""install_dir""__" ]]; then
-    install_dir=${HOME}/pw/code-server-4.7.0-linux-amd64
+if [ -z ${service_install_dir} ]; then
+    service_install_dir=${HOME}/pw/code-server-4.7.0-linux-amd64
 fi
 
-if [ -z ${tgz_path} ] || [[ "${tgz_path}" == "__""tgz_path""__" ]]; then
-    tgz_path=/swift-pw-bin/apps/code-server-4.7.0-linux-amd64.tar.gz
+if [ -z ${service_tgz_path} ]; then
+    service_tgz_path=/swift-pw-bin/apps/code-server-4.7.0-linux-amd64.tar.gz
 fi
 
 install_paths="${HOME}/pw/*/bin /opt/*/bin /shared/*/bin"
-#server_bin="openvscode-server"
-server_bin="code-server"
 
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
 # - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
 echo "Creating file ${chdir}/service-kill-${job_number}-main.sh from directory ${PWD}"
-if [[ ${partition_or_controller} == "True" ]]; then
+if [[ ${host_jobschedulertype} != "CONTROLLER" ]]; then
     # Remove .cluster.local for einteinmed!
     hname=$(hostname | sed "s/.cluster.local//g")
     echo "ssh ${hname} 'bash -s' < ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
@@ -83,16 +75,16 @@ bootstrap_tgz() {
             cp /core/pworks-main/${tgz_path} ${install_parent_dir}
         else
             ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-            if [[ ${partition_or_controller} == "True" ]]; then
+            if [[ ${host_jobschedulertype} != "CONTROLLER" ]]; then
                 # Running in a compute partition
                 if [[ "$USERMODE" == "k8s" ]]; then
                     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
                     # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
                     # Works because home directory is shared!
-                    ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                    ssh ${ssh_options} ${host_resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
                 else # Docker mode
                     # Works because home directory is shared!
-                    ssh ${ssh_options} $masterIp scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                    ssh ${ssh_options} ${host_resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
                 fi
             else
                 # Running in a controller node
@@ -119,8 +111,8 @@ if [ -z ${server_exec} ] || [[ "${server_exec}" == "__""server_exec""__" ]]; the
         server_exec=$(which ${server_bin})
     else
         # Else bootstrap (install) -- Does nothing unless install_dir does not exist
-        bootstrap_tgz ${tgz_path} ${install_dir}
-        server_exec=${install_dir}/bin/${server_bin}
+        bootstrap_tgz ${service_tgz_path} ${service_install_dir}
+        server_exec=${service_install_dir}/bin/${server_bin}
     fi
 
     # Search for the binary in install_paths
@@ -138,7 +130,7 @@ ${server_exec} \
     --bind-addr=localhost:${servicePort} \
     ${gh_flag} \
     ${password_flag} \
-    ${server_dir}
+    ${service_directory}
 
 
 exit 0

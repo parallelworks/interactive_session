@@ -1,9 +1,11 @@
 <tool id='Matthew.Shaxted_interactive_session' name='Matthew.Shaxted_interactive_session'>
   <command interpreter='bash'>main.sh</command>
+  <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
-  <param name='_pw_service_name' label='Service' type='hidden' value='novnc-docker' width='50%_none'></param>
-   <section name='service_sec' type='section' title='Jupyter Notebook Settings' expanded='true'>
-        <param name='_pw_docker_repo' type='select' label='noVNC Docker Container' help='Docker container to serve for the noVNC session' width='50%_none' multiple='false'>
+  <param name='service_name' label='Service' type='hidden' value='novnc-docker' width='50%_none'></param>
+   <section name='service' type='section' title='Jupyter Notebook Settings' expanded='true'>
+        <param name='name' label='Service' type='hidden' value='novnc-docker' width='50%_none'></param>
+        <param name='docker_repo' type='select' label='noVNC Docker Container' help='Docker container to serve for the noVNC session' width='50%_none' multiple='false'>
             <option value="accetto/ubuntu-vnc-xfce-opengl-g3" selected="true">Ubuntu 20.04 Xfce OpenGL</option>
             <option value="accetto/ubuntu-vnc-xfce-python-g3">Ubuntu 20.04 Xfce Python</option>
             <option value="accetto/ubuntu-vnc-xfce-nodejs-g3">Ubuntu 20.04 Xfce NodeJS</option>
@@ -16,24 +18,25 @@
             <option value="accetto/ubuntu-vnc-xfce-firefox-g3">Ubuntu 20.04 Xfce Firefox</option>
             <option value="accetto/ubuntu-vnc-xfce-chromium-g3">Ubuntu 20.04 Xfce Chromium</option>
         </param>
-        <param name="_pw_use_gpus" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Use GPUs?" help='Select Yes to run a CUDA application inside a container' width="25%_none" optional='true' float="right"></param>
+        <param name="use_gpus" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Use GPUs?" help='Select Yes to run a CUDA application inside a container' width="25%_none" optional='true' float="right"></param>
    </section>
     <section name='host' type='section' title='Desktop Host' expanded='true'>
+      <param name='resource' type='computeResource' label='Service host' hideUserWorkspace='true' help='Resource to host the service'></param>
       <conditional name="jobschedulertype_cond">
-          <param name='_pw_jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively' width='50%_none' multiple='false'>
+          <param name='jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively' width='50%_none' multiple='false'>
             <option value="CONTROLLER" selected="true">Controller</option>
             <option value="SLURM">SLURM Partition</option>
         </param>
         <when value="SLURM">
-            <param name='_pw__sch__dd_partition_e_' label='SLURM partition' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value='' width='50%_none'>
+            <param name='_sch__dd_partition_e_' label='SLURM partition' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value='' width='50%_none'>
             </param>
-            <param name='_pw_scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value='--time=00:20:00;--nodes=1;--exclusive' width='100%_none'>
+            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value='--time=00:20:00;--nodes=1;--exclusive' width='100%_none'>
             </param>
         </when>
       </conditional>
     </section>
-    <section name='advanced_options_other' type='section' title='Advanced Options' expanded='false'>
-        <param name="_pw_stream" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW' width="25%_none" optional='true' float="right">
+    <section name='advanced_options' type='section' title='Advanced Options' expanded='false'>
+        <param name="stream" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW' width="25%_none" optional='true' float="right">
         </param>
     </section>
   </inputs>

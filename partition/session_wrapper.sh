@@ -6,27 +6,31 @@ env > session_wrapper.env
 source lib.sh
 
 # TUNNEL COMMAND:
-SERVER_TUNNEL_CMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 0.0.0.0:$openPort:0.0.0.0:\$servicePort ${USER_CONTAINER_HOST}"
+if [ -z "$servicePort" ]; then
+    SERVER_TUNNEL_CMD="ssh -J ${host_resource_privateIp} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 0.0.0.0:$openPort:0.0.0.0:\$servicePort ${USER_CONTAINER_HOST}"
+else
+    SERVER_TUNNEL_CMD="ssh -J ${host_resource_privateIp} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -R 0.0.0.0:$openPort:0.0.0.0:$servicePort ${USER_CONTAINER_HOST}"
+fi
 # Cannot have different port numbers on client and server or license checkout fails!
-LICENSE_TUNNEL_CMD="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -L 0.0.0.0:${license_server_port}:localhost:${license_server_port} -L 0.0.0.0:${license_daemon_port}:localhost:${license_daemon_port} ${USER_CONTAINER_HOST}"
+LICENSE_TUNNEL_CMD="ssh -J ${host_resource_privateIp} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -fN -L 0.0.0.0:${advanced_options_license_server_port}:localhost:${advanced_options_license_server_port} -L 0.0.0.0:${advanced_options_license_daemon_port}:localhost:${advanced_options_license_daemon_port} ${USER_CONTAINER_HOST}"
 
 # Initiallize session batch file:
 echo "Generating session script"
-export session_sh=/pw/jobs/${job_number}/session.sh
+export session_sh=${PW_JOB_PATH}/session.sh
 echo "#!/bin/bash" > ${session_sh}
 
-if [[ ${jobschedulertype} == "SLURM" ]]; then
+if [[ ${host_jobschedulertype} == "SLURM" ]]; then
     directive_prefix="#SBATCH"
     submit_cmd="sbatch"
     delete_cmd="scancel"
     stat_cmd="squeue"
-elif [[ ${jobschedulertype} == "PBS" ]]; then
+elif [[ ${host_jobschedulertype} == "PBS" ]]; then
     directive_prefix="#PBS"
     submit_cmd="qsub"
     delete_cmd="qdel"
     stat_cmd="qstat"
 else
-    displayErrorMessage "ERROR: jobschedulertype <${jobschedulertype}> must be SLURM or PBS"
+    displayErrorMessage "ERROR: host_jobschedulertype <${host_jobschedulertype}> must be SLURM or PBS"
 fi
 
 if ! [ -z ${scheduler_directives} ]; then
@@ -37,6 +41,7 @@ if ! [ -z ${scheduler_directives} ]; then
 fi
 
 echo >> ${session_sh}
+cat inputs.sh >> ${session_sh}
 
 # ADD RUNTIME FIXES FOR EACH PLATFORM
 if ! [ -z ${RUNTIME_FIXES} ]; then
@@ -48,9 +53,9 @@ ${sshcmd} mkdir -p ${chdir}
 remote_session_dir=${chdir}
 
 # ADD STREAMING
-if [[ "${stream}" == "True" ]]; then
+if [[ "${advanced_options_stream}" == "true" ]]; then
     # Don't really know the extension of the --pushpath. Can't controll with PBS (FIXME)
-    stream_args="--host ${USER_CONTAINER_HOST} --pushpath /pw/jobs/${job_number}/session-${job_number}.o --pushfile session-${job_number}.out --delay 30 --masterIp ${masterIp}"
+    stream_args="--host ${USER_CONTAINER_HOST} --pushpath ${PW_JOB_PATH}/session-${job_number}.o --pushfile session-${job_number}.out --delay 30 --masterIp ${host_resource_privateIp}"
     stream_cmd="bash stream-${job_number}.sh ${stream_args} &"
     echo; echo "Streaming command:"; echo "${stream_cmd}"; echo
     echo ${stream_cmd} >> ${session_sh}
@@ -61,13 +66,13 @@ $sshcmd cp "~/.ssh/id_rsa.pub" ${remote_session_dir}
 
 cat >> ${session_sh} <<HERE
 echo "Running in host \$(hostname)"
-sshusercontainer="ssh -J $masterIp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST}"
+sshusercontainer="ssh -J ${host_resource_privateIp} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST}"
 
 displayErrorMessage() {
     echo \$(date): \$1
-    \${sshusercontainer} "sed -i \\"s|__ERROR_MESSAGE__|\$1|g\\" ${PW_PATH}/pw/jobs/${job_number}/error.html"
-    \${sshusercontainer} "cp /pw/jobs/${job_number}/error.html ${PW_PATH}/pw/jobs/${job_number}/service.html"
-    \${sshusercontainer} "sed -i \"s|.*ERROR_MESSAGE.*|    \\\\\"ERROR_MESSAGE\\\\\": \\\\\"\$1\\\\\"|\" /pw/jobs/57236/service.json"
+    \${sshusercontainer} "sed -i \\"s|__ERROR_MESSAGE__|\$1|g\\" ${PW_PATH}${PW_JOB_PATH}/error.html"
+    \${sshusercontainer} "cp ${PW_JOB_PATH}/error.html ${PW_PATH}${PW_JOB_PATH}/service.html"
+    \${sshusercontainer} "sed -i \"s|.*ERROR_MESSAGE.*|    \\\\\"ERROR_MESSAGE\\\\\": \\\\\"\$1\\\\\"|\" ${PW_JOB_PATH}/service.json"
     exit 1
 }
 
@@ -104,25 +109,20 @@ if [ -z "\${pubkey}" ]; then
     cat id_rsa.pub >> ~/.ssh/authorized_keys
 fi
 
-if [ -f "${poolworkdir}/pw/.pw/remote.sh" ]; then
+if [ -f "${host_resource_workdir}/pw/.pw/remote.sh" ]; then
     # NEW VERSION OF SLURMSHV2 PROVIDER
-    echo "Running ${poolworkdir}/pw/.pw/remote.sh"
-    ${poolworkdir}/pw/.pw/remote.sh
-elif [ -f "${poolworkdir}/pw/remote.sh" ]; then
-    echo "Running ${poolworkdir}/pw/remote.sh"
-    ${poolworkdir}/pw/remote.sh
+    echo "Running ${host_resource_workdir}/pw/.pw/remote.sh"
+    ${host_resource_workdir}/pw/.pw/remote.sh
+elif [ -f "${host_resource_workdir}/pw/remote.sh" ]; then
+    echo "Running ${host_resource_workdir}/pw/remote.sh"
+    ${host_resource_workdir}/pw/remote.sh
 fi
 
-# These are not workflow parameters but need to be available to the service on the remote node!
-FORWARDPATH=${FORWARDPATH}
-IPADDRESS=${IPADDRESS}
-openPort=${openPort}
-masterIp=${masterIp}
-USER_CONTAINER_HOST=${USER_CONTAINER_HOST}
-controller=${controller}
-
 # Find an available servicePort
-servicePort=\$(findAvailablePort)
+servicePort=${servicePort}
+if [ -z "${servicePort}" ]; then
+    servicePort=\$(findAvailablePort)
+fi
 echo \${servicePort} > service.port
 
 echo
@@ -134,9 +134,9 @@ echo
 echo "${SERVER_TUNNEL_CMD} </dev/null &>/dev/null &"
 ${SERVER_TUNNEL_CMD} </dev/null &>/dev/null &
 
-if ! [ -z "${license_env}" ]; then
+if ! [ -z "${advanced_options_license_env}" ]; then
     # Export license environment variable
-    export ${license_env}=${license_server_port}@localhost
+    export ${advanced_options_license_env}=${advanced_options_license_server_port}@localhost
     # Create tunnel
     echo "${LICENSE_TUNNEL_CMD} </dev/null &>/dev/null &"
     ${LICENSE_TUNNEL_CMD} </dev/null &>/dev/null &
@@ -150,14 +150,14 @@ rm -f \${portFile}
 HERE
 
 # Add application-specific code
-if [ -f "${start_service_sh}" ]; then
-    cat ${start_service_sh} >> ${session_sh}
+if [ -f "${service_name}/start-template.sh" ]; then
+    cat ${service_name}/start-template.sh >> ${session_sh}
 fi
 
 # move the session file over
 chmod 777 ${session_sh}
-scp ${session_sh} ${controller}:${remote_session_dir}/session-${job_number}.sh
-scp stream.sh ${controller}:${remote_session_dir}/stream-${job_number}.sh
+scp ${session_sh} ${host_resource_publicIp}:${remote_session_dir}/session-${job_number}.sh
+scp stream.sh ${host_resource_publicIp}:${remote_session_dir}/stream-${job_number}.sh
 
 echo
 echo "Submitting ${submit_cmd} request (wait for node to become available before connecting)..."
@@ -168,9 +168,9 @@ sed -i 's/.*Job status.*/Job status: Submitted/' service.html
 sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Submitted\",/" service.json
 
 # Submit job and get job id
-if [[ ${jobschedulertype} == "SLURM" ]]; then
+if [[ ${host_jobschedulertype} == "SLURM" ]]; then
     jobid=$($sshcmd ${submit_cmd} ${remote_session_dir}/session-${job_number}.sh | tail -1 | awk -F ' ' '{print $4}')
-elif [[ ${jobschedulertype} == "PBS" ]]; then
+elif [[ ${host_jobschedulertype} == "PBS" ]]; then
     jobid=$($sshcmd ${submit_cmd} ${remote_session_dir}/session-${job_number}.sh)
 fi
 
@@ -179,22 +179,28 @@ if [[ "${jobid}" == "" ]];then
 fi
 
 # CREATE KILL FILE:
-# - When the job is killed PW runs /pw/jobs/job-number/kill.sh
-# Initialize kill.sh
-kill_sh=/pw/jobs/${job_number}/kill.sh
-echo "#!/bin/bash" > ${kill_sh}
-echo "echo Running ${kill_sh}" >> ${kill_sh}
-
-# Add application-specific code
-# WARNING: if part runs in a different directory than bash command! --> Use absolute paths!!
-if [ -f "${kill_service_sh}" ]; then
-    echo "Adding kill server script: ${kill_service_sh}"
-    echo "$sshcmd 'bash -s' < ${kill_service_sh}" >> ${kill_sh}
+# - When the job is killed PW runs ${PW_JOB_PATH}/job-number/kill.sh
+# KILL_SSH: Part of the kill_sh that runs on the remote host with ssh
+kill_ssh=${PW_JOB_PATH}/kill_ssh.sh
+echo "#!/bin/bash" > ${kill_ssh}
+cat inputs.sh >> ${kill_ssh} 
+if [ -f "${service_name}/kill-template.sh" ]; then
+    echo "Adding kill server script ${service_name}/kill-template.sh to ${kill_ssh}"
+    cat ${service_name}/kill-template.sh >> ${kill_ssh}
 fi
-echo $sshcmd ${delete_cmd} ${jobid} >> ${kill_sh}
+echo ${delete_cmd} ${jobid} >> ${kill_ssh}
+
+# Initialize kill.sh
+kill_sh=${PW_JOB_PATH}/kill.sh
+echo "#!/bin/bash" > ${kill_sh}
+echo "mv ${kill_sh} ${kill_sh}.completed" >> ${kill_sh}
+cat inputs.sh >> ${kill_sh}
+echo "echo Running ${kill_sh}" >> ${kill_sh}
+echo "$sshcmd 'bash -s' < ${kill_ssh}" >> ${kill_sh}
 echo "echo Finished running ${kill_sh}" >> ${kill_sh}
-echo "sed -i 's/.*Job status.*/Job status: Cancelled/' /pw/jobs/${job_number}/service.html"  >> ${kill_sh}
-echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" /pw/jobs/${job_number}/service.json >> ${kill_sh}
+echo "sed -i 's/.*Job status.*/Job status: Cancelled/' ${PW_JOB_PATH}/service.html"  >> ${kill_sh}
+echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" ${PW_JOB_PATH}/service.json >> ${kill_sh}
+echo "exit 0" >> ${kill_sh}
 chmod 777 ${kill_sh}
 
 echo
@@ -208,7 +214,7 @@ while true; do
     job_status=$($sshcmd ${stat_cmd} | grep ${jobid} | awk '{print $5}')
     sed -i "s/.*Job status.*/Job status: ${job_status}/" service.html
     sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"${job_status}\",/" service.json
-    if [[ ${jobschedulertype} == "SLURM" ]]; then
+    if [[ ${host_jobschedulertype} == "SLURM" ]]; then
         # If job status is empty job is no longer running
         if [ -z ${job_status} ]; then
             job_status=$($sshcmd sacct -j ${jobid}  --format=state | tail -n1)
@@ -216,7 +222,7 @@ while true; do
             sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"${job_status}\",/" service.json
             break
         fi
-    elif [[ ${jobschedulertype} == "PBS" ]]; then
+    elif [[ ${host_jobschedulertype} == "PBS" ]]; then
         if [[ ${job_status} == "C" ]]; then
             break
         fi

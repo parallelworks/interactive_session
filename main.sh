@@ -8,6 +8,8 @@ chmod 777 * -Rf
 mv utils/error.html .
 mv utils/service.json .
 
+sed -i "s|__USER__|${PW_USER}|g" inputs.sh
+
 source lib.sh
 source inputs.sh
 # Obtain the service_name from any section of the XML

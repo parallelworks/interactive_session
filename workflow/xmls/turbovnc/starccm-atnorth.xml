@@ -7,7 +7,7 @@
     <param name='service_display' label='Service Display' type='hidden' value='1' width='50%_none'></param>
     <param name='service_is_running' label='Service Is Running' type='hidden' value='True' width='50%_none'></param>
     <param name='service_slurm_module' label='Module name' type='text' help='Module to load with [module load]' value='starccm' width='50%_none'></param>
-    <param name='service_bin' label='StarCCM+ Launch COmmand' type='text' value='starccm+' help='Use --- instead of spaces!' width='50%_none'></param>
+    <param name='service_bin' label='StarCCM+ Launch Command' type='text' value='starccm+' help='Use --- instead of spaces!' width='50%_none'></param>
     <section name='host' type='section' title='Desktop Host' expanded='true'>
       <param name='resource' type='computeResource' label='Service host' hideUserWorkspace='true' help='Resource to host the service'></param>
       <param name='jobschedulertype' label='Service Scheduler Type' type='hidden' value='SLURM' width='50%_none'></param>

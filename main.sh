@@ -13,6 +13,10 @@ sed -i "s|__USER__|${PW_USER}|g" inputs.sh
 source lib.sh
 
 # Processing resource inputs
+source /etc/profile.d/parallelworks.sh
+source /etc/profile.d/parallelworks-env.sh
+source /pw/.miniconda3/etc/profile.d/conda.sh
+conda activate
 python utils/input_form_resource_wrapper.py
 
 if ! [ -f "resources/host/inputs.sh" ]; then

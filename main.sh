@@ -13,7 +13,7 @@ sed -i "s|__USER__|${PW_USER}|g" inputs.sh
 source lib.sh
 
 # Processing resource inputs
-python input_form_resource_wrapper.py
+python utils/input_form_resource_wrapper.py
 
 if ! [ -f "resources/host/inputs.sh" ]; then
     displayErrorMessage "ERROR - Missing file ./resources/host/inputs.sh. Resource wrapper failed"

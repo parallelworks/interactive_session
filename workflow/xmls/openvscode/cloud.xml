@@ -8,7 +8,7 @@
         <param name='name' label='Service' type='hidden' value='openvscode' width='50%_none'></param>
         <param name='exec' label='Service' type='hidden' value='' width='50%_none'></param>
         <param name='password' label='Password for IDE session' type='text' value='' help='Enter password or leave blank for no password' width='50%_none'></param>
-        <param name='directory' label='Directory to open in VS code' type='text' value='~/' help='' width='50%_none'></param>
+        <param name='directory' label='Directory to open in VS code' type='text' value='__WORKDIR__' help='' width='50%_none'></param>
         <param name='github_token' label='GitHub authentication token (optional)' type='text' value='' help='' width='50%_none'></param>
    </section>
     <section name='pwrl_host' type='section' title='Server Host' expanded='true'>

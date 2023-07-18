@@ -5,7 +5,7 @@ conda activate
 # change permissions of run directly so we can execute all files
 chmod 777 * -Rf
 # Need to move files from utils directory to avoid updating the sparse checkout
-mv utils/service.json .
+cp utils/service.json .
 
 sed -i "s|__USER__|${PW_USER}|g" inputs.sh
 

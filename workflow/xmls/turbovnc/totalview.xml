@@ -11,6 +11,7 @@
     </section>
     <section name='pwrl_host' type='section' title='Host' expanded='true'>
        <param name='resource' type='computeResource' label='Service host' hideUserWorkspace='true' help='Resource to host the service'></param>
+       <param name='nports' label='Number of Ports to Reserve' type='hidden' value='1' width='50%_none'></param>        
        <conditional name="jobschedulertype_cond">
           <param name='jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively' width='50%_none' multiple='false'>
             <option value="CONTROLLER" selected="true">Controller</option>

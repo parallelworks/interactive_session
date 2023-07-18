@@ -164,8 +164,7 @@ HERE"
     #####################
     # Need to restart after changing the port
     sudo systemctl restart dcvserver
-    sleep 20
-    export DISPLAY=:1
+    export DISPLAY=:0
     dcv create-session --storage-root %home% ${job_number}
 fi
 rm -f ${portFile}
@@ -197,9 +196,9 @@ fi
 HERE
 echo
 
-if [[ ${service_is_running} != "True" ]]; then
-    dcv close-session ${job_number}
-fi
+#if [[ ${service_is_running} != "True" ]]; then
+#    dcv close-session ${job_number}
+#fi
 
 rm -f ${resource_jobdir}/service.pid
 touch ${resource_jobdir}/service.pid

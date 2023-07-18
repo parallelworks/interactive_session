@@ -126,6 +126,10 @@ if [ ! -f "${server_exec}" ]; then
     exit 1
 fi
 
+echo ${server_exec} --bind-addr=localhost:${servicePort} ${gh_flag} ${password_flag} ${service_directory}
+
+sleep 1000
+
 ${server_exec} \
     --bind-addr=localhost:${servicePort} \
     ${gh_flag} \

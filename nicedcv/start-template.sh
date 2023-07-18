@@ -172,17 +172,17 @@ rm -f ${portFile}
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
 # - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
-echo "Creating file ${chdir}/service-kill-${job_number}-main.sh from directory ${PWD}"
-if [[ ${host_jobschedulertype} == "CONTROLLER" ]]; then
-    echo "bash ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
+echo "Creating file ${resource_jobdir}/service-kill-${job_number}-main.sh from directory ${PWD}"
+if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
+    echo "bash ${resource_jobdir}/service-kill-${job_number}-main.sh" > ${resource_jobdir}/service-kill-${job_number}.sh
 else
     # Remove .cluster.local for einteinmed!
     hname=$(hostname | sed "s/.cluster.local//g")
-    echo "ssh ${hname} 'bash -s' < ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
+    echo "ssh ${hname} 'bash -s' < ${resource_jobdir}/service-kill-${job_number}-main.sh" > ${resource_jobdir}/service-kill-${job_number}.sh
 fi
 
-cat >> ${chdir}/service-kill-${job_number}-main.sh <<HERE
-service_pid=\$(cat ${chdir}/service.pid)
+cat >> ${resource_jobdir}/service-kill-${job_number}-main.sh <<HERE
+service_pid=\$(cat ${resource_jobdir}/service.pid)
 if [ -z \${service_pid} ]; then
     echo "ERROR: No service pid was found!"
 else
@@ -200,8 +200,8 @@ if [[ ${service_is_running} != "True" ]]; then
     dcv close-session ${job_number}
 fi
 
-rm -f ${chdir}/service.pid
-touch ${chdir}/service.pid
+rm -f ${resource_jobdir}/service.pid
+touch ${resource_jobdir}/service.pid
 
 echo
 # Load slurm module
@@ -224,7 +224,7 @@ if ! [ -z "${service_bin}" ] && ! [[ "${service_bin}" == "__""service_bin""__" ]
     else
         echo "Running ${service_bin} in the background"
         ${service_bin} &
-        echo $! >> ${chdir}/service.pid
+        echo $! >> ${resource_jobdir}/service.pid
     fi
 fi
     

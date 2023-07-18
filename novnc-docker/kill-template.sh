@@ -1,2 +1,2 @@
 
-bash ${chdir}/docker-kill-${job_number}.sh
+bash ${resource_jobdir}/docker-kill-${job_number}.sh

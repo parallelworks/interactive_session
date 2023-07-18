@@ -6,7 +6,7 @@ else
     gpu_flag=""
 fi
 
-if [[ ${host_jobschedulertype} == "CONTROLLER" ]]; then
+if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
     echo sudo -n docker stop jupyter-$servicePort > docker-kill-${job_number}.sh
 else
     # Create kill script. Needs to be here because we need the hostname of the compute node.
@@ -64,7 +64,6 @@ HERE
 
 
 # Served from 
-# https://cloud.parallel.works/api/v2/proxy/usercontainer?proxyType=api&proxyTo=/api/v1/display/${PW_JOB_PATH}/service.html
 export PYTHONPATH=${PWD}
 sudo -n docker run ${gpu_flag} --rm \
     -v /contrib:/contrib -v /lustre:/lustre -v ${HOME}:${HOME} \

@@ -5,17 +5,41 @@ conda activate
 # change permissions of run directly so we can execute all files
 chmod 777 * -Rf
 # Need to move files from utils directory to avoid updating the sparse checkout
-mv utils/error.html .
 mv utils/service.json .
 
 sed -i "s|__USER__|${PW_USER}|g" inputs.sh
 
+
 source lib.sh
+
+# Processing resource inputs
+python input_form_resource_wrapper.py
+
+if ! [ -f "resources/host/inputs.sh" ]; then
+    displayErrorMessage "ERROR - Missing file ./resources/host/inputs.sh. Resource wrapper failed"
+fi
+# Remove lines starting with "export host_" from inputs.sh
+#     These were only needed by the input_form_resource_wrapper.sh
+#     We want the inputs clean and in a single file because they are written to the submit scripts
+sed -i '/^export host_/d' inputs.sh
+# Append processed inputs to input.sh
+cat resources/host/inputs.sh >> inputs.sh
+
+# Load and process inputs
 source inputs.sh
+export openPort=$(echo ${resource_ports} | sed "s|___| |g" | cut -d ' ' -f1)
+echo "export openPort=${openPort}" >> inputs.sh
+export sshcmd="ssh -o StrictHostKeyChecking=no ${resource_publicIp}"
+echo "export sshcmd=\"${sshcmd}\"" >> inputs.sh 
+
+
 # Obtain the service_name from any section of the XML
 export service_name=$(cat inputs.sh | grep service_name | cut -d'=' -f2 | tr -d '"')
 echo "export service_name=${service_name}" >> inputs.sh
-checkInputParameters
+if ! [ -d "${service_name}" ]; then
+    displayErrorMessage "ERROR: Directory ${service_name} was not found --> Service ${service_name} is not supported --> Exiting workflow"
+    exit 1
+fi
 
 export job_number=$(basename ${PWD})
 export job_dir=$(pwd | rev | cut -d'/' -f1-2 | rev)
@@ -24,35 +48,11 @@ echo "export job_number=${job_number}" >> inputs.sh
 # export the users env file (for some reason not all systems are getting these upon execution)
 while read LINE; do export "$LINE"; done < ~/.env
 
-# Initialize service.html to prevent error from showing when you click in the eye icon
-cp service.html.template service.html
-
-echo
-echo "JOB NUMBER:  ${job_number}"
-echo "USER:        ${PW_USER}"
-echo "DATE:        $(date)"
-echo "DIRECTORY:   ${PWD}"
-echo "COMMAND:     $0"
-# Very useful to rerun a workflow with the exact same code version!
-#commit_hash=$(git --git-dir=clone/.git log --pretty=format:'%h' -n 1)
-#echo "COMMIT HASH: ${commit_hash}"
-echo
-
 export PW_JOB_PATH=$(pwd | sed "s|${HOME}||g")
 echo "export PW_JOB_PATH=${PW_JOB_PATH}" >> inputs.sh
 
 sed -i "s/__job_number__/${job_number}/g" inputs.sh
 sed -i "s/__USER__/${PW_USER}/g" inputs.sh
-
-# GER OPEN PORT FOR TUNNEL
-getOpenPort
-
-if [[ "$openPort" == "" ]]; then
-    displayErrorMessage "ERROR - cannot find open port..."
-    exit 1
-fi
-export openPort=${openPort}
-echo "export openPort=${openPort}" >> inputs.sh
 
 export USER_CONTAINER_HOST="usercontainer"
 echo "export USER_CONTAINER_HOST=${USER_CONTAINER_HOST}" >> inputs.sh
@@ -71,67 +71,24 @@ if ! [ -f "${CONDA_PYTHON_EXE}" ]; then
     export CONDA_PYTHON_EXE=$(which python3)
 fi
 
-echo "Interactive Session Port: $openPort"
-
-#  CONTROLLER INFO
-host_resource_name=$(echo ${host_resource_name} | sed "s/_//g" |  tr '[:upper:]' '[:lower:]')
-if [[ ${host_resource_name} == "userworkspace" ]]; then
-    # Unless the user workspace has PBS or SLURM installed the only supported scheduler type is LOCAL
-    export host_jobschedulertype="LOCAL"
-    echo "export host_jobschedulertype=LOCAL" >> inputs.sh
-else
-    # GET HOST INFORMATION FROM API
-    getRemoteHostInfoFromAPI
-fi
-
-sed -i "s|__host_resource_workdir__|${host_resource_workdir}|g" inputs.sh
-
-# SET chdir
-export chdir=${host_resource_workdir}${PW_JOB_PATH}
-echo "export chdir=${chdir}" >> inputs.sh
 
 # RUN IN CONTROLLER, SLURM PARTITION OR PBS QUEUE?
-if [[ ${host_jobschedulertype} == "CONTROLLER" ]]; then
-    echo "Submitting ssh job to ${host_resource_publicIp}"
+if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
+    echo "Submitting ssh job to ${resource_publicIp}"
     session_wrapper_dir=controller
-elif [[ ${host_jobschedulertype} == "LOCAL" ]]; then
+elif [[ ${jobschedulertype} == "LOCAL" ]]; then
     echo "Submitting ssh job to user container"
     session_wrapper_dir=local
 else
-    echo "Submitting ${host_jobschedulertype} job to ${host_resource_publicIp}"
+    echo "Submitting ${jobschedulertype} job to ${resource_publicIp}"
     session_wrapper_dir=partition
-
-    # Get scheduler directives from input form (see this function in lib.sh)
-    form_sched_directives=$(getSchedulerDirectivesFromInputForm)
-
-    # Get scheduler directives enforced by PW:
-    # Set job name, log paths and run directory
-    if [[ ${host_jobschedulertype} == "SLURM" ]]; then
-        pw_sched_directives=";--job-name=session-${job_number};--chdir=${chdir};--output=session-${job_number}.out"
-    elif [[ ${host_jobschedulertype} == "PBS" ]]; then
-        # PBS needs a queue to be specified!
-        if [ -z "${_sch__d_q___}" ]; then
-            is_queue_defined=$(echo ${host_scheduler_directives} | tr ';' '\n' | grep -e '-q___')
-            if [ -z "${is_queue_defined}" ]; then
-                displayErrorMessage "ERROR: PBS needs a queue to be defined! - exiting workflow"
-                exit 1
-            fi
-        fi
-        pw_sched_directives=";-N___session-${job_number};-o___${chdir}/session-${job_number}.out;-e___${chdir}/session-${job_number}.out;-S___/bin/bash"
-    fi
-
-    # Merge all directives in single param
-    export scheduler_directives="${host_scheduler_directives};${form_sched_directives};${pw_sched_directives}"
-    echo "export scheduler_directives=${scheduler_directives}" 
 fi
 
 # SERVICE URL
-
 echo "Generating session html"
 source ${service_name}/url.sh
 echo "export FORWARDPATH=${FORWARDPATH}" >> inputs.sh
 echo "export IPADDRESS=${IPADDRESS}" >> inputs.sh
-cp service.html.template service.html_
 
 # FIXME: Move this to <service-name>/url.sh
 if [[ "${service_name}" == "nicedcv" ]]; then
@@ -141,15 +98,12 @@ else
     URL="\"/me/${openPort}/${URLEND}"
     sed -i "s|.*URL.*|    \"URL\": \"/me\",|" service.json
 fi
-sed -i "s|__URL__|${URL}|g" service.html_
 # JSON values cannot contain quotes "
 #URL_JSON=$(echo ${URL} | sed 's|\"|\\\\\"|g')
 #sed -i "s|.*URL.*|    \"URL\": \"${URL_JSON}\",|" service.json
 sed -i "s|.*PORT.*|    \"PORT\": \"${openPort}\",|" service.json
 SLUG=$(echo ${URLEND} | sed 's|\"|\\\\\"|g')
 sed -i "s|.*SLUG.*|    \"SLUG\": \"${SLUG}\",|" service.json
-
-mv service.html_ service.html
 echo
 
 # RUNNING SESSION WRAPPER

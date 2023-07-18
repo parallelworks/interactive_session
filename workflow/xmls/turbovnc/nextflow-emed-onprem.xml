@@ -9,7 +9,7 @@
       <param name='slurm_module' label='Module name' type='text' help='Module to load with [module load]' value='nextflow' width='50%_none'></param>
       <param name='bin' label='Service binary' type='hidden' value='nextflow---console' width='50%_none'></param>
     </section>
-    <section name='host' type='section' title='NextFlow Host' expanded='true'>
+    <section name='pwrl_host' type='section' title='NextFlow Host' expanded='true'>
       <param name='resource' type='computeResource' label='Service host' hideUserWorkspace='true' help='Resource to host the service'></param>
       <conditional name="jobschedulertype_cond">
           <param name='jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively' width='50%_none' multiple='false'>

@@ -9,7 +9,7 @@
       <param name='bin' label='Service binary' type='hidden' value='matlab -desktop' width='50%_none'></param>
       <param name='name' label='Service' type='hidden' value='turbovnc' width='50%_none'></param>
     </section>
-    <section name='host' type='section' title='Matlab Host' expanded='true'>
+    <section name='pwrl_host' type='section' title='Matlab Host' expanded='true'>
       <param name='resource' type='computeResource' label='Service host' hideUserWorkspace='true' help='Resource to host the service'></param>
       <conditional name="jobschedulertype_cond">
           <param name='jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively' width='50%_none' multiple='false'>

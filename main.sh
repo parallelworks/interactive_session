@@ -25,16 +25,23 @@ fi
 # Remove lines starting with "export host_" from inputs.sh
 #     These were only needed by the input_form_resource_wrapper.sh
 #     We want the inputs clean and in a single file because they are written to the submit scripts
-sed -i '/^export host_/d' inputs.sh
+sed -i '/^export pwrl_host_/d' inputs.sh
 # Append processed inputs to input.sh
 cat resources/host/inputs.sh >> inputs.sh
 
 # Load and process inputs
 source inputs.sh
 export openPort=$(echo ${resource_ports} | sed "s|___| |g" | cut -d ' ' -f1)
+if [[ "$openPort" == "" ]]; then
+    displayErrorMessage "ERROR - cannot find open port..."
+    exit 1
+fi
+
 echo "export openPort=${openPort}" >> inputs.sh
 export sshcmd="ssh -o StrictHostKeyChecking=no ${resource_publicIp}"
 echo "export sshcmd=\"${sshcmd}\"" >> inputs.sh 
+sed -i "s|__WORKDIR__|${resource_workdir}|g" inputs.sh
+source inputs.sh
 
 
 # Obtain the service_name from any section of the XML

@@ -5,7 +5,8 @@ import requests
 import subprocess
 import time
 import random
-import socket 
+import socket
+# VERSION: 1
 
 """
 # Form Resource Wrapper

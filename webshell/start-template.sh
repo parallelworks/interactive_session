@@ -8,7 +8,7 @@ job_dir=${PWD}
 # - Needs to be here because we need the hostname of the compute node.
 # - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
 
-if [[ ${host_jobschedulertype} == "CONTROLLER" ]]; then
+if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
     echo "bash ${PWD}/service-kill-${job_number}-main.sh" > service-kill-${job_number}.sh
 else
     # Remove .cluster.local for einteinmed!
@@ -36,7 +36,7 @@ if ! [ -d "$(echo ~/pw/noVNC-1.3.0)" ]; then
     set -x
     mkdir -p ~/pw
     ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-    if [[ ${host_jobschedulertype} == "CONTROLLER" ]]; then
+    if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
         # Running in a controller node
         if [[ "$USERMODE" == "k8s" ]]; then
             # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
@@ -51,10 +51,10 @@ if ! [ -d "$(echo ~/pw/noVNC-1.3.0)" ]; then
             # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
             # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
             # Works because home directory is shared!
-            ssh ${ssh_options} ${host_resource_privateIp} scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pw
+            ssh ${ssh_options} ${resource_privateIp} scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pw
         else # Docker mode
             # Works because home directory is shared!
-            ssh ${ssh_options} ${host_resource_privateIp} scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pw
+            ssh ${ssh_options} ${resource_privateIp} scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pw
         fi
     fi
     tar -zxf ~/pw/noVNC-1.3.0.tgz -C ~/pw

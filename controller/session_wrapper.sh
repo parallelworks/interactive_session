@@ -34,7 +34,6 @@ $sshcmd 'bash -s' < ${kill_ssh}
 bash ${sdir}/kill_tunnels.sh
 echo Finished running ${kill_sh}
 HERE
-echo "sed -i 's/.*Job status.*/Job status: Cancelled/' ${PW_JOB_PATH}/service.html" >> ${kill_sh}
 echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" ${PW_JOB_PATH}/service.json >> ${kill_sh}
 echo "exit 0" >> ${kill_sh}
 chmod 777 ${kill_sh}
@@ -53,9 +52,9 @@ cat inputs.sh >> ${session_sh}
 # - CAREFUL! This command can change your ${PWD} directory
 echo "source ~/.bashrc" >>  ${session_sh}
 
-if ! [ -z "${chdir}" ] && ! [[ "${chdir}" == "default" ]]; then
-    echo "mkdir -p ${chdir}" >> ${session_sh}
-    echo "cd ${chdir}" >> ${session_sh}
+if ! [ -z "${resource_jobdir}" ] && ! [[ "${resource_jobdir}" == "default" ]]; then
+    echo "mkdir -p ${resource_jobdir}" >> ${session_sh}
+    echo "cd ${resource_jobdir}" >> ${session_sh}
 fi
 
 cat >> ${session_sh} <<HERE
@@ -63,8 +62,6 @@ sshusercontainer="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/nul
 
 displayErrorMessage() {
     echo \$(date): \$1
-    \${sshusercontainer} "sed -i \\"s|__ERROR_MESSAGE__|\$1|g\\" ${PW_PATH}${PW_JOB_PATH}/error.html"
-    \${sshusercontainer} "cp ${PW_JOB_PATH}/error.html ${PW_PATH}${PW_JOB_PATH}/service.html"
     \${sshusercontainer} "sed -i \"s|.*ERROR_MESSAGE.*|    \\\\\"ERROR_MESSAGE\\\\\": \\\\\"\$1\\\\\"|\" ${PW_JOB_PATH}/service.json"
     exit 1
 }
@@ -135,7 +132,6 @@ echo
 echo "Submitting ssh job (wait for node to become available before connecting)..."
 echo "$sshcmd 'bash -s' < ${session_sh} &> ${PW_JOB_PATH}/session-${job_number}.out"
 echo
-sed -i 's/.*Job status.*/Job status: Running/' service.html
 sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Running\",/" service.json
 job_dir=$(pwd | rev | cut -d'/' -f1-2 | rev)
 workflow_name=$(echo ${job_dir} | cut -d'/' -f1)
@@ -149,10 +145,8 @@ curl -s \
     https://${PW_PLATFORM_HOST}/api/v2/notifications?key=${PW_API_KEY} &> /dev/null
 $sshcmd 'bash -s' < ${session_sh} &> ${PW_JOB_PATH}/session-${job_number}.out
 if [ $? -eq 0 ]; then
-    sed -i 's/.*Job status.*/Job status: Completed/' service.html
     sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Completed\",/" service.json
 else
-    sed -i 's/.*Job status.*/Job status: Failed/' service.html
     sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Failed\",/" service.json
 fi
 

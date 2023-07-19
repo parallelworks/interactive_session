@@ -95,7 +95,6 @@ def load_jupyter_server_extension(nbapp):
 HERE
 
 # Served from 
-# https://cloud.parallel.works/api/v2/proxy/usercontainer?proxyType=api&proxyTo=/api/v1/display/${PW_JOB_PATH}/service.html
 export PYTHONPATH=${PWD}
 jupyter-notebook \
     --port=${servicePort} \

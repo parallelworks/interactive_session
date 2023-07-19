@@ -44,16 +44,16 @@ install_paths="${HOME}/pw/*/bin /opt/*/bin /shared/*/bin"
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
 # - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
-echo "Creating file ${chdir}/service-kill-${job_number}-main.sh from directory ${PWD}"
-if [[ ${host_jobschedulertype} != "CONTROLLER" ]]; then
+echo "Creating file ${resource_jobdir}/service-kill-${job_number}-main.sh from directory ${PWD}"
+if [[ ${jobschedulertype} != "CONTROLLER" ]]; then
     # Remove .cluster.local for einteinmed!
     hname=$(hostname | sed "s/.cluster.local//g")
-    echo "ssh ${hname} 'bash -s' < ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
+    echo "ssh ${hname} 'bash -s' < ${resource_jobdir}/service-kill-${job_number}-main.sh" > ${resource_jobdir}/service-kill-${job_number}.sh
 else
-    echo "bash ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
+    echo "bash ${resource_jobdir}/service-kill-${job_number}-main.sh" > ${resource_jobdir}/service-kill-${job_number}.sh
 fi
 
-cat >> ${chdir}/service-kill-${job_number}-main.sh <<HERE
+cat >> ${resource_jobdir}/service-kill-${job_number}-main.sh <<HERE
 service_pid=\$(ps -x | grep ${server_bin} | grep ${servicePort} | awk '{print \$1}')
 kill \${service_pid}
 pkill \${service_pid}
@@ -75,16 +75,16 @@ bootstrap_tgz() {
             cp /core/pworks-main/${tgz_path} ${install_parent_dir}
         else
             ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-            if [[ ${host_jobschedulertype} != "CONTROLLER" ]]; then
+            if [[ ${jobschedulertype} != "CONTROLLER" ]]; then
                 # Running in a compute partition
                 if [[ "$USERMODE" == "k8s" ]]; then
                     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
                     # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
                     # Works because home directory is shared!
-                    ssh ${ssh_options} ${host_resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                    ssh ${ssh_options} ${resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
                 else # Docker mode
                     # Works because home directory is shared!
-                    ssh ${ssh_options} ${host_resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                    ssh ${ssh_options} ${resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
                 fi
             else
                 # Running in a controller node
@@ -125,6 +125,10 @@ if [ ! -f "${server_exec}" ]; then
     displayErrorMessage "ERROR: server_exec=${server_exec} file not found! - Exiting workflow!"
     exit 1
 fi
+
+echo ${server_exec} --bind-addr=localhost:${servicePort} ${gh_flag} ${password_flag} ${service_directory}
+
+sleep 1000
 
 ${server_exec} \
     --bind-addr=localhost:${servicePort} \

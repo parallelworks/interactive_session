@@ -4,15 +4,16 @@
   <inputs>
    <section name='service' type='section' title='Jupyter Notebook Settings' expanded='true'>
         <param name='name' label='Service' type='hidden' value='jupyter-host' width='50%_none'></param>
-   	    <param name='notebook_dir' label='Directory to start JupyterHub GUI' type='text' value='__host_resource_workdir__' help='This is the directory that you start with when the JupyterHub graphical user interface starts.  The default value here is your home directory.' width='100%_none'></param>
-        <param name='conda_sh' label='Path to conda environment' type='text' value='__host_resource_workdir__/.miniconda3c/etc/profile.d/conda.sh' help='Path to use in source /path/to/conda.sh' width='50%_none'></param>
+   	    <param name='notebook_dir' label='Directory to start JupyterHub GUI' type='text' value='__WORKDIR__' help='This is the directory that you start with when the JupyterHub graphical user interface starts.  The default value here is your home directory.' width='100%_none'></param>
+        <param name='conda_sh' label='Path to conda environment' type='text' value='__WORKDIR__/.miniconda3c/etc/profile.d/conda.sh' help='Path to use in source /path/to/conda.sh' width='50%_none'></param>
         <param name="conda_install" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Install miniconda if not there?" help='Select Yes to install miniconda if the above directory does not exist' width="25%_none" optional='true' float="right">
         </param>
         <param name='conda_env' label='Conda environment (recommended: base)' type='text' value='jupyter' help='Environment to active. The base environment enables changing kernel to other environments!' width='50%_none'></param>
         <param name='password' label='Password for notebook session:' type='hidden' value='' help='Enter password or leave blank for no password' width='50%_none'></param>
    </section>
-    <section name='host' type='section' title='Jupyter Server Host' expanded='true'>
+    <section name='pwrl_host' type='section' title='Jupyter Server Host' expanded='true'>
       <param name='resource' type='computeResource' label='Service host' help='Resource to host the service'></param>
+      <param name='nports' label='Number of Ports to Reserve' type='hidden' value='1' width='50%_none'></param> 
       <conditional name="jobschedulertype_cond">
           <param name='jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively' width='50%_none' multiple='false'>
             <option value="CONTROLLER" selected="true">Controller</option>

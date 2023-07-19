@@ -1,6 +1,6 @@
 # RUNS IN THE CONTROLLER NODE:
 # - Kill the session script pid and its child processes
-job_pid_file=${chdir}/${job_number}.pid
+job_pid_file=${resource_jobdir}/${job_number}.pid
 if [ -f "${job_pid_file}" ]; then
     pid=$(cat ${job_pid_file})
     echo "Killing job=${job_number} pid=${pid}"

@@ -29,7 +29,7 @@ bootstrap_tgz() {
             cp /core/pworks-main/${tgz_path} ${install_parent_dir}
         else
             ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-            if [[ ${host_jobschedulertype} == "CONTROLLER" ]]; then
+            if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
                 # Running in a controller node
                 if [[ "$USERMODE" == "k8s" ]]; then
                     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
@@ -44,10 +44,10 @@ bootstrap_tgz() {
                     # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
                     # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
                     # Works because home directory is shared!
-                    ssh ${ssh_options} ${host_resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                    ssh ${ssh_options} ${resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
                 else # Docker mode
                     # Works because home directory is shared!
-                    ssh ${ssh_options} ${host_resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                    ssh ${ssh_options} ${resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
                 fi
             fi
         fi
@@ -88,17 +88,17 @@ fi
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
 # - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
-echo "Creating file ${chdir}/service-kill-${job_number}-main.sh from directory ${PWD}"
-if [[ ${host_jobschedulertype} == "CONTROLLER" ]]; then
-    echo "bash ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
+echo "Creating file ${resource_jobdir}/service-kill-${job_number}-main.sh from directory ${PWD}"
+if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
+    echo "bash ${resource_jobdir}/service-kill-${job_number}-main.sh" > ${resource_jobdir}/service-kill-${job_number}.sh
 else
     # Remove .cluster.local for einteinmed!
     hname=$(hostname | sed "s/.cluster.local//g")
-    echo "ssh ${hname} 'bash -s' < ${chdir}/service-kill-${job_number}-main.sh" > ${chdir}/service-kill-${job_number}.sh
+    echo "ssh ${hname} 'bash -s' < ${resource_jobdir}/service-kill-${job_number}-main.sh" > ${resource_jobdir}/service-kill-${job_number}.sh
 fi
 
-cat >> ${chdir}/service-kill-${job_number}-main.sh <<HERE
-service_pid=\$(cat ${chdir}/service.pid)
+cat >> ${resource_jobdir}/service-kill-${job_number}-main.sh <<HERE
+service_pid=\$(cat ${resource_jobdir}/service.pid)
 if [ -z \${service_pid} ]; then
     echo "ERROR: No service pid was found!"
 else
@@ -149,8 +149,8 @@ ${service_vnc_exec} -kill ${DISPLAY}
     ${service_vnc_exec} ${DISPLAY} -SecurityTypes None
 }
 
-rm -f ${chdir}/service.pid
-touch ${chdir}/service.pid
+rm -f ${resource_jobdir}/service.pid
+touch ${resource_jobdir}/service.pid
 
 # Fix bug (process:17924): dconf-CRITICAL **: 20:52:57.695: unable to create directory '/run/user/1002/dconf': 
 # Permission denied.  dconf will not work properly.
@@ -167,22 +167,22 @@ chmod og+rx /run/user/$(id -u)
 
 if  ! [ -z $(which gnome-session) ]; then
     gnome-session &
-    echo $! > ${chdir}/service.pid
+    echo $! > ${resource_jobdir}/service.pid
 elif ! [ -z $(which mate-session) ]; then
     mate-session &
-    echo $! > ${chdir}/service.pid
+    echo $! > ${resource_jobdir}/service.pid
 elif ! [ -z $(which xfce4-session) ]; then
     xfce4-session &
-    echo $! > ${chdir}/service.pid
+    echo $! > ${resource_jobdir}/service.pid
 elif ! [ -z $(which icewm-session) ]; then
     # FIXME: Code below fails to launch desktop session
     #        Use case in onyx automatically launches the session when visual apps are launched
     echo Found icewm-session
     #icewm-session &
-    #echo $! > ${chdir}/service.pid
+    #echo $! > ${resource_jobdir}/service.pid
 elif ! [ -z $(which gnome) ]; then
     gnome &
-    echo $! > ${chdir}/service.pid
+    echo $! > ${resource_jobdir}/service.pid
 else
     # Exit script here
     #displayErrorMessage "ERROR: No desktop environment was found! Tried gnome-session, mate-session, xfce4-session and gnome"
@@ -201,7 +201,7 @@ else
     fi
     # Start GUI
     xfce4-session &
-    echo $! > ${chdir}/service.pid
+    echo $! > ${resource_jobdir}/service.pid
 fi
 
 bootstrap_tgz ${novnc_tgz} ${novnc_dir}
@@ -217,9 +217,9 @@ fi
 echo
 
 ./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort} </dev/null &>/dev/null &
-echo $! >> ${chdir}/service.pid
+echo $! >> ${resource_jobdir}/service.pid
 pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
-echo ${pid} >> ${chdir}/service.pid
+echo ${pid} >> ${resource_jobdir}/service.pid
 rm -f ${portFile}
 sleep 5 # Need this specially in controller node or second software won't show up!
 
@@ -232,7 +232,7 @@ if ! [ -z "${service_bin}" ]; then
     else
         echo "Running ${service_bin} in the background"
         ${service_bin} &
-        echo $! >> ${chdir}/service.pid
+        echo $! >> ${resource_jobdir}/service.pid
     fi
 fi
     

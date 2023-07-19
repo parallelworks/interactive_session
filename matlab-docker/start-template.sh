@@ -6,7 +6,7 @@ else
     gpu_flag=""
 fi
 
-if [[ ${host_jobschedulertype} == "CONTROLLER" ]]; then
+if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
     echo sudo -n docker stop jupyter-$servicePort > docker-kill-${job_number}.sh
 else
     # Create kill script. Needs to be here because we need the hostname of the compute node.

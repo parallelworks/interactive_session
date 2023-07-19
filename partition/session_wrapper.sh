@@ -198,6 +198,8 @@ while true; do
     elif [[ ${jobschedulertype} == "PBS" ]]; then
         if [[ ${job_status} == "C" ]]; then
             break
+        elif [ -z ${job_status} ]; then
+            break
         fi
     fi
     sleep 60

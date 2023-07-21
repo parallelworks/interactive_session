@@ -13,27 +13,23 @@ f_install_miniconda() {
 }
 
 
-if ! [ -z "${service_conda_sh}" ]; then
-    if [[ "${service_conda_install}" != "true" ]]; then
+
+if [[ "${service_conda_install}" == "true" ]]; then
+    {
         source ${service_conda_sh}
+    } || {
+        conda_dir=$(echo ${service_conda_sh} | sed "s|etc/profile.d/conda.sh||g" )
+        f_install_miniconda ${conda_dir}
+        source ${service_conda_sh}
+    }
+    {
         conda activate ${service_conda_env}
-    else
-        {
-            source ${service_conda_sh}
-        } || {
-            conda_dir=$(echo ${service_conda_sh} | sed "s|etc/profile.d/conda.sh||g" )
-            f_install_miniconda ${conda_dir}
-            source ${service_conda_sh}
-        }
-        {
-            conda activate ${service_conda_env}
-        } || {
-            conda create -n ${service_conda_env} jupyter -y
-            conda activate ${service_conda_env}
-        }
-        if [ -z $(which ${jupyter-notebook} 2> /dev/null) ]; then
-            conda install -c anaconda jupyter -y
-        fi
+    } || {
+        conda create -n ${service_conda_env} jupyter -y
+        conda activate ${service_conda_env}
+    }
+    if [ -z $(which ${jupyter-notebook} 2> /dev/null) ]; then
+        conda install -c anaconda jupyter -y
     fi
 fi
 

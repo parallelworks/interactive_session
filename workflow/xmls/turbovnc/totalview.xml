@@ -1,4 +1,4 @@
-<tool id='Matthew.Shaxted_interactive_session' name='Matthew.Shaxted_interactive_session'>
+<tool id='NA' name='NA'>
   <command interpreter='bash'>main.sh</command>
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>

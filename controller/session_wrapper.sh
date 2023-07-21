@@ -118,6 +118,12 @@ echo "Starting session..."
 rm -f /tmp/\${servicePort}.port.used 
 HERE
 
+# Load server environment
+if ! [ -z "${service_load_env}" ]; then
+    echo ${service_load_env} >> ${session_sh}
+fi
+
+
 # Add application-specific code
 if [ -f "${service_name}/start-template.sh" ]; then
     cat "${service_name}/start-template.sh" >> ${session_sh}

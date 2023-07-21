@@ -119,12 +119,15 @@ if ! [ -z "${advanced_options_license_env}" ]; then
     ${LICENSE_TUNNEL_CMD} </dev/null &>/dev/null &
 fi
 
-
-
 echo "Exit code: \$?"
 echo "Starting session..."
 rm -f \${portFile}
 HERE
+
+# Load server environment
+if ! [ -z "${service_load_env}" ]; then
+    echo ${service_load_env} >> ${session_sh}
+fi
 
 # Add application-specific code
 if [ -f "${service_name}/start-template.sh" ]; then

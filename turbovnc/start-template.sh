@@ -207,15 +207,6 @@ fi
 bootstrap_tgz ${novnc_tgz} ${novnc_dir}
 cd ${novnc_dir}
 
-echo
-# Load slurm module
-if ! [ -z ${service_slurm_module} ]; then
-    echo "module load ${service_slurm_module}"
-    module avail ${service_slurm_module}
-    module load ${service_slurm_module}
-fi
-echo
-
 ./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort} </dev/null &>/dev/null &
 echo $! >> ${resource_jobdir}/service.pid
 pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')

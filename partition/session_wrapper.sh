@@ -119,8 +119,6 @@ if ! [ -z "${advanced_options_license_env}" ]; then
     ${LICENSE_TUNNEL_CMD} </dev/null &>/dev/null &
 fi
 
-
-
 echo "Exit code: \$?"
 echo "Starting session..."
 rm -f \${portFile}

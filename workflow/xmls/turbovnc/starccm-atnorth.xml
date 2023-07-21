@@ -6,7 +6,7 @@
     <param name='servicePort' label='Service Port' type='hidden' value='8443' width='50%_none'></param>
     <param name='service_display' label='Service Display' type='hidden' value='1' width='50%_none'></param>
     <param name='service_is_running' label='Service Is Running' type='hidden' value='True' width='50%_none'></param>
-    <param name='service_slurm_module' label='Module name' type='text' help='Module to load with [module load], e.g.: starccm, starccm/2210 or starccm/2306' value='starccm' width='50%_none'></param>
+    <param name='service_load_env' label='Command to load StarCCM+' type='text' value='module load starccm' help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.' width='50%_none'></param>
     <param name='service_bin' label='StarCCM+ Launch Command' type='text' value='starccm+' help='Command to start the StarCCM+ GUI' width='50%_none'></param>
     <section name='pwrl_host' type='section' title='Desktop Host' expanded='true'>
       <param name='resource' type='computeResource' label='Service host' hideUserWorkspace='true' help='Resource to host the service'></param>

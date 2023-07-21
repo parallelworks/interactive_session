@@ -6,7 +6,6 @@
         <param name='name' label='Service' type='hidden' value='jupyter-host' width='50%_none'></param>
         <param name='password' label='Password for notebook session:' type='hidden' value='' help='Enter password or leave blank for no password' width='50%_none'></param>
 	      <param name='notebook_dir' label='Directory to start JupyterHub GUI' type='text' value='/gs/gsfs0/users/__USER__/pw/' help='This is the directory that you start with when the JupyterHub graphical user interface starts.  The default value here is your home directory.' width='100%_none'></param>
-        <param name='slurm_module' label='Module name' type='hidden' value='cuda' width='50%_none'></param>
         <param name='load_env' 
                label='Command to load RStudio' 
                type='text' 

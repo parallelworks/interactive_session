@@ -203,16 +203,6 @@ echo
 rm -f ${resource_jobdir}/service.pid
 touch ${resource_jobdir}/service.pid
 
-echo
-# Load slurm module
-# - multiple quotes are used to prevent replacement of __varname__ !!!
-if ! [ -z ${service_slurm_module} ]; then
-    echo "module load ${service_slurm_module}"
-    module avail ${service_slurm_module}
-    module load ${service_slurm_module}
-fi
-echo
-
 sleep 5 # Need this specially in controller node or second software won't show up!
 
 # Launch service

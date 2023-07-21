@@ -5,7 +5,7 @@
     <param name='novnc_dir' label='Default noVNC installation directory' type='hidden' value='__WORKDIR__/pw/bootstrap/noVNC-1.3.0' width='50%_none'></param>
     <param name='novnc_tgz' label='Path to noVNC TGZ' type='hidden' value='/swift-pw-bin/apps/noVNC-1.3.0.tgz' width='50%_none'></param>
     <section name='service' type='section' title='Matlab Inputs' expanded='true'>
-      <param name='slurm_module' label='Module name' type='text' help='Module to load with [module load]' value='matlab' width='50%_none'></param>
+      <param name='load_env' label='Command to load MATLAB' type='text' value='module load matlab' help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.' width='50%_none'></param>
       <param name='bin' label='Service binary' type='hidden' value='matlab -desktop' width='50%_none'></param>
       <param name='name' label='Service' type='hidden' value='turbovnc' width='50%_none'></param>
     </section>

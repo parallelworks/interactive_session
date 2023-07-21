@@ -13,7 +13,7 @@
               <param name='conda_env' label='Conda environment (recommended: base)' type='text' value='base' help='Environment to active. The base environment enables changing kernel to other environments!' width='50%_none'></param>
           </when>
           <when value="No">
-              <param name='load_env' label='Command to load Jupyter' type='text' value='source __WORKDIR__/.miniconda3c/etc/profile.d/conda.sh; conda activate base' help='Path to use in source /path/to/conda.sh' width='50%_none'></param>
+              <param name='load_env' label='Command to load Jupyter' type='text' value='source __WORKDIR__/.miniconda3c/etc/profile.d/conda.sh; conda activate base' help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.' width='50%_none'></param>
           </when>
         </conditional>
         <param name='password' label='Password for notebook session:' type='hidden' value='' help='Enter password or leave blank for no password' width='50%_none'></param>

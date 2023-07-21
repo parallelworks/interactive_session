@@ -33,10 +33,6 @@ if [[ "${service_conda_install}" == "true" ]]; then
     fi
 fi
 
-if ! [ -z "${service_slurm_module}" ]; then
-    module load ${service_slurm_module}
-fi
-
 echo "starting notebook on $servicePort..."
 
 export XDG_RUNTIME_DIR=""

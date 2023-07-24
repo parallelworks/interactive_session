@@ -3,7 +3,7 @@
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
    <section name='service' type='section' title='Streamlit' expanded='true'>
-        <param name='name' label='Service' type='hidden' value='streamlit' width='50%_none'></param>
+        <param name='name' label='Service' type='hidden' value='streamlit-host' width='50%_none'></param>
    	    <param name='streamlit_script' label='Path to the Streamlit Script in the Cluster' type='text' value='' help='The job fails if no path is specified or no file is found'></param>
         <conditional name="conda_install_cond">
           <param name="conda_install" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Install miniconda if not there?" help='Select Yes to install miniconda if the above directory does not exist' width="25%_none" optional='true' float="right">

@@ -1,0 +1,49 @@
+<tool id='NA' name='NA'>
+  <command interpreter='bash'>main.sh</command>
+  <cancel interpreter='bash'>kill.sh</cancel>
+  <inputs>
+   <section name='service' type='section' title='Streamlit' expanded='true'>
+        <param name='name' label='Service' type='hidden' value='streamlit' width='50%_none'></param>
+   	    <param name='streamlit_script' label='Path to the Streamlit Script in the Cluster' type='text' value='' help='The job fails if no path is specified or no file is found'></param>
+        <conditional name="conda_install_cond">
+          <param name="conda_install" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Install miniconda if not there?" help='Select Yes to install miniconda if the above directory does not exist' width="25%_none" optional='true' float="right">
+          </param>
+          <when value="Yes">
+              <param name='conda_sh' label='Path to conda environment' type='text' value='__WORKDIR__/.miniconda3c/etc/profile.d/conda.sh' help='Path to use in source /path/to/conda.sh' width='50%_none'></param>
+              <param name='conda_env' label='Conda environment' type='text' value='streamlit' help='Environment to active. The base environment enables changing kernel to other environments!' width='50%_none'></param>
+          </when>
+          <when value="No">
+              <param name='load_env' label='Command to load streamlit' type='text' value='source __WORKDIR__/.miniconda3c/etc/profile.d/conda.sh; conda activate streamlit' help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.' width='50%_none'></param>
+          </when>
+        </conditional>
+   </section>
+    <section name='pwrl_host' type='section' title='Streamlit Host' expanded='true'>
+      <param name='resource' type='computeResource' label='Service host' help='Resource to host the service'></param>
+      <param name='nports' label='Number of Ports to Reserve' type='hidden' value='1' width='50%_none'></param> 
+      <conditional name="jobschedulertype_cond">
+          <param name='jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively' width='50%_none' multiple='false'>
+            <option value="CONTROLLER" selected="true">Controller</option>
+            <option value="SLURM">SLURM Partition</option>
+            <option value="PBS">PBS Queue</option>
+            <option value="LOCAL">PW USER CONTAINER</option>
+        </param>
+        <when value="SLURM">
+            <param name='_sch__dd_partition_e_' label='SLURM partition' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value='' width='50%_none'>
+            </param>
+            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value='--time=00:20:00;--nodes=1;--exclusive' width='100%_none'>
+            </param>
+        </when>
+        <when value="PBS">
+            <param name='_sch__d_q___' label='PBS queue' type='text' help='Queue to submit the interactive job. Must select one! Use [qstat -f -Q] to list all queues on the system' value='' width='50%_none'>
+            </param>
+            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to separate parameters. Do not include the PBS keyword.' value='-l walltime=00:20:00;-l nodes=1;-l naccesspolicy=SINGLEJOB -n' width='100%_none'>
+            </param>
+        </when>
+      </conditional>
+    </section>
+    <section name='advanced_options' type='section' title='Advanced Options' expanded='false'>
+        <param name="stream" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW' width="25%_none" optional='true' float="right">
+        </param>
+    </section>
+  </inputs>
+</tool>

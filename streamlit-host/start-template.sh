@@ -37,6 +37,10 @@ if [[ "${service_conda_install}" == "true" ]]; then
     fi
 fi
 
+echo "streamlit run ${service_streamlit_script} --server.enableCORS false --server.enableXsrfProtection false --server.port ${openPort}"
+
+
+sleep 99999
 streamlit run ${service_streamlit_script} \
     --server.enableCORS false \
     --server.enableXsrfProtection false \

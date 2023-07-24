@@ -12,7 +12,11 @@ f_install_miniconda() {
     nohup bash /tmp/miniconda-${ID}.sh -b -p ${install_dir} 2>&1 > /tmp/miniconda_sh-${ID}.out
 }
 
-
+if [ -z ${service_streamlit_script} ]; then
+    displayErrorMessage "ERROR: No streamlit script was specified!"
+elif ! [ -f "${service_streamlit_script}" ]; then
+    displayErrorMessage "ERROR: No streamlit script [${service_streamlit_script}] was not found!"
+fi
 
 if [[ "${service_conda_install}" == "true" ]]; then
     {

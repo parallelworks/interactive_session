@@ -7,9 +7,6 @@ chmod 777 * -Rf
 # Need to move files from utils directory to avoid updating the sparse checkout
 cp utils/service.json .
 
-sed -i "s|__USER__|${PW_USER}|g" inputs.sh
-
-
 source lib.sh
 
 # Processing resource inputs

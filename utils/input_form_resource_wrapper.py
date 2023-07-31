@@ -6,7 +6,7 @@ import subprocess
 import time
 import random
 import socket
-# VERSION: 1
+# VERSION: 2
 
 """
 # Form Resource Wrapper
@@ -278,7 +278,11 @@ def complete_resource_information(inputs_dict):
         inputs_dict, 
         {
             '__workdir__': inputs_dict['resource']['workdir'],
-            '__WORKDIR__': inputs_dict['resource']['workdir']
+            '__WORKDIR__': inputs_dict['resource']['workdir'],
+            '__user__': inputs_dict['resource']['username'],
+            '__USER__': inputs_dict['resource']['username'],
+            '__pw_user__': os.environ['PW_USER'],
+            '__PW_USER__': os.environ['PW_USER']
         }
     )
 

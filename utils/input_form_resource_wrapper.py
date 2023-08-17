@@ -120,7 +120,7 @@ def establish_ssh_connection(resource_info):
             command = f"{SSH_CMD} {username}@{ip_address} hostname"
         
         logger.info(f'Testing SSH connection with command <{command}>')
-        subprocess.run(command, check=True, shell=True)
+        subprocess.run(command, check=True, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return True
     except Exception as e:
         msg = 'Unable to stablish SSH connection to resource <{name}> with namespace <{namespace}>'.format(
@@ -165,7 +165,7 @@ def get_resource_info(resource_id):
         'Resource {} not found. Make sure the resource type is supported!'.format(resource_id)))
 
 def get_resource_workdir(resource_info, public_ip):
-    coaster_properties = json.loads(resource_info['coasterproperties'])
+    coaster_properties = resource_info['variables']
     workdir = None
     if 'workdir' in coaster_properties:
         workdir = coaster_properties['workdir']
@@ -194,7 +194,7 @@ def get_resource_external_ip(resource_info):
 
 
 def get_resource_internal_ip(resource_info, public_ip):
-    coaster_properties = json.loads(resource_info['coasterproperties'])
+    coaster_properties = resource_info['variables']
     if 'privateIp' in coaster_properties:
         internal_ip = coaster_properties['privateIp']
     else:

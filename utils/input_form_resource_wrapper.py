@@ -6,7 +6,7 @@ import subprocess
 import time
 import random
 import socket
-# VERSION: 2
+# VERSION: 3
 
 """
 # Form Resource Wrapper
@@ -246,8 +246,8 @@ def complete_resource_information(inputs_dict):
 
     if inputs_dict['resource']['name'] == 'user_workspace':
         inputs_dict['jobschedulertype'] = 'LOCAL'
-        # FIXME: Remove when workdir of user workspace is no longer /pw
         inputs_dict['resource']['workdir'] = os.path.expanduser("~")
+        inputs_dict['resource']['username'] = os.environ['PW_USER']
     else:
         resource_id = inputs_dict['resource']['id']
         resource_info = get_resource_info_with_verified_ip(resource_id)

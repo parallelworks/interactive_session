@@ -69,7 +69,7 @@ chmod 777 ${session_sh}
 
 echo
 echo "Submitting job:"
-echo "bash ${session_sh} &"
+echo "bash ${session_sh}"
 echo
 sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Running\",/" service.json
 

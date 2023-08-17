@@ -84,7 +84,7 @@ curl -s \
     -d "{\"title\": \"Interactive workflow ${workflow_name} job ${job_number} is running\", \"href\": \"${url}\"}" \
     https://${PW_PLATFORM_HOST}/api/v2/notifications?key=${PW_API_KEY} &> /dev/null
 
-bash ${session_sh} &
+bash ${session_sh} 
 
 if [ $? -eq 0 ]; then
     sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Completed\",/" service.json

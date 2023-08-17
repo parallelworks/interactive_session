@@ -17,7 +17,7 @@ conda activate
 
 if [ -f "/swift-pw-bin/utils/input_form_resource_wrapper.py" ]; then
     version=$(cat /swift-pw-bin/utils/input_form_resource_wrapper.py | grep VERSION | cut -d':' -f2)
-    if [ -z "$version" ] || [ "$version" -lt 2 ]; then
+    if [ -z "$version" ] || [ "$version" -lt 3 ]; then
         python utils/input_form_resource_wrapper.py
     else
         python /swift-pw-bin/utils/input_form_resource_wrapper.py

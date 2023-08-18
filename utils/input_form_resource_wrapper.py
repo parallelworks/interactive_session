@@ -6,7 +6,7 @@ import subprocess
 import time
 import random
 import socket
-# VERSION: 3
+# VERSION: 4
 
 """
 # Form Resource Wrapper
@@ -240,6 +240,11 @@ def replace_placeholders(inputs_dict, placeholder_dict):
                     inputs_dict[ik] =iv.replace(pk, pv)
     return inputs_dict 
 
+def get_partition_os(partition_name, resource_info):
+    for partition in resource_info['variables']['config']['partition_config']:
+        if partition['name'] == partition_name:
+            return partition['os']
+
 def complete_resource_information(inputs_dict):
     if 'nports' in inputs_dict:
         inputs_dict['resource']['ports'] = find_available_ports(int(inputs_dict['nports']))
@@ -273,6 +278,13 @@ def complete_resource_information(inputs_dict):
         'pw/jobs',
         *os.getcwd().split('/')[-2:]
     )
+
+    # If the OS of the SLURM partition is Windows we assume that the 
+    # job directory is not shared. 
+    if '_sch__dd_partition_e_' in inputs_dict:
+        os_name=get_partition_os(inputs_dict['_sch__dd_partition_e_'], resource_info)
+        if os_name == 'windows':
+            inputs_dict['resource']['jobdir'] = inputs_dict['resource']['workdir']
 
     inputs_dict = replace_placeholders(
         inputs_dict, 

@@ -29,7 +29,6 @@ fi
 
 # SET SESSIONS' REMOTE DIRECTORY
 ${sshcmd} mkdir -p ${resource_jobdir}
-remote_session_dir=${resource_jobdir}
 
 # ADD STREAMING
 if [[ "${advanced_options_stream}" == "true" ]]; then
@@ -41,9 +40,13 @@ if [[ "${advanced_options_stream}" == "true" ]]; then
 fi
 
 # MAKE SURE CONTROLLER NODES HAVE SSH ACCESS TO COMPUTE NODES:
-$sshcmd cp "~/.ssh/id_rsa.pub" ${remote_session_dir}
+$sshcmd cp "~/.ssh/id_rsa.pub" ${resource_jobdir}
 
 cat >> ${session_sh} <<HERE
+# In case the job directory is not shared between the controller and compute nodes
+mkdir -p ${resource_jobdir}
+cd ${resource_jobdir}
+
 echo "Running in host \$(hostname)"
 sshusercontainer="ssh -J ${resource_privateIp} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST}"
 
@@ -136,21 +139,21 @@ fi
 
 # move the session file over
 chmod 777 ${session_sh}
-scp ${session_sh} ${resource_publicIp}:${remote_session_dir}/session-${job_number}.sh
-scp stream.sh ${resource_publicIp}:${remote_session_dir}/stream-${job_number}.sh
+scp ${session_sh} ${resource_publicIp}:${resource_jobdir}/session-${job_number}.sh
+scp stream.sh ${resource_publicIp}:${resource_jobdir}/stream-${job_number}.sh
 
 echo
 echo "Submitting ${submit_cmd} request (wait for node to become available before connecting)..."
 echo
-echo $sshcmd ${submit_cmd} ${remote_session_dir}/session-${job_number}.sh
+echo $sshcmd ${submit_cmd} ${resource_jobdir}/session-${job_number}.sh
 
 sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Submitted\",/" service.json
 
 # Submit job and get job id
 if [[ ${jobschedulertype} == "SLURM" ]]; then
-    jobid=$($sshcmd ${submit_cmd} ${remote_session_dir}/session-${job_number}.sh | tail -1 | awk -F ' ' '{print $4}')
+    jobid=$($sshcmd ${submit_cmd} ${resource_jobdir}/session-${job_number}.sh | tail -1 | awk -F ' ' '{print $4}')
 elif [[ ${jobschedulertype} == "PBS" ]]; then
-    jobid=$($sshcmd ${submit_cmd} ${remote_session_dir}/session-${job_number}.sh)
+    jobid=$($sshcmd ${submit_cmd} ${resource_jobdir}/session-${job_number}.sh)
 fi
 
 if [[ "${jobid}" == "" ]];then
@@ -206,6 +209,6 @@ while true; do
             break
         fi
     fi
-    sleep 60
+    sleep 5
 done
 

@@ -282,9 +282,10 @@ def complete_resource_information(inputs_dict):
     # If the OS of the SLURM partition is Windows we assume that the 
     # job directory is not shared. 
     if '_sch__dd_partition_e_' in inputs_dict:
-        os_name=get_partition_os(inputs_dict['_sch__dd_partition_e_'], resource_info)
-        if os_name == 'windows':
-            inputs_dict['resource']['jobdir'] = inputs_dict['resource']['workdir']
+        if inputs_dict['resource']['type'] != 'slurmshv2':
+            os_name=get_partition_os(inputs_dict['_sch__dd_partition_e_'], resource_info)
+            if os_name == 'windows':
+                inputs_dict['resource']['jobdir'] = inputs_dict['resource']['workdir']
 
     inputs_dict = replace_placeholders(
         inputs_dict, 

@@ -75,6 +75,7 @@ fi
 
 # Find an available display port
 if [[ $kernel_version == *microsoft* ]]; then
+    # In windows only this port works
     displayPort=5900
 else
     minPort=5901

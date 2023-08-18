@@ -74,22 +74,26 @@ if [ -z ${novnc_tgz} ]; then
 fi
 
 # Find an available display port
-minPort=5901
-maxPort=5999
-for port in $(seq ${minPort} ${maxPort} | shuf); do
-    out=$(netstat -aln | grep LISTEN | grep ${port})
-    if [ -z "${out}" ]; then
-        # To prevent multiple users from using the same available port --> Write file to reserve it
-        portFile=/tmp/${port}.port.used
-        if ! [ -f "${portFile}" ]; then
-            touch ${portFile}
-            export displayPort=${port}
-            displayNumber=${displayPort: -2}
-            export DISPLAY=:${displayNumber#0}
-            break
+if [[ $kernel_version == *microsoft* ]]; then
+    displayPort=5900
+else
+    minPort=5901
+    maxPort=5999
+    for port in $(seq ${minPort} ${maxPort} | shuf); do
+        out=$(netstat -aln | grep LISTEN | grep ${port})
+        if [ -z "${out}" ]; then
+            # To prevent multiple users from using the same available port --> Write file to reserve it
+            portFile=/tmp/${port}.port.used
+            if ! [ -f "${portFile}" ]; then
+                touch ${portFile}
+                export displayPort=${port}
+                displayNumber=${displayPort: -2}
+                export DISPLAY=:${displayNumber#0}
+                break
+            fi
         fi
-    fi
-done
+    done
+fi
 
 if [ -z "${servicePort}" ]; then
     displayErrorMessage "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"

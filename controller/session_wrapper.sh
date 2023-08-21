@@ -149,7 +149,9 @@ curl -s \
     -X POST -H "Content-Type: application/json" \
     -d "{\"title\": \"Interactive workflow ${workflow_name} job ${job_number} is running\", \"href\": \"${url}\"}" \
     https://${PW_PLATFORM_HOST}/api/v2/notifications?key=${PW_API_KEY} &> /dev/null
-$sshcmd 'bash -s' < ${session_sh} &> ${PW_JOB_PATH}/session-${job_number}.out
+
+$sshcmd 'bash -s' < ${session_sh} #&> ${PW_JOB_PATH}/session-${job_number}.out
+
 if [ $? -eq 0 ]; then
     sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Completed\",/" service.json
 else

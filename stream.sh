@@ -45,7 +45,7 @@ else
     sshcmd="ssh -J $masterIp -o StrictHostKeyChecking=no ${port_flag} $host"
 fi
 
-pushpath=$(ls ${pushpath}*)
+#pushpath=$(ls ${pushpath}*)
 
 ${sshcmd} 'cat >"'$pushpath'"' >> logstream.out 2>&1
 

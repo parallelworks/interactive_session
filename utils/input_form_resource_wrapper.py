@@ -6,7 +6,7 @@ import subprocess
 import time
 import random
 import socket
-# VERSION: 6
+# VERSION: 7
 
 """
 # Form Resource Wrapper
@@ -243,7 +243,8 @@ def replace_placeholders(inputs_dict, placeholder_dict):
 def get_partition_os(partition_name, resource_info):
     for partition in resource_info['variables']['config']['partition_config']:
         if partition['name'] == partition_name:
-            return partition['os']
+            if 'os' in partition:
+                return partition['os']
 
 def complete_resource_information(inputs_dict):
     if 'nports' in inputs_dict:

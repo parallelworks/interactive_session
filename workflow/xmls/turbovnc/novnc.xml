@@ -28,11 +28,16 @@
       </conditional>
     </section>
     <section name='advanced_options' type='section' title='Advanced Options' expanded='false'>
-        <param name='service_name' type='select' label='Select remote display protocol'  width='50%_none' multiple='false'>
-            <option value="turbovnc" selected="true">VNC Server</option>
-            <option value="nicedcv">Nice DCV</option>
-            <option value="scw">Scyld Cloud Workstation</option>
-        </param>
+        <conditional name="service_name_cond">
+            <param name='service_name' type='select' label='Select remote display protocol'  width='50%_none' multiple='false'>
+                <option value="turbovnc" selected="true">VNC Server</option>
+                <option value="nicedcv">Nice DCV</option>
+                <option value="scw">Scyld Cloud Workstation</option>
+            </param>
+            <when value="scw">
+                <param name='servicePort' label='Service Port' type='hidden' value='443' width='50%_none'></param>
+            </when>
+        </conditional>
         <param name="stream" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW' width="25%_none" optional='true' float="right">
         </param>
     </section>

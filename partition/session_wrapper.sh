@@ -98,8 +98,8 @@ elif [ -f "${resource_workdir}/pw/remote.sh" ]; then
     ${resource_workdir}/pw/remote.sh
 fi
 
-# Find an available servicePort
-servicePort=${servicePort}
+# Find an available servicePort. Could be anywhere in the form (<section_name>_servicePort)
+servicePort=$(env | grep servicePort | cut -d'=' -f2)
 if [ -z "${servicePort}" ]; then
     servicePort=\$(findAvailablePort)
 fi

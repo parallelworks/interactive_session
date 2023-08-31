@@ -115,7 +115,7 @@ echo "export FORWARDPATH=${FORWARDPATH}" >> inputs.sh
 echo "export IPADDRESS=${IPADDRESS}" >> inputs.sh
 
 # FIXME: Move this to <service-name>/url.sh
-if [[ "${service_name}" == "nicedcv" ]] || [[ "${service_name}" == "scw" ]]; then
+if [[ "${service_name}" == "nicedcv" ]]; then
     URL="\"/sme/${openPort}/${URLEND}"
     sed -i "s|.*URL.*|    \"URL\": \"/sme\",|" service.json
 else

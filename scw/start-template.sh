@@ -1,6 +1,7 @@
 set -x
 
 # Stop SCW service
+"/c/Windows/System32/cmd.exe" /c taskkill /IM scyld-cloud-workstation.exe /F
 "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/bin/scyld-cloud-workstation.exe" /service=stop
 
 
@@ -75,7 +76,6 @@ END
 
 
 # Start SCW service
-sleep 10
 "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/bin/scyld-cloud-workstation.exe" /service=start
 
 echo "starting SCW on port $servicePort"

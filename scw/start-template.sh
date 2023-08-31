@@ -75,6 +75,7 @@ END
 
 
 # Start SCW service
+sleep 10
 "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/bin/scyld-cloud-workstation.exe" /service=start
 
 echo "starting SCW on port $servicePort"

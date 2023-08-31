@@ -1,13 +1,5 @@
 set -x
 
-# Stop SCW service
-# Need to give it a minute before stopping it or it won't work
-# For some reason this isnot necessary if you resubmit the job to a running node
-sleep 60
-"/c/Windows/System32/cmd.exe" /c taskkill /IM scyld-cloud-workstation.exe /F
-"/c/Program Files/Penguin Computing/Scyld Cloud Workstation/bin/scyld-cloud-workstation.exe" /service=stop
-
-
 # FIXME: Replace by (below) when license server is working
 #     <LicenseFile>27002@${resource_privateIp}</LicenseFile>
 # Rewrite config file
@@ -77,10 +69,23 @@ cat > "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/scyld-cloud-wo
 </config>
 END
 
-
-# Start SCW service
-"/c/Program Files/Penguin Computing/Scyld Cloud Workstation/bin/scyld-cloud-workstation.exe" /service=start
-
 echo "starting SCW on port $servicePort"
+
+while true; do
+    check_logs=$(cat "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/log/scyld-cloud-workstation.log" | grep "port ${servicePort}")
+    if [ -z "${check_logs}" ]; then
+        echo "Restarting Service"
+        # Stop SCW service
+        "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/bin/scyld-cloud-workstation.exe" /service=stop
+        # Start SCW service
+        "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/bin/scyld-cloud-workstation.exe" /service=start
+    else
+        break
+    fi
+    sleep 5
+done
+
+cat "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/log/service.log"
+cat "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/log/scyld-cloud-workstation.log"
 
 sleep 99999

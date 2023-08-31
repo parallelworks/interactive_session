@@ -3,13 +3,16 @@ set -x
 # Stop SCW service
 "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/bin/scyld-cloud-workstation.exe" /service=stop
 
+
+# FIXME: Replace by (below) when license server is working
+#     <LicenseFile>27002@${resource_privateIp}</LicenseFile>
 # Rewrite config file
 cat > "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/scyld-cloud-workstation.xml" << END
 <config>
   <Server>
     <!-- <AutoLock>false</AutoLock> -->
     <!-- <IdleUserTimeout>120</IdleUserTimeout> -->
-    <LicenseFile>27002@${resource_privateIp}</LicenseFile>
+    <LicenseFile>scyld-cloud-workstation.lic</LicenseFile>
     <!-- <LocalCursor>true</LocalCursor> -->
     <!-- <LogLevel>information</LogLevel> -->
     <PathPrefix></PathPrefix>

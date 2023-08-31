@@ -2,6 +2,7 @@ set -x
 
 # Stop SCW service
 # Need to give it a minute before stopping it or it won't work
+# For some reason this isnot necessary if you resubmit the job to a running node
 sleep 60
 "/c/Windows/System32/cmd.exe" /c taskkill /IM scyld-cloud-workstation.exe /F
 "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/bin/scyld-cloud-workstation.exe" /service=stop

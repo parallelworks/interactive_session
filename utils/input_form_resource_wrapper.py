@@ -6,7 +6,7 @@ import subprocess
 import time
 import random
 import socket
-# VERSION: 7
+# VERSION: 8
 
 """
 # Form Resource Wrapper
@@ -250,6 +250,9 @@ def complete_resource_information(inputs_dict):
     if 'nports' in inputs_dict:
         inputs_dict['resource']['ports'] = find_available_ports(int(inputs_dict['nports']))
 
+    if 'jobschedulertype' not in inputs_dict:
+        inputs_dict['jobschedulertype'] = 'CONTROLLER'
+
     if inputs_dict['resource']['name'] == 'user_workspace':
         inputs_dict['jobschedulertype'] = 'LOCAL'
         inputs_dict['resource']['workdir'] = os.path.expanduser("~")
@@ -398,6 +401,8 @@ def create_resource_directory(label, inputs_dict):
 
     with open(inputs_sh, 'w') as f:
         for k,v in inputs_dict_flatten.items():
+            # Parse newlines as \n for textarea parameter type
+            v = v.replace('\n', '\\n') 
             f.write(f"export {k}=\"{v}\"\n")
 
     create_batch_header(inputs_dict, header_sh)

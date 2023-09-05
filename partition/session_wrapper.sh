@@ -197,15 +197,15 @@ while true; do
     sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"${job_status}\",/" service.json
     if [[ ${jobschedulertype} == "SLURM" ]]; then
         # If job status is empty job is no longer running
-        if [ -z ${job_status} ]; then
+        if [ -z "${job_status}" ]; then
             job_status=$($sshcmd sacct -j ${jobid}  --format=state | tail -n1)
             sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"${job_status}\",/" service.json
             break
         fi
     elif [[ ${jobschedulertype} == "PBS" ]]; then
-        if [[ ${job_status} == "C" ]]; then
+        if [[ "${job_status}" == "C" ]]; then
             break
-        elif [ -z ${job_status} ]; then
+        elif [ -z "${job_status}" ]; then
             break
         fi
     fi

@@ -1,9 +1,3 @@
-if [ ! -z "${KUBERNETES_PORT}" ];then
-    export USERMODE="k8s"
-else
-    export USERMODE="docker"
-fi
-
 echod() {
     echo $(date): $@
 }

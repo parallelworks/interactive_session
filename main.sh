@@ -108,8 +108,6 @@ fi
 # SERVICE URL
 echo "Generating session html"
 source ${service_name}/url.sh
-echo "export FORWARDPATH=${FORWARDPATH}" >> inputs.sh
-echo "export IPADDRESS=${IPADDRESS}" >> inputs.sh
 
 # FIXME: Move this to <service-name>/url.sh
 if [[ "${service_name}" == "nicedcv" ]]; then

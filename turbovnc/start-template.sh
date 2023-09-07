@@ -18,24 +18,9 @@ bootstrap_tgz() {
             ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
             if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
                 # Running in a controller node
-                if [[ "$USERMODE" == "k8s" ]]; then
-                    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
-                    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-                    scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
-                else # Docker mode
-                    scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
-                fi
+                scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
             else
-                # Running in a compute partition
-                if [[ "$USERMODE" == "k8s" ]]; then
-                    # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
-                    # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-                    # Works because home directory is shared!
-                    ssh ${ssh_options} ${resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
-                else # Docker mode
-                    # Works because home directory is shared!
-                    ssh ${ssh_options} ${resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
-                fi
+                ssh ${ssh_options} ${resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
             fi
         fi
         tar -zxf ${install_parent_dir}/$(basename ${tgz_path}) -C ${install_parent_dir}

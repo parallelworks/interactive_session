@@ -6,7 +6,7 @@ import subprocess
 import time
 import random
 import socket
-# VERSION: 8
+# VERSION: 9
 
 """
 # Form Resource Wrapper
@@ -391,8 +391,10 @@ def create_resource_directory(label, inputs_dict):
     inputs_sh = os.path.join(dir, 'inputs.sh')
     header_sh = os.path.join(dir, 'batch_header.sh')
     inputs_dict_flatten = flatten_dictionary(inputs_dict)
-    if 'resource' in inputs_dict_flatten:
-        del inputs_dict_flatten['resource']
+    # Remove dictionaries
+    inputs_dict_flatten = {key: value for key, value in inputs_dict_flatten.items() if not isinstance(value, dict)}
+
+    print(json.dumps(inputs_dict_flatten, indent = 4))
 
     os.makedirs(dir, exist_ok=True)
 
@@ -402,7 +404,10 @@ def create_resource_directory(label, inputs_dict):
     with open(inputs_sh, 'w') as f:
         for k,v in inputs_dict_flatten.items():
             # Parse newlines as \n for textarea parameter type
-            v = v.replace('\n', '\\n') 
+            if type(v) == str:
+                v = v.replace('\n', '\\n')
+            elif type(v) == bool:
+                v = str(v).lower() 
             f.write(f"export {k}=\"{v}\"\n")
 
     create_batch_header(inputs_dict, header_sh)
@@ -422,7 +427,13 @@ if __name__ == '__main__':
     
     for label in resource_labels:
         logger.info(f'Preparing resource <{label}>')
+        # Copy only the resource information corresponding to the resource label
         label_inputs_dict = inputs_dict[f'pwrl_{label}']
+        # Copy every other input with no resource label
+        for key, value in inputs_dict.items():
+            if not key.startswith('pwrl_'):
+                label_inputs_dict[key] = value
+
         label_inputs_dict = complete_resource_information(label_inputs_dict)
         logger.info(json.dumps(label_inputs_dict, indent = 4))
         create_resource_directory(label, label_inputs_dict)

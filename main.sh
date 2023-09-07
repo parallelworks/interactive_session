@@ -17,7 +17,7 @@ conda activate
 
 if [ -f "/swift-pw-bin/utils/input_form_resource_wrapper.py" ]; then
     version=$(cat /swift-pw-bin/utils/input_form_resource_wrapper.py | grep VERSION | cut -d':' -f2)
-    if [ -z "$version" ] || [ "$version" -lt 7 ]; then
+    if [ -z "$version" ] || [ "$version" -lt 9 ]; then
         python utils/input_form_resource_wrapper.py
     else
         python /swift-pw-bin/utils/input_form_resource_wrapper.py
@@ -29,12 +29,9 @@ fi
 if ! [ -f "resources/host/inputs.sh" ]; then
     displayErrorMessage "ERROR - Missing file ./resources/host/inputs.sh. Resource wrapper failed"
 fi
-# Remove lines starting with "export host_" from inputs.sh
-#     These were only needed by the input_form_resource_wrapper.sh
-#     We want the inputs clean and in a single file because they are written to the submit scripts
-sed -i '/^export pwrl_host_/d' inputs.sh
-# Append processed inputs to input.sh
-cat resources/host/inputs.sh >> inputs.sh
+# Use inputs as processed by the resource wrapper
+# - ONLY do this if there is 1 resource!
+cp resources/host/inputs.sh inputs.sh
 
 # Load and process inputs
 source inputs.sh

@@ -38,24 +38,9 @@ if ! [ -d "$(echo ~/pw/noVNC-1.3.0)" ]; then
     ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
     if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
         # Running in a controller node
-        if [[ "$USERMODE" == "k8s" ]]; then
-            # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
-            # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-            scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pw
-        else # Docker mode
-            scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pw
-        fi
+        scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pw
     else
-        # Running in a compute partition
-        if [[ "$USERMODE" == "k8s" ]]; then
-            # HAVE TO DO THIS FOR K8S NETWORKING TO EXPOSE THE PORT
-            # WARNING: Maybe if controller contains user name (user@ip) you need to extract only the ip
-            # Works because home directory is shared!
-            ssh ${ssh_options} ${resource_privateIp} scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pw
-        else # Docker mode
-            # Works because home directory is shared!
-            ssh ${ssh_options} ${resource_privateIp} scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pw
-        fi
+        ssh ${ssh_options} ${resource_privateIp} scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pw
     fi
     tar -zxf ~/pw/noVNC-1.3.0.tgz -C ~/pw
     set +x

@@ -3,7 +3,6 @@ if [ ! -z "${KUBERNETES_PORT}" ];then
 else
     export USERMODE="docker"
 fi
-echo "export USERMODE=${USERMODE}" >> inputs.sh
 
 echod() {
     echo $(date): $@

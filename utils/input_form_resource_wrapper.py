@@ -452,8 +452,6 @@ def create_resource_directory(label, inputs_dict):
     # Remove dictionaries
     inputs_dict_flatten = {key: value for key, value in inputs_dict_flatten.items() if not isinstance(value, dict)}
 
-    print(json.dumps(inputs_dict_flatten, indent = 4))
-
     os.makedirs(dir, exist_ok=True)
 
     with open(inputs_json, 'w') as f:

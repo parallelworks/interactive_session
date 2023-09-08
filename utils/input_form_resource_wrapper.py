@@ -18,7 +18,8 @@ the resource information. The wrapper performs the following actions:
    incorrect if the workflow was launched while the resource is starting. 
 3. Creates `input.json` and `inputs.sh` files for each resource under the resource's directory. Note 
    that this is helpful to create code that runs on each of the resources without having to parse the 
-   workflow arguments every time. 
+   workflow arguments every time (see link below). For more information see resource inputs section below.
+   https://github.com/parallelworks/workflow_tutorial/blob/main/011_script_submitter_timeout_failover/main.sh
 4. Creates a batch header with the PBS or SLURM directives under the resource's directory. Note that this 
    header can be used as the header of any script that the workflow submits to the resource. 
 5. Finds a given number of available ports
@@ -42,6 +43,63 @@ The wrapper only works if the resources are defined using a specific format in t
    can be added to the XML without having to modify the workflow code. 
 7. nports: Number of available ports to find for this resource. These ports are added to the inputs.json and 
    inputs.sh files.
+
+
+### Resource Inputs
+The wrapper uses the inputs.sh and inputs.json files to write the resources/<resource-label>/inputs.json and
+resources/<resource-label>/inputs.sh files. These files contain the following information:
+1. Completed and validated resource information (see sections above)
+2. The resource section of the inputs.json is collapsed and any other resource section is removed, see example below.
+   Original inputs.json:
+   {
+	"novnc_dir": "__WORKDIR__/pw/bootstrap/noVNC-1.3.0",
+	"novnc_tgz": "/swift-pw-bin/apps/noVNC-1.3.0.tgz",
+	"pwrl_host": {
+		"resource": {
+			"id": "6419f5bd7d72b40e5b9a2af7",
+			"name": "gcpv2",
+			"status": "on",
+			"namespace": "alvaro",
+			"type": "gclusterv2",
+			"workdir": "/home/alvaro",
+			"publicIp": "35.222.63.173",
+			"privateIp": "10.128.0.66",
+			"username": "alvaro"
+		},
+		"nports": "1",
+		"jobschedulertype": "CONTROLLER"
+	},
+	"advanced_options": {
+		"service_name": "turbovnc",
+		"stream": true
+	}
+}
+resources/host/inputs.json:
+{
+    "resource": {
+        "id": "6419f5bd7d72b40e5b9a2af7",
+        "name": "gcpv2",
+        "status": "on",
+        "namespace": "alvaro",
+        "type": "gclusterv2",
+        "workdir": "/home/alvaro",
+        "publicIp": "alvaro@35.222.63.173",
+        "privateIp": "10.128.0.66",
+        "username": "alvaro",
+        "ports": [
+            55238
+        ],
+        "jobdir": "/home/alvaro/pw/jobs/desktop/00023"
+    },
+    "nports": "1",
+    "jobschedulertype": "CONTROLLER",
+    "novnc_dir": "/home/alvaro/pw/bootstrap/noVNC-1.3.0",
+    "novnc_tgz": "/swift-pw-bin/apps/noVNC-1.3.0.tgz",
+    "advanced_options": {
+        "service_name": "turbovnc",
+        "stream": true
+    }
+}
 """
 
 

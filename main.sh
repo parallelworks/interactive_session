@@ -43,16 +43,7 @@ fi
 
 echo "export openPort=${openPort}" >> inputs.sh
 export sshcmd="ssh -o StrictHostKeyChecking=no ${resource_publicIp}"
-echo "export sshcmd=\"${sshcmd}\"" >> inputs.sh 
-# The resource wrapper only replaces placeholders in resource sections of the input form
-# Therefore, we need to replace this here as well:
-sed -i "s|__WORKDIR__|${resource_workdir}|g" inputs.sh
-sed -i "s|__workdir__|${resource_workdir}|g" inputs.sh
-sed -i "s|__PW_USER__|${PW_USER}|g" inputs.sh
-sed -i "s|__pw_user__|${PW_USER}|g" inputs.sh
-sed -i "s|__USER__|${resource_username}|g" inputs.sh
-sed -i "s|__user__|${resource_username}|g" inputs.sh
-
+echo "export sshcmd=\"${sshcmd}\"" >> inputs.sh
 source inputs.sh
 
 # Obtain the service_name from any section of the XML

@@ -291,7 +291,6 @@ def get_resource_info_with_verified_ip(resource_id, timeout = 600):
 
 
 def replace_placeholders(inputs_dict, placeholder_dict):
-    print(inputs_dict)
     for ik,iv in inputs_dict.items():
         if type(iv) == str:
             for pk, pv in placeholder_dict.items():

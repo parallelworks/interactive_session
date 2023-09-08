@@ -6,7 +6,7 @@ import subprocess
 import time
 import random
 import socket
-# VERSION: 9
+# VERSION: 10
 
 """
 # Form Resource Wrapper
@@ -296,6 +296,9 @@ def replace_placeholders(inputs_dict, placeholder_dict):
             for pk, pv in placeholder_dict.items():
                 if pk in iv:
                     inputs_dict[ik] =iv.replace(pk, pv)
+        elif type(iv) == dict:
+            inputs_dict[ik] = replace_placeholders(iv, placeholder_dict)
+
     return inputs_dict 
 
 def get_partition_os(partition_name, resource_info):

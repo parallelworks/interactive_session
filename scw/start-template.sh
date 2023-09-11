@@ -35,7 +35,7 @@ cat > "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/scyld-cloud-wo
           <!-- <Username></Username> -->
         </Deny>
       </ScyldCloudAuth>
-      <!-- <Enabled>false</Enabled> -->
+        <Enabled>false</Enabled> -->
     </Auth>
     <Broker>
       <Username>broker</Username>

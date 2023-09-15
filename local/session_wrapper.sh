@@ -81,7 +81,7 @@ url="/workflows/${workflow_name}/${job_number}/view"
 source /etc/profile.d/parallelworks-env.sh
 curl -s \
     -X POST -H "Content-Type: application/json" \
-    -d "{\"title\": \"Interactive workflow ${workflow_name} job ${job_number} is running\", \"href\": \"${url}\"}" \
+    -d "{\"title\": \"Interactive workflow ${workflow_name} job ${job_number} is running\", \"href\": \"${url}\", \"type\": \"workflow\", \"subType\": \"readyInteractive\", \"broadcastZone\": \"user\", \"entityName\": \"${PW_USER}\", \"urgencyLevel\": \"info\"}" \
     https://${PW_PLATFORM_HOST}/api/v2/notifications?key=${PW_API_KEY} &> /dev/null
 
 bash ${session_sh} 

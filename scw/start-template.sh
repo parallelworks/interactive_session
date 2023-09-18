@@ -10,7 +10,7 @@ cat > "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/scyld-cloud-wo
     <!-- <IdleUserTimeout>120</IdleUserTimeout> -->
     <LicenseFile>scyld-cloud-workstation.lic</LicenseFile>
     <!-- <LocalCursor>true</LocalCursor> -->
-    <!-- <LogLevel>information</LogLevel> -->
+    <LogLevel>debug</LogLevel>
     <PathPrefix></PathPrefix>
     <Port>${servicePort}</Port>
     <Security>

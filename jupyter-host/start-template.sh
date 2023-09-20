@@ -32,7 +32,7 @@ if [[ "${service_conda_install}" == "true" ]]; then
         conda install -c anaconda jupyter -y
     fi
 else
-    eval ${service_load_env}
+    eval "${service_load_env}"
 fi
 
 echo "starting notebook on $servicePort..."

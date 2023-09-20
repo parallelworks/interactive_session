@@ -31,6 +31,8 @@ if [[ "${service_conda_install}" == "true" ]]; then
     if [ -z $(which ${jupyter-notebook} 2> /dev/null) ]; then
         conda install -c anaconda jupyter -y
     fi
+else
+    ${service_load_env}
 fi
 
 echo "starting notebook on $servicePort..."

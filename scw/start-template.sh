@@ -6,6 +6,9 @@ set -x
 cat > "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/scyld-cloud-workstation.xml" << END
 <config>
   <Server>
+    <Keyboard>
+      <LocalhostAutoAssign>true</LocalhostAutoAssign>
+    </Keyboard>
     <!-- <AutoLock>false</AutoLock> -->
     <!-- <IdleUserTimeout>120</IdleUserTimeout> -->
     <LicenseFile>scyld-cloud-workstation.lic</LicenseFile>

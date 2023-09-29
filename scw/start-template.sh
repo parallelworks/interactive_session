@@ -104,6 +104,7 @@ if ! [ -d "/opt/scyld-cloud-workstation" ]; then
     echo "Installing Scyld Cloud Workstation"
     wget https://updates.penguincomputing.com/scw/download/el7/x86_64/latest/scyld-cloud-workstation-12.3.0-1.el7.x86_64.rpm .
     sudo rpm -i scyld-cloud-workstation-12.3.0-1.el7.x86_64.rpm
+    sudo cp /contrib/${USER}/scyld-cloud-workstation.lic /opt/scyld-cloud-workstation
 fi
 
 # FIXME: Replace by (below) when license server is working

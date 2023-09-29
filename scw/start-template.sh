@@ -103,7 +103,7 @@ else
 # FIXME: Replace by (below) when license server is working
 #     <LicenseFile>27002@${resource_privateIp}</LicenseFile>
 # Rewrite config file
-cat > "/opt/scyld-cloud-workstation/bin/scyld-cloud-workstation.xml" << END
+sudo cat > "/opt/scyld-cloud-workstation/bin/scyld-cloud-workstation.xml" << END
 <config>
   <Server>
     <Keyboard>

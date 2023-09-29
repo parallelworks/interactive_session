@@ -106,6 +106,9 @@ else
 cat > "./scyld-cloud-workstation.xml" << END
 <config>
   <Server>
+    <X11>
+      <Binary>/usr/bin/Xorg</Binary>
+    </X11>
     <Keyboard>
       <LocalhostAutoAssign>true</LocalhostAutoAssign>
     </Keyboard>

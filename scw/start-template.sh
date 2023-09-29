@@ -103,7 +103,7 @@ else
 # FIXME: Replace by (below) when license server is working
 #     <LicenseFile>27002@${resource_privateIp}</LicenseFile>
 # Rewrite config file
-sudo cat > "/opt/scyld-cloud-workstation/bin/scyld-cloud-workstation.xml" << END
+cat > "./scyld-cloud-workstation.xml" << END
 <config>
   <Server>
     <Keyboard>
@@ -171,6 +171,8 @@ sudo cat > "/opt/scyld-cloud-workstation/bin/scyld-cloud-workstation.xml" << END
   </openSSL>
 </config>
 END
+
+sudo cp ./scyld-cloud-workstation.xml /opt/scyld-cloud-workstation/bin/
 
 echo "starting SCW on port $servicePort"
 

@@ -117,13 +117,45 @@ for port in $(seq ${minPort} ${maxPort} | shuf); do
     fi
 done
 
-# Check if X server is already running
-if ! pgrep Xorg > /dev/null; then
-    # Start the X server
-    startx --display ${DISPLAY} &
+if  ! [ -z $(which gnome-session) ]; then
+    gnome-session &
+    echo $! > ${resource_jobdir}/service.pid
+elif ! [ -z $(which mate-session) ]; then
+    mate-session &
+    echo $! > ${resource_jobdir}/service.pid
+elif ! [ -z $(which xfce4-session) ]; then
+    xfce4-session &
+    echo $! > ${resource_jobdir}/service.pid
+elif ! [ -z $(which icewm-session) ]; then
+    # FIXME: Code below fails to launch desktop session
+    #        Use case in onyx automatically launches the session when visual apps are launched
+    echo Found icewm-session
+    #icewm-session &
+    #echo $! > ${resource_jobdir}/service.pid
+elif ! [ -z $(which gnome) ]; then
+    gnome &
+    echo $! > ${resource_jobdir}/service.pid
 else
-    echo "X server is already running."
+    # Exit script here
+    #displayErrorMessage "ERROR: No desktop environment was found! Tried gnome-session, mate-session, xfce4-session and gnome"
+    # The lines below do not run
+    echo "WARNING: vnc desktop not found!"
+    echo "Attempting to install a desktop environment"
+    # Following https://owlhowto.com/how-to-install-xfce-on-centos-7/
+    # Install EPEL release
+    sudo -n yum install epel-release -y
+    # Install Window-x system
+    sudo -n yum groupinstall "X Window system" -y
+    # Install XFCE
+    sudo -n yum groupinstall "Xfce" -y
+    if ! [ -z $(which xfce4-session) ]; then
+        displayErrorMessage "ERROR: No desktop environment was found! Tried gnome-session, mate-session, xfce4-session and gnome"
+    fi
+    # Start GUI
+    xfce4-session &
+    echo $! > ${resource_jobdir}/service.pid
 fi
+
 
 if ! [ -d "/opt/scyld-cloud-workstation" ]; then
     echo "Installing Scyld Cloud Workstation"

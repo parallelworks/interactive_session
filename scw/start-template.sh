@@ -119,6 +119,7 @@ done
 
 # Check if X server is already running
 if ! pgrep Xorg > /dev/null; then
+    xauth generate :${DISPLAY} . trusted
     # Start the X server
     startx --display ${DISPLAY} &
 else

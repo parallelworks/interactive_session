@@ -7,7 +7,7 @@
     <section name='service' type='section' title='Matlab Inputs' expanded='false'>
       <param name='name' label='Service' type='hidden' value='turbovnc' width='50%_none'></param>
       <param name='load_env' label='Command to load MATLAB' type='text' value='module load matlab' help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.' width='50%_none'></param>
-      <param name='bin' label='Service binary' help='Command to launch Matlab type='text' value='matlab -desktop' ></param>
+      <param name='bin' label='Service binary' help='Command to launch Matlab' type='text' value='matlab -desktop' ></param>
     </section>
     <section name='pwrl_host' type='section' title='Host' expanded='true'>
        <param name='resource' type='computeResource' label='Service host' hideUserWorkspace='true' help='Resource to host the service'></param>

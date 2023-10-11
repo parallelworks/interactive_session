@@ -54,10 +54,6 @@ if ! [ -d "${service_name}" ]; then
     exit 1
 fi
 
-export job_number=$(basename ${PWD})
-export job_dir=$(pwd | rev | cut -d'/' -f1-2 | rev)
-echo "export job_number=${job_number}" >> inputs.sh
-
 # export the users env file (for some reason not all systems are getting these upon execution)
 while read LINE; do export "$LINE"; done < ~/.env
 

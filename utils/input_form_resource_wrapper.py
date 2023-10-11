@@ -423,19 +423,16 @@ def create_batch_header(inputs_dict, header_sh):
 
     scheduler_directives += get_scheduler_directives_from_input_form(inputs_dict)
 
-    jobnumber = os.path.basename(os.getcwd())
-    workflow_name = os.path.basename(os.path.dirname(os.getcwd()))
     jobdir = inputs_dict['resource']['jobdir']
     scheduler_directives += [f'-o {jobdir}/logs.out', f'-e {jobdir}/logs.out']
     jobschedulertype = inputs_dict['jobschedulertype']
-    jobname = f"{workflow_name}-{jobnumber}"
 
     if jobschedulertype == 'SLURM':
         directive_prefix="#SBATCH"
-        scheduler_directives += [f"--job-name={jobname}", f"--chdir={jobdir}"]
+        scheduler_directives += ["--job-name={}".format(inputs_dict['job_name']), f"--chdir={jobdir}"]
     elif jobschedulertype == 'PBS':
         directive_prefix="#PBS"
-        scheduler_directives += [f"-N {jobname}"]
+        scheduler_directives += ["-N {}".format(inputs_dict['job_name'])]
     else:
         return
     
@@ -474,7 +471,13 @@ def create_resource_directory(label, inputs_dict):
 if __name__ == '__main__':
     with open('inputs.json') as inputs_json:
         inputs_dict = json.load(inputs_json)
-        
+
+    # Add basic job info to inputs_dict:
+    inputs_dict['job_number'] = os.path.basename(os.getcwd())
+    inputs_dict['workflow_name'] = os.path.basename(os.path.dirname(os.getcwd()))
+    inputs_dict['job_name'] = "{}-{}".format(inputs_dict['workflow_name'], inputs_dict['job_number'])
+    inputs_dict['pw_job_dir'] = os.path.basename(os.getcwd())
+
     # Find all resource labels
     resource_labels = [label.replace('pwrl_','') for label in inputs_dict.keys() if label.startswith('pwrl_')]
     

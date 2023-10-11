@@ -1,3 +1,4 @@
+sleep 9999
 set -x
 
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')

@@ -17,7 +17,7 @@ conda activate
 
 if [ -f "/swift-pw-bin/utils/input_form_resource_wrapper.py" ]; then
     version=$(cat /swift-pw-bin/utils/input_form_resource_wrapper.py | grep VERSION | cut -d':' -f2)
-    if [ -z "$version" ] || [ "$version" -lt 10 ]; then
+    if [ -z "$version" ] || [ "$version" -lt 11 ]; then
         python utils/input_form_resource_wrapper.py
     else
         python /swift-pw-bin/utils/input_form_resource_wrapper.py
@@ -53,10 +53,6 @@ if ! [ -d "${service_name}" ]; then
     displayErrorMessage "ERROR: Directory ${service_name} was not found --> Service ${service_name} is not supported --> Exiting workflow"
     exit 1
 fi
-
-export job_number=$(basename ${PWD})
-export job_dir=$(pwd | rev | cut -d'/' -f1-2 | rev)
-echo "export job_number=${job_number}" >> inputs.sh
 
 # export the users env file (for some reason not all systems are getting these upon execution)
 while read LINE; do export "$LINE"; done < ~/.env

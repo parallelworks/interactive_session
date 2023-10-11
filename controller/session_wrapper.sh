@@ -139,9 +139,6 @@ echo "Submitting ssh job (wait for node to become available before connecting)..
 echo "$sshcmd 'bash -s' < ${session_sh} &> ${PW_JOB_PATH}/session-${job_number}.out"
 echo
 sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Running\",/" service.json
-job_dir=$(pwd | rev | cut -d'/' -f1-2 | rev)
-workflow_name=$(echo ${job_dir} | cut -d'/' -f1)
-job_number=$(echo ${job_dir} | cut -d'/' -f2)
 url="/workflows/${workflow_name}/${job_number}/view"
 # needed for now to get the PW_PLATFORM_HOST and PW_API_KEY
 source /etc/profile.d/parallelworks-env.sh

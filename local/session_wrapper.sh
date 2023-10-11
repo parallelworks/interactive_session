@@ -23,7 +23,7 @@ if [ -f "${service_name}/kill-template.sh" ]; then
 fi
 cat  ${sdir}/clear_ports.sh  >> ${kill_sh}
 sed -i "s/__KILL_PORTS__/${kill_ports}/g" ${kill_sh}
-echo "kill \$(ps -x | grep ${job_dir} | grep -v grep | awk '{print \$1}')" >> ${kill_sh}
+echo "kill \$(ps -x | grep ${job_number} | grep ${workflow_name} | grep -v grep | awk '{print \$1}')" >> ${kill_sh}
 echo "echo Finished running ${kill_sh}" >> ${kill_sh}
 echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" ${PW_JOB_PATH}/service.json >> ${kill_sh}
 chmod 777 ${kill_sh}
@@ -73,9 +73,6 @@ echo "bash ${session_sh}"
 echo
 sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Running\",/" service.json
 
-job_dir=$(pwd | rev | cut -d'/' -f1-2 | rev)
-workflow_name=$(echo ${job_dir} | cut -d'/' -f1)
-job_number=$(echo ${job_dir} | cut -d'/' -f2)
 url="/workflows/${workflow_name}/${job_number}/view"
 # needed for now to get the PW_PLATFORM_HOST and PW_API_KEY
 source /etc/profile.d/parallelworks-env.sh

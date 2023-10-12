@@ -11,5 +11,8 @@ Here's how to use an interactive session job:
 4. Access the server by clicking the "eye" icon in the workflow monitor. Note that the connection is established only after the server running. This might take some time if the job is in a queue, if compute nodes are starting, or if the job is installing required software. For more information on the job's status, check the logs.
 5. When you're done, click the red "no" symbol to cancel or stop the job.
 
+![Input Form](workflow/readmes/screenshots/input-form.png)
 
-![Alt Text](workflow/thumbnails/abaqus.png)
+![Workflow Monitor](workflow/readmes/screenshots/workflow-monitor.png)
+
+![Connected Desktop](workflow/readmes/screenshots/connected-desktop.png)

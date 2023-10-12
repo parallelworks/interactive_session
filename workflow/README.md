@@ -9,3 +9,5 @@ This workflow starts interactive sessions for different services. The services a
 * Once provisioned, open the session.html file (double click) in the job directory.
 * To close a session kill the PW job by clicking on COMPUTE > Workflow Monitor > Cancel Job (red icon).
 
+
+![Alt Text](workflow/thumbnails/abaqus.png)

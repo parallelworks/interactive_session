@@ -101,6 +101,32 @@ else
 # LINUX #
 #########
 
+minPort=5901
+maxPort=5999
+for port in $(seq ${minPort} ${maxPort} | shuf); do
+    out=$(netstat -aln | grep LISTEN | grep ${port})
+    if [ -z "${out}" ]; then
+        # To prevent multiple users from using the same available port --> Write file to reserve it
+        portFile=/tmp/${port}.port.used
+        if ! [ -f "${portFile}" ]; then
+            touch ${portFile}
+            export displayPort=${port}
+            displayNumber=${displayPort: -2}
+            export DISPLAY=:${displayNumber#0}
+            break
+        fi
+    fi
+done
+
+# Check if X server is already running
+if ! pgrep Xorg > /dev/null; then
+    xauth generate ${DISPLAY} . trusted
+    # Start the X server
+    startx --display ${DISPLAY} &
+else
+    echo "X server is already running."
+fi
+
 if ! [ -d "/opt/scyld-cloud-workstation" ]; then
     echo "Installing Scyld Cloud Workstation"
     wget https://updates.penguincomputing.com/scw/download/el7/x86_64/latest/scyld-cloud-workstation-12.3.0-1.el7.x86_64.rpm .
@@ -181,29 +207,6 @@ cat > "./scyld-cloud-workstation.xml" << END
 END
 
 sudo cp ./scyld-cloud-workstation.xml /opt/scyld-cloud-workstation/bin/
-
-# CONFIGURE X SERVER
-if nvidia-smi &>/dev/null; then
-    echo "Configuring X server for GPUs"
-    # GPU Support
-    # Configure the X server to start automatically when the Linux server boots.
-    if [[ $(sudo systemctl get-default) == "multi-user.target" ]]; then
-        sudo systemctl set-default graphical.target  
-    fi
-    # Start the X server.
-    sudo systemctl isolate graphical.target
-    # Verify that the X server is running.
-    ps aux | grep X | grep -v grep
-    # Generate an updated xorg.conf
-    sudo rm -rf /etc/X11/XF86Config*
-    sudo nvidia-xconfig --preserve-busid --enable-all-gpus
-    # If you're using a G3 or G4 Amazon EC2 instance and you want to use a multi-monitor console session
-    # sudo nvidia-xconfig --preserve-busid --enable-all-gpus --connected-monitor=DFP-0,DFP-1,DFP-2,DFP-3
-    # Restart the X server for the changes to take effect
-    sudo systemctl isolate multi-user.target
-    sudo systemctl isolate graphical.target
-fi
-
 
 echo "starting SCW on port $servicePort"
 

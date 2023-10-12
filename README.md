@@ -1,11 +1,12 @@
 ## Interactive Session
-This workflow starts interactive sessions for different services. The services are started in the selected slurm partition using an sbatch command.
+Interactive session workflows initiate a server, such as a remote desktop or Jupyter Notebook server, on your chosen resource and establish a connection through an SSH tunnel to link it to the Parallel Works platform.
 
+You can launch interactive sessions on the controller or login node of a cluster, on a compute node of a SLURM partition or PBS queue, or in your user workspace (user container).
 
-#### Instructions
+Here's how to use an interactive session job:
 
-* Enter form parameters and click _Execute_ to launch a PW job. The job status can be monitored under COMPUTE > Workflow Monitor. The job files and logs are under the newly created `/pw/jobs/<workflow-name>/<job-name>/` directory.
-* Wait for node to be provisioned from slurm.
-* Once provisioned, open the session.html file (double click) in the job directory.
-* To close a session kill the PW job by clicking on COMPUTE > Workflow Monitor > Cancel Job (red icon).
-
+1. Choose the resource where you want to start the server.
+2. Enter or review the input parameters in the provided form. You can find detailed descriptions of each parameter by hovering over the question mark icon.
+3. Click the "execute" button to launch the job.
+4. Access the server by clicking the "eye" icon in the workflow monitor. Note that the connection is established through an SSH tunnel once the job has finished running. This might take some time if the job is in a queue, if compute nodes are starting, or if the job is installing required software. For more information on the job's status, check the logs.
+5. When you're done, click the red "no" symbol to cancel or stop the job.

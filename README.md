@@ -10,3 +10,6 @@ Here's how to use an interactive session job:
 3. Click the "execute" button to launch the job.
 4. Access the server by clicking the "eye" icon in the workflow monitor. Note that the connection is established only after the server running. This might take some time if the job is in a queue, if compute nodes are starting, or if the job is installing required software. For more information on the job's status, check the logs.
 5. When you're done, click the red "no" symbol to cancel or stop the job.
+
+
+![Alt Text](workflow/thumbnails/abaqus.png)

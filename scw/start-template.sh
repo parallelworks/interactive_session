@@ -201,6 +201,8 @@ if nvidia-smi &>/dev/null; then
     # Restart the X server for the changes to take effect
     sudo systemctl isolate multi-user.target
     sudo systemctl isolate graphical.target
+else
+    displayErrorMessage "ERROR: Linux version of Scyld Cloud Workstation is only supported in nodes with GPUs"
 fi
 
 

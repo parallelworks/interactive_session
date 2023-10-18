@@ -204,7 +204,31 @@ if nvidia-smi &>/dev/null; then
 fi
 
 
-echo "starting SCW on port $servicePort"
+echo; echo "Enabling autologin"
+cat > "custom.conf" << END
+# GDM configuration storage
+
+[daemon]
+AutomaticLogin=${USER}
+AutomaticLoginEnable=True
+
+[security]
+
+[xdmcp]
+
+[chooser]
+
+[debug]
+# Uncomment the line below to turn on debugging
+#Enable=true
+
+END
+
+sudo cp custom.conf /etc/gdm/custom.conf
+sudo systemctl restart gdm
+
+
+echo; echo "starting SCW on port $servicePort"
 
 sudo systemctl restart scyld-cloud-workstation
 

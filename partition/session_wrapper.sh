@@ -192,7 +192,7 @@ echo "Submitted slurm job: ${jobid}"
 while true; do    
     # squeue won't give you status of jobs that are not running or waiting to run
     # qstat returns the status of all recent jobs
-    job_status=$($sshcmd ${status_cmd} | grep ${jobid} | awk '{print $5}')
+    job_status=$($sshcmd ${status_cmd} | awk -v id="${jobid}" '$1 == id {print $5}')
     echo "Job status: ${job_status}"
     sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"${job_status}\",/" service.json
     if [[ ${jobschedulertype} == "SLURM" ]]; then

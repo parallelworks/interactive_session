@@ -3,9 +3,9 @@
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
    <section name='service' type='section' title='Jupyter Notebook Settings' expanded='true'>
-        <param name='name' label='Service' type='hidden' value='jupyter-host' width='50%_none'></param>
-        <param name='notebook_dir' label='Directory to start JupyterHub GUI' type='hidden' value='__WORKDIR__' width='50%_none'></param>
-        <param name='load_env' type='select' label='Select slurm module with Jupyter' help='List modules with module avail command in the cluster login node' width='50%_none' multiple='false'>
+        <param name='name' label='Service' type='hidden' value='jupyter-host'  ></param>
+        <param name='notebook_dir' label='Directory to start JupyterHub GUI' type='hidden' value='__WORKDIR__'  ></param>
+        <param name='load_env' type='select' label='Select slurm module with Jupyter' help='List modules with module avail command in the cluster login node'   multiple='false'>
             <option value="module load python/3.10.6/gcc.7.3.1/base" selected="true">python/3.10.6/gcc.7.3.1/base</option>
             <option value="module load python/3.8.9/gcc.7.3.1/base ">python/3.8.9/gcc.7.3.1/base</option>
             <option value="module load python/3.8.9/gcc.7.3.1/rocm.4.1">python/3.8.9/gcc.7.3.1/rocm.4.1</option>
@@ -23,26 +23,26 @@
             <option value="module load pytorch/1.8.2/rocm.4.2.0">pytorch/1.8.2/rocm.4.2.0</option>
             <option value="module load pytorch/1.9.0/rocm.4.2.0">pytorch/1.9.0/rocm.4.2.0</option>
         </param>
-        <param name='password' label='Password for notebook session:' type='hidden' value='' help='Enter password or leave blank for no password' width='50%_none'></param>
+        <param name='password' label='Password for notebook session:' type='hidden' value='' help='Enter password or leave blank for no password'  ></param>
    </section>
     <section name='pwrl_host' type='section' title='Jupyter Server Host' expanded='true'>
       <param name='resource' type='computeResource' label='Service host' hideUserWorkspace='true' help='Resource to host the service'></param>
-      <param name='nports' label='Number of Ports to Reserve' type='hidden' value='1' width='50%_none'></param> 
+      <param name='nports' label='Number of Ports to Reserve' type='hidden' value='1'  ></param> 
 <conditional name="jobschedulertype_cond">
-          <param name='jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively' width='50%_none' multiple='false'>
+          <param name='jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively'   multiple='false'>
             <option value="CONTROLLER" selected="true">Controller</option>
             <option value="SLURM">SLURM Partition</option>
         </param>
         <when value="SLURM">
-            <param name='_sch__dd_partition_e_' label='SLURM partition' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value='' width='50%_none'>
+            <param name='_sch__dd_partition_e_' label='SLURM partition' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value=''  >
             </param>
-            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value='--time=00:20:00;--nodes=1;--exclusive' width='100%_none'>
+            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value=''  >
             </param>
         </when>
       </conditional>
     </section>
     <section name='advanced_options' type='section' title='Advanced Options' expanded='false'>
-        <param name="stream" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW' width="25%_none" optional='true' float="right">
+        <param name="stream" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW'   optional='true' float="right">
         </param>
     </section>
   </inputs>

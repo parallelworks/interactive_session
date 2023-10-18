@@ -1,9 +1,5 @@
 # Runs via ssh + sbatch
 
-job_number=__job_number__
-job_dir=${PWD}
-
-
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
 # - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
@@ -47,9 +43,9 @@ if ! [ -d "$(echo ~/pw/noVNC-1.3.0)" ]; then
 fi
 chmod +x ./pw/noVNC-1.3.0/ttyd.x86_64
 
-rm -rf ${job_dir}/service.pid
+rm -rf ${PWD}/service.pid
 
 ./pw/noVNC-1.3.0/ttyd.x86_64 -p $servicePort bash &
-echo $! >> ${job_dir}/service.pid
+echo $! >> ${PWD}/service.pid
 
 sleep 99999

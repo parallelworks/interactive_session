@@ -3,7 +3,7 @@
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
    <section name='service' type='section' title='Jupyter Notebook Settings' expanded='true'>
-        <param name='name' label='Service' type='hidden' value='jupyter-host'  ></param>
+        <param name='name' label='Service' type='hidden' value='jupyterlab-host'  ></param>
    	    <param name='notebook_dir' label='Directory to start JupyterHub GUI' type='text' value='__WORKDIR__' help='This is the directory that you start with when the JupyterHub graphical user interface starts.  The default value here is your home directory.'  ></param>
         <conditional name="conda_install_cond">
           <param name="conda_install" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Install miniconda if not there?" help='Select Yes to install Jupyter in miniconda environment and No to load an existing python environment ' optional='true' float="right">

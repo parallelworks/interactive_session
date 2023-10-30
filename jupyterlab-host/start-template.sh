@@ -56,53 +56,20 @@ if [ -z ${service_notebook_dir} ]; then
     service_notebook_dir="/"
 fi
 
-# Custom PW plugin:
-mkdir -p pw_jupyter_proxy
-cat >> pw_jupyter_proxy/__init__.py <<HERE
-from tornado.web import StaticFileHandler
-from tornado import web
-import os
-from notebook.utils import url_path_join
-import pprint as pp
-
-def load_jupyter_server_extension(nbapp):
-    
-    print('loading custom plugin')
-
-    web_app = nbapp.web_app
-    base_url = web_app.settings['base_url']
-
-    static_path = web_app.settings.get("static_path")
-    path_join = url_path_join(base_url, '', 'static', '(.*)')
-
-    web_app.settings['base_url'] = '/me/%s/' % ${openPort}
-
-    # pp.pprint(web_app.settings)
-
-    handlers = [
-         (
-            path_join,
-            StaticFileHandler,
-            {'path': os.path.join(static_path[0])}
-        )
-    ]
-    web_app.settings['nbapp'] = nbapp
-    web_app.add_handlers('.*', handlers)
-HERE
 
 # Served from 
 export PYTHONPATH=${PWD}
 jupyter-lab \
     --port=${servicePort} \
     --ip=0.0.0.0 \
-    --ServerApp.default_url="/lab/tree${openPort}" \
+    --ServerApp.default_url="/me/${openPort}/tree" \
     --ServerApp.iopub_data_rate_limit=10000000000 \
     --ServerApp.token= \
     --ServerApp.password=$sha \
     --no-browser \
     --notebook-dir=${service_notebook_dir} \
     --ServerApp.nbserver_extensions "pw_jupyter_proxy=True" \
-    --ServerApp.tornado_settings="{\"static_url_prefix\":\"/lab/static${openPort}/\"}" \
+    --ServerApp.tornado_settings="{\"static_url_prefix\":\"/me/${openPort}/static/\"}" \
     --ServerApp.allow_origin="*"
 
 

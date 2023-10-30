@@ -1220,6 +1220,6 @@ c.ServerApp.tornado_settings = {"static_url_prefix":"/me/${openPort}/static/"}
 HERE
 
 
-jupyter-lab --port=${jupyterlab_port} --ip=0.0.0.0 --no-browser --config=${PWD}/jupyter_lab_config.py
+jupyter-lab --port=${jupyterlab_port} --no-browser --config=${PWD}/jupyter_lab_config.py
 
 sleep 9999

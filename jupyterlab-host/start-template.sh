@@ -523,7 +523,7 @@ c.LabServerApp.app_url = '/me/${openPort}/lab'
 
 ## The url path for the application.
 #  Default: '/lab'
-c.LabApp.app_url = '/me/${openPort}/lab'
+c.LabApp.app_url = '/lab'
 
 ## Deprecated, use \`LabServerApp.blocked_extensions_uris\`
 #  See also: LabServerApp.blacklist_uris
@@ -640,7 +640,7 @@ c.LabApp.default_url = '/me/${openPort}/lab'
 
 ## The override url for static lab assets, typically a CDN.
 #  Default: ''
-c.LabApp.override_static_url = '/me/${openPort}/static'
+#c.LabApp.override_static_url = '/me/${openPort}/static'
 
 ## The override url for static lab theme assets, typically a CDN.
 #  Default: ''

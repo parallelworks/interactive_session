@@ -1,6 +1,18 @@
 # Runs via ssh + sbatch
 set -x
 
+# Start networking to display Dask dashboard in the PW platform
+if ! sudo -n true 2>/dev/null; then
+    displayErrorMessage "ERROR: NGINX CANNOT START PW BECAUSE USER ${USER} DOES NOT HAVE SUDO PRIVILEGES"
+fi
+
+
+# Initialize cancel script
+echo '#!/bin/bash' > cancel.sh
+chmod +x cancel.sh
+jupyterlab_port=$(findAvailablePort)
+echo "rm /tmp/${jupyterlab_port}.port.used" >> cancel.sh
+
 f_install_miniconda() {
     install_dir=$1
     echo "Installing Miniconda3-py39_4.9.2"
@@ -56,11 +68,48 @@ if [ -z ${service_notebook_dir} ]; then
     service_notebook_dir="/"
 fi
 
+#######################
+# START NGINX WRAPPER #
+#######################
 
-# Served from 
-export PYTHONPATH=${PWD}
+# Write config file
+cat >> config.conf <<HERE
+server {
+ listen ${servicePort};
+ server_name _;
+ index index.html index.htm index.php;
+ add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+ add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
+ add_header X-Frame-Options "ALLOWALL";
+ location / {
+     proxy_pass http://127.0.0.1:${jupyterlab_port}/me/${openPort}/;
+     proxy_http_version 1.1;
+       proxy_set_header Upgrade \$http_upgrade;
+       proxy_set_header Connection "upgrade";
+       proxy_set_header X-Real-IP \$remote_addr;
+       proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+       proxy_set_header Host \$http_host;
+       proxy_set_header X-NginX-Proxy true;
+ }
+}
+HERE
+
+container_name="nginx-${servicePort}"
+# Remove container when job is canceled
+echo "sudo docker stop ${container_name}" >> cancel.sh
+echo "sudo docker rm ${container_name}" >> cancel.sh
+# Start container
+sudo service docker start
+sudo docker run  -d --name ${container_name}  -v $PWD/config.conf:/etc/nginx/conf.d/config.conf --network=host nginx
+# Print logs
+sudo docker logs ${container_name}
+
+
+####################
+# START JUPYTERLAB #
+####################
 jupyter-lab \
-    --port=${servicePort} \
+    --port=${jupyterlab_port} \
     --ip=0.0.0.0 \
     --ServerApp.default_url="/me/${openPort}/tree" \
     --ServerApp.iopub_data_rate_limit=10000000000 \

@@ -92,19 +92,18 @@ HERE
 
 # Served from 
 export PYTHONPATH=${PWD}
-jupyter-lab \
+jupyter-notebook \
     --port=${servicePort} \
     --ip=0.0.0.0 \
-    --ServerApp.default_url="/me/${openPort}/" \
-    --ServerApp.iopub_data_rate_limit=10000000000 \
-    --ServerApp.token= \
-    --ServerApp.password=$sha \
+    --NotebookApp.default_url="/me/${openPort}/tree" \
+    --NotebookApp.iopub_data_rate_limit=10000000000 \
+    --NotebookApp.token= \
+    --NotebookApp.password=$sha \
     --no-browser \
     --notebook-dir=${service_notebook_dir} \
-    --ServerApp.jpserver_extensions "pw_jupyter_proxy=True" \
-    --ServerApp.tornado_settings="{\"static_url_prefix\":\"/me/${openPort}/static\"}" \
-    --ServerApp.allow_origin="*"
-
+    --NotebookApp.nbserver_extensions "pw_jupyter_proxy=True" \
+    --NotebookApp.tornado_settings="{\"static_url_prefix\":\"/me/${openPort}/static/\"}" \
+    --NotebookApp.allow_origin=*
 
 
 

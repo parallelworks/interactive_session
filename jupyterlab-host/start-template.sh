@@ -41,17 +41,16 @@ if [[ "${service_conda_install}" == "true" ]]; then
         eval "conda activate ${service_conda_env}"
     }
     if [ -z $(which ${jupyter-lab} 2> /dev/null) ]; then
-        conda install -c conda-forge jupyterlab
+        conda install -c conda-forge jupyterlab -y
         conda install nb_conda_kernels -y
         conda install -c anaconda jinja2 -y
-        echo DEBUG1
     fi
 else
     eval "${service_load_env}"
 fi
-sleep 120
 
-echo DEBUG2
+
+export XDG_RUNTIME_DIR=""
 
 # Generate sha:
 if [ -z "${service_password}" ]; then

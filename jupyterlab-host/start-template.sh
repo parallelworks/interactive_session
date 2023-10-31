@@ -35,13 +35,13 @@ if [[ "${service_conda_install}" == "true" ]]; then
         source ${service_conda_sh}
     }
     {
-        conda activate ${service_conda_env}
+        eval "conda activate ${service_conda_env}"
     } || {
-        conda create -n ${service_conda_env} jupyter -y
-        conda activate ${service_conda_env}
+        conda create -n ${service_conda_env}
+        eval "conda activate ${service_conda_env}"
     }
-    if [ -z $(which ${jupyter-notebook} 2> /dev/null) ]; then
-        conda install -c conda-forge jupyterlab
+    if [ -z $(which ${jupyter-lab} 2> /dev/null) ]; then
+        conda install -c conda-forge jupyterlab -y
         conda install nb_conda_kernels -y
         conda install -c anaconda jinja2 -y
     fi
@@ -49,7 +49,6 @@ else
     eval "${service_load_env}"
 fi
 
-echo "starting notebook on $servicePort..."
 
 export XDG_RUNTIME_DIR=""
 
@@ -71,6 +70,8 @@ fi
 #######################
 # START NGINX WRAPPER #
 #######################
+
+echo "Starting nginx wrapper on service port ${servicePort}"
 
 # Write config file
 cat >> config.conf <<HERE

@@ -37,7 +37,7 @@ if [[ "${service_conda_install}" == "true" ]]; then
     {
         conda activate ${service_conda_env}
     } || {
-        conda create -n ${service_conda_env} jupyter -y
+        conda create -n ${service_conda_env}
         conda activate ${service_conda_env}
     }
     if [ -z $(which ${jupyter-lab} 2> /dev/null) ]; then

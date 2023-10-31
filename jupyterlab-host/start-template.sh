@@ -49,8 +49,7 @@ else
     eval "${service_load_env}"
 fi
 
-
-export XDG_RUNTIME_DIR=""
+echo DEBUG
 
 # Generate sha:
 if [ -z "${service_password}" ]; then

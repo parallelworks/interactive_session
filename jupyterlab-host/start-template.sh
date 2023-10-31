@@ -44,6 +44,7 @@ if [[ "${service_conda_install}" == "true" ]]; then
         conda install -c conda-forge jupyterlab
         conda install nb_conda_kernels -y
         conda install -c anaconda jinja2 -y
+        conda activate ${service_conda_env}
     fi
 else
     eval "${service_load_env}"

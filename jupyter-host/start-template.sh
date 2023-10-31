@@ -23,16 +23,15 @@ if [[ "${service_conda_install}" == "true" ]]; then
         source ${service_conda_sh}
     }
     {
-        conda activate ${service_conda_env}
+        eval "conda activate ${service_conda_env}"
     } || {
         conda create -n ${service_conda_env} jupyter -y
-        conda activate ${service_conda_env}
+        eval "conda activate ${service_conda_env}"
     }
     if [ -z $(which ${jupyter-notebook} 2> /dev/null) ]; then
         conda install -c anaconda jupyter -y
         conda install nb_conda_kernels -y
         conda install -c anaconda jinja2 -y
-        conda activate ${service_conda_env}
     fi
 else
     eval "${service_load_env}"

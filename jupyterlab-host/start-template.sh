@@ -50,7 +50,6 @@ else
     eval "${service_load_env}"
 fi
 
-echo "starting notebook on $servicePort..."
 
 export XDG_RUNTIME_DIR=""
 
@@ -72,6 +71,8 @@ fi
 #######################
 # START NGINX WRAPPER #
 #######################
+
+echo "Starting nginx wrapper on service port ${servicePort}"
 
 # Write config file
 cat >> config.conf <<HERE

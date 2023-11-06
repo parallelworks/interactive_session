@@ -19,7 +19,7 @@
         <param name='password' label='Password for notebook session:' type='hidden' value='' help='Enter password or leave blank for no password'  ></param>
    </section>
     <section name='pwrl_host' type='section' title='JupyterLab Server Host' expanded='true'>
-      <param name='resource' type='computeResource' label='Service host' hideUserWorkspace='true' help='Resource to host the service'></param>
+      <param name='resource' type='computeResource' label='Service host' hideUserWorkspace='true' hideDisconnectedResources='false' help='Resource to host the service'></param>
       <param name='nports' label='Number of Ports to Reserve' type='hidden' value='1'  ></param> 
       <conditional name="jobschedulertype_cond">
           <param name='jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively'   multiple='false'>

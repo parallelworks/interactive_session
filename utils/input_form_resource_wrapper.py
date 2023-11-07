@@ -1,3 +1,4 @@
+#!/pw/.miniconda3/bin/python
 import json
 import os
 import logging
@@ -6,7 +7,7 @@ import subprocess
 import time
 import random
 import socket
-# VERSION: 11
+# VERSION: 12
 
 """
 # Form Resource Wrapper
@@ -243,6 +244,9 @@ def get_resource_user(resource_info):
 
 
 def get_resource_external_ip(resource_info):
+    controller_ip = resource_info.get('controllerIp')
+    if controller_ip:
+        return controller_ip
     if 'masterNode' in resource_info['state']:
         if '@' in resource_info['state']['masterNode']:
             return resource_info['state']['masterNode']

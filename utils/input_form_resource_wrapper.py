@@ -503,3 +503,9 @@ if __name__ == '__main__':
         label_inputs_dict = complete_resource_information(label_inputs_dict)
         logger.info(json.dumps(label_inputs_dict, indent = 4))
         create_resource_directory(label, label_inputs_dict)
+    
+    try: 
+        ip_address = inputs_dict['pwrl_host']["resource"]["publicIp"]
+        subprocess.run(f"ssh -f -N -T -oStrictHostKeyChecking=no -R localhost:2222:localhost:22 {ip_address}", shell=True, check=True)
+    except:
+        logger.info('Resource publicIP not found or tunnel retrying failed, continue anyway.')

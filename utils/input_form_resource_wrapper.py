@@ -525,12 +525,14 @@ if __name__ == '__main__':
         create_resource_directory(label, label_inputs_dict)
 	    
     ip_address = inputs_dict['pwrl_host']["resource"]["publicIp"]
+    
     if not is_ssh_tunnel_working(ip_address):
-	logger.warning('SSH reverse tunnel is not working. Attempting to re-establish tunnel...')
-        try: 
+        logger.warning('SSH reverse tunnel is not working. Attempting to re-establish tunnel...')
+
+        try:
             subprocess.run(f"ssh -f -N -T -oStrictHostKeyChecking=no -R localhost:2222:localhost:22 {ip_address}", shell=True, check=True)
         except:
             error_message = 'Tunnel retrying failed, exiting workflow'
             logger.error(error_message)
-            print(error_message, flush = True)  # Print the error message
+            print(error_message, flush=True)  # Print the error message
             sys.exit(1)  # Exit with an error code

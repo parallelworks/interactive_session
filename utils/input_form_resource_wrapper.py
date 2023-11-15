@@ -7,7 +7,7 @@ import subprocess
 import time
 import random
 import socket
-# VERSION: 12
+# VERSION: 13
 
 """
 # Form Resource Wrapper
@@ -472,6 +472,26 @@ def create_resource_directory(label, inputs_dict):
 
     create_batch_header(inputs_dict, header_sh)
 
+def is_ssh_tunnel_working(ip_address):
+    # Define the SSH command
+    ssh_command = f"ssh {ip_address} \"ssh usercontainer hostname\""
+        
+    try:
+        # Run the SSH command and capture the output
+        output = subprocess.check_output(ssh_command, shell=True, text=True)
+        
+        # Get the hostname of the local machine
+        local_hostname = socket.gethostname()
+        
+        # Compare the output and local hostname
+        if output.strip() == local_hostname:
+            return True
+        else:
+            return False
+    except subprocess.CalledProcessError:
+        return False
+
+
 if __name__ == '__main__':
     with open('inputs.json') as inputs_json:
         inputs_dict = json.load(inputs_json)
@@ -503,3 +523,16 @@ if __name__ == '__main__':
         label_inputs_dict = complete_resource_information(label_inputs_dict)
         logger.info(json.dumps(label_inputs_dict, indent = 4))
         create_resource_directory(label, label_inputs_dict)
+	    
+    ip_address = inputs_dict['pwrl_host']["resource"]["publicIp"]
+    
+    if not is_ssh_tunnel_working(ip_address):
+        logger.warning('SSH reverse tunnel is not working. Attempting to re-establish tunnel...')
+
+        try:
+            subprocess.run(f"ssh -f -N -T -oStrictHostKeyChecking=no -R localhost:2222:localhost:22 {ip_address}", shell=True, check=True)
+        except:
+            error_message = 'Tunnel retrying failed, exiting workflow'
+            logger.error(error_message)
+            print(error_message, flush=True)  # Print the error message
+            sys.exit(1)  # Exit with an error code

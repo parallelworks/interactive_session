@@ -61,7 +61,7 @@ jupyter_major_version=$(jupyter notebook --version | cut -d'.' -f1)
 echo "Jupyter version is"
 jupyter notebook --version 
 
-if [ "${jupyter_major_version}" -lt 7 ];
+if [ "${jupyter_major_version}" -lt 7 ]; then
 
 # Custom PW plugin:
 mkdir -p pw_jupyter_proxy

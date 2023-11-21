@@ -114,6 +114,50 @@ jupyter-notebook \
 
 else
 
+# Initialize cancel script
+echo '#!/bin/bash' > cancel.sh
+chmod +x cancel.sh
+jupyterserver_port=$(findAvailablePort)
+echo "rm /tmp/${jupyterserver_port}.port.used" >> cancel.sh
+
+#######################
+# START NGINX WRAPPER #
+#######################
+
+echo "Starting nginx wrapper on service port ${servicePort}"
+
+# Write config file
+cat >> config.conf <<HERE
+server {
+ listen ${servicePort};
+ server_name _;
+ index index.html index.htm index.php;
+ add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+ add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
+ add_header X-Frame-Options "ALLOWALL";
+ location / {
+     proxy_pass http://127.0.0.1:${jupyterserver_port}/me/${openPort}/;
+     proxy_http_version 1.1;
+       proxy_set_header Upgrade \$http_upgrade;
+       proxy_set_header Connection "upgrade";
+       proxy_set_header X-Real-IP \$remote_addr;
+       proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+       proxy_set_header Host \$http_host;
+       proxy_set_header X-NginX-Proxy true;
+ }
+}
+HERE
+
+container_name="nginx-${servicePort}"
+# Remove container when job is canceled
+echo "sudo docker stop ${container_name}" >> cancel.sh
+echo "sudo docker rm ${container_name}" >> cancel.sh
+# Start container
+sudo service docker start
+sudo docker run  -d --name ${container_name}  -v $PWD/config.conf:/etc/nginx/conf.d/config.conf --network=host nginx
+# Print logs
+sudo docker logs ${container_name}
+
 cat >> jupyter_notebook_config.py <<HERE
 # Configuration file for notebook.
 
@@ -1049,7 +1093,7 @@ c.ServerApp.default_url = '/me/${openPort}/'
 
 ## The port the server will listen on (env: JUPYTER_PORT).
 #  Default: 0
-c.ServerApp.port = ${servicePort}
+c.ServerApp.port = ${jupyterserver_port}
 
 ## The number of additional ports to try if the specified port is not available
 #  (env: JUPYTER_PORT_RETRIES).
@@ -1195,7 +1239,7 @@ c.ServerApp.tornado_settings = {"static_url_prefix":"/me/${openPort}/static/"}
 # c.ServerApp.websocket_url = ''
 HERE
 
-jupyter-notebook --port=${servicePort} --no-browser --config=${PWD}/jupyter_notebook_config.py
+jupyter-notebook --port=${jupyterserver_port} --no-browser --config=${PWD}/jupyter_notebook_config.py
 
 
 fi

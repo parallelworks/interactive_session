@@ -1191,7 +1191,7 @@ c.ServerApp.tornado_settings = {"static_url_prefix":"/me/${openPort}/static/"}
 #  For headerssent by the upstream reverse proxy. Necessary if the proxy handles
 #  SSL
 #  Default: False
-# c.ServerApp.trust_xheaders = False
+c.ServerApp.trust_xheaders = True
 
 ## Disable launching browser by redirect file
 #       For versions of notebook > 5.7.2, a security feature measure was added that

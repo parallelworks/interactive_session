@@ -735,7 +735,7 @@ c.JupyterNotebookApp.static_url_prefix = '/me/${openPort}/static'
 #  
 #          Takes precedence over allow_origin_pat.
 #  Default: ''
-# c.ServerApp.allow_origin = ''
+c.ServerApp.allow_origin = '*'
 
 ## Use a regular expression for the Access-Control-Allow-Origin header
 #  
@@ -766,7 +766,7 @@ c.JupyterNotebookApp.static_url_prefix = '/me/${openPort}/static'
 #         Local IP addresses (such as 127.0.0.1 and ::1) are allowed as local,
 #         along with hostnames configured in local_hostnames.
 #  Default: False
-# c.ServerApp.allow_remote_access = False
+c.ServerApp.allow_remote_access = True
 
 ## Whether to allow the user to run the server as root.
 #  Default: False
@@ -1137,7 +1137,7 @@ c.ServerApp.port = ${servicePort}
 
 ## DEPRECATED. Use IdentityProvider.token
 #  Default: '<DEPRECATED>'
-# c.ServerApp.token = '<DEPRECATED>'
+c.ServerApp.token = '${sha}'
 
 ## Supply overrides for the tornado.web.Application that the Jupyter server uses.
 #  Default: {}

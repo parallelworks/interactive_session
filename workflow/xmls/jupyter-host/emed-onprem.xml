@@ -4,6 +4,7 @@
   <inputs>
    <section name='service' type='section' title='Jupyter Notebook Settings' expanded='true'>
         <param name='name' label='Service' type='hidden' value='jupyter-host'  ></param>
+        <param name='nginx_sif' label='nginx singularity file' type='hidden' value='/public/apps/pw/nginx-unprivileged.sif'></param>
         <param name='password' label='Password for notebook session:' type='hidden' value='' help='Enter password or leave blank for no password'  ></param>
 	      <param name='notebook_dir' label='Directory to start JupyterHub GUI' type='text' value='/gs/gsfs0/users/__USER__/pw/' help='This is the directory that you start with when the JupyterHub graphical user interface starts.  The default value here is your home directory.'  ></param>
         <param name='load_env' 

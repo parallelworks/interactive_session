@@ -223,11 +223,12 @@ sed -i "s|^.*c\.ServerApp\.allow_origin\ =.*|c.ServerApp.allow_origin = '\*'|" j
 #  Default: False
 sed -i "s|^.*c\.ServerApp\.allow_remote_access.*|c.ServerApp.allow_remote_access = True|" jupyter_notebook_config.py
 
-
 ############################
 ############################
 
 sed -i "s|^.*c\.ServerApp\.token.*|c.ServerApp.token = ''|" jupyter_notebook_config.py
+
+sed -i "s|^.*c\.ServerApp\.root_dir.*|c.ServerApp.root_dir = '${service_notebook_dir}'|" jupyter_notebook_config.py
 
 ## The base URL for the Jupyter server.
 #  

@@ -145,8 +145,6 @@ server {
        proxy_set_header Host \$http_host;
        proxy_set_header X-NginX-Proxy true;
  }
-# Set the number of worker processes for this server block
-worker_processes 2;
 }
 HERE
 

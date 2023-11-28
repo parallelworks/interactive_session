@@ -1,0 +1,5 @@
+BootStrap: docker
+From: nginxinc/nginx-unprivileged
+
+%help
+  This Singularity container of the nginxinc/nginx-unprivileged Docker repository

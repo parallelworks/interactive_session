@@ -22,3 +22,5 @@ curl -s \
     -X POST -H "Content-Type: application/json" \
     -d "{\"title\": \"Interactive workflow ${workflow_name} job ${job_number} is running\", \"href\": \"${url}\", \"type\": \"workflow\", \"subtype\": \"readyInteractive\"}" \
     https://${PW_PLATFORM_HOST}/api/v2/notifications?key=${PW_API_KEY}
+
+exit 0

@@ -124,6 +124,7 @@ fi
 
 echo "Exit code: \$?"
 echo "Starting session..."
+
 rm -f \${portFile}
 HERE
 

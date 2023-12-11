@@ -228,5 +228,7 @@ if ! [ -z "${service_bin}" ]; then
         echo $! >> ${resource_jobdir}/service.pid
     fi
 fi
-    
+
+# Notify platform that service is running
+${sshusercontainer} ${pw_job_dir}/utils/notify.sh
 sleep 99999

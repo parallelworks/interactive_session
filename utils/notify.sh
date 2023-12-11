@@ -14,7 +14,7 @@ url="/workflows/${workflow_name}/${job_number}/view"
 
 # Change job status
 echo "Changing job status to running"
-sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Running\",/" service.json
+sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Running\",/" ${pw_job_dir}/service.json
 
 # Send notification
 echo "Posting notification"

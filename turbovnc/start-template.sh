@@ -230,5 +230,5 @@ if ! [ -z "${service_bin}" ]; then
 fi
 
 # Notify platform that service is running
-${sshusercontainer} ${pw_job_dir}/utils/notify.sh  &> notify.log
+nohup ${sshusercontainer} ${pw_job_dir}/utils/notify.sh  &> notify.log
 sleep 99999

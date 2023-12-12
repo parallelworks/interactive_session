@@ -1,10 +1,2 @@
-## Interactive Session - Matlab Docker
-
-This workflow starts a Matlab session in a docker container.
-
-#### Instructions
-
-- Enter form parameters and click _Execute_ to launch a PW job. The job status can be monitored under COMPUTE > Workflow Monitor. The job files and logs are under the newly created `/pw/jobs/<workflow-name>/<job-name>/` directory.
-- Wait for node to be provisioned from slurm.
-- Once provisioned, open the session.html file (double click) in the job directory.
-- To close a session kill the PW job by clicking on COMPUTE > Workflow Monitor > Cancel Job (red icon).
+## Matlab Docker Interactive Session
+This workflow starts a MATLAB [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README.md) using the official MATLAB docker [container](https://www.mathworks.com/help/cloudcenter/ug/matlab-container-on-docker-hub.html)

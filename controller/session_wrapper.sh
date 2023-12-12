@@ -135,6 +135,7 @@ echo >> ${session_sh}
 chmod 777 ${session_sh}
 
 echo
+sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Submitted\",/" service.json
 echo "Submitting ssh job (wait for node to become available before connecting)..."
 echo "$sshcmd 'bash -s' < ${session_sh} &> ${PW_JOB_PATH}/session-${job_number}.out"
 echo

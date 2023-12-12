@@ -72,6 +72,8 @@ echo "Submitting job:"
 echo "bash ${session_sh}"
 echo
 
+sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Submitted\",/" service.json
+
 # Run service
 bash ${session_sh} 
 

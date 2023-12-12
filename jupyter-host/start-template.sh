@@ -97,7 +97,9 @@ def load_jupyter_server_extension(nbapp):
     web_app.add_handlers('.*', handlers)
 HERE
 
-# Served from 
+# Notify platform that service is ready
+${sshusercontainer} ${pw_job_dir}/utils/notify.sh
+
 export PYTHONPATH=${PWD}
 jupyter-notebook \
     --port=${servicePort} \
@@ -240,6 +242,8 @@ sed -i "s|^.*c\.ServerApp\.root_dir.*|c.ServerApp.root_dir = '${service_notebook
 sed -i "s|^.*c\.ServerApp\.base_url.*|c.ServerApp.base_url = '/me/${openPort}/'|" jupyter_notebook_config.py
 #sed -i "s|^.*c\.ServerApp\.base_url.*|c.ServerApp.base_url = '/me/${openPort}/'|" jupyter_notebook_config.py
 
+# Notify platform that service is ready
+${sshusercontainer} ${pw_job_dir}/utils/notify.sh
 
 jupyter-notebook --port=${jupyterserver_port} --no-browser --config=${PWD}/jupyter_notebook_config.py
 

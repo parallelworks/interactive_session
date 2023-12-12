@@ -63,6 +63,9 @@ MWI_BASE_URL="/me/${openPort}/"
 # Docker supports mounting directories that do not exist (singularity does not)
 set -x
 
+# Notify platform that service is ready
+${sshusercontainer} ${pw_job_dir}/utils/notify.sh
+
 # https://docs.docker.com/config/containers/container-networking/
 #    sudo docker run -it --rm -p 8888:8888 --shm-size=512M mathworks/matlab:r2022a -browser
 #        cant run "-it" in the workflow! Fails with message: the input device is not a TTY

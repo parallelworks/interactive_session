@@ -1220,6 +1220,8 @@ c.ServerApp.tornado_settings = {"static_url_prefix":"/me/${openPort}/static/"}
 # c.ServerApp.websocket_url = ''
 HERE
 
+# Notify platform that service is running
+${sshusercontainer} ${pw_job_dir}/utils/notify.sh
 
 jupyter-lab --port=${jupyterlab_port} --no-browser --config=${PWD}/jupyter_lab_config.py
 

@@ -113,6 +113,9 @@ fi
 
 echo ${server_exec} --bind-addr=localhost:${servicePort} ${gh_flag} ${password_flag} ${service_directory}
 
+# Notify platform that service is running
+${sshusercontainer} ${pw_job_dir}/utils/notify.sh
+
 ${server_exec} \
     --bind-addr=localhost:${servicePort} \
     ${gh_flag} \

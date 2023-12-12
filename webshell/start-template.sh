@@ -48,4 +48,7 @@ rm -rf ${PWD}/service.pid
 ./pw/noVNC-1.3.0/ttyd.x86_64 -p $servicePort bash &
 echo $! >> ${PWD}/service.pid
 
+# Notify platform that service is running
+${sshusercontainer} ${pw_job_dir}/utils/notify.sh
+
 sleep 99999

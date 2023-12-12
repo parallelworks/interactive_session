@@ -16,7 +16,7 @@
           label='Docker mount volumnes' 
           type='text' 
           value='' 
-          help='Type in the mount volume options for the docker command. E.g.: -v /lustre:/lustre -v /contrib:/contrib' 
+          help='Type in the mount volume options for the docker command. Home is always mounted. E.g.: -v /lustre:/lustre -v /contrib:/contrib' 
         ></param>
     </section>
     <section name='pwrl_host' type='section' title='Jupyter Server Host' expanded='true'>

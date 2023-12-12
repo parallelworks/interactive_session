@@ -68,7 +68,7 @@ set -x
 #        cant run "-it" in the workflow! Fails with message: the input device is not a TTY
 sudo -n docker run ${gpu_flag} -i --rm \
     --name ${container_name} \
-    -v /contrib:/contrib -v /lustre:/lustre -v ${HOME}:${HOME} \
+    ${service_mount_directories} -v ${HOME}:${HOME} \
     -p ${matlab_port}:${matlab_port} \
     --shm-size=512M \
     --env MWI_LOG_LEVEL=DEBUG \

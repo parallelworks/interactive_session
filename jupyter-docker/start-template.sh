@@ -62,6 +62,8 @@ def load_jupyter_server_extension(nbapp):
     web_app.add_handlers('.*', handlers)
 HERE
 
+# Notify platform that service is running
+${sshusercontainer} ${pw_job_dir}/utils/notify.sh
 
 # Served from 
 export PYTHONPATH=${PWD}
@@ -83,22 +85,3 @@ sudo -n docker run ${gpu_flag} --rm \
         --NotebookApp.allow_origin=*
 
 sleep 9999
-
-# Docker supports mounting directories that do not exist (singularity does not)
-set -x
-sudo -n docker run ${gpu_flag} --rm \
-    -v /contrib:/contrib -v /lustre:/lustre -v ${HOME}:${HOME} \
-    --name=jupyter-$servicePort \
-    -p $servicePort:$servicePort \
-    ${service_docker_repo} jupyter-notebook \
-    --port=$servicePort \
-    --ip=0.0.0.0 \
-    --NotebookApp.iopub_data_rate_limit=10000000000 \
-    --NotebookApp.token= \
-    --NotebookApp.password=${sha} \
-    --no-browser \
-    --allow-root \
-    --notebook-dir=/ \
-    --NotebookApp.tornado_settings="${tornado_settings}" \
-    --NotebookApp.base_url="${base_url}" \
-    --NotebookApp.allow_origin=*

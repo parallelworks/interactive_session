@@ -48,7 +48,7 @@ mkdir -p ${resource_jobdir}
 cd ${resource_jobdir}
 
 echo "Running in host \$(hostname)"
-sshusercontainer="ssh -J ${resource_privateIp} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST}"
+sshusercontainer="ssh -f -J ${resource_privateIp} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST}"
 
 displayErrorMessage() {
     echo \$(date): \$1
@@ -124,6 +124,7 @@ fi
 
 echo "Exit code: \$?"
 echo "Starting session..."
+
 rm -f \${portFile}
 HERE
 

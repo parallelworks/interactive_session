@@ -78,6 +78,8 @@ def load_jupyter_server_extension(nbapp):
     web_app.add_handlers('.*', handlers)
 HERE
 
+# Notify platform that service is running
+${sshusercontainer} ${pw_job_dir}/utils/notify.sh
 
 # Served from 
 export PYTHONPATH=${PWD}

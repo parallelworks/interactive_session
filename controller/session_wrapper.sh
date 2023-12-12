@@ -58,7 +58,7 @@ if ! [ -z "${resource_jobdir}" ] && ! [[ "${resource_jobdir}" == "default" ]]; t
 fi
 
 cat >> ${session_sh} <<HERE
-sshusercontainer="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST}"
+sshusercontainer="ssh -f -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST}"
 
 displayErrorMessage() {
     echo \$(date): \$1
@@ -135,18 +135,12 @@ echo >> ${session_sh}
 chmod 777 ${session_sh}
 
 echo
+sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Submitted\",/" service.json
 echo "Submitting ssh job (wait for node to become available before connecting)..."
 echo "$sshcmd 'bash -s' < ${session_sh} &> ${PW_JOB_PATH}/session-${job_number}.out"
 echo
-sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Running\",/" service.json
-url="/workflows/${workflow_name}/${job_number}/view"
-# needed for now to get the PW_PLATFORM_HOST and PW_API_KEY
-source /etc/profile.d/parallelworks-env.sh
-curl -s \
-    -X POST -H "Content-Type: application/json" \
-    -d "{\"title\": \"Interactive workflow ${workflow_name} job ${job_number} is running\", \"href\": \"${url}\", \"type\": \"workflow\", \"subtype\": \"readyInteractive\"}" \
-    https://${PW_PLATFORM_HOST}/api/v2/notifications?key=${PW_API_KEY} &> /dev/null
 
+# Run service
 $sshcmd 'bash -s' < ${session_sh} #&> ${PW_JOB_PATH}/session-${job_number}.out
 
 if [ $? -eq 0 ]; then

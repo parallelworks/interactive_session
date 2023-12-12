@@ -71,16 +71,10 @@ echo
 echo "Submitting job:"
 echo "bash ${session_sh}"
 echo
-sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Running\",/" service.json
 
-url="/workflows/${workflow_name}/${job_number}/view"
-# needed for now to get the PW_PLATFORM_HOST and PW_API_KEY
-source /etc/profile.d/parallelworks-env.sh
-curl -s \
-    -X POST -H "Content-Type: application/json" \
-    -d "{\"title\": \"Interactive workflow ${workflow_name} job ${job_number} is running\", \"href\": \"${url}\", \"type\": \"workflow\", \"subtype\": \"readyInteractive\"}" \
-    https://${PW_PLATFORM_HOST}/api/v2/notifications?key=${PW_API_KEY} &> /dev/null
+sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Submitted\",/" service.json
 
+# Run service
 bash ${session_sh} 
 
 if [ $? -eq 0 ]; then

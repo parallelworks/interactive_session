@@ -58,7 +58,7 @@ if ! [ -z "${resource_jobdir}" ] && ! [[ "${resource_jobdir}" == "default" ]]; t
 fi
 
 cat >> ${session_sh} <<HERE
-sshusercontainer="ssh -N -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST}"
+sshusercontainer="ssh -f -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${USER_CONTAINER_HOST}"
 
 displayErrorMessage() {
     echo \$(date): \$1

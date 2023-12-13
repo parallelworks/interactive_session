@@ -163,7 +163,7 @@ else
     echo "sudo docker rm ${container_name}" >> cancel.sh
     # Start container
     sudo service docker start
-    sudo docker run  -d --name ${container_name}  -v $PWD/config.conf:/etc/nginx/conf.d/config.conf --network=host nginx
+    sudo docker run  -d --name ${container_name}  -v $PWD/config.conf:/etc/nginx/conf.d/config.conf --network=host nginxinc/nginx-unprivileged
     # Print logs
     sudo docker logs ${container_name}
 fi

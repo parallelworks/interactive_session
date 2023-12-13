@@ -49,6 +49,23 @@ else
     eval "${service_load_env}"
 fi
 
+# INSTALL DASK EXTENSION FOR JUPYTERLAB
+# Get JupyterLab version
+jupyterlab_major_version=$(jupyter-lab --version | cut -d'.' -f1)
+
+# Check if version is 4.x
+if [[ ${jupyterlab_major_version} == "4" ]]; then
+    echo "JupyterLab version is $jupyterlab_version"
+    pip install dask-labextension
+# Check if version is 3.x
+elif [[ ${jupyterlab_major_version} == "3" ]]; then
+    echo "JupyterLab version is $jupyterlab_version"
+    pip install dask-labextension==6.2.0
+# Check if version is 2.x
+elif [[ ${jupyterlab_major_version} == "2" ]]; then 
+    pip install 'dask_labextension<5'
+fi
+
 
 export XDG_RUNTIME_DIR=""
 

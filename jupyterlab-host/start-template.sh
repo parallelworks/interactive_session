@@ -49,7 +49,10 @@ else
     eval "${service_load_env}"
 fi
 
-# INSTALL DASK EXTENSION FOR JUPYTERLAB
+#################################
+# DASK EXTENSION FOR JUPYTERLAB #
+#################################
+
 # Get JupyterLab version
 jupyterlab_major_version=$(jupyter-lab --version | cut -d'.' -f1)
 
@@ -64,8 +67,10 @@ elif [[ ${jupyterlab_major_version} == "3" ]]; then
 # Check if version is 2.x
 elif [[ ${jupyterlab_major_version} == "2" ]]; then 
     pip install 'dask_labextension<5'
+    jupyter labextension install dask-labextension
 fi
 
+pip install bokeh==2.4.2
 
 export XDG_RUNTIME_DIR=""
 

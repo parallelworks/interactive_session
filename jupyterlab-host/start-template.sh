@@ -45,10 +45,40 @@ if [[ "${service_conda_install}" == "true" ]]; then
         conda install nb_conda_kernels -y
         conda install -c anaconda jinja2 -y
     fi
+
+    if [[ ${advanced_options_dask} == "true" ]]; then
+        #################################
+        # DASK EXTENSION FOR JUPYTERLAB #
+        #################################
+        # Dask depencies
+        conda install dask-jobqueue -c conda-forge -y
+        conda install dask distributed -c conda-forge -y
+        # Install faker for test notebook
+        conda install -c conda-forge faker -y
+        # Install data transfer tools
+        conda install -c conda-forge s3fs -y
+        conda install -c conda-forge -y
+        # Get JupyterLab version
+        jupyterlab_major_version=$(jupyter-lab --version | cut -d'.' -f1)
+        
+        # Check if version is 4.x
+        if [[ ${jupyterlab_major_version} == "4" ]]; then
+            echo "JupyterLab version is $jupyterlab_version"
+            pip install dask-labextension
+            # Check if version is 3.x
+        elif [[ ${jupyterlab_major_version} == "3" ]]; then
+            echo "JupyterLab version is $jupyterlab_version"
+            pip install dask-labextension==6.2.0
+            # Check if version is 2.x
+        elif [[ ${jupyterlab_major_version} == "2" ]]; then 
+            pip install 'dask_labextension<5'
+            jupyter labextension install dask-labextension
+        fi
+        pip install bokeh==2.4.2
+    fi
 else
     eval "${service_load_env}"
 fi
-
 
 export XDG_RUNTIME_DIR=""
 

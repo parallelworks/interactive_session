@@ -58,6 +58,10 @@ if [[ "${service_conda_install}" == "true" ]]; then
         # Install data transfer tools
         conda install -c conda-forge s3fs -y
         conda install -c conda-forge -y
+
+        # SLURM extension for Jupyter Lab https://github.com/NERSC/jupyterlab-slurm
+        pip install jupyterlab_slurm
+        
         # Get JupyterLab version
         jupyterlab_major_version=$(jupyter-lab --version | cut -d'.' -f1)
         

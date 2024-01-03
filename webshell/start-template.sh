@@ -26,7 +26,7 @@ HERE
 cd ~/
 
 # Check if the noVNC directory is present
-# - if not copy from user container -> /swift-pw-bin/noVNC-1.3.0.tgz
+# - if not copy from user container -> /swift-pw-bin/apps/noVNC-1.3.0.tgz
 if ! [ -d "$(echo ~/pw/noVNC-1.3.0)" ]; then
     echo "Bootstrapping noVNC"
     set -x
@@ -34,9 +34,9 @@ if ! [ -d "$(echo ~/pw/noVNC-1.3.0)" ]; then
     ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
     if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
         # Running in a controller node
-        scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pw
+        scp ${USER_CONTAINER_HOST}:/swift-pw-bin/apps/noVNC-1.3.0.tgz ~/pw
     else
-        ssh ${ssh_options} ${resource_privateIp} scp ${USER_CONTAINER_HOST}:/swift-pw-bin/noVNC-1.3.0.tgz ~/pw
+        ssh ${ssh_options} ${resource_privateIp} scp ${USER_CONTAINER_HOST}:/swift-pw-bin/apps/noVNC-1.3.0.tgz ~/pw
     fi
     tar -zxf ~/pw/noVNC-1.3.0.tgz -C ~/pw
     set +x

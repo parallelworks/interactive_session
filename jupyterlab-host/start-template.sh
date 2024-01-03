@@ -16,7 +16,7 @@ echo "rm /tmp/${jupyterlab_port}.port.used" >> cancel.sh
 f_install_miniconda() {
     install_dir=$1
     echo "Installing Miniconda3-py39_4.9.2"
-    conda_repo="https://repo.anaconda.com/miniconda/Miniconda3-py39_4.9.2-Linux-x86_64.sh"
+    conda_repo="https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"
     ID=$(date +%s)-${RANDOM} # This script may run at the same time!
     nohup wget ${conda_repo} -O /tmp/miniconda-${ID}.sh 2>&1 > /tmp/miniconda_wget-${ID}.out
     rm -rf ${install_dir}
@@ -46,21 +46,24 @@ if [[ "${service_conda_install}" == "true" ]]; then
         conda install -c anaconda jinja2 -y
     fi
 
+    # Check if SLURM is installed
+    if command -v sinfo &> /dev/null; then
+        # SLURM extension for Jupyter Lab https://github.com/NERSC/jupyterlab-slurm
+        pip install jupyterlab_slurm
+    fi
+
     if [[ ${advanced_options_dask} == "true" ]]; then
         #################################
         # DASK EXTENSION FOR JUPYTERLAB #
         #################################
         # Dask depencies
-        conda install dask-jobqueue -c conda-forge -y
         conda install dask distributed -c conda-forge -y
+        conda install dask-jobqueue -c conda-forge -y
         # Install faker for test notebook
         conda install -c conda-forge faker -y
         # Install data transfer tools
         conda install -c conda-forge s3fs -y
-        conda install -c conda-forge -y
-
-        # SLURM extension for Jupyter Lab https://github.com/NERSC/jupyterlab-slurm
-        pip install jupyterlab_slurm
+        conda install -c conda-forge gcsfs -y 
         
         # Get JupyterLab version
         jupyterlab_major_version=$(jupyter-lab --version | cut -d'.' -f1)

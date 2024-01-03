@@ -166,6 +166,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     chmod og+rx /run/user/$(id -u)
 
     if  ! [ -z $(which gnome-session) ]; then
+        gsettings set org.gnome.desktop.session idle-delay 0
         gnome-session &
         echo $! > ${resource_jobdir}/service.pid
     elif ! [ -z $(which mate-session) ]; then

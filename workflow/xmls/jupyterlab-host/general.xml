@@ -127,17 +127,18 @@
         optional='true' 
         float="right"
       ></param>
-      <param name="dask" 
-        type="boolean" 
-        truevalue="Yes" 
-        falsevalue="No" 
-        checked="False" 
-        label="Install Dask packages and extension for Jupyter Lab" 
-        help='Select Yes to Dask packages' 
-        optional='true' 
-        float="right"
-        show_if='service.conda_install'
-       ></param>
+      <param name='install_instructions' 
+        type='select' 
+        label='Additional Install Packages' 
+        help='Choose the additional packages to install along with the main application. Options include:
+             - None: Do not install any additional packages.
+             - Dask: Install dependencies required for running Dask on PW clusters.
+             - YAML: Provide a custom Conda environment YAML file for advanced configuration.'
+        multiple='false'>
+        <option value="none" selected="true">None</option>
+        <option value="dask">Dask dependencies for PW</option>
+        <option value="yaml">Provide custom Conda environment YAML file</option>
+      </param>
     </section>
   </inputs>
 </tool>

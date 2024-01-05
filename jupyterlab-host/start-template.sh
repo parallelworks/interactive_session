@@ -41,18 +41,8 @@ f_set_up_conda_from_yaml() {
     echo "Sourcing Conda SH <${CONDA_SH}>"
     source ${CONDA_SH}
     echo "Activating Conda Environment <${CONDA_ENV}>"
-    {
-        conda activate ${CONDA_ENV}
-    } || {
-        echo "Conda environment <${CONDA_ENV}> not found. Installing conda environment from YAML file <${CONDA_YAML}>"
-        conda env update -n ${CONDA_ENV} -q -f ${CONDA_YAML} #--prune
-        {
-            echo "Activating Conda Environment <${CONDA_ENV}> again"
-            conda activate ${CONDA_ENV}
-        } || {
-            displayErrorMessage "ERROR: Conda environment <${CONDA_ENV}> not found. Exiting workflow"
-        }
-    }
+    conda activate ${CONDA_ENV}
+    conda env update -n ${CONDA_ENV} -q -f ${CONDA_YAML}
 }
 
 if [[ "${service_conda_install}" == "true" ]]; then

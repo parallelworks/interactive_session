@@ -140,7 +140,7 @@
         <option value="yaml">Provide custom Conda environment YAML file</option>
       </param>
       <param 
-        name='script_text' 
+        name='yaml' 
         label='Paste Conda Environment Defition YAML' 
         type='textarea' 
         value='' 

@@ -24,67 +24,68 @@ f_install_miniconda() {
     nohup bash /tmp/miniconda-${ID}.sh -b -p ${install_dir} 2>&1 > /tmp/miniconda_sh-${ID}.out
 }
 
-
+f_set_up_conda_from_yaml() {
+    CONDA_DIR=$1
+    CONDA_ENV=$2
+    CONDA_YAML=$3
+    CONDA_SH="${CONDA_DIR}/etc/profile.d/conda.sh"
+    # conda env export
+    # Remove line starting with name, prefix and remove empty lines
+    sed -i -e 's/name.*$//' -e 's/prefix.*$//' -e '/^$/d' ${CONDA_YAML}    
+    
+    if [ ! -d "${CONDA_DIR}" ]; then
+        echo "Conda directory <${CONDA_DIR}> not found. Installing conda..."
+        f_install_miniconda ${CONDA_DIR}
+    fi
+    
+    echo "Sourcing Conda SH <${CONDA_SH}>"
+    source ${CONDA_SH}
+    echo "Activating Conda Environment <${CONDA_ENV}>"
+    {
+        conda activate ${CONDA_ENV}
+    } || {
+        echo "Conda environment <${CONDA_ENV}> not found. Installing conda environment from YAML file <${CONDA_YAML}>"
+        conda env update -n ${CONDA_ENV} -q -f ${CONDA_YAML} #--prune
+        {
+            echo "Activating Conda Environment <${CONDA_ENV}> again"
+            conda activate ${CONDA_ENV}
+        } || {
+            displayErrorMessage "ERROR: Conda environment <${CONDA_ENV}> not found. Exiting workflow"
+        }
+    }
+}
 
 if [[ "${service_conda_install}" == "true" ]]; then
-    {
-        source ${service_conda_sh}
-    } || {
-        conda_dir=$(echo ${service_conda_sh} | sed "s|etc/profile.d/conda.sh||g" )
-        f_install_miniconda ${conda_dir}
-        source ${service_conda_sh}
-    }
-    {
-        eval "conda activate ${service_conda_env}"
-    } || {
-        conda create -n ${service_conda_env}
-        eval "conda activate ${service_conda_env}"
-    }
-    if [ -z $(which ${jupyter-lab} 2> /dev/null) ]; then
-        conda install -c conda-forge jupyterlab -y
-        conda install nb_conda_kernels -y
-        conda install -c anaconda jinja2 -y
-    fi
+    service_conda_dir=$(echo "${service_conda_sh}" | sed 's|/etc/profile.d/conda.sh||')
 
-    # Check if SLURM is installed
-    if command -v sinfo &> /dev/null; then
-        # SLURM extension for Jupyter Lab https://github.com/NERSC/jupyterlab-slurm
-        pip install jupyterlab_slurm
-    fi
-
-    if [[ ${advanced_options_dask} == "true" ]]; then
-        #################################
-        # DASK EXTENSION FOR JUPYTERLAB #
-        #################################
-        # Dask depencies
-        conda install dask distributed -c conda-forge -y
-        conda install dask-jobqueue -c conda-forge -y
-        # Install faker for test notebook
-        conda install -c conda-forge faker -y
-        # Install data transfer tools
-        conda install -c conda-forge s3fs -y
-        conda install -c conda-forge gcsfs -y 
-
-        conda install -c conda-forge msgpack-python==1.0.5
-        conda install pyarrow=14.0.1
-        
-        # Get JupyterLab version
-        jupyterlab_major_version=$(jupyter-lab --version | cut -d'.' -f1)
-        
-        # Check if version is 4.x
-        if [[ ${jupyterlab_major_version} == "4" ]]; then
-            echo "JupyterLab version is $jupyterlab_version"
-            pip install dask-labextension
-            # Check if version is 3.x
-        elif [[ ${jupyterlab_major_version} == "3" ]]; then
-            echo "JupyterLab version is $jupyterlab_version"
-            pip install dask-labextension==6.2.0
-            # Check if version is 2.x
-        elif [[ ${jupyterlab_major_version} == "2" ]]; then 
-            pip install 'dask_labextension<5'
-            jupyter labextension install dask-labextension
+    if [[ "${advanced_options_install_instructions}" == "yaml" ]]; then
+        echo -e ${advanced_options_yaml} > conda.yaml
+        f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
+    else
+        {
+            source ${service_conda_sh}
+        } || {
+            conda_dir=$(echo ${service_conda_sh} | sed "s|etc/profile.d/conda.sh||g" )
+            f_install_miniconda ${conda_dir}
+            source ${service_conda_sh}
+        }
+        {
+            eval "conda activate ${service_conda_env}"
+        } || {
+            conda create -n ${service_conda_env}
+            eval "conda activate ${service_conda_env}"
+        }
+        if [ -z $(which ${jupyter-lab} 2> /dev/null) ]; then
+            conda install -c conda-forge jupyterlab -y
+            conda install nb_conda_kernels -y
+            conda install -c anaconda jinja2 -y
         fi
-        pip install bokeh==2.4.2
+
+        # Check if SLURM is installed
+        if command -v sinfo &> /dev/null; then
+            # SLURM extension for Jupyter Lab https://github.com/NERSC/jupyterlab-slurm
+            pip install jupyterlab_slurm
+        fi
     fi
 else
     eval "${service_load_env}"

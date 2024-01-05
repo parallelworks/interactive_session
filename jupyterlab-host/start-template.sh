@@ -64,6 +64,9 @@ if [[ "${service_conda_install}" == "true" ]]; then
         # Install data transfer tools
         conda install -c conda-forge s3fs -y
         conda install -c conda-forge gcsfs -y 
+
+        conda install -c conda-forge msgpack-python==1.0.5
+        conda install pyarrow=14.0.1
         
         # Get JupyterLab version
         jupyterlab_major_version=$(jupyter-lab --version | cut -d'.' -f1)

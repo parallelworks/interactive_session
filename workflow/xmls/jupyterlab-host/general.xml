@@ -128,6 +128,7 @@
         float="right"
       ></param>
       <param name='install_instructions' 
+        depends_on='service.conda_install'
         type='select' 
         label='Additional Install Packages' 
         help='Choose the additional packages to install along with the main application. Options include:
@@ -140,7 +141,6 @@
         <option value="yaml">Provide custom Conda environment YAML file</option>
       </param>
       <param
-        depends_on='service.conda_install'
         name='yaml' 
         label='Paste Conda Environment Defition YAML' 
         type='textarea' 

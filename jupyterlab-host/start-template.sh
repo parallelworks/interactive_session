@@ -40,6 +40,12 @@ f_set_up_conda_from_yaml() {
     
     echo "Sourcing Conda SH <${CONDA_SH}>"
     source ${CONDA_SH}
+    # Check if Conda environment exists
+    if ! conda env list | grep -q "${CONDA_ENV}"; then
+        echo "Creating Conda Environment <${CONDA_ENV}>"
+        conda create --name ${CONDA_ENV} [additional_packages]
+    fi
+    
     echo "Activating Conda Environment <${CONDA_ENV}>"
     conda activate ${CONDA_ENV}
     conda env update -n ${CONDA_ENV} -q -f ${CONDA_YAML}

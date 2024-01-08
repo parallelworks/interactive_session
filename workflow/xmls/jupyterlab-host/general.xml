@@ -139,7 +139,8 @@
         <option value="dask">Dask dependencies for PW</option>
         <option value="yaml">Provide custom Conda environment YAML file</option>
       </param>
-      <param 
+      <param
+        depends_on='service.conda_install'
         name='yaml' 
         label='Paste Conda Environment Defition YAML' 
         type='textarea' 

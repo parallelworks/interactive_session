@@ -128,7 +128,7 @@
         float="right"
       ></param>
       <param name='install_instructions' 
-        depends_on='service.conda_install'
+        show_if='service.conda_install'
         type='select' 
         label='Additional Install Packages' 
         help='Choose the additional packages to install along with the main application. Options include:

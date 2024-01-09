@@ -51,7 +51,7 @@ f_set_up_conda_from_yaml() {
     conda activate ${CONDA_ENV}
     
     echo "Installing condda environment from YAML"
-    conda env update -n ${CONDA_ENV} -q -f ${CONDA_YAML}
+    conda env update -n ${CONDA_ENV} -f ${CONDA_YAML}
 }
 
 if [[ "${service_conda_install}" == "true" ]]; then

@@ -28,6 +28,5 @@ Refer to the included Jupyter notebook at `jupyterlab-host/dask-extension-jupyte
 2. Data transfer to and from a PW storage resource, corresponding to an AWS S3 bucket. Authentication is streamlined through short-term credentials.
 3. Integration of the [Dask extension for JupyterLab](https://github.com/dask/dask-labextension)
 
-A sample YAML file outlining Dask dependencies for PW is provided at `jupyterlab-host/dask-extension-jupyterlab.yaml`. These dependencies are automatically installed by selecting the input form parameters displayed in the screenshot below. Alternatively, you have the option to use your own YAML file.
+A sample YAML file outlining Dask dependencies for PW is provided at `jupyterlab-host/dask-extension-jupyterlab.yaml`. These dependencies are automatically installed by selecting the input form parameters displayed in this [screenshot](https://raw.githubusercontent.com/parallelworks/interactive_session/jupyterlab-yaml-file/workflow/readmes/jupyterlab-host/dask-input-form.pn). Alternatively, you have the option to use your own YAML file.
  
-![Dask Input Form](https://raw.githubusercontent.com/parallelworks/interactive_session/jupyterlab-yaml-file/workflow/readmes/jupyterlab-host/dask-input-form.png)

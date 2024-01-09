@@ -41,17 +41,24 @@ f_set_up_conda_from_yaml() {
     echo "Sourcing Conda SH <${CONDA_SH}>"
     source ${CONDA_SH}
 
-    conda env create -n ${CONDA_ENV} -f ${CONDA_YAML}
-
+    # Check if Conda environment exists
+    if ! conda env list | grep -q "${CONDA_ENV}"; then
+        echo "Creating Conda Environment <${CONDA_ENV}>"
+        conda create --name ${CONDA_ENV}
+    fi
+    
     echo "Activating Conda Environment <${CONDA_ENV}>"
     conda activate ${CONDA_ENV}
+    
+    echo "Installing condda environment from YAML"
+    conda env update -n ${CONDA_ENV} -q -f ${CONDA_YAML}
 }
 
 if [[ "${service_conda_install}" == "true" ]]; then
     service_conda_dir=$(echo "${service_conda_sh}" | sed 's|/etc/profile.d/conda.sh||')
 
     if [[ "${advanced_options_install_instructions}" == "yaml" ]]; then
-        echo -e ${advanced_options_yaml} > conda.yaml
+        printf "%b" ${advanced_options_yaml} > conda.yaml
         f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
     else
         {

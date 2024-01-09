@@ -22,7 +22,7 @@ singularity build nginx-unprivileged.simg nginx_unprivileged.def
 Ensure that the workflow has access to the specified path for the resultant nginx-unprivileged.simg.
 
 ### Dask Integration on Parallel Works
-Refer to the included Jupyter notebook at `jupyterlab-host/dask-extension-jupyterlab-demo.ipynb`` for a practical guide illustrating:
+Refer to the included Jupyter notebook at `jupyterlab-host/dask-extension-jupyterlab-demo.ipynb` for a practical guide illustrating:
 
 1. Deployment of Dask on a SLURM cluster using the [SLURMCluster](https://jobqueue.dask.org/en/latest/generated/dask_jobqueue.SLURMCluster.html) object.
 2. Data transfer to and from a PW storage resource, corresponding to an AWS S3 bucket. Authentication is streamlined through short-term credentials.

@@ -31,7 +31,7 @@ f_set_up_conda_from_yaml() {
     CONDA_SH="${CONDA_DIR}/etc/profile.d/conda.sh"
     # conda env export
     # Remove line starting with name, prefix and remove empty lines
-    sed -i -e 's/name.*$//' -e 's/prefix.*$//' -e '/^$/d' ${CONDA_YAML}    
+    sed -i -e '/^name:/d' -e '/^prefix:/d' -e '/^$/d' ${CONDA_YAML} 
     
     if [ ! -d "${CONDA_DIR}" ]; then
         echo "Conda directory <${CONDA_DIR}> not found. Installing conda..."

@@ -22,7 +22,7 @@ import subprocess
 import os
 import json
 
-def load_bucket_credentials(bucket_id, bucket_type):
+def load_bucket_credentials(bucket_id):
     cmd = [
         "ssh", "usercontainer",
         "/swift-pw-bin/utils/bucket_token_generator.py",

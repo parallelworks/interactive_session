@@ -1,12 +1,6 @@
 # Runs via ssh + sbatch
 set -x
 
-# Start networking to display Dask dashboard in the PW platform
-if ! sudo -n true 2>/dev/null; then
-    displayErrorMessage "ERROR: NGINX CANNOT START PW BECAUSE USER ${USER} DOES NOT HAVE SUDO PRIVILEGES"
-fi
-
-
 # Initialize cancel script
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
@@ -144,6 +138,10 @@ if [ -f "${service_nginx_sif}" ]; then
     singularity run --writable-tmpfs  -B $PWD/config.conf:/etc/nginx/conf.d/config.conf ${service_nginx_sif} &
     echo "kill $!" >> cancel.sh
 else
+    if ! sudo -n true 2>/dev/null; then
+        displayErrorMessage "ERROR: NGINX CANNOT START PW BECAUSE USER ${USER} DOES NOT HAVE SUDO PRIVILEGES"
+    fi
+
     container_name="nginx-${servicePort}"
     # Remove container when job is canceled
     echo "sudo docker stop ${container_name}" >> cancel.sh

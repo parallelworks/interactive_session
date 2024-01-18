@@ -139,16 +139,21 @@ server {
 }
 HERE
 
-container_name="nginx-${servicePort}"
-# Remove container when job is canceled
-echo "sudo docker stop ${container_name}" >> cancel.sh
-echo "sudo docker rm ${container_name}" >> cancel.sh
-# Start container
-sudo service docker start
-sudo docker run  -d --name ${container_name}  -v $PWD/config.conf:/etc/nginx/conf.d/config.conf --network=host nginxinc/nginx-unprivileged
-# Print logs
-sudo docker logs ${container_name}
-
+if [ -f "${service_nginx_sif}" ]; then
+    echo "Running singularity container ${service_nginx_sif}"
+    singularity run --writable-tmpfs  -B $PWD/config.conf:/etc/nginx/conf.d/config.conf ${service_nginx_sif} &
+    echo "kill $!" >> cancel.sh
+else
+    container_name="nginx-${servicePort}"
+    # Remove container when job is canceled
+    echo "sudo docker stop ${container_name}" >> cancel.sh
+    echo "sudo docker rm ${container_name}" >> cancel.sh
+    # Start container
+    sudo service docker start
+    sudo docker run  -d --name ${container_name}  -v $PWD/config.conf:/etc/nginx/conf.d/config.conf --network=host nginxinc/nginx-unprivileged
+    # Print logs
+    sudo docker logs ${container_name}
+fi
 
 ####################
 # START JUPYTERLAB #

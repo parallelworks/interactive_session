@@ -7,7 +7,7 @@
           name='name' 
           label='Service' 
           type='hidden' 
-          value='jupyter-host'
+          value='jupyterlab-host'
         ></param>
         <param 
           name='nginx_sif' 

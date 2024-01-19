@@ -142,6 +142,10 @@ if ! [[ $kernel_version == *microsoft* ]]; then
 
     # Start service
     ${service_vnc_exec} -kill ${DISPLAY}
+
+    # To prevent the process from being killed at startime
+    sed -i '/vncserver -kill $DISPLAY/ s/^#*/#/' ~/.vnc/xstartup
+
     # FIXME: Need better way of doing this:
     # Turbovnc fails with "=" and tigevnc fails with " "
     {

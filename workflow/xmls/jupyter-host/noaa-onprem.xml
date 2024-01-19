@@ -30,7 +30,7 @@
             </param>
             <param name='_sch__dd_partition_e_' label='SLURM partition' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value=''  >
             </param>
-            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value=''  >
+            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value='--nodes=1'  >
             </param>
         </when>
       </conditional>

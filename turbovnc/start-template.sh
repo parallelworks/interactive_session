@@ -142,6 +142,10 @@ if ! [[ $kernel_version == *microsoft* ]]; then
 
     # Start service
     ${service_vnc_exec} -kill ${DISPLAY}
+
+    # To prevent the process from being killed at startime
+    sed -i '/vncserver -kill $DISPLAY/ s/^#*/#/' ~/.vnc/xstartup
+
     # FIXME: Need better way of doing this:
     # Turbovnc fails with "=" and tigevnc fails with " "
     {
@@ -165,7 +169,10 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     sudo -n  chgrp ${USER} /run/user/$(id -u)/dconf
     chmod og+rx /run/user/$(id -u)
 
-    if  ! [ -z $(which gnome-session) ]; then
+    if ! [ -z "${service_desktop}" ]; then
+        eval ${service_desktop} &
+        echo $! > ${resource_jobdir}/service.pid
+    elif  ! [ -z $(which gnome-session) ]; then
         gsettings set org.gnome.desktop.session idle-delay 0
         gnome-session &
         echo $! > ${resource_jobdir}/service.pid

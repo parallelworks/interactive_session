@@ -169,7 +169,10 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     sudo -n  chgrp ${USER} /run/user/$(id -u)/dconf
     chmod og+rx /run/user/$(id -u)
 
-    if  ! [ -z $(which gnome-session) ]; then
+    if ! [ -z "${service_desktop}" ]; then
+        eval ${service_desktop} &
+        echo $! > ${resource_jobdir}/service.pid
+    elif  ! [ -z $(which gnome-session) ]; then
         gsettings set org.gnome.desktop.session idle-delay 0
         gnome-session &
         echo $! > ${resource_jobdir}/service.pid

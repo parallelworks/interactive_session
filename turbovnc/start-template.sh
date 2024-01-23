@@ -183,7 +183,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     chmod og+rx /run/user/$(id -u)
 
     if ! [ -z "${service_desktop}" ]; then
-        eval ${service_desktop} &
+        eval ${service_desktop} --autostart=./ &
         echo $! > ${resource_jobdir}/service.pid
     elif  ! [ -z $(which gnome-session) ]; then
         gsettings set org.gnome.desktop.session idle-delay 0

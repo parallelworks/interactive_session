@@ -10,6 +10,12 @@
         value='jupyter-host'
       ></param>
       <param 
+        name='vnc_type' 
+        label='Service' 
+        type='hidden' 
+        value='turbovnc'
+      ></param>
+      <param 
         name="conda_install" 
         type="boolean" 
         truevalue="Yes" 

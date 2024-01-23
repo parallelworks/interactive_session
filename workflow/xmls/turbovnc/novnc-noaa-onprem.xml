@@ -22,6 +22,12 @@
         value='turbovnc'
       ></param>
       <param 
+        name='vnc_type' 
+        label='VNC Server Type' 
+        type='hidden' 
+        value='turbovnc'
+      ></param>
+      <param 
         name='desktop' 
         label='Desktop Session' 
         type='hidden' 

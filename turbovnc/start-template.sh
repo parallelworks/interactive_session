@@ -157,13 +157,15 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     # To prevent the process from being killed at startime
     sed -i '/vncserver -kill $DISPLAY/ s/^#*/#/' ~/.vnc/xstartup
 
-    # FIXME: Need better way of doing this:
-    # Turbovnc fails with "=" and tigevnc fails with " "
-    {
-        ${service_vnc_exec} ${DISPLAY} -SecurityTypes=None
-    } || {
+    
+    # service_vnc_type needs to be an input to the workflow in the XML
+    # if vncserver is not tigervnc
+    if [[ ${service_vnc_type} == "turbovnc" ]]; then
         ${service_vnc_exec} ${DISPLAY} -SecurityTypes None
-    }
+    else
+        # tigervnc
+        ${service_vnc_exec} ${DISPLAY} -SecurityTypes=None
+    fi
 
     rm -f ${resource_jobdir}/service.pid
     touch ${resource_jobdir}/service.pid

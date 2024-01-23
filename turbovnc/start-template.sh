@@ -159,12 +159,8 @@ if ! [[ $kernel_version == *microsoft* ]]; then
 
     # FIXME: Need better way of doing this:
     # Turbovnc fails with "=" and tigevnc fails with " "
-    {
-        ${service_vnc_exec} ${DISPLAY} -SecurityTypes=None
-    } || {
-        ${service_vnc_exec} ${DISPLAY} -SecurityTypes None
-    }
-
+    ${service_vnc_exec} ${DISPLAY} -SecurityTypes None
+    
     rm -f ${resource_jobdir}/service.pid
     touch ${resource_jobdir}/service.pid
 

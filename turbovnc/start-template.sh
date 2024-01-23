@@ -28,7 +28,7 @@ bootstrap_tgz() {
     # Check if the directory exists
     if [ -d "${install_dir}" ]; then
         # Check if the directory is empty
-        if [ -z "$(ls -A "$directory")" ]; then
+        if [ -z "$(ls -A "${install_dir}")" ]; then
             displayErrorMessage "Error tranferring noVNC files. Directory ${install_dir} is empty"
         fi
     else

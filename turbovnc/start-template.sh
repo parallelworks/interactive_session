@@ -25,6 +25,15 @@ bootstrap_tgz() {
         fi
         tar -zxf ${install_parent_dir}/$(basename ${tgz_path}) -C ${install_parent_dir}
     fi
+    # Check if the directory exists
+    if [ -d "${install_dir}" ]; then
+        # Check if the directory is empty
+        if [ -z "$(ls -A "$directory")" ]; then
+            displayErrorMessage "Error tranferring noVNC files. Directory ${install_dir} is empty"
+        fi
+    else
+        displayErrorMessage "Error tranferring noVNC files. Directory ${install_dir} does not exist"
+    fi
 }
 
 # Determine if the service is running in windows using WSL
@@ -140,6 +149,8 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         displayErrorMessage "ERROR: service_vnc_exec=${service_vnc_exec} file not found! - Exiting workflow!"
     fi
 
+    bootstrap_tgz ${novnc_tgz} ${novnc_dir}
+
     # Start service
     ${service_vnc_exec} -kill ${DISPLAY}
 
@@ -161,12 +172,12 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     # Permission denied.  dconf will not work properly.
     # When the session is killed the permissions of directory /run/user/$(id -u) change from drwxr-xr-x to drwxr-----
     rm -rf /run/user/$(id -u)/dconf
-    sudo -n mkdir /run/user/$(id -u)/
-    sudo -n chown ${USER} /run/user/$(id -u)
-    sudo -n chgrp ${USER} /run/user/$(id -u)
-    sudo -n  mkdir /run/user/$(id -u)/dconf
-    sudo -n  chown ${USER} /run/user/$(id -u)/dconf
-    sudo -n  chgrp ${USER} /run/user/$(id -u)/dconf
+    sudo -n mkdir /run/user/$(id -u)/ &>/dev/null
+    sudo -n chown ${USER} /run/user/$(id -u) &>/dev/null
+    sudo -n chgrp ${USER} /run/user/$(id -u) &>/dev/null
+    sudo -n  mkdir /run/user/$(id -u)/dconf  &>/dev/null
+    sudo -n  chown ${USER} /run/user/$(id -u)/dconf &>/dev/null
+    sudo -n  chgrp ${USER} /run/user/$(id -u)/dconf &>/dev/null
     chmod og+rx /run/user/$(id -u)
 
     if ! [ -z "${service_desktop}" ]; then
@@ -211,12 +222,11 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         xfce4-session &
         echo $! > ${resource_jobdir}/service.pid
     fi
-
-    bootstrap_tgz ${novnc_tgz} ${novnc_dir}
 fi
 
 cd ${novnc_dir}
 
+echo "Running ./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort}"
 ./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort} </dev/null &>/dev/null &
 echo $! >> ${resource_jobdir}/service.pid
 pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')

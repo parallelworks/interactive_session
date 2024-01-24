@@ -24,13 +24,13 @@
         ></param>
 	      <param 
           name='notebook_dir' 
-          label='Directory to start JupyterHub GUI' 
+          label='Directory to start Jupyter Lab' 
           type='text' 
           value='/gs/gsfs0/users/__USER__/pw/' 
-          help='This is the directory that you start with when the JupyterHub graphical user interface starts.  The default value here is your home directory.'
+          help='This is the directory that you start with when the Jupyter Lab graphical user interface starts.  The default value here is your home directory.'
         ></param>
         <param name='load_env' 
-          label='Command to load Jupyter Lab' 
+          label='Command to load Jupyter Lab environment' 
           type='text' 
           value='source /gs/gsfs0/hpc01/rhel8/apps/conda3/etc/profile.d/conda.sh; conda activate base; module load cuda' 
           help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.' 

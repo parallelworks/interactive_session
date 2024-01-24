@@ -65,7 +65,9 @@
         name='resource' 
         type='computeResource' 
         label='Service host' 
-        hideUserWorkspace='true' help='Resource to host the service'></param>
+        hideUserWorkspace='true' 
+        help='Resource to host the service'>
+      </param>
       <param 
         name='nports' 
         label='Number of Ports to Reserve' 
@@ -75,8 +77,8 @@
       <param 
         name='jobschedulertype' 
         type='select' 
-        label='Select Controller, SLURM Partition or PBS Queue' 
-        help='Job will submitted using SSH, sbatch or qsub, respectively'   
+        label='Select Controller or SLURM Partition' 
+        help='Job will submitted using SSH or sbatch or qsub'   
         multiple='false'>
           <option value="CONTROLLER" selected="true">Controller</option>
           <option value="SLURM">SLURM Partition</option>
@@ -96,6 +98,15 @@
         type='text' 
         help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
         value=''
+        depends_on='pwrl_host.jobschedulertype'
+        show_if='SLURM'
+      ></param>
+      <param 
+        name='_sch__dd_time_e_' 
+        label='Walltime' 
+        type='text' 
+        help='e.g. 01:00:00 - Amount of time slurm will honor the interactive session.' 
+        value='01:00:00'
         depends_on='pwrl_host.jobschedulertype'
         show_if='SLURM'
       ></param>

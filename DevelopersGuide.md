@@ -1,5 +1,5 @@
 # Developers Guide
-Welcome to the developer's guide for the interactive sessions repository. While this repository offers one method for creating interactive workflows in Parallel Works, please note that it's not the sole approach available. For more information on interactive workflows, please refer to this link and ensure you review the information provided there before proceeding with this guide.
+Welcome to the developer's guide for the interactive sessions repository. While this repository offers one method for creating interactive workflows in Parallel Works, please note that it's not the sole approach available. Ensure you review the information provided in these links on [interactive workflows](https://parallelworks.com/docs/workflows/interactive-sessions) and [developing workflows](https://parallelworks.com/docs/workflows/creating-workflows) before proceeding with this guide.
 
 This repository enables you to establish interactive session workflows for running various services, such as Jupyter or remote desktops, across different types of executors. The supported executors encompass your Parallel Works user workspace as well as remote on-premises or cloud clusters. When running on a cluster, we offer support for execution on the controller node, a SLURM partition, or a PBS queue. The session.sh script is launched on the selected executor to initiate the service.. 
 
@@ -30,12 +30,12 @@ The workflow directory contains workflow-specific information and is further cat
 The rest of the directories are service directories and contain the specific code to start the service.
 
 ## Workflow XML
-The workflow XML encompasses both input parameters and execution details for each workflow. For a comprehensive understanding of workflow XML files, please consult the user guide. In this instance, it adheres to the subsequent structure:
+The workflow XML encompasses both input parameters and execution details for each workflow. For a comprehensive understanding of workflow XML files, please consult the [user guide](https://parallelworks.com/docs/workflows/creating-workflows#form-configuration). In this instance, it adheres to the subsequent structure:
 
-Command and cancellation items define the execution and cancellation process for the workflow.
-The service_name parameter is set as a fixed value corresponding to the service directory's name.
-The resource section adheres to the resource wrapper tool's format. For further details, refer to this link (FIXME).
-Additional parameters and sections are also included.
+- Command and cancellation items define the execution and cancellation process for the workflow.
+- The `service_name` parameter is set as a fixed value corresponding to the service directory's name.
+- The resource section adheres to the resource wrapper tool's format. For further details, refer to [this link](https://github.com/parallelworks/interactive_session/blob/main/utils/input_form_resource_wrapper.py).
+- Additional parameters and sections are also included.
 
 ## Adding a New Service
 Follow this steps to add a new service using the interactive sessions repository.
@@ -43,15 +43,10 @@ Follow this steps to add a new service using the interactive sessions repository
 ### 1. Create the Service Directory
  You can either create a new service directory from scratch or duplicate an existing one that closely matches your requirements. Within the service directory, you'll be working with several scripts. These scripts have access to environment variables with the input parameters defined in the input form as well as any variables introduced by the workflow. Here are the key scripts:
 
-start-template.sh: Use this script to write the necessary code to start the service.
-url.sh: This script is responsible for writing the SLUG parameter within the file service.json. For more detailed information, you can refer to the section labeled FIXME. In most cases, this script sets the SLUG parameter to "\"".
+- start-template.sh: Use this script to write the necessary code to start the service.
+- url.sh: This script is responsible for writing the SLUG parameter within the file `service.json`. Visit [this link](https://parallelworks.com/docs/workflows/creating-workflows#servicejson) for more information about the service JSON file. In most cases, this script sets the SLUG parameter to "\"".
 
-kill-template.sh: This script serves the purpose of terminating the service initiated by start-template.sh when the workflow is canceled. For instance, if you employ docker run -d within start-template.sh, this script becomes essential for stopping the Docker container. It is automatically executed when a job is canceled within the PW platform.
-
-Create the service directory or copy the most similar service directory and create or edit the following scripts. All of these scripts have access to the environment variables that were defined in the input form and also to those added by the workflow.
-- `start-template.sh`: This script is called by the interactive sessions workflow.
-- `url.sh`: This is used to write the SLUG parameter of the file service.json. For more info see FIXME. Most of the times this value is  export URLEND="\""
-- `kill-template.sh`: Use this script to kill the service started in start-template.sh if necessary. For example, if you use the docker run -d in start-template.sh you need to stop the docker container in this service. The script is called when the job is canceled in the PW platform. 
+- kill-template.sh: This script serves the purpose of terminating the service initiated by start-template.sh when the workflow is canceled. For instance, if you employ `docker run -d` within start-template.sh, this script becomes essential for stopping the Docker container. It is automatically executed when a job is canceled within the PW platform.
 
 ### 2. Create the README and XML Directories
 These components serve as the front end of the workflow, encompassing the description and XML files for each workflow that initiates this service. It's important to note that a single service can have various workflows tailored to strike the right balance between customization and generality. For instance, some workflows might require the exposure or hardcoding of specific SLURM directives, such as the account or the number of tasks per node for a particular cluster. Another common scenario involves desktop sessions that launch different software applications like MATLAB or RSTUDIO. This approach alleviates the need for users to complete extensive forms when submitting jobs to a designated cluster.

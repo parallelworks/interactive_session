@@ -33,7 +33,6 @@
         type='hidden' 
         value='mate-session'
       ></param>
-    </section>
    </section>
     <section name='pwrl_host' type='section' title='Jupyter Server Host' expanded='true'>
       <param 
@@ -41,7 +40,8 @@
         type='computeResource' 
         label='Service host' 
         hideUserWorkspace='true' 
-        help='Resource to host the service'></param>
+        help='Resource to host the service'>
+      </param>
       <param 
         name='nports' 
         label='Number of Ports to Reserve' 

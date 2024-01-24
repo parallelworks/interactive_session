@@ -154,6 +154,7 @@ if [ -f "${service_nginx_sif}" ]; then
     echo "Running singularity container ${service_nginx_sif}"
     singularity run --writable-tmpfs  -B $PWD/config.conf:/etc/nginx/conf.d/config.conf ${service_nginx_sif} &
     echo "kill $!" >> cancel.sh
+    echo "rm -f /tmp/nginx.pid" >> cancel.sh
 else
     echo "Running docker container nginx"
     

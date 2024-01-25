@@ -152,9 +152,11 @@ HERE
 
 if [ -f "${service_nginx_sif}" ]; then
     echo "Running singularity container ${service_nginx_sif}"
-    singularity run --writable-tmpfs  -B $PWD/config.conf:/etc/nginx/conf.d/config.conf ${service_nginx_sif} &
+    # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
+    # and other users cannot use the node. Was not able to change this in the config.conf.
+    mkdir -p ./tmp
+    singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf ${service_nginx_sif} &
     echo "kill $!" >> cancel.sh
-    echo "rm -f /tmp/nginx.pid" >> cancel.sh
 else
     echo "Running docker container nginx"
     

@@ -39,7 +39,7 @@ else
     port_flag=" -p ${port} "
 fi
 
-sshcmd="ssh ${ssh_usercontainer_options} ${port_flag} $host"
+sshcmd="ssh ${resource_ssh_usercontainer_options} ${port_flag} $host"
 
 #pushpath=$(ls ${pushpath}*)
 

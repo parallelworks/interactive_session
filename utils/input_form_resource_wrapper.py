@@ -327,7 +327,7 @@ def get_ssh_config_path(workdir, jobschedulertype, public_ip):
 
     config_exists = get_command_output(command)
 
-    if config_exists == 'true':
+    if config_exists:
         return ssh_config_path
 
 def get_ssh_usercontainer_options(workdir, jobschedulertype, public_ip, private_ip):

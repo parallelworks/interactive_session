@@ -34,14 +34,14 @@
         name='bin' 
         label='Launch command' 
         type='text' 
-        value='matlab' 
+        value='matlab -desktop' 
         help=''
       ></param>
       <param 
         name='background' 
         label='Run service in background (True or False)' 
         type='hidden' 
-        value='False'
+        value='True'
       ></param>
     </section>
     <section name='pwrl_host' type='section' title='Jupyter Server Host' expanded='true'>

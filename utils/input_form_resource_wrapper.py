@@ -323,7 +323,7 @@ def get_ssh_config_path(workdir, jobschedulertype, public_ip):
 
     ssh_config_path = os.path.join(workdir, ssh_config_path)
 
-    command = f"{SSH_CMD} {public_ip} '/bin/bash -c \"[ -e \\\"{ssh_config_path}\\\" ] && echo true || echo false\"'"
+    command = f"{SSH_CMD} {public_ip} ls {ssh_config_path} 2>/dev/null || echo"
 
     config_exists = get_command_output(command)
 

@@ -39,11 +39,7 @@ else
     port_flag=" -p ${port} "
 fi
 
-if [ -z "${masterIp}" ]; then
-    sshcmd="ssh -o StrictHostKeyChecking=no ${port_flag} $host"
-else
-    sshcmd="ssh -J $masterIp -o StrictHostKeyChecking=no ${port_flag} $host"
-fi
+sshcmd="ssh ${ssh_usercontainer_options} ${port_flag} $host"
 
 #pushpath=$(ls ${pushpath}*)
 

@@ -7,7 +7,7 @@ import subprocess
 import time
 import random
 import socket
-# VERSION: 14
+# VERSION: 15
 
 """
 # Form Resource Wrapper
@@ -311,6 +311,40 @@ def get_partition_os(partition_name, resource_info):
             if 'os' in partition:
                 return partition['os']
 
+
+def get_ssh_config_path(workdir, jobschedulertype, public_ip):
+    """
+    Returns the ssh config path of the cluster if it exists. Otherwise it returns nothing
+    """
+    if jobschedulertype == 'CONTROLLER':
+        ssh_config_path = 'pw/.pw/config'
+    else:
+        ssh_config_path =  'pw/.pw/config_compute'
+
+    ssh_config_path = os.path.join(workdir, ssh_config_path)
+
+    command = f"{SSH_CMD} {public_ip} '/bin/bash -c \"[ -e \\\"{ssh_config_path}\\\" ] && echo true || echo false\"'"
+
+    config_exists = get_command_output(command)
+
+    if config_exists == 'true':
+        return ssh_config_path
+
+def get_ssh_usercontainer_options(workdir, jobschedulertype, public_ip, private_ip):
+    # In some clusters the PW SSH config file is not included in ~/.ssh/config
+    ssh_config_path = get_ssh_config_path(
+        workdir,
+        jobschedulertype, 
+        public_ip
+    )
+
+    if ssh_config_path:
+        return f'-F {ssh_config_path} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+    elif jobschedulertype == 'CONTROLLER':
+        return f'-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+    else:
+        return f'-J {private_ip} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
 def complete_resource_information(inputs_dict):
     if 'nports' in inputs_dict:
         inputs_dict['resource']['ports'] = find_available_ports(int(inputs_dict['nports']))
@@ -341,7 +375,15 @@ def complete_resource_information(inputs_dict):
             inputs_dict['submit_cmd'] = "qsub"
             inputs_dict['cancel_cmd'] = "qdel"
             inputs_dict['status_cmd'] = "qstat"
-        
+
+        inputs_dict['resource']['ssh_usercontainer_options'] = get_ssh_usercontainer_options(
+            inputs_dict['resource']['workdir'],
+            inputs_dict['jobschedulertype'], 
+            inputs_dict['resource']['publicIp'],
+            inputs_dict['resource']['privateIp']
+        )
+
+
     inputs_dict['resource']['jobdir'] = os.path.join(
         inputs_dict['resource']['workdir'],
         'pw/jobs',
@@ -472,9 +514,9 @@ def create_resource_directory(label, inputs_dict):
 
     create_batch_header(inputs_dict, header_sh)
 
-def is_ssh_tunnel_working(ip_address):
-    # Define the SSH command
-    ssh_command = f"ssh {ip_address} \"ssh usercontainer hostname\""
+def is_ssh_tunnel_working(ip_address, ssh_usercontainer_options):
+    # Define the SSH command 
+    ssh_command = f"ssh {ip_address} \"ssh {ssh_usercontainer_options} usercontainer hostname\""
         
     try:
         # Run the SSH command and capture the output
@@ -525,8 +567,9 @@ if __name__ == '__main__':
         create_resource_directory(label, label_inputs_dict)
 	    
         ip_address = inputs_dict[f'pwrl_{label}']["resource"]["publicIp"]
+        ssh_usercontainer_options = inputs_dict[f'pwrl_{label}']['resource']['ssh_usercontainer_options']
     
-        if not is_ssh_tunnel_working(ip_address):
+        if not is_ssh_tunnel_working(ip_address, ssh_usercontainer_options):
             logger.warning('SSH reverse tunnel is not working. Attempting to re-establish tunnel...')
 
             try:

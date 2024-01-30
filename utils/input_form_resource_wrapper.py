@@ -514,9 +514,9 @@ def create_resource_directory(label, inputs_dict):
 
     create_batch_header(inputs_dict, header_sh)
 
-def is_ssh_tunnel_working(ip_address):
-    # Define the SSH command
-    ssh_command = f"ssh {ip_address} \"ssh usercontainer hostname\""
+def is_ssh_tunnel_working(ip_address, ssh_usercontainer_options):
+    # Define the SSH command 
+    ssh_command = f"ssh {ip_address} \"ssh {ssh_usercontainer_options} usercontainer hostname\""
         
     try:
         # Run the SSH command and capture the output
@@ -567,8 +567,9 @@ if __name__ == '__main__':
         create_resource_directory(label, label_inputs_dict)
 	    
         ip_address = inputs_dict[f'pwrl_{label}']["resource"]["publicIp"]
+        ssh_usercontainer_options = inputs_dict[f'pwrl_{label}']['resource']['ssh_usercontainer_options']
     
-        if not is_ssh_tunnel_working(ip_address):
+        if not is_ssh_tunnel_working(ip_address, ssh_usercontainer_options):
             logger.warning('SSH reverse tunnel is not working. Attempting to re-establish tunnel...')
 
             try:

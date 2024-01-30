@@ -236,6 +236,9 @@ echo ${pid} >> ${resource_jobdir}/service.pid
 rm -f ${portFile}
 sleep 5 # Need this specially in controller node or second software won't show up!
 
+# Notify platform that service is running
+${sshusercontainer} ${pw_job_dir}/utils/notify.sh
+
 # Launch service
 cd
 if ! [ -z "${service_bin}" ]; then
@@ -249,6 +252,4 @@ if ! [ -z "${service_bin}" ]; then
     fi
 fi
 
-# Notify platform that service is running
-${sshusercontainer} ${pw_job_dir}/utils/notify.sh
 sleep 99999

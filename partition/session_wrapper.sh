@@ -208,6 +208,6 @@ while true; do
             break
         fi
     fi
-    sleep 5
+    sleep 15
 done
 

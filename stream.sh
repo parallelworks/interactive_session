@@ -43,7 +43,7 @@ sshcmd="ssh ${resource_ssh_usercontainer_options} ${port_flag} $host"
 
 #pushpath=$(ls ${pushpath}*)
 
-${sshcmd} 'cat >"'$pushpath'"' >> logstream.out 2>&1
+${sshcmd} 'cat >>"'$pushpath'"' >> logstream.out 2>&1
 
 while true; do
     if [ -f "$pushfile" ]; then

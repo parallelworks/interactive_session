@@ -189,6 +189,16 @@ echo
 echo "Submitted slurm job: ${jobid}"
 
 
+get_slurm_job_status() {
+    # Get the header line to determine the column index corresponding to the job status
+    if [ -z "${SQUEUE_HEADER}" ]; then
+        export SQUEUE_HEADER="$(eval "$ssh_command" | awk 'NR==1')"
+    fi
+    status_column=$(echo "${SQUEUE_HEADER}" | awk '{ for (i=1; i<=NF; i++) if ($i ~ /^S/) { print i; exit } }')
+    job_status=$(eval "$sshcmd ${status_cmd}" | awk -v id="${jobid}" -v col="$status_column" '$1 == id {print $col}')
+    echo ${job_status}
+}
+
 # Job status file writen by remote script:
 while true; do    
     # squeue won't give you status of jobs that are not running or waiting to run
@@ -196,12 +206,14 @@ while true; do
     job_status=$($sshcmd ${status_cmd} | awk -v id="${jobid}" '$1 == id {print $5}')
     echo "Job status: ${job_status}"
     if [[ ${jobschedulertype} == "SLURM" ]]; then
+        job_status=$(get_slurm_job_status)
         # If job status is empty job is no longer running
         if [ -z "${job_status}" ]; then
             job_status=$($sshcmd sacct -j ${jobid}  --format=state | tail -n1)
             break
         fi
     elif [[ ${jobschedulertype} == "PBS" ]]; then
+        job_status=$(ssh "$sshcmd" "${status_cmd} -f ${jobid}" 2>/dev/null  | grep job_state | cut -d'=' -f2)
         if [[ "${job_status}" == "C" ]]; then
             break
         elif [ -z "${job_status}" ]; then

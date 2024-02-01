@@ -200,7 +200,8 @@ get_slurm_job_status() {
 }
 
 # Job status file writen by remote script:
-while true; do    
+while true; do
+    sleep 15
     # squeue won't give you status of jobs that are not running or waiting to run
     # qstat returns the status of all recent jobs
     if [[ ${jobschedulertype} == "SLURM" ]]; then
@@ -213,7 +214,7 @@ while true; do
         fi
     elif [[ ${jobschedulertype} == "PBS" ]]; then
         echo "$sshcmd ${status_cmd} -f ${jobid} 2>/dev/null  | grep job_state | cut -d'=' -f2 | tr -d ' '"
-        job_status=$(eval $sshcmd ${status_cmd} -f ${jobid} 2>/dev/null  | grep job_state | cut -d'=' -f2 | tr -d ' ')
+        job_status="$(eval $sshcmd ${status_cmd} -f ${jobid} 2>/dev/null  | grep job_state | cut -d'=' -f2 | tr -d ' ')"
         echo "Job status: ${job_status}"
         sleep 99999
         if [[ "${job_status}" == "C" ]]; then
@@ -222,6 +223,5 @@ while true; do
             break
         fi
     fi
-    sleep 15
 done
 

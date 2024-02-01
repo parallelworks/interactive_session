@@ -205,7 +205,7 @@ get_pbs_job_status() {
     if [ -z "${QSTAT_HEADER}" ]; then
         export QSTAT_HEADER="$(eval "$sshcmd ${status_cmd}" | awk 'NR==1')"
     fi
-    status_response=$(eval $sshcmd ${status_cmd} | grep "\<${jobid}\>")
+    status_response=$(eval $sshcmd ${status_cmd} 2>/dev/null | grep "\<${jobid}\>")
     echo "${QSTAT_HEADER}"
     echo "${status_response}"
     export job_status="$(eval $sshcmd ${status_cmd} -f ${jobid} 2>/dev/null  | grep job_state | cut -d'=' -f2 | tr -d ' ')"

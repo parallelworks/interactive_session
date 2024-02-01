@@ -195,6 +195,7 @@ get_slurm_job_status() {
     fi
     status_column=$(echo "${SQUEUE_HEADER}" | awk '{ for (i=1; i<=NF; i++) if ($i ~ /^S/) { print i; exit } }')
     status_response=$(eval $sshcmd ${status_cmd} | grep "\<${jobid}\>")
+    echo "${SQUEUE_HEADER}"
     echo "${status_response}"
     export job_status=$(echo ${status_response} | awk -v id="${jobid}" -v col="$status_column" '{print $col}')
 }
@@ -207,7 +208,6 @@ while true; do
     if [[ ${jobschedulertype} == "SLURM" ]]; then
         get_slurm_job_status
         # If job status is empty job is no longer running
-        echo "Job status: ${job_status}"
         if [ -z "${job_status}" ]; then
             job_status=$($sshcmd sacct -j ${jobid}  --format=state | tail -n1)
             break

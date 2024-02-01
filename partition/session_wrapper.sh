@@ -192,11 +192,12 @@ echo "Submitted slurm job: ${jobid}"
 get_slurm_job_status() {
     # Get the header line to determine the column index corresponding to the job status
     if [ -z "${SQUEUE_HEADER}" ]; then
-        export SQUEUE_HEADER="$(eval "$ssh_command" | awk 'NR==1')"
+        export SQUEUE_HEADER="$(eval "$sshcmd ${status_cmd}" | awk 'NR==1')"
     fi
     status_column=$(echo "${SQUEUE_HEADER}" | awk '{ for (i=1; i<=NF; i++) if ($i ~ /^S/) { print i; exit } }')
-    job_status=$(eval "$sshcmd ${status_cmd}" | awk -v id="${jobid}" -v col="$status_column" '$1 == id {print $col}')
-    echo ${job_status}
+    status_response=$(eval $sshcmd ${status_cmd} | grep "\<${jobid}\>")
+    echo "${status_response}"
+    export job_status=$(echo ${status_response} | awk -v id="${jobid}" -v col="$status_column" '{print $col}')
 }
 
 # Job status file writen by remote script:
@@ -205,7 +206,7 @@ while true; do
     # squeue won't give you status of jobs that are not running or waiting to run
     # qstat returns the status of all recent jobs
     if [[ ${jobschedulertype} == "SLURM" ]]; then
-        job_status=$(get_slurm_job_status)
+        $(get_slurm_job_status)
         # If job status is empty job is no longer running
         echo "Job status: ${job_status}"
         if [ -z "${job_status}" ]; then

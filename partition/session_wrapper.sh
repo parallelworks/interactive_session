@@ -206,7 +206,7 @@ while true; do
     # squeue won't give you status of jobs that are not running or waiting to run
     # qstat returns the status of all recent jobs
     if [[ ${jobschedulertype} == "SLURM" ]]; then
-        $(get_slurm_job_status)
+        get_slurm_job_status
         # If job status is empty job is no longer running
         echo "Job status: ${job_status}"
         if [ -z "${job_status}" ]; then

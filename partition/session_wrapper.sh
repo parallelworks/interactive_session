@@ -212,8 +212,8 @@ while true; do
             break
         fi
     elif [[ ${jobschedulertype} == "PBS" ]]; then
-        echo "$sshcmd \"${status_cmd} -f ${jobid}\" 2>/dev/null  | grep job_state | cut -d'=' -f2 | tr -d ' '"
-        job_status=$($sshcmd "${status_cmd} -f ${jobid}" 2>/dev/null  | grep job_state | cut -d'=' -f2 | tr -d ' ')
+        echo "$sshcmd ${status_cmd} -f ${jobid} 2>/dev/null  | grep job_state | cut -d'=' -f2 | tr -d ' '"
+        job_status=$(eval $sshcmd ${status_cmd} -f ${jobid} 2>/dev/null  | grep job_state | cut -d'=' -f2 | tr -d ' ')
         echo "Job status: ${job_status}"
         sleep 99999
         if [[ "${job_status}" == "C" ]]; then

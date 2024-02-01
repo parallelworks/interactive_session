@@ -198,6 +198,7 @@ get_slurm_job_status() {
     status_response=$(eval $sshcmd ${status_cmd} | grep "\<${jobid}\>")
     echo "${status_response}"
     export job_status=$(echo ${status_response} | awk -v id="${jobid}" -v col="$status_column" '{print $col}')
+    sleep 9999
 }
 
 # Job status file writen by remote script:

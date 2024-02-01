@@ -55,7 +55,6 @@
         help='Job will submitted using SSH or sbatch'   
         multiple='false'>
           <option value="CONTROLLER" selected="true">Controller</option>
-          <option value="SLURM">SLURM Partition</option>
       </param>    
       <param 
         name='_sch__dd_account_e_' 

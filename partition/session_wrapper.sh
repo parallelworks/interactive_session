@@ -203,17 +203,17 @@ get_slurm_job_status() {
 while true; do    
     # squeue won't give you status of jobs that are not running or waiting to run
     # qstat returns the status of all recent jobs
-    job_status=$($sshcmd ${status_cmd} | awk -v id="${jobid}" '$1 == id {print $5}')
-    echo "Job status: ${job_status}"
     if [[ ${jobschedulertype} == "SLURM" ]]; then
         job_status=$(get_slurm_job_status)
         # If job status is empty job is no longer running
+        echo "Job status: ${job_status}"
         if [ -z "${job_status}" ]; then
             job_status=$($sshcmd sacct -j ${jobid}  --format=state | tail -n1)
             break
         fi
     elif [[ ${jobschedulertype} == "PBS" ]]; then
-        job_status=$(ssh "$sshcmd" "${status_cmd} -f ${jobid}" 2>/dev/null  | grep job_state | cut -d'=' -f2)
+        job_status=$(ssh "$sshcmd" "${status_cmd} -f ${jobid}" 2>/dev/null  | grep job_state | cut -d'=' -f2 | tr -d ' ')
+        echo "Job status: ${job_status}"
         if [[ "${job_status}" == "C" ]]; then
             break
         elif [ -z "${job_status}" ]; then

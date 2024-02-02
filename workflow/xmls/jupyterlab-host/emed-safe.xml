@@ -32,7 +32,7 @@
         <param name='load_env' 
           label='Command to load Jupyter Lab environment' 
           type='text' 
-          value='source /gs/gsfs2/hpc01/rhel8/apps/conda3/etc/profile.d/conda.sh; conda activate base; module load cuda' 
+          value='source /gs/gsfs0/hpc01/rhel8/apps/conda3/etc/profile.d/conda.sh; conda activate base; module load cuda' 
           help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.' 
         ></param>
    </section>

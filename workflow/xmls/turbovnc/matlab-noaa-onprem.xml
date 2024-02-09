@@ -44,7 +44,7 @@
         value='True'
       ></param>
     </section>
-    <section name='pwrl_host' type='section' title='Jupyter Server Host' expanded='true'>
+    <section name='pwrl_host' type='section' title='Desktop Host' expanded='true'>
       <param 
         name='resource' 
         type='computeResource' 
@@ -60,12 +60,10 @@
       ></param> 
       <param 
         name='jobschedulertype' 
-        type='select' 
         label='Select Controller or SLURM Partition' 
-        help='Job will submitted using SSH or sbatch'   
-        multiple='false'>
-          <option value="CONTROLLER" selected="true">Controller</option>
-      </param>    
+        type='hidden' 
+        value='CONTROLLER'  
+      ></param>  
       <param 
         name='_sch__dd_account_e_' 
         label='SLURM account' 
@@ -111,17 +109,16 @@
         show_if='SLURM'
       ></param>
     </section>
-    <section name='advanced_options' type='section' title='Advanced Options' expanded='false'>
         <param 
-          name="stream" 
+          name="advanced_options_stream" 
           type="boolean" 
           truevalue="Yes" 
           falsevalue="No" 
-          checked="False" 
+          checked="True" 
           label="Stream slurm output?" 
           help='Select Yes to stream the slurm output from the execution host to the job directory in PW'
+          float="right"
         ></param>
-    </section>
   </inputs>
   <outputs>
   </outputs>

@@ -34,7 +34,7 @@
         value='mate-session'
       ></param>
    </section>
-    <section name='pwrl_host' type='section' title='Jupyter Server Host' expanded='true'>
+    <section name='pwrl_host' type='section' title='Desktop Host' expanded='true'>
       <param 
         name='resource' 
         type='computeResource' 

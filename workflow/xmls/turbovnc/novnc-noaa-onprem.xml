@@ -97,16 +97,12 @@
         show_if='SLURM'
       ></param>
     </section>
-        <param 
-          name="advanced_options_stream" 
-          type="boolean" 
-          truevalue="Yes" 
-          falsevalue="No" 
-          checked="True" 
-          label="Stream slurm output?" 
-          help='Select Yes to stream the slurm output from the execution host to the job directory in PW'
-          float="right"
-        ></param>
+    <param 
+        name='advanced_options_stream' 
+        label='Stream slurm output?' 
+        type='hidden' 
+        value='true'  
+      ></param>
   </inputs>
   <outputs>
   </outputs>

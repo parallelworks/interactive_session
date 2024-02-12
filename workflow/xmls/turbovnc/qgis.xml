@@ -7,7 +7,6 @@
     <section name='service' type='section' title='QGIS Inputs' expanded='true'>
       <param name='load_env' label='Command to load QGIS' type='text' value='source /efs/miniconda/miniconda/etc/profile.d/conda.sh; conda activate qgis_stable' help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'  ></param>
       <param name='bin' label='Service binary' type='hidden' value='qgis'  ></param>
-      <param name='name' label='Service' type='hidden' value='turbovnc'  ></param>
     </section>
     <section name='pwrl_host' type='section' title='Desktop Host' expanded='true'>
       <param name='resource' type='computeResource' label='Service host' hideUserWorkspace='true' help='Resource to host the service'></param>

@@ -39,6 +39,7 @@ bootstrap_tgz() {
 # Determine if the service is running in windows using WSL
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
 
+# Deactive default conda environments (required for emed)
 export $(env | grep CONDA_PREFIX)
 echo ${CONDA_PREFIX}
 
@@ -47,6 +48,9 @@ if ! [ -z "${CONDA_PREFIX}" ]; then
     source ${CONDA_PREFIX}/etc/profile.d/conda.sh
     conda deactivate
 fi
+# Reload env in case it was deactivated in the step above (e.g.: conda activate)
+eval "${service_load_env}"
+
 
 
 set -x

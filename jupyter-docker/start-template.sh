@@ -89,14 +89,14 @@ if [ "${jupyter_major_version}" -eq 6 ]; then
     eval ${jupyter_docker_cmd} \
         --port=${jupyter_port} \
         --ip=0.0.0.0 \
-        --NotebookApp.default_url="/me/${openPort}/tree" \
         --NotebookApp.iopub_data_rate_limit=10000000000 \
         --NotebookApp.token= \
         --NotebookApp.password=$sha \
         --no-browser \
         --notebook-dir=${service_notebook_dir} \
-        --NotebookApp.allow_origin=* \
-        --ServerApp.base_url=${BASE_URL}
+        --NotebookApp.allow_origin=* 
+        #--NotebookApp.default_url="/me/${openPort}/tree" \
+        #--ServerApp.base_url=${BASE_URL}
         #--NotebookApp.tornado_settings="{\"static_url_prefix\":\"/me/${openPort}/static/\"}" \
 
 elif [ "${jupyter_major_version}" -eq 7 ]; then

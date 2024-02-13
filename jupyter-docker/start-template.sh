@@ -75,7 +75,7 @@ sudo -n docker run ${gpu_flag} -i --rm --name ${jupyter_container_name} \
     ${service_mount_directories} \
     -v ${HOME}:${HOME} \
     -e PYTHONPATH=${PWD} \
-    -p ${jupyter_port}:${jupyter_port} \
+    -p ${servicePort}:${servicePort} \
     ${service_docker_repo} \
     jupyter-notebook \
         --port=${servicePort} \
@@ -157,6 +157,5 @@ sudo -n docker run ${gpu_flag} -i --rm --name ${jupyter_container_name} \
         --ServerApp.base_url=${BASE_URL}
 
 fi
-
 
 sleep 9999

@@ -7,6 +7,7 @@
         <param name='docker_repo' label='Docker repository' type='text' value='tensorflow/tensorflow:latest-gpu-jupyter' help='Docker repository to start with docker run and containing jupyter-notebook'></param>
         <param name='mount_directories' label='Docker mount volumnes' type='text' value='' help='Type in the mount volume options for the docker command. E.g.: -v /lustre:/lustre -v /contrib:/contrib'></param>
         <param name="use_gpus" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Use GPUs?" help='Select Yes to run a CUDA application inside a container'   optional='true' float="right"></param>
+        <param name='notebook_dir' label='Directory to start Jupyter' type='text' value='__WORKDIR__' help='This is the directory that you start with when the JupyterHub graphical user interface starts.  The default value here is your home directory.'  ></param>
     </section>
     <section name='pwrl_host' type='section' title='Service host' expanded='true'>
       <param name='resource' type='computeResource' label='Service host' hideUserWorkspace='true' help='Resource to host the service'></param>

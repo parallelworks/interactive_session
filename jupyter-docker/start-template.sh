@@ -143,10 +143,10 @@ ${sshusercontainer} ${pw_job_dir}/utils/notify.sh
 sudo -n docker run ${gpu_flag} -i --rm --name ${jupyter_container_name} \
     ${service_mount_directories} \
     -v ${HOME}:${HOME} \
-    -p ${jupyter_port}:${jupyter_port} \
+    -p ${jupyterserver_port}:${jupyterserver_port} \
     ${service_docker_repo} \
     jupyter-notebook \
-        --port=${jupyter_port} \
+        --port=${jupyterserver_port} \
         --ip=0.0.0.0 \
         --no-browser  \
         --allow-root \

@@ -6,12 +6,12 @@ This workflow connects a service hosted in a Docker container to the Parallel Wo
 
 Two examples are provided below for Matlab and Tensorflow. 
 
-*Matlab*
+**Matlab**
 ```
 sudo -n docker run -i --rm --name __container_name__  -v /home/alvaro:/home/alvaro -p __docker_port__:__docker_port__ --shm-size=512M --env MWI_ENABLE_WEB_LOGGING=True  --env MWI_APP_HOST=0.0.0.0 --env MWI_APP_PORT=__docker_port__ --env MWI_ENABLE_TOKEN_AUTH=False --env MWI_BASE_URL=__base_url__  mathworks/matlab:r2022a  -browser
 ```
 
-*TensorFlow*
+**TensorFlow**
 ```
 sudo -n docker run -i --rm --name __container_name__  -v /home/alvaro:/home/alvaro -p __docker_port__:__docker_port__ tensorflow/tensorflow:latest-gpu-jupyter jupyter-notebook --port=__docker_port__ --ip=0.0.0.0 --no-browser  --allow-root --ServerApp.trust_xheaders=True  --ServerApp.allow_origin='*'  --ServerApp.allow_remote_access=True --ServerApp.token=""  --ServerApp.base_url=__base_url__
 ```

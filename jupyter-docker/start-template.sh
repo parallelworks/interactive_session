@@ -66,6 +66,10 @@ docker_cmd="sudo -n docker run ${gpu_flag} -i --rm --name ${container_name} ${se
 jupyter_docker_cmd="${docker_cmd} ${service_docker_repo} jupyter-notebook"
 jupyter_major_version=$(${jupyter_docker_cmd} --version | cut -d'.' -f1)
 
+echo "Jupyter Docker Command"
+echo "${jupyter_docker_cmd}"
+echo "Jupyter version ${jupyter_major_version}"
+
 if [ -z ${service_notebook_dir} ]; then
     service_notebook_dir="/"
 fi

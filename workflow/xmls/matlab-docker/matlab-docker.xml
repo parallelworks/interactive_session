@@ -2,7 +2,7 @@
   <command interpreter='bash'>main.sh</command>
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
-    <section name='service' type='section' title='Jupyter Server' expanded='true'>
+    <section name='service' type='section' title='Matlab Server' expanded='true'>
         <param name='name' label='Service' type='hidden' value='matlab-docker'></param>
         <param name='docker_repo' label='Docker repository' type='text' value='mathworks/matlab:r2022a' help='Docker repository to start with docker run'></param>
         <param name='mount_directories' label='Docker mount volumnes' type='text' value='' help='Type in the mount volume options for the docker command. E.g.: -v /lustre:/lustre -v /contrib:/contrib'></param>
@@ -15,18 +15,11 @@
           <param name='jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively'   multiple='false'>
             <option value="CONTROLLER" selected="true">Controller</option>
             <option value="SLURM">SLURM Partition</option>
-            <option value="PBS">PBS Queue</option>
         </param>
         <when value="SLURM">
             <param name='_sch__dd_partition_e_' label='SLURM partition' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value=''  >
             </param>
             <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value=''  >
-            </param>
-        </when>
-        <when value="PBS">
-            <param name='_sch__d_q___' label='PBS queue' type='text' help='Queue to submit the interactive job. Must select one! Use [qstat -f -Q] to list all queues on the system' value=''  >
-            </param>
-            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to separate parameters. Do not include the PBS keyword.' value=''  >
             </param>
         </when>
       </conditional>

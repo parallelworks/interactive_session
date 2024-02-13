@@ -1,4 +1,56 @@
-echo "$(date): $(hostname):${PWD} $0 $@"
+
+# Initialize cancel script
+echo '#!/bin/bash' > cancel.sh
+chmod +x cancel.sh
+jupyter_port=$(findAvailablePort)
+echo "rm /tmp/${jupyter_port}.port.used" >> cancel.sh
+
+
+#######################
+# START NGINX WRAPPER #
+#######################
+
+echo "Starting nginx wrapper on service port ${servicePort}"
+
+# Write config file
+cat >> config.conf <<HERE
+server {
+ listen ${servicePort};
+ server_name _;
+ index index.html index.htm index.php;
+ add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+ add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
+ add_header X-Frame-Options "ALLOWALL";
+ location / {
+     proxy_pass http://127.0.0.1:${jupyter_port}/me/${openPort}/;
+     proxy_http_version 1.1;
+       proxy_set_header Upgrade \$http_upgrade;
+       proxy_set_header Connection "upgrade";
+       proxy_set_header X-Real-IP \$remote_addr;
+       proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+       proxy_set_header Host \$http_host;
+       proxy_set_header X-NginX-Proxy true;
+ }
+}
+HERE
+
+echo "Running docker container nginx"
+container_name="nginx-${servicePort}"
+# Remove container when job is canceled
+echo "sudo docker stop ${container_name}" >> cancel.sh
+echo "sudo docker rm ${container_name}" >> cancel.sh
+# Start container
+sudo service docker start
+sudo docker run  -d --name ${container_name}  -v $PWD/config.conf:/etc/nginx/conf.d/config.conf --network=host nginxinc/nginx-unprivileged
+# Print logs
+sudo docker logs ${container_name}
+
+########################
+# START JUPYTER DOCKER #
+########################
+container_name="jupyter-${servicePort}"
+echo "sudo docker stop ${container_name}" >> cancel.sh
+echo "sudo docker rm ${container_name}" >> cancel.sh
 
 if [[ ${service_use_gpus} == "true" ]]; then
     gpu_flag="--gpus all"
@@ -6,82 +58,28 @@ else
     gpu_flag=""
 fi
 
-if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
-    echo sudo -n docker stop jupyter-$servicePort > docker-kill-${job_number}.sh
-else
-    # Create kill script. Needs to be here because we need the hostname of the compute node.
-    echo ssh "'$(hostname)'" sudo -n docker stop jupyter-$servicePort > docker-kill-${job_number}.sh
-fi
+BASE_URL="/me/${openPort}/"
 
-chmod 777 docker-kill-${job_number}.sh
+# Docker supports mounting directories that do not exist (singularity does not)
+set -x
 
-sudo -n systemctl start docker
-
-
-# Generate sha:
-if [ -z "${service_password}" ]; then
-    echo "No password was specified"
-    sha=""
-else
-    echo "Generating sha"
-    sha=$(sudo -n docker run --rm ${service_docker_repo} python3 -c "from notebook.auth.security import passwd; print(passwd('${service_password}', algorithm = 'sha1'))")
-fi
-
-
-# Custom PW plugin:
-mkdir -p pw_jupyter_proxy
-cat >> pw_jupyter_proxy/__init__.py <<HERE
-from tornado.web import StaticFileHandler
-from tornado import web
-import os
-from notebook.utils import url_path_join
-import pprint as pp
-
-def load_jupyter_server_extension(nbapp):
-    
-    print('loading custom plugin')
-
-    web_app = nbapp.web_app
-    base_url = web_app.settings['base_url']
-
-    static_path = web_app.settings.get("static_path")
-    path_join = url_path_join(base_url, '', 'static', '(.*)')
-
-    web_app.settings['base_url'] = '/me/%s/' % ${openPort}
-
-    # pp.pprint(web_app.settings)
-
-    handlers = [
-         (
-            path_join,
-            StaticFileHandler,
-            {'path': os.path.join(static_path[0])}
-        )
-    ]
-    web_app.settings['nbapp'] = nbapp
-    web_app.add_handlers('.*', handlers)
-HERE
-
-# Notify platform that service is running
+# Notify platform that service is ready
 ${sshusercontainer} ${pw_job_dir}/utils/notify.sh
 
-# Served from 
-export PYTHONPATH=${PWD}
-sudo -n docker run ${gpu_flag} --rm \
-    -v /contrib:/contrib -v /lustre:/lustre -v ${HOME}:${HOME} \
-    --name=jupyter-$servicePort \
-    -p $servicePort:$servicePort \
-    ${service_docker_repo} jupyter-notebook \
-        --port=${servicePort} \
-        --ip=0.0.0.0 \
-        --NotebookApp.default_url="/me/${openPort}/tree" \
-        --NotebookApp.iopub_data_rate_limit=10000000000 \
-        --NotebookApp.token= \
-        --NotebookApp.password=$sha \
-        --no-browser \
-        --notebook-dir=$notebook_dir \
-        --NotebookApp.nbserver_extensions "pw_jupyter_proxy=True" \
-        --NotebookApp.tornado_settings="{\"static_url_prefix\":\"/me/${openPort}/static/\"}" \
-        --NotebookApp.allow_origin=*
+sudo -n docker run ${gpu_flag} -i --rm \
+    --name ${container_name} \
+    ${service_mount_directories} -v ${HOME}:${HOME} \
+    -p ${jupyter_port}:${jupyter_port} \
+    ${service_docker_repo} \
+    jupyter-notebook \
+    --port=${jupyter_port} \
+    --ip=0.0.0.0 \
+    --no-browser  \
+    --allow-root \
+    --ServerApp.trust_xheaders=True  \
+    --ServerApp.allow_origin='*'  \
+    --ServerApp.allow_remote_access=True \
+    --ServerApp.token=""  \
+    --ServerApp.base_url=${BASE_URL}
 
 sleep 9999

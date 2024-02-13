@@ -52,7 +52,12 @@ set -x
 
 sudo docker pull ${service_docker_repo}
 
-jupyter_major_version=$(sudo docker run -i --rm  ${service_docker_repo} jupyter-notebook --version | cut -d'.' -f1)
+# Obtain Jupyter version without breaking ssh connection
+sudo docker run -i --rm  ${service_docker_repo} jupyter-notebook --version > jupyter.version & 
+while [ ! -f "jupyter.version" ]; do
+    sleep 2
+done
+jupyter_major_version=$(cat jupyter.version | cut -d'.' -f1)
 
 container_name="jupyter-${servicePort}"
 echo "sudo docker stop ${container_name}" >> cancel.sh

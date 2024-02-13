@@ -86,7 +86,7 @@ echo "Jupyter version ${jupyter_major_version}"
 ${sshusercontainer} ${pw_job_dir}/utils/notify.sh
 
 if [ "${jupyter_major_version}" -lt 7 ]; then
-    ${jupyter_docker_cmd} \
+    eval ${jupyter_docker_cmd} \
         --port=${servicePort} \
         --ip=0.0.0.0 \
         --NotebookApp.default_url="/me/${openPort}/tree" \
@@ -98,7 +98,7 @@ if [ "${jupyter_major_version}" -lt 7 ]; then
         --NotebookApp.tornado_settings="{\"static_url_prefix\":\"/me/${openPort}/static/\"}" \
         --NotebookApp.allow_origin=*
 else
-    ${jupyter_docker_cmd}
+    ${jupyter_docker_cmd} \
         --port=${jupyter_port} \
         --ip=0.0.0.0 \
         --no-browser  \

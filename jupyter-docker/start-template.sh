@@ -52,6 +52,8 @@ set -x
 
 sudo docker pull ${service_docker_repo}
 
+jupyter_major_version=$(sudo docker run -i --rm  ${service_docker_repo} jupyter-notebook --version | cut -d'.' -f1)
+
 container_name="jupyter-${servicePort}"
 echo "sudo docker stop ${container_name}" >> cancel.sh
 echo "sudo docker rm ${container_name}" >> cancel.sh
@@ -62,19 +64,18 @@ else
     gpu_flag=""
 fi
 
+if [ -z ${service_notebook_dir} ]; then
+    service_notebook_dir="/"
+fi
+
 BASE_URL="/me/${openPort}/"
 
 docker_cmd="sudo -n docker run ${gpu_flag} -i --rm --name ${container_name} ${service_mount_directories} -v ${HOME}:${HOME} -p ${jupyter_port}:${jupyter_port}"
 jupyter_docker_cmd="${docker_cmd} ${service_docker_repo} jupyter-notebook"
-jupyter_major_version=$(${jupyter_docker_cmd} --version | cut -d'.' -f1)
 
 echo "Jupyter Docker Command"
 echo "${jupyter_docker_cmd}"
 echo "Jupyter version ${jupyter_major_version}"
-
-if [ -z ${service_notebook_dir} ]; then
-    service_notebook_dir="/"
-fi
 
 # Notify platform that service is ready
 ${sshusercontainer} ${pw_job_dir}/utils/notify.sh

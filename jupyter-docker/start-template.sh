@@ -48,6 +48,8 @@ sudo docker logs ${container_name}
 ########################
 # START JUPYTER DOCKER #
 ########################
+set -x
+
 sudo docker pull ${service_docker_repo}
 
 container_name="jupyter-${servicePort}"
@@ -73,8 +75,6 @@ echo "Jupyter version ${jupyter_major_version}"
 if [ -z ${service_notebook_dir} ]; then
     service_notebook_dir="/"
 fi
-
-set -x
 
 # Notify platform that service is ready
 ${sshusercontainer} ${pw_job_dir}/utils/notify.sh

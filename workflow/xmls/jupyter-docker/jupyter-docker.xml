@@ -1,20 +1,21 @@
-<tool id='User.Demo_say_hello' name='User.Demo_say_hello'>
+<tool id='NA' name='NA'>
   <command interpreter='bash'>main.sh</command>
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
     <section name='service' type='section' title='Jupyter Server' expanded='true'>
-        <param name='name' label='Service' type='hidden' value='jupyter-docker'  ></param>
-        <param name='password' label='Password for notebook session:' type='text' value='Enter password or leave blank for no password' help=''  ></param>
-        <param name='docker_repo' label='Docker repository' type='text' value='tensorflow/tensorflow:latest-gpu-jupyter' help='Docker repository to start with docker run'  ></param>
-        <param name="use_gpus" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Use GPUs?" help='Select Yes to run a CUDA application inside a container'   optional='true' float="right"></param>
+        <param name='name' label='Service' type='hidden' value='jupyter-docker'></param>
+        <param name='docker_repo' label='Docker repository' type='text' value='tensorflow/tensorflow:latest-gpu-jupyter' help='Docker repository to start with docker run and containing jupyter-notebook'></param>
+        <param name='mount_directories' label='Docker mount volumnes' type='text' value='' help='Type in the mount volume options for the docker command. E.g.: -v /lustre:/lustre -v /contrib:/contrib'></param>
+        <param name="use_gpus" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Use GPUs?" help='Select Yes to run a CUDA application inside a container'   optional='true' float="right"></param>
+        <param name='notebook_dir' label='Directory to start Jupyter' type='text' value='__WORKDIR__' help='This is the directory that you start with when the JupyterHub graphical user interface starts.  The default value here is your home directory.'  ></param>
     </section>
     <section name='pwrl_host' type='section' title='Service host' expanded='true'>
       <param name='resource' type='computeResource' label='Service host' hideUserWorkspace='true' help='Resource to host the service'></param>
-      <param name='nports' label='Number of Ports to Reserve' type='hidden' value='1'  ></param> 
+      <param name='nports' label='Number of Ports to Reserve' type='hidden' value='1'></param> 
       <conditional name="jobschedulertype_cond">
           <param name='jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively'   multiple='false'>
-            <option value="CONTROLLER">Controller</option>
-            <option value="SLURM" selected="true">SLURM Partition</option>
+            <option value="CONTROLLER" selected="true">Controller</option>
+            <option value="SLURM">SLURM Partition</option>
         </param>
         <when value="SLURM">
             <param name='_sch__dd_partition_e_' label='SLURM partition' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value=''  >

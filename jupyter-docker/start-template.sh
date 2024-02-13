@@ -1,32 +1,38 @@
-echo "$(date): $(hostname):${PWD} $0 $@"
+# Runs via ssh + sbatch
+set -x
 
-if [[ ${service_use_gpus} == "true" ]]; then
-    gpu_flag="--gpus all"
-else
-    gpu_flag=""
+# Initialize cancel script
+echo '#!/bin/bash' > cancel.sh
+chmod +x cancel.sh
+
+jupyter_container_name="jupyter-${servicePort}"
+echo "sudo docker stop ${jupyter_container_name}" >> cancel.sh
+echo "sudo docker rm ${jupyter_container_name}" >> cancel.sh
+
+# Set the launch directory for JupyterHub
+# If notebook_dir is not set or set to a templated value,
+# use the default value of "/".
+if [ -z ${service_notebook_dir} ]; then
+    service_notebook_dir="/"
 fi
 
-if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
-    echo sudo -n docker stop jupyter-$servicePort > docker-kill-${job_number}.sh
-else
-    # Create kill script. Needs to be here because we need the hostname of the compute node.
-    echo ssh "'$(hostname)'" sudo -n docker stop jupyter-$servicePort > docker-kill-${job_number}.sh
-fi
+sudo service docker start
+sudo docker pull ${service_docker_repo}
 
-chmod 777 docker-kill-${job_number}.sh
+# Obtain Jupyter version without breaking ssh connection
+sudo docker run -i --rm  ${service_docker_repo} jupyter-notebook --version > jupyter.version & 
+while [ ! -f "jupyter.version" ]; do
+    sleep 2
+done
+jupyter_major_version=$(cat jupyter.version | tail -n1 | cut -d'.' -f1)
 
-sudo -n systemctl start docker
+echo "Jupyter version is ${jupyter_major_version}"
 
 
-# Generate sha:
-if [ -z "${service_password}" ]; then
-    echo "No password was specified"
-    sha=""
-else
-    echo "Generating sha"
-    sha=$(sudo -n docker run --rm ${service_docker_repo} python3 -c "from notebook.auth.security import passwd; print(passwd('${service_password}', algorithm = 'sha1'))")
-fi
-
+#######################
+# OLD JUPYTER VERSION #
+#######################
+if [ "${jupyter_major_version}" -lt 7 ]; then
 
 # Custom PW plugin:
 mkdir -p pw_jupyter_proxy
@@ -62,16 +68,16 @@ def load_jupyter_server_extension(nbapp):
     web_app.add_handlers('.*', handlers)
 HERE
 
-# Notify platform that service is running
+# Notify platform that service is ready
 ${sshusercontainer} ${pw_job_dir}/utils/notify.sh
 
-# Served from 
-export PYTHONPATH=${PWD}
-sudo -n docker run ${gpu_flag} --rm \
-    -v /contrib:/contrib -v /lustre:/lustre -v ${HOME}:${HOME} \
-    --name=jupyter-$servicePort \
-    -p $servicePort:$servicePort \
-    ${service_docker_repo} jupyter-notebook \
+sudo -n docker run ${gpu_flag} -i --rm --name ${jupyter_container_name} \
+    ${service_mount_directories} \
+    -v ${HOME}:${HOME} \
+    -e PYTHONPATH=${PWD} \
+    -p ${servicePort}:${servicePort} \
+    ${service_docker_repo} \
+    jupyter-notebook \
         --port=${servicePort} \
         --ip=0.0.0.0 \
         --NotebookApp.default_url="/me/${openPort}/tree" \
@@ -79,9 +85,78 @@ sudo -n docker run ${gpu_flag} --rm \
         --NotebookApp.token= \
         --NotebookApp.password=$sha \
         --no-browser \
-        --notebook-dir=$notebook_dir \
+        --notebook-dir=${service_notebook_dir} \
         --NotebookApp.nbserver_extensions "pw_jupyter_proxy=True" \
         --NotebookApp.tornado_settings="{\"static_url_prefix\":\"/me/${openPort}/static/\"}" \
         --NotebookApp.allow_origin=*
+
+else
+#######################
+# NEW JUPYTER VERSION #
+#######################
+
+jupyterserver_port=$(findAvailablePort)
+echo "rm /tmp/${jupyterserver_port}.port.used" >> cancel.sh
+
+#######################
+# START NGINX WRAPPER #
+#######################
+
+echo "Starting nginx wrapper on service port ${servicePort}"
+
+# Write config file
+cat >> config.conf <<HERE
+server {
+ listen ${servicePort};
+ server_name _;
+ index index.html index.htm index.php;
+ add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+ add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
+ add_header X-Frame-Options "ALLOWALL";
+ location / {
+     proxy_pass http://127.0.0.1:${jupyterserver_port}/me/${openPort}/;
+     proxy_http_version 1.1;
+       proxy_set_header Upgrade \$http_upgrade;
+       proxy_set_header Connection "upgrade";
+       proxy_set_header X-Real-IP \$remote_addr;
+       proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+       proxy_set_header Host \$http_host;
+       proxy_set_header X-NginX-Proxy true;
+ }
+}
+HERE
+
+container_name="nginx-${servicePort}"
+# Remove container when job is canceled
+echo "sudo docker stop ${container_name}" >> cancel.sh
+echo "sudo docker rm ${container_name}" >> cancel.sh
+sudo docker run  -d --name ${container_name}  -v $PWD/config.conf:/etc/nginx/conf.d/config.conf --network=host nginxinc/nginx-unprivileged
+# Print logs
+sudo docker logs ${container_name}
+
+#########################
+# START JUPYTER WRAPPER #
+#########################
+# Notify platform that service is ready
+${sshusercontainer} ${pw_job_dir}/utils/notify.sh
+
+sudo -n docker run ${gpu_flag} -i --rm --name ${jupyter_container_name} \
+    ${service_mount_directories} \
+    -v ${HOME}:${HOME} \
+    -p ${jupyterserver_port}:${jupyterserver_port} \
+    ${service_docker_repo} \
+    jupyter-notebook \
+        --port=${jupyterserver_port} \
+        --ip=0.0.0.0 \
+        --no-browser  \
+        --allow-root \
+        --ServerApp.trust_xheaders=True  \
+        --ServerApp.allow_origin='*'  \
+        --ServerApp.allow_remote_access=True \
+        --ServerApp.token=""  \
+        --ServerApp.base_url=/me/${openPort}/ \
+        --ServerApp.root_dir=${service_notebook_dir}
+
+fi
 
 sleep 9999

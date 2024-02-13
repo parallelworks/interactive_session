@@ -48,6 +48,7 @@ sudo docker logs ${container_name}
 #######################
 # START MATLAB DOCKER #
 #######################
+sudo docker pull ${container_name}
 container_name="matlab-${servicePort}"
 echo "sudo docker stop ${container_name}" >> cancel.sh
 echo "sudo docker rm ${container_name}" >> cancel.sh

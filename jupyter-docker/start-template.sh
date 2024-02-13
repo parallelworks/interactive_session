@@ -154,7 +154,8 @@ sudo -n docker run ${gpu_flag} -i --rm --name ${jupyter_container_name} \
         --ServerApp.allow_origin='*'  \
         --ServerApp.allow_remote_access=True \
         --ServerApp.token=""  \
-        --ServerApp.base_url=${BASE_URL}
+        --ServerApp.base_url=${BASE_URL} \
+        --ServerApp.root_dir=${service_notebook_dir}
 
 fi
 

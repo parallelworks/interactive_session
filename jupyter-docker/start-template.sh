@@ -57,7 +57,7 @@ sudo docker run -i --rm  ${service_docker_repo} jupyter-notebook --version > jup
 while [ ! -f "jupyter.version" ]; do
     sleep 2
 done
-jupyter_major_version=$(cat jupyter.version | cut -d'.' -f1)
+jupyter_major_version=$(cat jupyter.version | tail -n1 | cut -d'.' -f1)
 
 container_name="jupyter-${servicePort}"
 echo "sudo docker stop ${container_name}" >> cancel.sh
@@ -85,7 +85,7 @@ echo "Jupyter version ${jupyter_major_version}"
 # Notify platform that service is ready
 ${sshusercontainer} ${pw_job_dir}/utils/notify.sh
 
-if [ "${jupyter_major_version}" -lt 7 ]; then
+if [ "${jupyter_major_version}" -eq 6 ]; then
     eval ${jupyter_docker_cmd} \
         --port=${servicePort} \
         --ip=0.0.0.0 \
@@ -97,7 +97,7 @@ if [ "${jupyter_major_version}" -lt 7 ]; then
         --notebook-dir=${service_notebook_dir} \
         --NotebookApp.tornado_settings="{\"static_url_prefix\":\"/me/${openPort}/static/\"}" \
         --NotebookApp.allow_origin=*
-else
+elif [ "${jupyter_major_version}" -eq 7 ]; then
     ${jupyter_docker_cmd} \
         --port=${jupyter_port} \
         --ip=0.0.0.0 \
@@ -108,6 +108,7 @@ else
         --ServerApp.allow_remote_access=True \
         --ServerApp.token=""  \
         --ServerApp.base_url=${BASE_URL}
-
+else
+    echo "Unsupported Jupyter version ${jupyter_major_version}"
 fi
 sleep 9999

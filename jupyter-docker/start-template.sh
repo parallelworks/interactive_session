@@ -26,7 +26,8 @@ sudo service docker start
 sudo docker pull ${service_docker_repo}
 
 # Obtain Jupyter version without breaking ssh connection
-sudo docker run -i --rm  ${service_docker_repo} jupyter-notebook --version > jupyter.version & 
+sudo docker run -i --rm  ${service_docker_repo} jupyter-notebook --version > jupyter.version &
+sleep 5
 while [ ! -f "jupyter.version" ]; do
     sleep 2
 done

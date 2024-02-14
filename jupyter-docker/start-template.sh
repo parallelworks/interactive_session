@@ -16,6 +16,12 @@ if [ -z ${service_notebook_dir} ]; then
     service_notebook_dir="/"
 fi
 
+if [[ ${service_use_gpus} == "true" ]]; then
+    gpu_flag="--gpus all"
+else
+    gpu_flag=""
+fi
+
 sudo service docker start
 sudo docker pull ${service_docker_repo}
 

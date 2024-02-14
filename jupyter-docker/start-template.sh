@@ -92,6 +92,7 @@ sudo -n docker run ${gpu_flag} -i --rm --name ${jupyter_container_name} \
         --NotebookApp.token= \
         --NotebookApp.password=$sha \
         --no-browser \
+        --allow-root \
         --notebook-dir=${service_notebook_dir} \
         --NotebookApp.nbserver_extensions "pw_jupyter_proxy=True" \
         --NotebookApp.tornado_settings="{\"static_url_prefix\":\"/me/${openPort}/static/\"}" \

@@ -39,7 +39,7 @@ echo "Jupyter version is ${jupyter_major_version}"
 #######################
 # OLD JUPYTER VERSION #
 #######################
-if [ "${jupyter_major_version}" -lt 7 ]; then
+if [ "${jupyter_major_version}" -eq 6 ]; then
 
 # Custom PW plugin:
 mkdir -p pw_jupyter_proxy
@@ -97,7 +97,7 @@ sudo -n docker run ${gpu_flag} -i --rm --name ${jupyter_container_name} \
         --NotebookApp.tornado_settings="{\"static_url_prefix\":\"/me/${openPort}/static/\"}" \
         --NotebookApp.allow_origin=*
 
-else
+elif [ "${jupyter_major_version}" -eq 7 ]; then
 #######################
 # NEW JUPYTER VERSION #
 #######################
@@ -164,6 +164,8 @@ sudo -n docker run ${gpu_flag} -i --rm --name ${jupyter_container_name} \
         --ServerApp.base_url=/me/${openPort}/ \
         --ServerApp.root_dir=${service_notebook_dir}
 
+else
+    displayErrorMessage "ERROR: Jupyter Notebook version ${jupyter_major_version} is not supported. Use version 6 or 7"
 fi
 
 sleep 9999

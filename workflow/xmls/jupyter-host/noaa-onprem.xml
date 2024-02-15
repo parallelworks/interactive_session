@@ -128,7 +128,7 @@
         show_if='SLURM'
       ></param>
     </section>
-    <sectionname='advanced_options' type='section' title='Advanced Options' expanded='false'>
+    <section name='advanced_options' type='section' title='Advanced Options' expanded='false'>
         <param 
           name="stream"
           type="boolean" 

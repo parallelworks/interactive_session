@@ -364,8 +364,18 @@ def complete_resource_information(inputs_dict):
         inputs_dict['resource']['publicIp'] = public_ip
         inputs_dict['resource']['username'] = get_resource_user(resource_info)
         inputs_dict['resource']['type'] = resource_info['type']
-        inputs_dict['resource']['workdir'] = get_resource_workdir(resource_info, public_ip)
+        if 'workdir' not in inputs_dict['resource']:
+            inputs_dict['resource']['workdir'] = get_resource_workdir(resource_info, public_ip)
+        elif not inputs_dict['resource']['workdir']:
+            inputs_dict['resource']['workdir'] = get_resource_workdir(resource_info, public_ip)
+
         inputs_dict['resource']['privateIp'] = get_resource_internal_ip(resource_info, public_ip)
+
+        # FIXME: Refactor
+        inputs_dict['resource']['owner'] = True
+        if 'namespace' in resource_info:
+            if resource_info['namespace'] != os.environ['PW_USER']:
+                inputs_dict['resource']['owner'] = False
 
         if inputs_dict['jobschedulertype'] == 'SLURM':
             inputs_dict['submit_cmd'] = "sbatch"
@@ -534,6 +544,22 @@ def is_ssh_tunnel_working(ip_address, ssh_usercontainer_options):
         return False
 
 
+def create_ssh_config_from_scratch(ip_address):
+    # Check if cluster was already connected
+    command = f"{SSH_CMD} {ip_address} ls ~/.ssh/USER_CONTAINER_SSH_PORT 2>/dev/null || echo"
+    connected = get_command_output(command)
+
+    if not connected:
+        # Create ssh config and keys
+        subprocess.run(f'{SSH_CMD} {ip_address} \'bash -s\' < utils/create_ssh_config_and_keys.sh', shell=True)
+        # Add public key to user container
+        subprocess.run(f'{SSH_CMD} {ip_address} cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys', shell=True)
+    
+    # Get port number
+    command = f"{SSH_CMD} {ip_address} cat ~/.ssh/USER_CONTAINER_SSH_PORT"
+    ssh_port = connected = get_command_output(command)
+    return ssh_port
+
 if __name__ == '__main__':
     with open('inputs.json') as inputs_json:
         inputs_dict = json.load(inputs_json)
@@ -565,15 +591,21 @@ if __name__ == '__main__':
         label_inputs_dict = complete_resource_information(label_inputs_dict)
         logger.info(json.dumps(label_inputs_dict, indent = 4))
         create_resource_directory(label, label_inputs_dict)
-	    
+
+        # FIXME Refactor
         ip_address = inputs_dict[f'pwrl_{label}']["resource"]["publicIp"]
+        if not label_inputs_dict['resource']['owner']:
+            ssh_port = create_ssh_config_from_scratch(ip_address)
+        else:
+            ssh_port = 2222
+
         ssh_usercontainer_options = inputs_dict[f'pwrl_{label}']['resource']['ssh_usercontainer_options']
     
         if not is_ssh_tunnel_working(ip_address, ssh_usercontainer_options):
             logger.warning('SSH reverse tunnel is not working. Attempting to re-establish tunnel...')
 
             try:
-                subprocess.run(f"ssh -f -N -T -oStrictHostKeyChecking=no -R localhost:2222:localhost:22 {ip_address}", shell=True, check=True)
+                subprocess.run(f"ssh -f -N -T -oStrictHostKeyChecking=no -R localhost:{ssh_port}:localhost:22 {ip_address}", shell=True, check=True)
             except:
                 error_message = 'Tunnel retrying failed, exiting workflow'
                 logger.error(error_message)

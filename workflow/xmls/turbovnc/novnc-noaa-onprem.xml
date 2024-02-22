@@ -27,6 +27,12 @@
         value='turbovnc'
       ></param>
       <param 
+        name='service_vnc_exec' 
+        label='Path to vncserver if not in path' 
+        type='hidden' 
+        value='/opt/TurboVNC/bin/vncserver'
+      ></param>
+      <param 
         name='service_desktop' 
         label='Desktop Session' 
         type='hidden' 

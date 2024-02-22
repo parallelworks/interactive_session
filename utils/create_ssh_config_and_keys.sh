@@ -34,7 +34,7 @@ Host *
     UserKnownHostsFile=/dev/null
 Host usercontainer
     HostName localhost
-    User Matthew.Shaxted
+    User ${USER}
     Port ${user_container_ssh_port}
     StrictHostKeyChecking no
 

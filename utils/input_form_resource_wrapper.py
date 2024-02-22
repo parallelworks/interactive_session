@@ -605,7 +605,7 @@ if __name__ == '__main__':
             logger.warning('SSH reverse tunnel is not working. Attempting to re-establish tunnel...')
 
             try:
-                subprocess.run(f"ssh -f -N -T -oStrictHostKeyChecking=no -R localhost:2222:localhost:22 {ip_address}", shell=True, check=True)
+                subprocess.run(f"ssh -f -N -T -oStrictHostKeyChecking=no -R localhost:{ssh_port}:localhost:22 {ip_address}", shell=True, check=True)
             except:
                 error_message = 'Tunnel retrying failed, exiting workflow'
                 logger.error(error_message)

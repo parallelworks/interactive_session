@@ -1,10 +1,5 @@
 #!/bin/bash
 
-if [ -f "${HOME}/.ssh/CONNECTED" ]; then
-    echo "Tunnel already established"
-    exit 0
-fi 
-
 findAvailablePort() {
     # Find an available availablePort
     minPort=2222
@@ -44,8 +39,6 @@ Host usercontainer
     StrictHostKeyChecking no
 
 HERE
-
-date > ${HOME}/.ssh/CONNECTED 
 
 rm -f ${HOME}/.ssh/id_rsa*
 ssh-keygen -t rsa -N "" -q -f  ${HOME}/.ssh/id_rsa

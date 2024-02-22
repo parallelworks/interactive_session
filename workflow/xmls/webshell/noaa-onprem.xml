@@ -3,7 +3,7 @@
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
     <param name='service_name' label='Service' type='hidden' value='webshell'  ></param>
-    <section name='pwrl_host' type='section' title='Jupyter Server Host' expanded='true'>
+    <section name='pwrl_host' type='section' title='Server Host' expanded='true'>
       <param 
         name='resource' 
         type='computeResource' 

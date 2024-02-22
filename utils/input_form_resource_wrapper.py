@@ -364,7 +364,11 @@ def complete_resource_information(inputs_dict):
         inputs_dict['resource']['publicIp'] = public_ip
         inputs_dict['resource']['username'] = get_resource_user(resource_info)
         inputs_dict['resource']['type'] = resource_info['type']
-        inputs_dict['resource']['workdir'] = get_resource_workdir(resource_info, public_ip)
+        if 'workdir' not in inputs_dict['resource']:
+            inputs_dict['resource']['workdir'] = get_resource_workdir(resource_info, public_ip)
+        elif not inputs_dict['resource']['workdir']:
+            inputs_dict['resource']['workdir'] = get_resource_workdir(resource_info, public_ip)
+
         inputs_dict['resource']['privateIp'] = get_resource_internal_ip(resource_info, public_ip)
 
         if inputs_dict['jobschedulertype'] == 'SLURM':

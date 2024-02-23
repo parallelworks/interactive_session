@@ -373,7 +373,7 @@ def complete_resource_information(inputs_dict):
 
         # FIXME: Refactor
         inputs_dict['resource']['owner'] = True
-        if 'namespace' in resource_info:
+        if resource_info['type'] != 'slurmshv2':
             if resource_info['namespace'] != os.environ['PW_USER']:
                 inputs_dict['resource']['owner'] = False
 

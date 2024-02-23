@@ -1,12 +1,15 @@
 #!/pw/.miniconda3/bin/python
 import json
 import os
+import sys
 import logging
 import requests
 import subprocess
 import time
 import random
 import socket
+from copy import deepcopy
+
 # VERSION: 16
 
 """
@@ -316,6 +319,8 @@ def get_ssh_config_path(workdir, jobschedulertype, public_ip):
     """
     Returns the ssh config path of the cluster if it exists. Otherwise it returns nothing
     """
+    # In some clusters the PW SSH config file is not included in ~/.ssh/config
+    # Search for config in <workdir>/pw/.pw/
     if jobschedulertype == 'CONTROLLER':
         ssh_config_path = 'pw/.pw/config'
     else:
@@ -329,21 +334,54 @@ def get_ssh_config_path(workdir, jobschedulertype, public_ip):
 
     if config_exists:
         return ssh_config_path
-
-def get_ssh_usercontainer_options(workdir, jobschedulertype, public_ip, private_ip):
-    # In some clusters the PW SSH config file is not included in ~/.ssh/config
-    ssh_config_path = get_ssh_config_path(
-        workdir,
-        jobschedulertype, 
-        public_ip
-    )
-
-    if ssh_config_path:
-        return f'-F {ssh_config_path} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
-    elif jobschedulertype == 'CONTROLLER':
-        return f'-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+    
+    # Default to ~/.ssh/config
+    ssh_config_path = '~/.ssh/config'
+    command = f"{SSH_CMD} {public_ip} ls ~/.ssh/config 2>/dev/null || echo"
+    config_exists = get_command_output(command)
+    
+    if config_exists:
+        return ssh_config_path
+    
+    # Create SSH config file
+    logger.warning(f'SSH config file not found. Creating {ssh_config_path} ...')
+    subprocess.run(f'{SSH_CMD} {public_ip} \'bash -s\' < utils/create_ssh_config.sh', shell=True)
+    
+    # Check that SSH config was created:
+    command = f"{SSH_CMD} {public_ip} ls ~/.ssh/config 2>/dev/null || echo"
+    config_exists = get_command_output(command)
+    if config_exists:
+        return ssh_config_path
     else:
-        return f'-J {private_ip} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+        error_message = f'Could not create {ssh_config_path} in {public_ip}'
+        logger.error(error_message)
+        print(error_message, flush=True)  # Print the error message
+        sys.exit(1)  # Exit with an error code
+
+
+
+def get_ssh_usercontainer_options(ssh_config_path, jobschedulertype, private_ip):
+
+    if ssh_config_path == '~/.ssh/config':
+        if jobschedulertype == 'CONTROLLER':
+            return f'-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+        else:
+            return f'-J {private_ip} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+    else:
+        return f'-F {ssh_config_path} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+
+def get_ssh_usercontainer_port(ssh_config_path, ip_address):
+    # FIXME: Improve port parsing!
+    command = f"{SSH_CMD} {ip_address} cat {ssh_config_path} | grep Port | awk \'{{print $2}}\'"
+    ssh_port = get_command_output(command)
+    
+    if not ssh_port:
+        error_message = f'Could not find ssh usercontainer port in {ssh_config_path} in {ip_address}'
+        logger.warning(f'Cannot find SSH usercontainer port in {ip_address}:{ssh_config_path}. Using 2222')
+        ssh_port = 2222
+    return ssh_port
+
 
 def complete_resource_information(inputs_dict):
     if 'nports' in inputs_dict:
@@ -364,18 +402,12 @@ def complete_resource_information(inputs_dict):
         inputs_dict['resource']['publicIp'] = public_ip
         inputs_dict['resource']['username'] = get_resource_user(resource_info)
         inputs_dict['resource']['type'] = resource_info['type']
-        if 'workdir' not in inputs_dict['resource']:
+        workdir = inputs_dict['resource'].get('workdir')
+        if not workdir:
             inputs_dict['resource']['workdir'] = get_resource_workdir(resource_info, public_ip)
-        elif not inputs_dict['resource']['workdir']:
-            inputs_dict['resource']['workdir'] = get_resource_workdir(resource_info, public_ip)
+
 
         inputs_dict['resource']['privateIp'] = get_resource_internal_ip(resource_info, public_ip)
-
-        # FIXME: Refactor
-        inputs_dict['resource']['owner'] = True
-        if resource_info['type'] != 'slurmshv2':
-            if resource_info['namespace'] != os.environ['PW_USER']:
-                inputs_dict['resource']['owner'] = False
 
         if inputs_dict['jobschedulertype'] == 'SLURM':
             inputs_dict['submit_cmd'] = "sbatch"
@@ -386,10 +418,21 @@ def complete_resource_information(inputs_dict):
             inputs_dict['cancel_cmd'] = "qdel"
             inputs_dict['status_cmd'] = "qstat"
 
-        inputs_dict['resource']['ssh_usercontainer_options'] = get_ssh_usercontainer_options(
+        
+        inputs_dict['resource']['ssh_config_path'] = get_ssh_config_path(
             inputs_dict['resource']['workdir'],
             inputs_dict['jobschedulertype'], 
-            inputs_dict['resource']['publicIp'],
+            inputs_dict['resource']['publicIp']
+        )
+
+        inputs_dict['resource']['ssh_usercontainer_port'] = get_ssh_usercontainer_port(
+            inputs_dict['resource']['ssh_config_path'],
+            inputs_dict['resource']['publicIp']
+        )
+
+        inputs_dict['resource']['ssh_usercontainer_options'] = get_ssh_usercontainer_options(
+            inputs_dict['resource']['ssh_config_path'],
+            inputs_dict['jobschedulertype'], 
             inputs_dict['resource']['privateIp']
         )
 
@@ -499,22 +542,22 @@ def create_batch_header(inputs_dict, header_sh):
                 schd.replace('___',' ')
                 f.write(f'{directive_prefix} {schd}\n')
         
-def create_resource_directory(label, inputs_dict):
-    dir = os.path.join(RESOURCES_DIR, label)
+def create_resource_directory(resource_inputs, resource_label):
+    dir = os.path.join(RESOURCES_DIR, resource_label)
     inputs_json = os.path.join(dir, 'inputs.json')
     inputs_sh = os.path.join(dir, 'inputs.sh')
     header_sh = os.path.join(dir, 'batch_header.sh')
-    inputs_dict_flatten = flatten_dictionary(inputs_dict)
+    resource_inputs_flatten = flatten_dictionary(resource_inputs)
     # Remove dictionaries
-    inputs_dict_flatten = {key: value for key, value in inputs_dict_flatten.items() if not isinstance(value, dict)}
+    resource_inputs_flatten = {key: value for key, value in resource_inputs_flatten.items() if not isinstance(value, dict)}
 
     os.makedirs(dir, exist_ok=True)
 
     with open(inputs_json, 'w') as f:
-        json.dump(inputs_dict, f, indent = 4)
+        json.dump(resource_inputs, f, indent = 4)
 
     with open(inputs_sh, 'w') as f:
-        for k,v in inputs_dict_flatten.items():
+        for k,v in resource_inputs_flatten.items():
             # Parse newlines as \n for textarea parameter type
             if type(v) == str:
                 v = v.replace('\n', '\\n')
@@ -522,7 +565,7 @@ def create_resource_directory(label, inputs_dict):
                 v = str(v).lower() 
             f.write(f"export {k}=\"{v}\"\n")
 
-    create_batch_header(inputs_dict, header_sh)
+    create_batch_header(resource_inputs, header_sh)
 
 def is_ssh_tunnel_working(ip_address, ssh_usercontainer_options):
     # Define the SSH command 
@@ -543,31 +586,91 @@ def is_ssh_tunnel_working(ip_address, ssh_usercontainer_options):
     except subprocess.CalledProcessError:
         return False
 
+def is_key_in_authorized_keys(public_key):
+    authorized_keys_path = os.path.expanduser('~/.ssh/authorized_keys')
+    with open(authorized_keys_path, 'r') as file:
+        for line in file:
+            if line.strip() == public_key.strip():
+                return True
+    return False
 
-def ensure_ssh_config_and_keys_exits(ip_address):
-    # ONLY REQUIRED FOR SHARED CLUSTERS!
+def get_resource_public_key(ip_address):
+    ssh_public_key = get_command_output(f'{SSH_CMD} {ip_address} cat ~/.ssh/id_rsa.pub')
+    return ssh_public_key
 
-    # Check if ssh config exists
-    ssh_config_exists = get_command_output(f"{SSH_CMD} {ip_address} ls ~/.ssh/config 2>/dev/null || echo")
+def add_key_to_authorized_keys(public_key):
+    authorized_keys_path = os.path.expanduser('~/.ssh/authorized_keys')
+    with open(authorized_keys_path, 'a') as file:
+        file.write(public_key + '\n')
 
-    if not ssh_config_exists:
-        # Create ssh config and keys
-        subprocess.run(f'{SSH_CMD} {ip_address} \'bash -s\' < utils/create_ssh_config.sh', shell=True)
+
+def extract_resource_inputs(inputs_dict, resource_label):
+    """
+    Extracts inputs from a dictionary, including the resource-specific data identified 
+    by the provided resource label, along with any general inputs not associated with a resource label.
     
+    Parameters:
+        inputs_dict (dict): The dictionary with the contents of /pw/jobs/<workflow-name>/inputs.json
+        label (str): The resource label identifying the resource-specific data to be extracted.
+    
+    Returns:
+        dict: A dictionary containing both the resource data corresponding to the provided label
+        and any general inputs not associated with a specific resource.
+    """
+    # Copy only the resource information corresponding to the resource label
+    resource_inputs = deepcopy(inputs_dict[f'pwrl_{resource_label}'])
+
+    # Copy every other input with no resource label
+    for key, value in inputs_dict.items():
+        if not key.startswith('pwrl_'):
+            resource_inputs[key] = value
+    
+    return resource_inputs
+
+def create_reverse_ssh_tunnel(ip_address, ssh_port):
     # Check if ssh keys exists
     ssh_keys_exists = get_command_output(f"{SSH_CMD} {ip_address} ls ~/.ssh/id_rsa 2>/dev/null || echo")
     if not ssh_keys_exists:
         # Create SSH keys
+        logger.warning(f'SSH keys not found in {ip_address}:~/.ssh/id_rsa. Creating keys...')
         subprocess.run(f'{SSH_CMD} {ip_address} \'bash -s\' < utils/create_ssh_keys.sh', shell=True)
-
-        # Add public key to user container
-        # FIXME check if key is in the authorized_keys!
-        subprocess.run(f'{SSH_CMD} {ip_address} cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys', shell=True)
+        ssh_keys_exists = get_command_output(f"{SSH_CMD} {ip_address} ls ~/.ssh/id_rsa 2>/dev/null || echo")
+        if not ssh_keys_exists:
+            logger.error(f'Cannot create SSH keys in {ip_address}:~/.ssh/id_rsa. Exiting workflow...')
+            print(error_message, flush=True)  # Print the error message
+            sys.exit(1)  # Exit with an error code
     
-    # Get port number
-    command = f"{SSH_CMD} {ip_address} cat ~/.ssh/config | grep Port | awk \'{{print $2}}\'"
-    ssh_port = get_command_output(command)
-    return ssh_port
+    ssh_public_key = get_resource_public_key(ip_address)
+    if not is_key_in_authorized_keys(ssh_public_key):
+        logger.warning(f'SSH public key not found in ~/.ssh/authorized_keys. Adding key...')
+        add_key_to_authorized_keys(ssh_public_key)
+
+    try:
+        subprocess.run(f"ssh -f -N -T -oStrictHostKeyChecking=no -R localhost:{ssh_port}:localhost:22 {ip_address}", shell=True, check=True)
+    except:
+        error_message = 'Tunnel retrying failed, exiting workflow'
+        logger.error(error_message)
+        print(error_message, flush=True)  # Print the error message
+        sys.exit(1)  # Exit with an error code
+
+def prepare_resource(inputs_dict, resource_label):
+
+    resource_inputs = extract_resource_inputs(inputs_dict, resource_label)
+
+    resource_inputs = complete_resource_information(resource_inputs)
+
+    logger.info(json.dumps(resource_inputs, indent = 4))
+    create_resource_directory(resource_inputs, resource_label)
+
+    # FIXME Refactor
+    ip_address = inputs_dict[f'pwrl_{label}']["resource"]["publicIp"]
+    ssh_port = resource_inputs['resource']['ssh_usercontainer_port']
+    ssh_usercontainer_options = resource_inputs['resource']['ssh_usercontainer_options']
+    
+    if not is_ssh_tunnel_working(ip_address, ssh_usercontainer_options):
+        logger.warning('SSH reverse tunnel is not working. Attempting to re-establish tunnel...')
+        create_reverse_ssh_tunnel(ip_address, ssh_port)
+
 
 if __name__ == '__main__':
     with open('inputs.json') as inputs_json:
@@ -590,33 +693,4 @@ if __name__ == '__main__':
     
     for label in resource_labels:
         logger.info(f'Preparing resource <{label}>')
-        # Copy only the resource information corresponding to the resource label
-        label_inputs_dict = inputs_dict[f'pwrl_{label}']
-        # Copy every other input with no resource label
-        for key, value in inputs_dict.items():
-            if not key.startswith('pwrl_'):
-                label_inputs_dict[key] = value
-
-        label_inputs_dict = complete_resource_information(label_inputs_dict)
-        logger.info(json.dumps(label_inputs_dict, indent = 4))
-        create_resource_directory(label, label_inputs_dict)
-
-        # FIXME Refactor
-        ip_address = inputs_dict[f'pwrl_{label}']["resource"]["publicIp"]
-        if not label_inputs_dict['resource']['owner']:
-            ssh_port = ensure_ssh_config_and_keys_exits(ip_address)
-        else:
-            ssh_port = 2222
-
-        ssh_usercontainer_options = inputs_dict[f'pwrl_{label}']['resource']['ssh_usercontainer_options']
-    
-        if not is_ssh_tunnel_working(ip_address, ssh_usercontainer_options):
-            logger.warning('SSH reverse tunnel is not working. Attempting to re-establish tunnel...')
-
-            try:
-                subprocess.run(f"ssh -f -N -T -oStrictHostKeyChecking=no -R localhost:{ssh_port}:localhost:22 {ip_address}", shell=True, check=True)
-            except:
-                error_message = 'Tunnel retrying failed, exiting workflow'
-                logger.error(error_message)
-                print(error_message, flush=True)  # Print the error message
-                sys.exit(1)  # Exit with an error code
+        prepare_resource(inputs_dict, label)

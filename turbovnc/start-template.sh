@@ -238,7 +238,7 @@ echo $! >> ${resource_jobdir}/service.pid
 pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
 echo ${pid} >> ${resource_jobdir}/service.pid
 rm -f ${portFile}
-sleep 20 # Need this specially in controller node or second software won't show up!
+sleep 6 # Need this specially in controller node or second software won't show up!
 
 # Notify platform that service is running
 ${sshusercontainer} ${pw_job_dir}/utils/notify.sh

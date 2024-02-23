@@ -544,7 +544,7 @@ def is_ssh_tunnel_working(ip_address, ssh_usercontainer_options):
         return False
 
 
-def ensure_ssh_config_exits(ip_address):
+def ensure_ssh_config_and_keys_exits(ip_address):
     # ONLY REQUIRED FOR SHARED CLUSTERS!
 
     # Check if ssh config exists
@@ -604,7 +604,7 @@ if __name__ == '__main__':
         # FIXME Refactor
         ip_address = inputs_dict[f'pwrl_{label}']["resource"]["publicIp"]
         if not label_inputs_dict['resource']['owner']:
-            ssh_port = create_ssh_config_from_scratch(ip_address)
+            ssh_port = ensure_ssh_config_and_keys_exits(ip_address)
         else:
             ssh_port = 2222
 

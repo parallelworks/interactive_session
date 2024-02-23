@@ -557,7 +557,7 @@ def create_ssh_config_from_scratch(ip_address):
     
     # Get port number
     command = f"{SSH_CMD} {ip_address} cat ~/.ssh/USER_CONTAINER_SSH_PORT"
-    ssh_port = connected = get_command_output(command)
+    ssh_port = get_command_output(command)
     return ssh_port
 
 if __name__ == '__main__':

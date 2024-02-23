@@ -415,12 +415,6 @@ def complete_resource_information(inputs_dict):
 
         inputs_dict['resource']['privateIp'] = get_resource_internal_ip(resource_info, public_ip)
 
-        # FIXME: Refactor
-        inputs_dict['resource']['owner'] = True
-        if 'namespace' in resource_info:
-            if resource_info['namespace'] != os.environ['PW_USER']:
-                inputs_dict['resource']['owner'] = False
-
         if inputs_dict['jobschedulertype'] == 'SLURM':
             inputs_dict['submit_cmd'] = "sbatch"
             inputs_dict['cancel_cmd'] = "scancel"

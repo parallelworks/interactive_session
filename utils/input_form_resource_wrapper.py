@@ -699,4 +699,4 @@ if __name__ == '__main__':
     
     for label in resource_labels:
         logger.info(f'Preparing resource <{label}>')
-        prepare_resource(inputs_dict, resource_label)
+        prepare_resource(inputs_dict, label)

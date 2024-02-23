@@ -345,14 +345,8 @@ def get_ssh_config_path(workdir, jobschedulertype, public_ip):
     
     # Create SSH config file
     logger.warning(f'SSH config file not found. Creating {ssh_config_path} ...')
-    try:
-        subprocess.run(f'{SSH_CMD} {ip_address} \'bash -s\' < utils/create_ssh_config.sh', shell=True, check=True)
-    except:
-        error_message = f'Could not create {ssh_config_path} in {public_ip}'
-        logger.error(error_message)
-        print(error_message, flush=True)  # Print the error message
-        sys.exit(1)  # Exit with an error code
-
+    subprocess.run(f'{SSH_CMD} {public_ip} \'bash -s\' < utils/create_ssh_config.sh', shell=True)
+    
     # Check that SSH config was created:
     command = f"{SSH_CMD} {public_ip} ls ~/.ssh/config 2>/dev/null || echo"
     config_exists = get_command_output(command)

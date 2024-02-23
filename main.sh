@@ -26,6 +26,10 @@ else
     python utils/input_form_resource_wrapper.py
 fi
 
+if [ $? -ne 0 ]; then
+    displayErrorMessage "ERROR - Resource wrapper failed"
+fi
+
 if ! [ -f "resources/host/inputs.sh" ]; then
     displayErrorMessage "ERROR - Missing file ./resources/host/inputs.sh. Resource wrapper failed"
 fi

@@ -544,20 +544,29 @@ def is_ssh_tunnel_working(ip_address, ssh_usercontainer_options):
         return False
 
 
-def create_ssh_config_from_scratch(ip_address):
-    # Check if cluster was already connected
-    command = f"{SSH_CMD} {ip_address} ls ~/.ssh/USER_CONTAINER_SSH_PORT 2>/dev/null || echo"
-    connected = get_command_output(command)
+def ensure_ssh_config_exits(ip_address):
+    # ONLY REQUIRED FOR SHARED CLUSTERS!
 
-    if not connected:
+    # Check if ssh config exists
+    ssh_config_exists = get_command_output(f"{SSH_CMD} {ip_address} ls ~/.ssh/config 2>/dev/null || echo")
+
+    if not ssh_config_exists:
         # Create ssh config and keys
-        subprocess.run(f'{SSH_CMD} {ip_address} \'bash -s\' < utils/create_ssh_config_and_keys.sh', shell=True)
+        subprocess.run(f'{SSH_CMD} {ip_address} \'bash -s\' < utils/create_ssh_config.sh', shell=True)
+    
+    # Check if ssh keys exists
+    ssh_keys_exists = get_command_output(f"{SSH_CMD} {ip_address} ls ~/.ssh/id_rsa 2>/dev/null || echo")
+    if not ssh_keys_exists:
+        # Create SSH keys
+        subprocess.run(f'{SSH_CMD} {ip_address} ssh-keygen -t rsa -N \"\" -q -f  ~/.ssh/id_rsa', shell=True)
+
         # Add public key to user container
+        # FIXME check if key is in the authorized_keys!
         subprocess.run(f'{SSH_CMD} {ip_address} cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys', shell=True)
     
     # Get port number
-    command = f"{SSH_CMD} {ip_address} cat ~/.ssh/USER_CONTAINER_SSH_PORT"
-    ssh_port = connected = get_command_output(command)
+    command = f"{SSH_CMD} {ip_address} cat ~/.ssh/config | grep Port | awk \'{{print $2}}\'"
+    ssh_port = get_command_output(command)
     return ssh_port
 
 if __name__ == '__main__':

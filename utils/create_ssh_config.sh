@@ -26,8 +26,6 @@ findAvailablePort() {
 
 user_container_ssh_port=$(findAvailablePort)
 
-echo ${user_container_ssh_port} > ~/.ssh/USER_CONTAINER_SSH_PORT
-
 cat > ~/.ssh/config <<HERE
 Host *
     StrictHostKeyChecking no
@@ -40,6 +38,3 @@ Host usercontainer
 
 HERE
 
-if ! [ -f "${HOME}/.ssh/id_rsa" ]; then
-    ssh-keygen -t rsa -N "" -q -f  ${HOME}/.ssh/id_rsa
-fi

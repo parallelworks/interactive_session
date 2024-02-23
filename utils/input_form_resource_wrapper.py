@@ -558,7 +558,7 @@ def ensure_ssh_config_exits(ip_address):
     ssh_keys_exists = get_command_output(f"{SSH_CMD} {ip_address} ls ~/.ssh/id_rsa 2>/dev/null || echo")
     if not ssh_keys_exists:
         # Create SSH keys
-        subprocess.run(f'{SSH_CMD} {ip_address} ssh-keygen -t rsa -N \"\" -q -f  ~/.ssh/id_rsa', shell=True)
+        subprocess.run(f'{SSH_CMD} {ip_address} \'bash -s\' < utils/create_ssh_keys.sh', shell=True)
 
         # Add public key to user container
         # FIXME check if key is in the authorized_keys!

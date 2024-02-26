@@ -18,6 +18,12 @@
         value='gnome-terminal -- bash -c "ncdiff --help; exec bash"'
         help='Make sure you have access to the files!'
       ></param>
+      <param 
+        name='background' 
+        label='Launch command in the background' 
+        type='hidden' 
+        value='False'
+      ></param>
     </section>
     <section name='pwrl_host' type='section' title='Desktop Host' expanded='true'>
       <param name='resource' type='computeResource' label='Service host' hideUserWorkspace='true' help='Resource to host the service'></param>

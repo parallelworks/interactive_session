@@ -8,7 +8,6 @@ import subprocess
 import time
 import random
 import socket
-from copy import deepcopy
 
 # VERSION: 16
 
@@ -624,8 +623,7 @@ def extract_resource_inputs(inputs_dict, resource_label):
         dict: A dictionary containing both the resource data corresponding to the provided label
         and any general inputs not associated with a specific resource.
     """
-    # Copy only the resource information corresponding to the resource label
-    resource_inputs = deepcopy(inputs_dict[f'pwrl_{resource_label}'])
+    resource_inputs = inputs_dict[f'pwrl_{resource_label}']
 
     # Copy every other input with no resource label
     for key, value in inputs_dict.items():

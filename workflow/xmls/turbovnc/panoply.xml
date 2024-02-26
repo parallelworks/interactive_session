@@ -16,7 +16,7 @@
         name='bin' 
         label='Command to launch Panoply' 
         type='text' 
-        value='/contrib/software/Panoply/panoply.sh'
+        value='/contrib/software/Panoply/PanoplyJ/panoply.sh'
         help='Make sure you have access to the files!'
       ></param>
     </section>

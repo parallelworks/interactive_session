@@ -48,10 +48,6 @@ if ! [ -z "${CONDA_PREFIX}" ]; then
     source ${CONDA_PREFIX}/etc/profile.d/conda.sh
     conda deactivate
 fi
-# Reload env in case it was deactivated in the step above (e.g.: conda activate)
-eval "${service_load_env}"
-
-
 
 set -x
 # Runs via ssh + sbatch
@@ -249,6 +245,9 @@ sleep 6 # Need this specially in controller node or second software won't show u
 
 # Notify platform that service is running
 ${sshusercontainer} ${pw_job_dir}/utils/notify.sh
+
+# Reload env in case it was deactivated in the step above (e.g.: conda activate)
+eval "${service_load_env}"
 
 # Launch service
 cd

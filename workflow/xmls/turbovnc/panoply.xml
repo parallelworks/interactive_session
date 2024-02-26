@@ -9,14 +9,14 @@
         name='service_load_env' 
         label='Command to load or install Panoply' 
         type='text' 
-        value='/hydrofabric-efs/Panoply/set_panoply.sh'
+        value='/contrib/software/Panoply/set_panoply.sh'
         help='Make sure you have access to the files!'
       ></param>
       <param 
         name='bin' 
         label='Command to launch Panoply' 
         type='text' 
-        value='/hydrofabric-efs/Panoply/PanoplyJ/panoply.sh'
+        value='/contrib/software/Panoply/panoply.sh'
         help='Make sure you have access to the files!'
       ></param>
     </section>

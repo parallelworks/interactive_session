@@ -383,17 +383,6 @@ def get_ssh_usercontainer_port(ssh_config_path, ip_address):
 
 
 def complete_resource_information(inputs_dict):
-
-    inputs_dict = replace_placeholders(
-        inputs_dict, 
-        {
-            '__user__': inputs_dict['resource']['username'],
-            '__USER__': inputs_dict['resource']['username'],
-            '__pw_user__': os.environ['PW_USER'],
-            '__PW_USER__': os.environ['PW_USER']
-        }
-    )
-
     if 'nports' in inputs_dict:
         inputs_dict['resource']['ports'] = find_available_ports(int(inputs_dict['nports']))
 
@@ -464,6 +453,10 @@ def complete_resource_information(inputs_dict):
     inputs_dict = replace_placeholders(
         inputs_dict, 
         {
+	    '__user__': inputs_dict['resource']['username'],
+            '__USER__': inputs_dict['resource']['username'],
+            '__pw_user__': os.environ['PW_USER'],
+            '__PW_USER__': os.environ['PW_USER'],
             '__workdir__': inputs_dict['resource']['workdir'],
             '__WORKDIR__': inputs_dict['resource']['workdir']
         }

@@ -15,7 +15,7 @@
         name='bin' 
         label='Command to launch terminal with ncdiff' 
         type='text' 
-        value='gnome-terminal -- bash -c "ncdiff --help; exec bash"'
+        value='gnome-terminal -- bash -c \"ncdiff --help; exec bash\"'
         help='Make sure you have access to the files!'
       ></param>
       <param 

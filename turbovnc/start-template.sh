@@ -255,10 +255,10 @@ cd
 if ! [ -z "${service_bin}" ]; then
     if [[ ${service_background} == "False" ]]; then
         echo "Running ${service_bin}"
-        ${service_bin}
+        eval ${service_bin}
     else
         echo "Running ${service_bin} in the background"
-        ${service_bin} &
+        eval ${service_bin} &
         echo $! >> ${resource_jobdir}/service.pid
     fi
 fi

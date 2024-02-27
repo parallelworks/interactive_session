@@ -167,14 +167,15 @@ if [ -f "${service_nginx_sif}" ]; then
     mkdir -p ./tmp
     tries=0
     while true; do
+        tries=$((tries+1))
         singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf ${service_nginx_sif} &
         pid=$!
-        sleep 5
+        sleep $((5*tries))
         if check_singularity_pid_file; then
             echo "Singularity command started successfully."
             break
         fi
-        tries=$((tries+1))
+        
         if [ $tries -eq 5 ]; then
             echo "Max retries reached. Exiting..."
             displayErrorMessage "Error starting Nginx singularity container"

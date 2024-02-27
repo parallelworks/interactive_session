@@ -138,7 +138,8 @@ if [ -f "${service_nginx_sif}" ]; then
     # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
     # and other users cannot use the node. Was not able to change this in the config.conf.
     mkdir -p ./tmp
-    singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf ${service_nginx_sif} &
+    touch empty
+    singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} &
     echo "kill $!" >> cancel.sh
 else
     if ! sudo -n true 2>/dev/null; then
@@ -151,7 +152,11 @@ else
     echo "sudo docker rm ${container_name}" >> cancel.sh
     # Start container
     sudo service docker start
-    sudo docker run  -d --name ${container_name}  -v $PWD/config.conf:/etc/nginx/conf.d/config.conf --network=host nginxinc/nginx-unprivileged
+    touch empty
+    sudo docker run  -d --name ${container_name} \
+         -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
+         -v empty:/etc/nginx/conf.d/default.conf \
+         --network=host nginxinc/nginx-unprivileged
     # Print logs
     sudo docker logs ${container_name}
 fi

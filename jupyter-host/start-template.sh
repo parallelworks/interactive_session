@@ -132,7 +132,7 @@ echo "Starting nginx wrapper on service port ${servicePort}"
 cat >> config.conf <<HERE
 server {
  listen ${servicePort};
- server_name _;
+ server_name ${servicePort};
  index index.html index.htm index.php;
  add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
  add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';

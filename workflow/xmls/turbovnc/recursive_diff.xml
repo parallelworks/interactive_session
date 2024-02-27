@@ -6,16 +6,11 @@
     <param name='novnc_tgz' label='Path to noVNC TGZ' type='hidden' value='/swift-pw-bin/apps/noVNC-1.3.0.tgz'  ></param>
     <section name='service' type='section' title='NCDIFF Inputs' expanded='true'>
       <param 
-        name='service_load_env' 
-        label='Command to load or install ncdiff' 
-        type='text' 
-        value='source /contrib/software/miniconda/miniconda/etc/profile.d/conda.sh; conda activate recusrsive_diff_stable'
-      ></param>
-      <param 
         name='bin' 
         label='Command to launch terminal with ncdiff' 
         type='text' 
-        value='gnome-terminal -- bash -c \"ncdiff --help; exec bash\"'
+        value='gnome-terminal -- bash -c \"source /contrib/software/miniconda/miniconda/etc/profile.d/conda.sh; conda activate recursive_diff_stable
+; ncdiff --help; exec bash\"'
       ></param>
       <param 
         name='background' 

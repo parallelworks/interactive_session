@@ -150,13 +150,37 @@ server {
 }
 HERE
 
+check_singularity_pid_file() {
+    if [ -f "./tmp/nginx.pid" ]; then
+        echo "nginx.pid exists, continuing..."
+        return 0
+    else
+        echo "nginx.pid does not exist"
+        return 1
+    fi
+}
+
 if [ -f "${service_nginx_sif}" ]; then
     echo "Running singularity container ${service_nginx_sif}"
     # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
     # and other users cannot use the node. Was not able to change this in the config.conf.
     mkdir -p ./tmp
-    singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf ${service_nginx_sif} &
-    echo "kill $!" >> cancel.sh
+    tries=0
+    while true; do
+        singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf ${service_nginx_sif} &
+        pid=$!
+        sleep 5
+        if check_singularity_pid_file; then
+            echo "Singularity command started successfully."
+            break
+        fi
+        tries=$((tries+1))
+        if [ $tries -eq 5 ]; then
+            echo "Max retries reached. Exiting..."
+            displayErrorMessage "Error starting Nginx singularity container"
+        fi
+    done
+    echo "kill ${pid}" >> cancel.sh
 else
     echo "Running docker container nginx"
     

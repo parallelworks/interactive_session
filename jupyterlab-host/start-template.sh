@@ -143,7 +143,7 @@ if [ -f "${service_nginx_sif}" ]; then
     echo "kill $!" >> cancel.sh
 else
     if ! sudo -n true 2>/dev/null; then
-        displayErrorMessage "ERROR: NGINX CANNOT START PW BECAUSE USER ${USER} DOES NOT HAVE SUDO PRIVILEGES"
+        displayErrorMessage "ERROR: NGINX DOCKER CONTAINER CANNOT START PW BECAUSE USER ${USER} DOES NOT HAVE SUDO PRIVILEGES"
     fi
 
     container_name="nginx-${servicePort}"

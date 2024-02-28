@@ -132,4 +132,12 @@ if [ -f "kill.sh" ]; then
     bash kill.sh
 fi
 
-exit 0
+job_status=$(cat service.json | jq -r '.JOB_STATUS' | tr '[:upper:]' '[:lower:]')
+# Check if JOB_STATUS is "FAILED" or "failed"
+if [[ "$job_status" == "failed" ]]; then
+    echo "JOB FAILED"
+    cat service.json | jq -r '.ERROR_MESSAGE'
+    exit 1
+else
+    exit 0
+fi

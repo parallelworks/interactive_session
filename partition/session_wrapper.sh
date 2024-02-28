@@ -53,6 +53,7 @@ sshusercontainer="ssh ${resource_ssh_usercontainer_options} -f ${USER_CONTAINER_
 displayErrorMessage() {
     echo \$(date): \$1
     \${sshusercontainer} "sed -i \"s|.*ERROR_MESSAGE.*|    \\\\\"ERROR_MESSAGE\\\\\": \\\\\"\$1\\\\\"|\" ${PW_JOB_PATH}/service.json"
+    \${sshusercontainer} "sed -i \"s|.*JOB_STATUS.*|    \\\\\"JOB_STATUS\\\\\": \\\\\"FAILED\\\\\"|\" ${PW_JOB_PATH}/service.json"
     exit 1
 }
 

@@ -155,7 +155,6 @@ else
     touch empty
     sudo docker run  -d --name ${container_name} \
          -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
-         -v empty:/etc/nginx/conf.d/default.conf \
          --network=host nginxinc/nginx-unprivileged
     # Print logs
     sudo docker logs ${container_name}

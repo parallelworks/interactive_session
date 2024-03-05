@@ -9,7 +9,7 @@
         name='bin' 
         label='Command to launch terminal with ncdiff' 
         type='text' 
-        value='gnome-terminal -- bash -c \"source /contrib/software/miniconda/miniconda/etc/profile.d/conda.sh; conda activate recursive_diff_stable
+        value='gnome-terminal -- bash -c \"source /contrib/software/miniconda/miniconda/etc/profile.d/conda.sh; conda activate recursive_diff_latest
 ; ncdiff --help; exec bash\"'
       ></param>
       <param 

@@ -390,6 +390,8 @@ def complete_resource_information(inputs_dict):
         {
 	        '__user__': inputs_dict['resource']['username'],
             '__USER__': inputs_dict['resource']['username'],
+            '__user__': os.environ['PW_USER'],
+            '__USER__': os.environ['PW_USER'],
             '__pw_user__': os.environ['PW_USER'],
             '__PW_USER__': os.environ['PW_USER']
         }
@@ -466,7 +468,13 @@ def complete_resource_information(inputs_dict):
         inputs_dict, 
         {
             '__workdir__': inputs_dict['resource']['workdir'],
-            '__WORKDIR__': inputs_dict['resource']['workdir']
+            '__WORKDIR__': inputs_dict['resource']['workdir'],
+	        '__user__': inputs_dict['resource']['username'],
+            '__USER__': inputs_dict['resource']['username'],
+            '__user__': os.environ['PW_USER'],
+            '__USER__': os.environ['PW_USER'],
+            '__pw_user__': os.environ['PW_USER'],
+            '__PW_USER__': os.environ['PW_USER']
         }
     )
 

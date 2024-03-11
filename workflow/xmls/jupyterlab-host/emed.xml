@@ -37,7 +37,14 @@
         ></param>
    </section>
     <section name='pwrl_host' type='section' title='Jupyter Server Host' expanded='true'>
-      <param name='resource' type='computeResource' label='Service host' hideUserWorkspace='true' help='Resource to host the service'></param>
+      <param 
+	name='resource' 
+	type='computeResource' 
+	label='Service host' 
+	hideUserWorkspace='true' 
+	hideDisconnectedResources='false'
+	help='Resource to host the service'  
+      ></param>
       <param name='nports' label='Number of Ports to Reserve' type='hidden' value='1'  ></param> 
       <param name='jobschedulertype' label='Select Controller, SLURM Partition or PBS Queue' type='hidden' value='SLURM'></param>
       <param name='_sch__dd_partition_e_' label='SLURM partition' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value=''  >

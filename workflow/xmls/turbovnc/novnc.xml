@@ -56,6 +56,7 @@
       label='SLURM partition' 
       type='dynamicPartitionDropdown' 
       resource='pwrl_host.resource'
+      resource='pwrl_host.resource'
       help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
       depends_on='pwrl_host.jobschedulertype'
       show_if='SLURM'

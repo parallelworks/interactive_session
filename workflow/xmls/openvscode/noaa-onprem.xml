@@ -3,35 +3,104 @@
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
     <section name='service' type='section' title='OpenVSCode Settings' expanded='true'>
-        <param name='install_dir' label='Default OpenVSCode installation directory' type='hidden' value='__WORKDIR__/pw/bootstrap/code-server-4.7.0-linux-amd64'  ></param>
-        <param name='tgz_path' label='Path to bootstrap TGZ' type='hidden' value='/swift-pw-bin/apps/code-server-4.7.0-linux-amd64.tar.gz'  ></param>
-        <param name='exec' label='Service' type='hidden' value=''  ></param>
-        <param name='name' label='Service' type='hidden' value='openvscode'  ></param>
-        <param name='password' label='Password for IDE session' type='text' value='' help='Enter password or leave blank for no password'  ></param>
-        <param name='directory' label='Directory to open in VS code' type='text' value='~/' help=''  ></param>
-        <param name='github_token' label='GitHub authentication token (optional)' type='text' value='' help=''  ></param>
+        <param 
+          name='install_dir' 
+          label='Default OpenVSCode installation directory' 
+          type='hidden' 
+          value='__WORKDIR__/pw/bootstrap/code-server-4.7.0-linux-amd64'  
+        ></param>
+        <param 
+          name='tgz_path' 
+          label='Path to bootstrap TGZ' 
+          type='hidden' 
+          value='/swift-pw-bin/apps/code-server-4.7.0-linux-amd64.tar.gz'  
+        ></param>
+        <param 
+          name='exec' 
+          label='Service' 
+          type='hidden' 
+          value=''  
+        ></param>
+        <param 
+          name='name' 
+          label='Service' 
+          type='hidden' 
+          value='openvscode'  
+        ></param>
+        <param 
+          name='password' 
+          label='Password for IDE session' 
+          type='text' 
+          value='' 
+          help='Enter password or leave blank for no password'  
+        ></param>
+        <param 
+          name='directory' 
+          label='Directory to open in VS code' 
+          type='text' 
+          value='~/' 
+          help=''  
+        ></param>
+        <param 
+          name='github_token' 
+          label='GitHub authentication token (optional)' 
+          type='text' 
+          value='' 
+          help=''  
+        ></param>
    </section>
     <section name='pwrl_host' type='section' title='Server Host' expanded='true'>
-      <param name='resource' type='computeResource' label='Service host' help='Resource to host the service'></param>
-      <param name='nports' label='Number of Ports to Reserve' type='hidden' value='1'  ></param> 
-      <conditional name="jobschedulertype_cond">
-          <param name='jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively'   multiple='false'>
-            <option value="CONTROLLER" selected="true">Controller</option>
-            <option value="SLURM">SLURM Partition</option>
-        </param>
-        <when value="SLURM">
-            <param name='_sch__dd_account_e_' label='SLURM account' type='text' help='Account to submit the interactive job' value='nesccmgmt'  >
-            </param>
-            <param name='_sch__dd_partition_e_' label='SLURM partition' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value=''  >
-            </param>
-            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value=''  >
-            </param>
-        </when>
-      </conditional>
-    </section>
-    <section name='advanced_options' type='section' title='Advanced Options' expanded='false'>
-        <param name="stream" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW'   optional='true' float="right">
-        </param>
+      <param 
+        name='resource' 
+        type='computeResource' 
+        label='Service host' 
+        hideUserWorkspace='true' 
+        hideDisconnectedResources='false' 
+        help='Resource to host the service'
+      ></param>
+      <param 
+        name='nports' 
+        label='Number of Ports to Reserve' 
+        type='hidden' 
+        value='1'  
+      ></param> 
+      <param 
+        name='jobschedulertype' 
+        type='select' 
+        label='Select Controller or SLURM Partition' 
+        help='Job will submitted using SSH or sbatch, respectively'      
+        multiple='false'>
+          <option value="CONTROLLER" selected="true">Controller</option>
+          <option value="SLURM">SLURM Partition</option>
+      </param>
+      <param 
+        name='_sch__dd_account_e_' 
+        label='SLURM account' 
+        type='text' 
+        help='Account to submit the interactive job' 
+        value='nesccmgmt'
+        depends_on='pwrl_host.jobschedulertype'
+        show_if='SLURM'
+      ></param>
+      <param 
+          name='_sch__dd_partition_e_' 
+          label='SLURM partition' 
+          type='dynamicPartitionDropdown' 
+          help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
+          depends_on='pwrl_host.jobschedulertype'
+          show_if='SLURM'
+          optional='true'   
+      ></param>
+      <param 
+        name='scheduler_directives' 
+        label='Scheduler directives' 
+        type='text' 
+        help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' 
+        value=''
+        depends_on='pwrl_host.jobschedulertype'
+        show_if='SLURM'
+        optional='true'  
+       ></param>
     </section>
   </inputs>
   <outputs>

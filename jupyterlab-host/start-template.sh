@@ -51,10 +51,10 @@ f_set_up_conda_from_yaml() {
 if [[ "${service_conda_install}" == "true" ]]; then
     service_conda_dir=$(echo "${service_conda_sh}" | sed 's|/etc/profile.d/conda.sh||')
 
-    if [[ "${advanced_options_install_instructions}" == "yaml" ]]; then
-        printf "%b" "${advanced_options_yaml}" > conda.yaml
+    if [[ "${service_install_instructions}" == "yaml" ]]; then
+        printf "%b" "${service_yaml}" > conda.yaml
         f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
-    elif [[ "${advanced_options_install_instructions}" == "dask" ]]; then
+    elif [[ "${service_install_instructions}" == "dask" ]]; then
         scp usercontainer:${pw_job_dir}/${service_name}/dask-extension-jupyterlab.yaml conda.yaml
         f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
     else

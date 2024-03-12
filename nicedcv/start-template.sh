@@ -99,7 +99,7 @@ HERE'
     fi
 fi
 
-if [[ ${service_is_running} == "True" ]]; then
+if [[ ${service_is_running} == "true" ]]; then
     export DISPLAY=:${service_display}
 else
     # Exit workflow if user has an active session
@@ -196,7 +196,7 @@ fi
 HERE
 echo
 
-#if [[ ${service_is_running} != "True" ]]; then
+#if [[ ${service_is_running} != "true" ]]; then
 #    dcv close-session ${job_number}
 #fi
 

@@ -82,11 +82,11 @@
       <param 
         name='_sch__dd_partition_e_' 
         label='SLURM partition' 
-        type='text' 
+        type='dynamicPartitionDropdown' 
         help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
-        value=''
         depends_on='pwrl_host.jobschedulertype'
         show_if='SLURM'
+        optional='true'   
       ></param>
       <param 
         name='_sch__dd_time_e_' 
@@ -113,14 +113,9 @@
         help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value=''
         depends_on='pwrl_host.jobschedulertype'
         show_if='SLURM'
+        optional='true'
       ></param>
-    </section>
-    <param 
-        name='advanced_options_stream' 
-        label='Stream slurm output?' 
-        type='hidden' 
-        value='true'  
-      ></param> 
+    </section> 
   </inputs>
   <outputs>
   </outputs>

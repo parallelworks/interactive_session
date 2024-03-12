@@ -2,39 +2,102 @@
   <command interpreter='bash'>main.sh</command>
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
-    <param name='novnc_dir' label='Default noVNC installation directory' type='hidden' value='__WORKDIR__/pw/bootstrap/noVNC-1.3.0'  ></param>
-    <param name='novnc_tgz' label='Path to noVNC TGZ' type='hidden' value='/swift-pw-bin/apps/noVNC-1.3.0.tgz'  ></param>
+    <param 
+      name='novnc_dir' 
+      label='Default noVNC installation directory' 
+      type='hidden' 
+      value='__WORKDIR__/pw/bootstrap/noVNC-1.3.0'  
+    ></param>
+    <param 
+      name='novnc_tgz' 
+      label='Path to noVNC TGZ' 
+      type='hidden' 
+      value='/swift-pw-bin/apps/noVNC-1.3.0.tgz'  
+    ></param>
     <section name='service' type='section' title='Inputs' expanded='false'>
-      <param name='name' label='Service' type='hidden' value='turbovnc'  ></param>
-      <param name='load_env' label='Command to load Paraview' type='text' value='module load paraview' help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'  ></param>
-      <param name='bin' label='Paraview launch command' type='text' value='paraview --mesa' help=''  ></param>
+      <param 
+        name='name' 
+        label='Service' 
+        type='hidden' 
+        value='turbovnc'  
+      ></param>
+      <param 
+        name='load_env' 
+        label='Command to load Paraview' 
+        type='text' 
+        value='module load paraview' 
+        help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'  
+      ></param>
+      <param 
+        name='bin' 
+        label='Paraview launch command' 
+        type='text' 
+        value='paraview --mesa' 
+        help=''  
+      ></param>
     </section>
     <section name='pwrl_host' type='section' title='Host' expanded='true'>
-       <param name='resource' type='computeResource' label='Service host' hideUserWorkspace='true' help='Resource to host the service'></param>
-       <param name='nports' label='Number of Ports to Reserve' type='hidden' value='1'  ></param> 
-       <conditional name="jobschedulertype_cond">
-          <param name='jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively'   multiple='false'>
-            <option value="CONTROLLER" selected="true">Controller</option>
-            <option value="SLURM">SLURM Partition</option>
-            <option value="PBS">PBS Queue</option>
-        </param>
-        <when value="SLURM">
-            <param name='_sch__dd_partition_e_' label='SLURM partition' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value=''  >
-            </param>
-            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value=''  >
-            </param>
-        </when>
-        <when value="PBS">
-            <param name='_sch__d_q___' label='PBS queue' type='text' help='Queue to submit the interactive job. Must select one! Use [qstat -f -Q] to list all queues on the system' value=''  >
-            </param>
-            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to separate parameters. Do not include the PBS keyword.' value=''  >
-            </param>
-        </when>
-      </conditional>
-    </section>
-    <section name='advanced_options' type='section' title='Advanced Options' expanded='false'>
-        <param name="stream" type="boolean" truevalue="Yes" falsevalue="No" checked="False" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW'   optional='true' float="right">
-        </param>
+        <param 
+      name='resource' 
+      type='computeResource' 
+      label='Service host' 
+      help='Resource to host the service'
+      hideUserWorkspace='true' 
+    ></param>
+    <param
+     name='nports' 
+     label='Number of Ports to Reserve' 
+     type='hidden' 
+     value='1'  
+    ></param> 
+    <param 
+      name='jobschedulertype' 
+      type='select' 
+      label='Select Controller, SLURM Partition or PBS Queue' 
+      help='Job will submitted using SSH, sbatch or qsub, respectively'   
+      multiple='false'>
+        <option value="CONTROLLER" selected="true">Controller</option>
+        <option value="SLURM">SLURM Partition</option>
+        <option value="PBS">PBS Queue</option>
+    </param>
+    <param 
+      name='_sch__dd_partition_e_' 
+      label='SLURM partition' 
+      type='dynamicPartitionDropdown' 
+      help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
+      depends_on='pwrl_host.jobschedulertype'
+      show_if='SLURM'
+      optional='true'   
+    ></param>
+    <param 
+      name='scheduler_directives_slurm' 
+      label='Scheduler directives' 
+      type='text' 
+      help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' 
+      value=''
+      depends_on='pwrl_host.jobschedulertype'
+      show_if='SLURM'
+      optional='true' 
+    ></param>
+    <param 
+      name='_sch__d_q___' 
+      label='PBS queue' 
+      type='text' 
+      help='Queue to submit the interactive job. Must select one! Use [qstat -f -Q] to list all queues on the system' 
+      value=''  
+      depends_on='pwrl_host.jobschedulertype'
+      show_if='PBS'
+    ></param>
+    <param 
+      name='scheduler_directives_pbs' 
+      label='Scheduler directives' 
+      type='text' 
+      help='e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to separate parameters. Do not include the PBS keyword.' 
+      value=''
+      depends_on='pwrl_host.jobschedulertype'
+      show_if='PBS'
+      optional='true'   
+    ></param>
     </section>
   </inputs>
   <outputs>

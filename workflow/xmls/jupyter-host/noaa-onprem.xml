@@ -66,8 +66,9 @@
         type='computeResource' 
         label='Service host' 
         hideUserWorkspace='true' 
-        help='Resource to host the service'>
-      </param>
+        help='Resource to host the service'
+        hideDisconnectedResources='false'
+      ></param>
       <param 
         name='nports' 
         label='Number of Ports to Reserve' 
@@ -95,11 +96,12 @@
       <param 
         name='_sch__dd_partition_e_' 
         label='SLURM partition' 
-        type='text' 
+        type='dynamicPartitionDropdown' 
+        resource='pwrl_host.resource'
         help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
-        value=''
         depends_on='pwrl_host.jobschedulertype'
         show_if='SLURM'
+        optional='true'
       ></param>
       <param 
         name='_sch__dd_time_e_' 
@@ -126,18 +128,8 @@
         help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value=''
         depends_on='pwrl_host.jobschedulertype'
         show_if='SLURM'
+        optional='true'
       ></param>
-    </section>
-    <section name='advanced_options' type='section' title='Advanced Options' expanded='false'>
-        <param 
-          name="stream"
-          type="boolean" 
-          truevalue="Yes" 
-          falsevalue="No" 
-          checked="False" 
-          label="Stream slurm output?" 
-          help='Select Yes to stream the slurm output from the execution host to the job directory in PW'   
-        ></param>
     </section>
   </inputs>
   <outputs>

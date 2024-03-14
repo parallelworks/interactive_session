@@ -2,34 +2,107 @@
   <command interpreter='bash'>main.sh</command>
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
-    <param name='novnc_dir' label='Default noVNC installation directory' type='hidden' value='__WORKDIR__/pw/bootstrap/noVNC-1.3.0'  ></param>
-    <param name='novnc_tgz' label='Path to noVNC TGZ' type='hidden' value='/swift-pw-bin/apps/noVNC-1.3.0.tgz'  ></param>
+    <param 
+      name='advanced_options_stream' 
+      label='Stream slurm output?' 
+      type='hidden' 
+      value='false'
+    ></param>
+    <param 
+      name='novnc_dir' 
+      label='Default noVNC installation directory' 
+      type='hidden' 
+      value='__WORKDIR__/pw/bootstrap/noVNC-1.3.0'  
+    ></param>
+    <param 
+      name='novnc_tgz' 
+      label='Path to noVNC TGZ' 
+      type='hidden' 
+      value='/swift-pw-bin/apps/noVNC-1.3.0.tgz'  
+    ></param>
     <section name='service' type='section' title='VMD Inputs' expanded='true'>
-      <param name='name' label='Service' type='hidden' value='turbovnc'  ></param>
-      <param name='load_env' label='Command to load VMD' type='text' value='module load vmd' help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'  ></param>
-      <param name='bin' label='Service binary' type='hidden' value='vmd'  ></param>
+      <param 
+        name='name' 
+        label='Service' 
+        type='hidden' 
+        value='turbovnc'  
+      ></param>
+      <param 
+        name='load_env' 
+        label='Command to load VMD' 
+        type='text' 
+        value='module load vmd' 
+        help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'  
+      ></param>
+      <param 
+        name='bin' 
+        label='Service binary' 
+        type='hidden' 
+        value='vmd'  
+      ></param>
     </section>
     <section name='pwrl_host' type='section' title='Rstudio Host' expanded='true'>
       <param 
-        name='resource' 
-        type='computeResource' 
-        label='Service host' 
+	      name='resource' 
+	      type='computeResource' 
+	      label='Service host' 
         hideUserWorkspace='true' 
-        hideDisconnectedResources='false'
-        help='Resource to host the service'
+	      help='Resource to host the service'
+	      hideDisconnectedResources='false'
       ></param>
-      <param name='nports' label='Number of Ports to Reserve' type='hidden' value='1'  ></param>       
-      <param name='jobschedulertype' label='Select Controller, SLURM Partition or PBS Queue' type='hidden' value='SLURM'></param>
-      <param name='_sch__dd_partition_e_' label='SLURM partition' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value=''  >
-      </param>
-      <param name='_sch__dd_cpus_d_per_d_task_e_' label='CPUs per task' type='integer' min="1" max="10" help='--cpus-per-task=value slurm directive' value='1'  >
-      </param>
-      <param name='_sch__dd_mem_d_per_d_cpu_e_' label='Minimum memory required per usable allocated CPU' type='text' help='--mem-per-cpu=value slurm directive' value='8G'  >
-      </param>   
-      <param name='_sch__dd_time_e_' label='Walltime' type='text' help='e.g. 01:00:00 - Amount of time slurm will honor the interactive session.' value='01:00:00'  >
-      </param>
-      <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value='--get-user-env;--export=ALL'  >
-      </param>
+      <param 
+        name='nports' 
+        label='Number of Ports to Reserve' 
+        type='hidden' 
+        value='1'  
+      ></param> 
+      <param 
+        name='jobschedulertype' 
+        label='Select Controller, SLURM Partition or PBS Queue' 
+        type='hidden' 
+        value='SLURM'
+      ></param>
+      <param 
+        name='_sch__dd_partition_e_' 
+        label='SLURM partition' 
+        type='text' 
+        help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
+        value=''
+        optional='true'  
+      ></param>
+      <param 
+        name='_sch__dd_cpus_d_per_d_task_e_' 
+        label='CPUs per task' 
+        type='integer' 
+        min="1" 
+        max="10" 
+        help='--cpus-per-task=value slurm directive' 
+        value='1'
+      ></param>
+      <param 
+        name='_sch__dd_mem_d_per_d_cpu_e_' 
+        label='Minimum memory required per usable allocated CPU' 
+        type='text' 
+        help='--mem-per-cpu=value slurm directive' 
+        value='8G'
+        optional='true'  
+      ></param>   
+      <param 
+        name='_sch__dd_time_e_' 
+        label='Walltime' 
+        type='text' 
+        help='e.g. 01:00:00 - Amount of time slurm will honor the interactive session.' 
+        value='01:00:00'
+        optional='true'  
+      ></param>
+      <param 
+        name='scheduler_directives' 
+        label='Scheduler directives' 
+        type='text' 
+        help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' 
+        value=''
+        optional='true'  
+      ></param>
     </section>
   </inputs>
   <outputs>

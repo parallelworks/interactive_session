@@ -3,48 +3,125 @@
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
    <section name='service' type='section' title='Jupyter Notebook Settings' expanded='true'>
-        <param name='name' label='Service' type='hidden' value='jupyter-host'  ></param>
-   	    <param name='notebook_dir' label='Directory to start JupyterHub GUI' type='text' value='__WORKDIR__' help='This is the directory that you start with when the JupyterHub graphical user interface starts.  The default value here is your home directory.'  ></param>
-        <conditional name="conda_install_cond">
-          <param name="conda_install" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Install miniconda if not there?" help='Select Yes to install Jupyter in miniconda environment and No to load an existing python environment ' optional='true' float="right">
-          </param>
-          <when value="Yes">
-              <param name='conda_sh' label='Path to conda environment' type='text' value='__WORKDIR__/.miniconda3c/etc/profile.d/conda.sh' help='Path to use in source /path/to/conda.sh'  ></param>
-              <param name='conda_env' label='Conda environment (recommended: base)' type='text' value='base' help='Environment to active. The base environment enables changing kernel to other environments!'  ></param>
-          </when>
-          <when value="No">
-              <param name='load_env' label='Command to load Jupyter' type='text' value='source __WORKDIR__/.miniconda3c/etc/profile.d/conda.sh; conda activate base' help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'  ></param>
-          </when>
-        </conditional>
-        <param name='password' label='Password for notebook session:' type='hidden' value='' help='Enter password or leave blank for no password'  ></param>
+    <param 
+      name='name' 
+      label='Service' 
+      type='hidden' 
+      value='jupyter-host'  
+    ></param>
+   	<param 
+      name='notebook_dir' 
+      label='Directory to start Jupyter GUI' 
+      type='text' 
+      value='__WORKDIR__' 
+      help='This is the directory that you start with when the JupyterHub graphical user interface starts. The default value here is your home directory.'
+    ></param>
+    <param 
+      name="conda_install" 
+      type="boolean" 
+      truevalue="Yes" 
+      falsevalue="No" 
+      checked="True" 
+      label="Install miniconda if not there?" 
+      help='Select Yes to install Jupyter in miniconda environment and No to load an existing python environment '
+      float="right"
+    ></param>
+    <param 
+      name='conda_sh' 
+      label='Path to conda environment' 
+      type='text' 
+      value='/contrib/__USER__/pw/miniconda/etc/profile.d/conda.sh' 
+      help='Path to use in source /path/to/conda.sh'
+      show_if='service.conda_install'
+    ></param>
+    <param 
+      name='conda_env' 
+      label='Conda environment (recommended: base)' 
+      type='text' 
+      value='base' 
+      help='Environment to active. The base environment enables changing kernel to other environments!'
+      show_if='service.conda_install'
+    ></param>
+    <param 
+      name='load_env' 
+      label='Command to load Jupyter' 
+      type='text' 
+      value='source /contrib/__USER__/pw/miniconda/etc/profile.d/conda.sh; conda activate base' 
+      help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'
+      depends_on='service.conda_install'
+      show_if='false'
+    ></param>
+    <param 
+      name='password' 
+      label='Password for notebook session' 
+      type='hidden' 
+      value='' 
+      help='Enter password or leave blank for no password'  
+    ></param>
    </section>
-    <section name='pwrl_host' type='section' title='Jupyter Server Host' expanded='true'>
-      <param name='resource' type='computeResource' label='Service host' help='Resource to host the service'></param>
-      <param name='nports' label='Number of Ports to Reserve' type='hidden' value='1'  ></param> 
-      <conditional name="jobschedulertype_cond">
-          <param name='jobschedulertype' type='select' label='Select Controller, SLURM Partition or PBS Queue' help='Job will submitted using SSH, sbatch or qsub, respectively'   multiple='false'>
-            <option value="CONTROLLER" selected="true">Controller</option>
-            <option value="SLURM">SLURM Partition</option>
-            <option value="PBS">PBS Queue</option>
-            <option value="LOCAL">PW USER CONTAINER</option>
-        </param>
-        <when value="SLURM">
-            <param name='_sch__dd_partition_e_' label='SLURM partition' type='text' help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' value=''  >
-            </param>
-            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value=''  >
-            </param>
-        </when>
-        <when value="PBS">
-            <param name='_sch__d_q___' label='PBS queue' type='text' help='Queue to submit the interactive job. Must select one! Use [qstat -f -Q] to list all queues on the system' value=''  >
-            </param>
-            <param name='scheduler_directives' label='Scheduler directives' type='text' help='e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to separate parameters. Do not include the PBS keyword.' value=''  >
-            </param>
-        </when>
-      </conditional>
-    </section>
-    <section name='advanced_options' type='section' title='Advanced Options' expanded='false'>
-        <param name="stream" type="boolean" truevalue="Yes" falsevalue="No" checked="True" label="Stream slurm output?" help='Select Yes to stream the slurm output from the execution host to the job directory in PW'   optional='true' float="right">
-        </param>
-    </section>
+   <section name='pwrl_host' type='section' title='Jupyter Server Host' expanded='true'>
+    <param 
+      name='resource' 
+      type='computeResource' 
+      label='Service host' 
+      help='Resource to host the service'
+    ></param>
+    <param
+     name='nports' 
+     label='Number of Ports to Reserve' 
+     type='hidden' 
+     value='1'  
+    ></param> 
+    <param 
+      name='jobschedulertype' 
+      type='select' 
+      label='Select Controller, SLURM Partition or PBS Queue' 
+      help='Job will submitted using SSH, sbatch or qsub, respectively'   
+      multiple='false'>
+        <option value="CONTROLLER" selected="true">Controller</option>
+        <option value="SLURM">SLURM Partition</option>
+        <option value="PBS">PBS Queue</option>
+        <option value="LOCAL">PW USER CONTAINER</option>
+    </param>
+    <param 
+      name='_sch__dd_partition_e_' 
+      label='SLURM partition' 
+      type='dynamicPartitionDropdown' 
+      resource='pwrl_host.resource'
+      help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
+      depends_on='pwrl_host.jobschedulertype'
+      show_if='SLURM'
+      optional='true'   
+    ></param>
+    <param 
+      name='scheduler_directives_slurm' 
+      label='Scheduler directives' 
+      type='text' 
+      help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' 
+      value=''
+      depends_on='pwrl_host.jobschedulertype'
+      show_if='SLURM'
+      optional='true' 
+    ></param>
+    <param 
+      name='_sch__d_q___' 
+      label='PBS queue' 
+      type='text' 
+      help='Queue to submit the interactive job. Must select one! Use [qstat -f -Q] to list all queues on the system' 
+      value=''  
+      depends_on='pwrl_host.jobschedulertype'
+      show_if='PBS'
+    ></param>
+    <param 
+      name='scheduler_directives_pbs' 
+      label='Scheduler directives' 
+      type='text' 
+      help='e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to separate parameters. Do not include the PBS keyword.' 
+      value=''
+      depends_on='pwrl_host.jobschedulertype'
+      show_if='PBS'
+      optional='true'   
+    ></param>
+   </section>
   </inputs>
 </tool>

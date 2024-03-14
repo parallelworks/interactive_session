@@ -44,8 +44,9 @@
         type='computeResource' 
         label='Service host' 
         hideUserWorkspace='true' 
-        help='Resource to host the service'>
-      </param>
+        help='Resource to host the service'
+  	    hideDisconnectedResources='false'
+      ></param>
       <param 
         name='nports' 
         label='Number of Ports to Reserve' 

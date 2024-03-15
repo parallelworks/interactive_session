@@ -127,6 +127,7 @@ server {
  add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
  add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
  add_header X-Frame-Options "ALLOWALL";
+ client_max_body_size 1000M;
  location / {
      proxy_pass http://127.0.0.1:${jupyterserver_port}/me/${openPort}/;
      proxy_http_version 1.1;

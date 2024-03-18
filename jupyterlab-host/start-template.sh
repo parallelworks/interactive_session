@@ -76,6 +76,7 @@ if [[ "${service_conda_install}" == "true" ]]; then
             conda install -c conda-forge jupyterlab -y
             conda install nb_conda_kernels -y
             conda install -c anaconda jinja2 -y
+            pip install ipywidgets
         fi
 
         # Check if SLURM is installed

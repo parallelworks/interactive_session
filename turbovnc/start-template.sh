@@ -128,7 +128,7 @@ rm ~/.vnc/\${HOSTNAME}${DISPLAY}.*
 HERE
 echo
 
-if [ -z ${service_vnc_exec} ]; then
+if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
     # If no vnc_exec is provided
     if [ -z $(which ${vnc_bin}) ]; then
         # If no vncserver is in PATH:

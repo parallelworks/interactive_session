@@ -32,7 +32,8 @@
           label='Password for IDE session' 
           type='text' 
           value='' 
-          help='Enter password or leave blank for no password'  
+          help='Enter password or leave blank for no password' 
+          optional='true'
         ></param>
         <param 
           name='directory' 
@@ -43,10 +44,11 @@
         ></param>
         <param 
           name='github_token' 
-          label='GitHub authentication token (optional)' 
+          label='GitHub authentication token' 
           type='text' 
           value='' 
-          help=''  
+          help=''
+          optional='true'
         ></param>
    </section>
     <section name='pwrl_host' type='section' title='Server Host' expanded='true'>

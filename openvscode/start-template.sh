@@ -74,13 +74,7 @@ bootstrap_tgz() {
         if [[ -f "/core/pworks-main/${tgz_path}" ]]; then
             cp /core/pworks-main/${tgz_path} ${install_parent_dir}
         else
-            ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-            if [[ ${jobschedulertype} != "CONTROLLER" ]]; then
-                # Running in a compute partition
-                ssh ${ssh_options} ${resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
-            else
-                scp ${resource_ssh_usercontainer_options} ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
-            fi
+            rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
         fi
         tar -zxf ${install_parent_dir}/$(basename ${tgz_path}) -C ${install_parent_dir}
     fi

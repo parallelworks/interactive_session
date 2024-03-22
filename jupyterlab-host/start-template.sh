@@ -55,7 +55,7 @@ if [[ "${service_conda_install}" == "true" ]]; then
         printf "%b" "${service_yaml}" > conda.yaml
         f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
     elif [[ "${service_install_instructions}" == "dask" ]]; then
-        scp usercontainer:${pw_job_dir}/${service_name}/dask-extension-jupyterlab.yaml conda.yaml
+        rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" usercontainer:${pw_job_dir}/${service_name}/dask-extension-jupyterlab.yaml conda.yaml
         f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
     else
     

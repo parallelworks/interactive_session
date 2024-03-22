@@ -34,7 +34,7 @@ if ! [ -d "$(echo ~/pw/noVNC-1.3.0)" ]; then
     ssh_options="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
     if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
         # Running in a controller node
-        scp ${USER_CONTAINER_HOST}:/swift-pw-bin/apps/noVNC-1.3.0.tgz ~/pw
+        scp ${resource_ssh_usercontainer_options} ${USER_CONTAINER_HOST}:/swift-pw-bin/apps/noVNC-1.3.0.tgz ~/pw
     else
         ssh ${ssh_options} ${resource_privateIp} scp ${USER_CONTAINER_HOST}:/swift-pw-bin/apps/noVNC-1.3.0.tgz ~/pw
     fi

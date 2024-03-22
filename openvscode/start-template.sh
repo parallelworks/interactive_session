@@ -79,7 +79,7 @@ bootstrap_tgz() {
                 # Running in a compute partition
                 ssh ${ssh_options} ${resource_privateIp} scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
             else
-                scp ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
+                scp ${resource_ssh_usercontainer_options} ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
             fi
         fi
         tar -zxf ${install_parent_dir}/$(basename ${tgz_path}) -C ${install_parent_dir}

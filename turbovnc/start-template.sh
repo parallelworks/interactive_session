@@ -122,7 +122,9 @@ rm ~/.vnc/\${HOSTNAME}${DISPLAY}.*
 HERE
 echo
 
-export VNCSERVER_UNIX_SOCKET_DIR=${PWD}
+if [[ ${service_desktop} == "mate-session" ]]; then
+    export TVNC_WM=mate
+fi
 
 if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
     # If no vnc_exec is provided

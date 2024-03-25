@@ -122,6 +122,8 @@ rm ~/.vnc/\${HOSTNAME}${DISPLAY}.*
 HERE
 echo
 
+# This is only required for turbovnc:
+# https://turbovnc.org/Documentation/Compatibility30
 if [[ ${service_desktop} == "mate-session" ]]; then
     export TVNC_WM=mate
 fi

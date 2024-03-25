@@ -411,8 +411,8 @@ def complete_resource_information(inputs_dict):
         resource_id = inputs_dict['resource']['id']
         resource_info = get_resource_info_with_verified_ip(resource_id)
         public_ip = get_resource_external_ip(resource_info)
-	inputs_dict['resource']['publicIp'] = public_ip
-	inputs_dict['resource']['group'] = resource_info['group']
+
+        inputs_dict['resource']['publicIp'] = public_ip
         inputs_dict['resource']['username'] = get_resource_user(resource_info)
         inputs_dict['resource']['type'] = resource_info['type']
         workdir = inputs_dict['resource'].get('workdir')

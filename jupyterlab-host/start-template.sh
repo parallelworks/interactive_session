@@ -9,7 +9,7 @@ echo "rm /tmp/${jupyterlab_port}.port.used" >> cancel.sh
 
 f_install_miniconda() {
     install_dir=$1
-    echo "Installing Miniconda3-py39_4.9.2"
+    echo "Installing Miniconda3-latest-Linux-x86_64.sh"
     conda_repo="https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"
     ID=$(date +%s)-${RANDOM} # This script may run at the same time!
     nohup wget ${conda_repo} -O /tmp/miniconda-${ID}.sh 2>&1 > /tmp/miniconda_wget-${ID}.out
@@ -72,17 +72,16 @@ if [[ "${service_conda_install}" == "true" ]]; then
             conda create -n ${service_conda_env}
             eval "conda activate ${service_conda_env}"
         }
-        if [ -z $(which ${jupyter-lab} 2> /dev/null) ]; then
+        if [ -z $(which jupyter-lab 2> /dev/null) ]; then
             conda install -c conda-forge jupyterlab -y
             conda install nb_conda_kernels -y
             conda install -c anaconda jinja2 -y
             pip install ipywidgets
-        fi
-
-        # Check if SLURM is installed
-        if command -v sinfo &> /dev/null; then
-            # SLURM extension for Jupyter Lab https://github.com/NERSC/jupyterlab-slurm
-            pip install jupyterlab_slurm
+            # Check if SLURM is installed
+            if command -v sinfo &> /dev/null; then
+                # SLURM extension for Jupyter Lab https://github.com/NERSC/jupyterlab-slurm
+                pip install jupyterlab_slurm
+            fi
         fi
     fi
 else

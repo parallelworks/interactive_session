@@ -28,7 +28,7 @@ if [[ "${service_conda_install}" == "true" ]]; then
         conda create -n ${service_conda_env} jupyter -y
         eval "conda activate ${service_conda_env}"
     }
-    if [ -z $(which ${jupyter-notebook} 2> /dev/null) ]; then
+    if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
         conda install -c anaconda jupyter -y
         conda install nb_conda_kernels -y
         conda install -c anaconda jinja2 -y

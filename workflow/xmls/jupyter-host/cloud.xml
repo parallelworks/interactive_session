@@ -51,19 +51,28 @@
         depends_on='service.conda_install'
         show_if='false'
       ></param>
-      <param name='install_instructions' 
-        show_if='service.conda_install'
-        type='select' 
-        label='Select Jupyter Lab Installation' 
-        help='Choose the installation option for Jupyter Lab. Options include:
+    <param name='install_instructions' 
+      show_if='service.conda_install'
+      type='select' 
+      label='Select Jupyter Lab Installation' 
+      help='Choose the installation option for Jupyter Lab. Options include:
             - Latest: The latest default versions of Jupyter Lab and Python. Note that the latest version may not be thoroughly tested.
-            - Jupyter6.4.12-Python3.9.12: Jupyter 6.4.12 with Python version 3.9.12
+            - Jupyter7.0.8-Python3.12.1: Jupyter 7.0.8 with Python version 3.12.1
             - YAML: Provide a custom Conda environment YAML file for advanced configuration'
-        multiple='false'>
+      multiple='false'>
         <option value="latest">Latest default versions of Jupyter and Python (not thoroughly tested)</option>
-        <option value="jupyter6.4.12-python3.9.12" selected="true">Jupyter 6.4.12 with Python version 3.9.12</option>
+        <option value="jupyter7.0.8-python3.12.1" selected="true">Jupyter 7.0.8 with Python version 3.12.1</option>
         <option value="yaml">Provide custom Conda environment YAML file</option>
-      </param>
+    </param>
+    <param
+        name='yaml' 
+        label='Paste Conda Environment Defition YAML' 
+        type='textarea' 
+        value='' 
+        help='Copy and paste a custom Conda environment definition YAML file'
+        show_if="yaml"
+        depends_on='service.install_instructions'
+    ></param>
       <param 
         name='password' 
         label='Password for notebook session' 

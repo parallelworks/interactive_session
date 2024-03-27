@@ -19,8 +19,8 @@ if [[ "${service_conda_install}" == "true" ]]; then
     if [[ "${service_install_instructions}" == "yaml" ]]; then
         printf "%b" "${service_yaml}" > conda.yaml
         f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
-    elif [[ "${service_install_instructions}" == "dask" ]]; then
-        rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" usercontainer:${pw_job_dir}/${service_name}/dask-extension-jupyterlab.yaml conda.yaml
+    elif [[ "${service_install_instructions}" == "jupyter6.4.12-python3.9.12" ]]; then
+        rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" usercontainer:${pw_job_dir}/${service_name}/jupyter6.4.12-python3.9.12.yaml conda.yaml
         f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
     else
         {

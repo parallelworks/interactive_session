@@ -30,7 +30,7 @@
         name='conda_sh' 
         label='Path to conda environment' 
         type='text' 
-        value='/contrib/__USER__/pw/miniconda/etc/profile.d/conda.sh' 
+        value='__WORKDIR__/.miniconda/etc/profile.d/conda.sh' 
         help='Path to use in source /path/to/conda.sh'
         show_if='service.conda_install'
       ></param>
@@ -46,7 +46,7 @@
         name='load_env' 
         label='Command to load Jupyter' 
         type='text' 
-        value='source /contrib/__USER__/pw/miniconda/etc/profile.d/conda.sh; conda activate base' 
+        value='source __WORKDIR__/.miniconda/etc/profile.d/conda.sh; conda activate base' 
         help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'
         depends_on='service.conda_install'
         show_if='false'

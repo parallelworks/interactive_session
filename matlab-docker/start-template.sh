@@ -45,8 +45,8 @@ sudo service docker start
 touch empty
 sudo docker run  -d --name ${container_name} \
     -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
-    -v empty:/etc/nginx/conf.d/default.conf \
-    --network=host nginxinc/nginx-unprivileged
+    -v ${PWD}/empty:/etc/nginx/conf.d/default.conf \
+    --network=host nginxinc/nginx-unprivileged:1.25.3
 # Print logs
 sudo docker logs ${container_name}
 

@@ -15,23 +15,32 @@ f_install_miniconda() {
 
 
 if [[ "${service_conda_install}" == "true" ]]; then
-    {
-        source ${service_conda_sh}
-    } || {
-        conda_dir=$(echo ${service_conda_sh} | sed "s|etc/profile.d/conda.sh||g" )
-        f_install_miniconda ${conda_dir}
-        source ${service_conda_sh}
-    }
-    {
-        eval "conda activate ${service_conda_env}"
-    } || {
-        conda create -n ${service_conda_env} jupyter -y
-        eval "conda activate ${service_conda_env}"
-    }
-    if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
-        conda install -c anaconda jupyter -y
-        conda install nb_conda_kernels -y
-        conda install -c anaconda jinja2 -y
+    service_conda_dir=$(echo "${service_conda_sh}" | sed 's|/etc/profile.d/conda.sh||')
+    if [[ "${service_install_instructions}" == "yaml" ]]; then
+        printf "%b" "${service_yaml}" > conda.yaml
+        f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
+    elif [[ "${service_install_instructions}" == "dask" ]]; then
+        rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" usercontainer:${pw_job_dir}/${service_name}/dask-extension-jupyterlab.yaml conda.yaml
+        f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
+    else
+        {
+            source ${service_conda_sh}
+        } || {
+            conda_dir=$(echo ${service_conda_sh} | sed "s|etc/profile.d/conda.sh||g" )
+            f_install_miniconda ${conda_dir}
+            source ${service_conda_sh}
+        }
+        {
+            eval "conda activate ${service_conda_env}"
+        } || {
+            conda create -n ${service_conda_env} jupyter -y
+            eval "conda activate ${service_conda_env}"
+        }
+        if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
+            conda install -c anaconda jupyter -y
+            conda install nb_conda_kernels -y
+            conda install -c anaconda jinja2 -y
+        fi
     fi
 else
     eval "${service_load_env}"

@@ -62,7 +62,7 @@
         type='select' 
         label='Select Jupyter Lab Installation' 
         help='Choose the installation option for Jupyter Lab. Options include:
-             - Latest: Latest: The latest default versions of Jupyter Lab and Python. Note that the latest version may not be thoroughly tested.
+             - Latest: The latest default versions of Jupyter Lab and Python. Note that the latest version may not be thoroughly tested.
              - JupyterLab4.1.5-Python3.11.5: JupyterLab 4.1.5 with Python version 3.11.15
              - Dask: Install dependencies required for running Dask on PW clusters.
              - YAML: Provide a custom Conda environment YAML file for advanced configuration.'

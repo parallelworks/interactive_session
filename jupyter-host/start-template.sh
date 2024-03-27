@@ -12,26 +12,64 @@ f_install_miniconda() {
     nohup bash /tmp/miniconda-${ID}.sh -b -p ${install_dir} 2>&1 > /tmp/miniconda_sh-${ID}.out
 }
 
+f_set_up_conda_from_yaml() {
+    CONDA_DIR=$1
+    CONDA_ENV=$2
+    CONDA_YAML=$3
+    CONDA_SH="${CONDA_DIR}/etc/profile.d/conda.sh"
+    # conda env export
+    # Remove line starting with name, prefix and remove empty lines
+    sed -i -e '/^name:/d' -e '/^prefix:/d' -e '/^$/d' ${CONDA_YAML} 
+    
+    if [ ! -d "${CONDA_DIR}" ]; then
+        echo "Conda directory <${CONDA_DIR}> not found. Installing conda..."
+        f_install_miniconda ${CONDA_DIR}
+    fi
+    
+    echo "Sourcing Conda SH <${CONDA_SH}>"
+    source ${CONDA_SH}
+
+    # Check if Conda environment exists
+    if ! conda env list | grep -q "${CONDA_ENV}"; then
+        echo "Creating Conda Environment <${CONDA_ENV}>"
+        conda create --name ${CONDA_ENV}
+    fi
+    
+    echo "Activating Conda Environment <${CONDA_ENV}>"
+    conda activate ${CONDA_ENV}
+    
+    echo "Installing condda environment from YAML"
+    conda env update -n ${CONDA_ENV} -f ${CONDA_YAML}
+}
 
 
 if [[ "${service_conda_install}" == "true" ]]; then
-    {
-        source ${service_conda_sh}
-    } || {
-        conda_dir=$(echo ${service_conda_sh} | sed "s|etc/profile.d/conda.sh||g" )
-        f_install_miniconda ${conda_dir}
-        source ${service_conda_sh}
-    }
-    {
-        eval "conda activate ${service_conda_env}"
-    } || {
-        conda create -n ${service_conda_env} jupyter -y
-        eval "conda activate ${service_conda_env}"
-    }
-    if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
-        conda install -c anaconda jupyter -y
-        conda install nb_conda_kernels -y
-        conda install -c anaconda jinja2 -y
+    service_conda_dir=$(echo "${service_conda_sh}" | sed 's|/etc/profile.d/conda.sh||')
+    if [[ "${service_install_instructions}" == "yaml" ]]; then
+        printf "%b" "${service_yaml}" > conda.yaml
+        f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
+    elif [[ "${service_install_instructions}" == "notebook7.0.8-python3.12.1" ]]; then
+        rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" usercontainer:${pw_job_dir}/${service_name}/notebook7.0.8-python3.12.1.yaml conda.yaml
+        f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
+    else
+        {
+            source ${service_conda_sh}
+        } || {
+            conda_dir=$(echo ${service_conda_sh} | sed "s|etc/profile.d/conda.sh||g" )
+            f_install_miniconda ${conda_dir}
+            source ${service_conda_sh}
+        }
+        {
+            eval "conda activate ${service_conda_env}"
+        } || {
+            conda create -n ${service_conda_env} jupyter -y
+            eval "conda activate ${service_conda_env}"
+        }
+        if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
+            conda install -c anaconda jupyter -y
+            conda install nb_conda_kernels -y
+            conda install -c anaconda jinja2 -y
+        fi
     fi
 else
     eval "${service_load_env}"
@@ -172,8 +210,8 @@ else
     touch empty
     sudo docker run  -d --name ${container_name}  \
         -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
-        -v empty:/etc/nginx/conf.d/default.conf \
-        --network=host nginxinc/nginx-unprivileged
+        -v ${PWD}/empty:/etc/nginx/conf.d/default.conf \
+        --network=host nginxinc/nginx-unprivileged:1.25.3
     # Print logs
     sudo docker logs ${container_name}
 fi

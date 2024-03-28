@@ -29,7 +29,7 @@
         name='conda_sh' 
         label='Path to conda environment' 
         type='text' 
-        value='__WORKDIR__/.miniconda3c/etc/profile.d/conda.sh' 
+        value='__WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh' 
         help='Path to use in source /path/to/conda.sh'
         show_if='service.conda_install'
       ></param>
@@ -45,7 +45,7 @@
         name='load_env' 
         label='Command to load JupyterLab' 
         type='text' 
-        value='source __WORKDIR__/.miniconda3c/etc/profile.d/conda.sh; conda activate base' 
+        value='source __WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base' 
         help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'
         depends_on='service.conda_install'
         show_if='false'
@@ -61,11 +61,6 @@
         show_if='service.conda_install'
         type='select' 
         label='Select Jupyter Lab Installation' 
-        help='Choose the installation option for Jupyter Lab. Options include:
-             - Latest: The latest default versions of Jupyter Lab and Python. Note that the latest version may not be thoroughly tested.
-             - JupyterLab4.1.5-Python3.11.5: JupyterLab 4.1.5 with Python version 3.11.15
-             - Dask: Install dependencies required for running Dask on PW clusters.
-             - YAML: Provide a custom Conda environment YAML file for advanced configuration.'
         multiple='false'>
         <option value="latest">Latest versions of Jupyter Lab and Python (not thoroughly tested)</option>
         <option value="jupyterlab4.1.5-python3.11.5" selected="true">Jupyter Lab 4.1.5 with Python 3.11.5 </option>

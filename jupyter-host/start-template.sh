@@ -48,10 +48,7 @@ if [[ "${service_conda_install}" == "true" ]]; then
     if [[ "${service_install_instructions}" == "yaml" ]]; then
         printf "%b" "${service_yaml}" > conda.yaml
         f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
-    elif [[ "${service_install_instructions}" == "notebook7.0.8-python3.12.1" ]]; then
-        rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" usercontainer:${pw_job_dir}/${service_name}/notebook7.0.8-python3.12.1.yaml conda.yaml
-        f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
-    else
+    elif [[ "${service_install_instructions}" == "latest" ]]; then
         {
             source ${service_conda_sh}
         } || {
@@ -70,6 +67,9 @@ if [[ "${service_conda_install}" == "true" ]]; then
             conda install nb_conda_kernels -y
             conda install -c anaconda jinja2 -y
         fi
+    else
+        rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" usercontainer:${pw_job_dir}/${service_name}/${service_install_instructions}.yaml conda.yaml
+        f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
     fi
 else
     eval "${service_load_env}"

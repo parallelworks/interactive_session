@@ -57,10 +57,7 @@ if [[ "${service_conda_install}" == "true" ]]; then
     elif [[ "${service_install_instructions}" == "dask" ]]; then
         rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" usercontainer:${pw_job_dir}/${service_name}/dask-extension-jupyterlab.yaml conda.yaml
         f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
-    elif [[ "${service_install_instructions}" == "jupyterlab4.1.5-python3.11.5" ]]; then
-        rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" usercontainer:${pw_job_dir}/${service_name}/jupyterlab4.1.5-python3.11.5.yaml conda.yaml
-        f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
-    else
+    elif [[ "${service_install_instructions}" == "latest" ]]; then
     
         {
             source ${service_conda_sh}
@@ -86,6 +83,9 @@ if [[ "${service_conda_install}" == "true" ]]; then
                 pip install jupyterlab_slurm
             fi
         fi
+    else
+        rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" usercontainer:${pw_job_dir}/${service_name}/${service_install_instructions}.yaml conda.yaml
+        f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
     fi
 else
     eval "${service_load_env}"

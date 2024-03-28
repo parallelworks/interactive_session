@@ -64,7 +64,7 @@
         multiple='false'>
         <option value="latest">Latest versions of Jupyter Lab and Python (not thoroughly tested)</option>
         <option value="jupyterlab4.1.5-python3.11.5" selected="true">Jupyter Lab 4.1.5 with Python 3.11.5 </option>
-        <option value="dask">Dask dependencies for PW</option>
+        <option value="dask-extension-jupyterlab">Dask dependencies for PW</option>
         <option value="yaml">Provide custom Conda environment YAML file</option>
       </param>
       <param

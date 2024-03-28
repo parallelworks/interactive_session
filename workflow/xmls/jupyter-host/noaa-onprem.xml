@@ -45,6 +45,13 @@
         depends_on='service.conda_install'
         show_if='false'
       ></param>
+      <param name='install_instructions' 
+        show_if='service.conda_install'
+        type='select' 
+        label='Select Jupyter Notebook Installation' 
+        multiple='false'>
+          <option value="notebook6.5.4-python3.9.18" selected="true">Jupyter Notebook 6.5.4 with Python version 3.9.18</option>
+      </param>
       <param 
         name='password' 
         label='Password for notebook session' 

@@ -122,29 +122,30 @@ rm ~/.vnc/\${HOSTNAME}${DISPLAY}.*
 HERE
 echo
 
-# This is only required for turbovnc:
-# https://turbovnc.org/Documentation/Compatibility30
-if [[ ${service_desktop} == "mate-session" ]]; then
-    export TVNC_WM=mate
-fi
-
-if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
-    # If no vnc_exec is provided
-    if [ -z $(which ${vnc_bin}) ]; then
-        # If no vncserver is in PATH:
-        echo "Installing tigervnc-server: sudo -n yum install tigervnc-server -y"
-        sudo -n yum install tigervnc-server -y
-        # python3 is a dependency
-        if [ -z $(which python3) ]; then
-            sudo -n yum install python3 -y
-        fi
-
-    fi
-    service_vnc_exec=$(which ${vnc_bin})
-fi
-
 
 if ! [[ $kernel_version == *microsoft* ]]; then
+
+    # This is only required for turbovnc:
+    # https://turbovnc.org/Documentation/Compatibility30
+    if [[ ${service_desktop} == "mate-session" ]]; then
+        export TVNC_WM=mate
+    fi
+
+    if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
+        # If no vnc_exec is provided
+        if [ -z $(which ${vnc_bin}) ]; then
+            # If no vncserver is in PATH:
+            echo "Installing tigervnc-server: sudo -n yum install tigervnc-server -y"
+            sudo -n yum install tigervnc-server -y
+            # python3 is a dependency
+            if [ -z $(which python3) ]; then
+                sudo -n yum install python3 -y
+            fi
+
+        fi
+        service_vnc_exec=$(which ${vnc_bin})
+    fi
+    
     if [ ! -f "${service_vnc_exec}" ]; then
         displayErrorMessage "ERROR: service_vnc_exec=${service_vnc_exec} file not found! - Exiting workflow!"
     fi

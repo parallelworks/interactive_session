@@ -667,11 +667,27 @@ def create_reverse_ssh_tunnel(ip_address, ssh_port):
         print(error_message, flush=True)  # Print the error message
         sys.exit(1)  # Exit with an error code
 
+
+def check_slurm(public_ip):
+    # Fail if slurmctld is not running
+    command = f'{SSH_CMD} {public_ip} ps aux | grep slurmctld | grep -v grep || echo'
+    is_slurmctld = get_command_output(command)
+
+    if not is_slurmctld:
+        msg = f'slurmctld is not running in resource {public_ip}'
+        logger.error(msg)
+        print(f'ERROR: {msg}', flush = True)
+        raise(Exception(msg))
+
+
 def prepare_resource(inputs_dict, resource_label):
 
     resource_inputs = extract_resource_inputs(inputs_dict, resource_label)
 
     resource_inputs = complete_resource_information(resource_inputs)
+
+    if resource_inputs['jobschedulertype'] == 'SLURM':
+        check_slurm(resource_inputs['resource']['publicIp'])
 
     logger.info(json.dumps(resource_inputs, indent = 4))
     create_resource_directory(resource_inputs, resource_label)

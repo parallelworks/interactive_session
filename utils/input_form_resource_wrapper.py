@@ -686,8 +686,8 @@ def prepare_resource(inputs_dict, resource_label):
 
     resource_inputs = complete_resource_information(resource_inputs)
 
-    if resource_inputs['jobschedulertype'] == 'SLURM':
-        check_slurm(resource_inputs['resource']['publicIp'])
+    #if resource_inputs['jobschedulertype'] == 'SLURM':
+    #    check_slurm(resource_inputs['resource']['publicIp'])
 
     logger.info(json.dumps(resource_inputs, indent = 4))
     create_resource_directory(resource_inputs, resource_label)

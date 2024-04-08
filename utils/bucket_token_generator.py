@@ -3,6 +3,8 @@ import requests
 import os
 import json
 import argparse
+from base64 import b64encode
+
 
 """
 Description: 
@@ -36,18 +38,28 @@ def load_bucket_credentials(bucket_id):
 
 """
 
-PW_PLATFORM_HOST = os.environ.get('PW_PLATFORM_HOST')
-PW_API_KEY = os.environ.get('PW_API_KEY')
-STORAGE_URL = f'https://{PW_PLATFORM_HOST}/api/v2/storage?key={PW_API_KEY}'
-BUCKET_TOKEN_URL = f'https://{PW_PLATFORM_HOST}/api/v2/vault/getBucketToken?key={PW_API_KEY}'
+def encode_string_to_base64(text):
+    # Convert the string to bytes
+    text_bytes = text.encode('utf-8')
+    # Encode the bytes to base64
+    encoded_bytes = b64encode(text_bytes)
+    # Convert the encoded bytes back to a string
+    encoded_string = encoded_bytes.decode('utf-8')
+    return encoded_string
 
 
-if not PW_PLATFORM_HOST or not PW_API_KEY:
+if not (os.getenv('PW_PLATFORM_HOST') and os.getenv('PW_API_KEY')):
     raise EnvironmentError("Please set the 'PW_PLATFORM_HOST' and 'PW_API_KEY' environment variables.")
 
 
+PW_PLATFORM_HOST = os.environ.get('PW_PLATFORM_HOST')
+HEADERS = {"Authorization": "Basic {}".format(encode_string_to_base64(os.environ['PW_API_KEY']))}
+STORAGE_URL = f'https://{PW_PLATFORM_HOST}/api/v2/storage'
+BUCKET_TOKEN_URL = f'https://{PW_PLATFORM_HOST}/api/v2/vault/getBucketToken'
+
+
 def get_bucket_info_with_name(bucket_name: str, bucket_namespace: str) -> dict:
-    res = requests.get(STORAGE_URL)
+    res = requests.get(STORAGE_URL, headers = HEADERS)
     for bucket in res.json():
         if bucket_name == bucket['name'] and bucket_namespace == bucket['namespace']:
             return bucket
@@ -67,7 +79,7 @@ def get_bucket_info_with_id(bucket_id: str) -> dict:
 
 def get_bucket_token(bucket_id: str) -> dict:
     try:
-        post_response = requests.post(BUCKET_TOKEN_URL, data={"bucketID": bucket_id})
+        post_response = requests.post(BUCKET_TOKEN_URL, data={"bucketID": bucket_id}, headers = HEADERS)
         post_response.raise_for_status()  # Raise an exception for HTTP errors
         return post_response.json()
     except requests.exceptions.RequestException as e:

@@ -264,6 +264,8 @@ def get_resource_external_ip(resource_info):
         else:
             user =  get_resource_user(resource_info)
             return user + '@' + resource_info['state']['masterNode']
+        
+    return resource_info['variables']['slurmUsername'] + '@' + resource_info['variables']['slurmLoginNode']
 
 
 def get_resource_internal_ip(resource_info, public_ip):

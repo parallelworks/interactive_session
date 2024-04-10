@@ -74,9 +74,9 @@
       <param 
         name='_sch__dd_account_e_' 
         label='SLURM account' 
-        type='text' 
+        type='dynamicAccountDropdown' 
         help='Account to submit the interactive job' 
-        value='nesccmgmt'
+        resource='pwrl_host.resource'
         depends_on='pwrl_host.jobschedulertype'
         show_if='SLURM'
       ></param>
@@ -85,10 +85,11 @@
         label='SLURM partition' 
         type='dynamicPartitionDropdown' 
         resource='pwrl_host.resource'
+        account='pwrl_host._sch__dd_account_e_'
         help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
         depends_on='pwrl_host.jobschedulertype'
         show_if='SLURM'
-        optional='true'   
+        optional='true'
       ></param>
       <param 
         name='_sch__dd_time_e_' 

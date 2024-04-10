@@ -50,7 +50,6 @@
         hideUserWorkspace='true' 
         hideDisconnectedResources='false' 
         help='Resource to host the service'
-	      hideDisconnectedResources='false'
       ></param>
       <param 
         name='nports' 
@@ -60,13 +59,10 @@
       ></param> 
       <param 
         name='jobschedulertype' 
-        type='select' 
         label='Select Controller or SLURM Partition' 
-        help='Job will submitted using SSH or sbatch, respectively'      
-        multiple='false'>
-          <option value="CONTROLLER" selected="true">Controller</option>
-          <option value="SLURM">SLURM Partition</option>
-      </param>
+        type='hidden' 
+        value='CONTROLLER'  
+      ></param>
       <param 
         name='_sch__dd_account_e_' 
         label='SLURM account' 

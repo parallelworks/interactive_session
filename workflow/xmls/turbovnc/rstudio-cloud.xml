@@ -75,6 +75,7 @@
           depends_on='pwrl_host.jobschedulertype'
           show_if='SLURM'
           optional='true'   
+          dependent='false'
       ></param>
       <param 
         name='scheduler_directives' 

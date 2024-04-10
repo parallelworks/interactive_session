@@ -72,7 +72,8 @@
           help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
           depends_on='pwrl_host.jobschedulertype'
           show_if='SLURM'
-          optional='true'   
+          optional='true'  
+          dependent='false' 
       ></param>
       <param 
         name='scheduler_directives' 

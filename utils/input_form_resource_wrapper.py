@@ -10,7 +10,7 @@ import random
 import socket
 from base64 import b64encode
 
-# VERSION: 16
+# VERSION: 17
 
 """
 # Form Resource Wrapper
@@ -27,6 +27,7 @@ the resource information. The wrapper performs the following actions:
 4. Creates a batch header with the PBS or SLURM directives under the resource's directory. Note that this 
    header can be used as the header of any script that the workflow submits to the resource. 
 5. Finds a given number of available ports
+6. Replaces the values of _replace_with_<parameter-section>.<parameter-name> with the corresponding value
 
 ### Workflow XML
 The wrapper only works if the resources are defined using a specific format in the workflow.xml file. 
@@ -393,6 +394,38 @@ def get_ssh_usercontainer_port(ssh_config_path, ip_address):
         ssh_port = 2222
     return ssh_port
 
+def extract_value_from_dict(string, my_dict):
+    """
+    Extracts a value from a nested dictionary based on a hierarchical key specified in dot notation.
+
+    Args:
+        string (str): A string representing a hierarchical key in dot notation.
+        my_dict (dict): The dictionary from which to extract the value.
+
+    Returns:
+        The value located at the hierarchical key specified by the input string.
+    """
+    keys = string.split('.')
+    result = my_dict
+    for key in keys:
+        result = result[key]
+    return result
+
+
+def replace_assigned_values(inputs_dict, inputs_dict_orig):
+    keys = list(inputs_dict.keys())
+    for ik in keys: #,iv in inputs_dict.items():
+        iv = inputs_dict[ik]
+        if type(iv) == str:
+            if iv.startswith('_replace_with_'):
+                pkey = iv.replace('_replace_with_', '')
+                inputs_dict[ik] = extract_value_from_dict(pkey, inputs_dict_orig)
+
+        elif type(iv) == dict:
+            inputs_dict[ik] = replace_assigned_values(iv, inputs_dict_orig)
+
+    return inputs_dict 
+
 
 def complete_resource_information(inputs_dict):
     
@@ -489,6 +522,7 @@ def complete_resource_information(inputs_dict):
         }
     )
 
+    inputs_dict = replace_assigned_values(inputs_dict, inputs_dict)
     return inputs_dict
 
 def flatten_dictionary(dictionary, parent_key='', separator='_'):
@@ -524,7 +558,7 @@ def get_scheduler_directives_from_input_form(inputs_dict):
             schd = schd.replace('_e_', '=')
             schd = schd.replace('___', ' ')
             if v:
-                scheduler_directives.append(schd+v)
+                scheduler_directives.append(schd+str(v))
         
     return scheduler_directives
 

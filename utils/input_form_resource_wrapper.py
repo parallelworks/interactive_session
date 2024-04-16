@@ -8,9 +8,8 @@ import subprocess
 import time
 import random
 import socket
-from base64 import b64encode
 
-# VERSION: 16
+# VERSION: 17
 
 """
 # Form Resource Wrapper
@@ -27,6 +26,7 @@ the resource information. The wrapper performs the following actions:
 4. Creates a batch header with the PBS or SLURM directives under the resource's directory. Note that this 
    header can be used as the header of any script that the workflow submits to the resource. 
 5. Finds a given number of available ports
+6. Replaces the values of _replace_with_<parameter-section>.<parameter-name> with the corresponding value
 
 ### Workflow XML
 The wrapper only works if the resources are defined using a specific format in the workflow.xml file. 
@@ -106,20 +106,12 @@ resources/host/inputs.json:
 }
 """
 
-def encode_string_to_base64(text):
-    # Convert the string to bytes
-    text_bytes = text.encode('utf-8')
-    # Encode the bytes to base64
-    encoded_bytes = b64encode(text_bytes)
-    # Convert the encoded bytes back to a string
-    encoded_string = encoded_bytes.decode('utf-8')
-    return encoded_string
 
 RESOURCES_DIR: str = 'resources'
 SUPPORTED_RESOURCE_TYPES: list = ['gclusterv2', 'pclusterv2', 'azclusterv2', 'slurmshv2']
 SSH_CMD: str = 'ssh  -o StrictHostKeyChecking=no'
 PW_PLATFORM_HOST: str = os.environ['PW_PLATFORM_HOST']
-HEADERS = {"Authorization": "Basic {}".format(encode_string_to_base64(os.environ['PW_API_KEY']))}
+PW_API_KEY: str = os.environ['PW_API_KEY']
 MIN_PORT: int = 50000
 MAX_PORT: int = 55500
 
@@ -158,9 +150,9 @@ def find_available_port_with_socket():
  
 
 def find_available_port_with_api():
-    url = f'https://{PW_PLATFORM_HOST}/api/v2/usercontainer/getSingleOpenPort?minPort={MIN_PORT}&maxPort={MAX_PORT}'
+    url = f'https://{PW_PLATFORM_HOST}/api/v2/usercontainer/getSingleOpenPort?minPort={MIN_PORT}&maxPort={MAX_PORT}&key={PW_API_KEY}'
     logger.info(f'Get request to {url}')
-    res = requests.get(url, headers = HEADERS)
+    res = requests.get(url)
     return res.text()
 
 
@@ -220,9 +212,9 @@ def get_resource_info(resource_id):
 
     url_resources = 'https://' + \
         PW_PLATFORM_HOST + \
-        "/api/resources"
+        "/api/resources?key=" + PW_API_KEY
 
-    res = requests.get(url_resources, headers = HEADERS)
+    res = requests.get(url_resources)
 
     for resource in res.json():
         if type(resource['id']) == str:
@@ -264,8 +256,6 @@ def get_resource_external_ip(resource_info):
         else:
             user =  get_resource_user(resource_info)
             return user + '@' + resource_info['state']['masterNode']
-        
-    return resource_info['variables']['slurmUsername'] + '@' + resource_info['variables']['slurmLoginNode']
 
 
 def get_resource_internal_ip(resource_info, public_ip):
@@ -308,7 +298,6 @@ def get_resource_info_with_verified_ip(resource_id, timeout = 600):
 
 
 def replace_placeholders(inputs_dict, placeholder_dict):
-    print(json.dumps(inputs_dict, indent = 4))
     for ik,iv in inputs_dict.items():
         if type(iv) == str:
             for pk, pv in placeholder_dict.items():
@@ -392,6 +381,40 @@ def get_ssh_usercontainer_port(ssh_config_path, ip_address):
         logger.warning(f'Cannot find SSH usercontainer port in {ip_address}:{ssh_config_path}. Using 2222')
         ssh_port = 2222
     return ssh_port
+
+
+def extract_value_from_dict(string, my_dict):
+    """
+    Extracts a value from a nested dictionary based on a hierarchical key specified in dot notation.
+
+    Args:
+        string (str): A string representing a hierarchical key in dot notation.
+        my_dict (dict): The dictionary from which to extract the value.
+
+    Returns:
+        The value located at the hierarchical key specified by the input string.
+    """
+    keys = string.split('.')
+    result = my_dict
+    for key in keys:
+        result = result[key]
+    return result
+
+
+def replace_assigned_values(inputs_dict, inputs_dict_orig):
+    keys = list(inputs_dict.keys())
+    for ik in keys: #,iv in inputs_dict.items():
+        iv = inputs_dict[ik]
+        if type(iv) == str:
+            if iv.startswith('_replace_with_'):
+                pkey = iv.replace('_replace_with_', '')
+                inputs_dict[ik] = extract_value_from_dict(pkey, inputs_dict_orig)
+
+        elif type(iv) == dict:
+            inputs_dict[ik] = replace_assigned_values(iv, inputs_dict_orig)
+
+    return inputs_dict 
+
 
 
 def complete_resource_information(inputs_dict):
@@ -489,6 +512,7 @@ def complete_resource_information(inputs_dict):
         }
     )
 
+    inputs_dict = replace_assigned_values(inputs_dict, inputs_dict)
     return inputs_dict
 
 def flatten_dictionary(dictionary, parent_key='', separator='_'):
@@ -524,7 +548,7 @@ def get_scheduler_directives_from_input_form(inputs_dict):
             schd = schd.replace('_e_', '=')
             schd = schd.replace('___', ' ')
             if v:
-                scheduler_directives.append(schd+v)
+                scheduler_directives.append(schd+str(v))
         
     return scheduler_directives
 
@@ -697,7 +721,7 @@ def prepare_resource(inputs_dict, resource_label):
 
     resource_inputs = complete_resource_information(resource_inputs)
 
-    if resource_inputs['jobschedulertype'] == 'SLURM' and resource_inputs['resource']['type'] != 'slurmshv2':
+    if resource_inputs['jobschedulertype'] == 'SLURM':
         check_slurm(resource_inputs['resource']['publicIp'])
 
     logger.info(json.dumps(resource_inputs, indent = 4))

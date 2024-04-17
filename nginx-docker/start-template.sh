@@ -12,28 +12,38 @@
 # servicePort: This value can be specified in the input form. Otherwise, the workflow 
 #              selects any available port in the range 6000-9000
 
+# Check if the user can execute commands with sudo
+if ! sudo -v >/dev/null 2>&1; then
+    displayErrorMessage "You do not have sudo access. Exiting."
+fi
+
+# Run docker container
+container_name="nginx-${servicePort}"
 
 # CREATE CANCEL SCRIPT TO REMOVE DOCKER CONTAINER WHEN THE PW JOB IS CANCELED
 if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
-    echo sudo -n docker stop jupyter-$servicePort > docker-kill-${job_number}.sh
+    echo sudo "sudo docker stop ${container_name}" > docker-kill-${job_number}.sh
+    echo sudo "sudo docker rm ${container_name}" >> docker-kill-${job_number}.sh
 else
     # Create kill script. Needs to be here because we need the hostname of the compute node.
-    echo ssh "'$(hostname)'" sudo -n docker stop jupyter-$servicePort > docker-kill-${job_number}.sh
+    echo ssh "'$(hostname)' sudo docker stop ${container_name}" > docker-kill-${job_number}.sh
+    echo ssh "'$(hostname)' sudo docker rm ${container_name}" >> docker-kill-${job_number}.sh
 fi
 
 chmod 777 docker-kill-${job_number}.sh
 
-# Notify platform that service is running
-${sshusercontainer} ${pw_job_dir}/utils/notify.sh
-
-# Run docker container
+# Start container
 sudo service docker start
-sudo -n docker run --rm \
+
+sudo -n docker run -d --name ${container_name} \
     ${service_mount_directories} -v ${HOME}:${HOME} \
-    --name=nginx-$servicePort \
     -p $servicePort:80 \
     ${service_docker_repo}
 
+sudo docker logs ${container_name}
+
+# Notify platform that service is running
+${sshusercontainer} ${pw_job_dir}/utils/notify.sh
 
 # If running docker with the -d option sleep here! 
 # Do not exit this script until the job is canceled!

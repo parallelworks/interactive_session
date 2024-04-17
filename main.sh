@@ -17,10 +17,10 @@ conda activate
 
 if [ -z "${workflow_utils_branch}" ]; then
     # If empty, clone the main default branch
-    git clone git@github.com:parallelworks/workflow-utils.git
+    git clone https://github.com/parallelworks/workflow-utils.git
 else
     # If not empty, clone the specified branch
-    git clone -b "$workflow_utils_branch" git@github.com:parallelworks/workflow-utils.git
+    git clone -b "$workflow_utils_branch" https://github.com/parallelworks/workflow-utils.git
 fi
 
 mv workflow-utils/* utils

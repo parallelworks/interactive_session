@@ -23,13 +23,11 @@ fi
 
 chmod 777 docker-kill-${job_number}.sh
 
-# Make sure docker service is started
-sudo -n systemctl start docker
-
 # Notify platform that service is running
 ${sshusercontainer} ${pw_job_dir}/utils/notify.sh
 
 # Run docker container
+sudo service docker start
 sudo -n docker run --rm \
     ${service_mount_directories} -v ${HOME}:${HOME} \
     --name=nginx-$servicePort \

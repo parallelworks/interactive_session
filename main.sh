@@ -26,6 +26,8 @@ fi
 mv workflow-utils/* utils
 rm -rf workflow-utils
 
+python utils/input_form_resource_wrapper.py
+
 if [ $? -ne 0 ]; then
     displayErrorMessage "ERROR - Resource wrapper failed"
 fi

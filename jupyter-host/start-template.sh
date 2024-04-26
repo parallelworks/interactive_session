@@ -75,6 +75,10 @@ else
     eval "${service_load_env}"
 fi
 
+if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
+    displayErrorMessage "Jupyter-notebook command not found"
+fi
+
 echo "starting notebook on $servicePort..."
 
 export XDG_RUNTIME_DIR=""

@@ -76,7 +76,7 @@ else
 fi
 
 if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
-    displayErrorMessage "Jupyter-notebook command not found"
+    displayErrorMessage "jupyter-notebook command not found"
 fi
 
 echo "starting notebook on $servicePort..."

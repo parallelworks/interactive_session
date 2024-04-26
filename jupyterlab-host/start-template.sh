@@ -91,6 +91,10 @@ else
     eval "${service_load_env}"
 fi
 
+if [ -z $(which jupyter-lab 2> /dev/null) ]; then
+    displayErrorMessage "jupyter-lab command not found"
+fi
+
 export XDG_RUNTIME_DIR=""
 
 # Generate sha:

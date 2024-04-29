@@ -54,9 +54,9 @@
         type='computeResource' 
         label='Service host' 
         hideUserWorkspace='true' 
-        hideDisconnectedResources='false' 
+        hideDisconnectedResources='true' 
         help='Resource to host the service'
-	      hideDisconnectedResources='false'
+	hideDisconnectedResources='false'
       ></param>
       <param 
         name='nports' 

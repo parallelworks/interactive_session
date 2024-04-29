@@ -15,6 +15,13 @@ source /etc/profile.d/parallelworks-env.sh
 source /pw/.miniconda3/etc/profile.d/conda.sh
 conda activate
 
+# load kerberos if it exists
+if [ -d /pw/kerberos ];then
+  echo "LOADING KERBEROS SSH PACKAGES"
+  source /pw/kerberos/source.env
+  which ssh kinit
+fi
+
 source inputs.sh
 if [ -z "${workflow_utils_branch}" ]; then
     # If empty, clone the main default branch

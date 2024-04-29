@@ -48,7 +48,7 @@
         type='computeResource' 
         label='Service host' 
         hideUserWorkspace='true' 
-        hideDisconnectedResources='false' 
+        hideDisconnectedResources='true' 
         help='Resource to host the service'
       ></param>
       <param 

@@ -74,7 +74,7 @@
         label='Service host' 
         hideUserWorkspace='true' 
         help='Resource to host the service'
-        hideDisconnectedResources='false'
+        hideDisconnectedResources='true'
       ></param>
       <param 
         name='nports' 

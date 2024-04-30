@@ -9,6 +9,7 @@ displayErrorMessage() {
     exit 1
 }
 
+
 f_install_miniconda() {
     install_dir=$1
     echo "Installing Miniconda3-latest-Linux-x86_64.sh"
@@ -50,13 +51,17 @@ f_set_up_conda_from_yaml() {
     conda env update -n ${CONDA_ENV} -f ${CONDA_YAML}
 }
 
-
 if [[ "${service_conda_install}" == "true" ]]; then
     service_conda_dir=$(echo "${service_conda_sh}" | sed 's|/etc/profile.d/conda.sh||')
+
     if [[ "${service_install_instructions}" == "yaml" ]]; then
         printf "%b" "${service_yaml}" > conda.yaml
         f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
+    elif [[ "${service_install_instructions}" == "dask" ]]; then
+        rsync -avzq -e "ssh ${resource_ssh_usercontainer_options_controller}" usercontainer:${pw_job_dir}/${service_name}/dask-extension-jupyterlab.yaml conda.yaml
+        f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
     elif [[ "${service_install_instructions}" == "latest" ]]; then
+    
         {
             source ${service_conda_sh}
         } || {
@@ -67,22 +72,28 @@ if [[ "${service_conda_install}" == "true" ]]; then
         {
             eval "conda activate ${service_conda_env}"
         } || {
-            conda create -n ${service_conda_env} jupyter -y
+            conda create -n ${service_conda_env}
             eval "conda activate ${service_conda_env}"
         }
-        if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
-            conda install -c anaconda jupyter -y
+        if [ -z $(which jupyter-lab 2> /dev/null) ]; then
+            conda install -c conda-forge jupyterlab -y
             conda install nb_conda_kernels -y
             conda install -c anaconda jinja2 -y
+            pip install ipywidgets
+            # Check if SLURM is installed
+            if command -v sinfo &> /dev/null; then
+                # SLURM extension for Jupyter Lab https://github.com/NERSC/jupyterlab-slurm
+                pip install jupyterlab_slurm
+            fi
         fi
     else
-        rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" usercontainer:${pw_job_dir}/${service_name}/${service_install_instructions}.yaml conda.yaml
+        rsync -avzq -e "ssh ${resource_ssh_usercontainer_options_controller}" usercontainer:${pw_job_dir}/${service_name}/${service_install_instructions}.yaml conda.yaml
         f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
     fi
 else
     eval "${service_load_env}"
 fi
 
-if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
-    displayErrorMessage "jupyter-notebook command not found"
+if [ -z $(which jupyter-lab 2> /dev/null) ]; then
+    displayErrorMessage "jupyter-lab command not found"
 fi

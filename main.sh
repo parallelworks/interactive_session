@@ -93,6 +93,17 @@ if ! [ -f "${CONDA_PYTHON_EXE}" ]; then
     export CONDA_PYTHON_EXE=$(which python3)
 fi
 
+# RUN CONTROLLER PREPROCESSING STEP
+if [ -f "${service_name}/controller.sh" ]; then
+    echo; echo; echo "RUNNING PREPROCESSING STEP"
+    echo '#!/bin/bash' > controller.sh
+    cat inputs.sh >> controller.sh
+    cat ${service_name}/controller.sh >> controller.sh
+    echo "$sshcmd 'bash -s' < controller.sh"
+    $sshcmd 'bash -s' < controller.sh
+fi
+
+
 
 # RUN IN CONTROLLER, SLURM PARTITION OR PBS QUEUE?
 if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
@@ -118,6 +129,7 @@ else
     URL="\"/me/${openPort}/${URLEND}"
     sed -i "s|.*URL.*|    \"URL\": \"/me\",|" service.json
 fi
+
 # JSON values cannot contain quotes "
 #URL_JSON=$(echo ${URL} | sed 's|\"|\\\\\"|g')
 #sed -i "s|.*URL.*|    \"URL\": \"${URL_JSON}\",|" service.json

@@ -67,10 +67,13 @@
       ></param> 
       <param 
         name='jobschedulertype' 
+        type='select' 
         label='Select Controller or SLURM Partition' 
-        type='hidden' 
-        value='CONTROLLER'  
-      ></param>  
+        help='Job will submitted using SSH or sbatch, respectively'      
+        multiple='false'>
+          <option value="CONTROLLER" selected="true">Controller</option>
+          <option value="SLURM">SLURM Partition</option>
+      </param>  
       <param 
         name='_sch__dd_account_e_' 
         label='SLURM account' 
@@ -83,21 +86,27 @@
       <param 
         name='_sch__dd_partition_e_' 
         label='SLURM partition' 
-        type='dynamicPartitionDropdown' 
-        resource='pwrl_host.resource'
-        account='pwrl_host._sch__dd_account_e_'
-        help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
+        type='hidden' 
+        value='service'
+      ></param>
+      <param name='qos'
+        label='Quality of Service [QoS]'
+        type="dynamicQOSDropdown"
+        help="Select a QOS from the drop down menu."
+        resource="pwrl_host.resource"
+        account="pwrl_host._sch__dd_account_e_"
+        partition="pwrl_host._sch__dd_partition_e_"
+        dependent="true"
         depends_on='pwrl_host.jobschedulertype'
         show_if='SLURM'
         optional='true'
-        dependent='true'
       ></param>
       <param 
         name='_sch__dd_time_e_' 
         label='Walltime' 
         type='text' 
         help='e.g. 01:00:00 - Amount of time slurm will honor the interactive session.' 
-        value='01:00:00'
+        value=''
         depends_on='pwrl_host.jobschedulertype'
         show_if='SLURM'
       ></param>

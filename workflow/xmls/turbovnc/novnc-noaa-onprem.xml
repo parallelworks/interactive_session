@@ -108,6 +108,15 @@
         show_if='SLURM'
       ></param>
       <param 
+        name='_sch__dd_ntasks_e_' 
+        label='Number of tasks' 
+        type='hidden' 
+        help='Required' 
+        value='1'
+        depends_on='pwrl_host.jobschedulertype'
+        show_if='SLURM'
+      ></param>
+      <param 
         name='scheduler_directives' 
         label='Scheduler directives' 
         type='text' 

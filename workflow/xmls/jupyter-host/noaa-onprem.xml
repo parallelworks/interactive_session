@@ -85,12 +85,12 @@
       <param 
         name='jobschedulertype' 
         type='select' 
-        depends_on='service.conda_install'
-        options='{"true":[{"value":"CONTROLLER", "label": "Controller"}], "false":[{"value":"CONTROLLER", "label": "Controller"}, {"value":"SLURM", "label": "SLURM Partition"}]}'
         label='Select Controller or SLURM Partition' 
-        help='Job will submitted using SSH or sbatch'   
-        multiple='false'
-      ></param>    
+        help='Job will submitted using SSH or sbatch, respectively'      
+        multiple='false'>
+          <option value="CONTROLLER" selected="true">Controller</option>
+          <option value="SLURM">SLURM Partition</option>
+      </param>   
       <param 
         name='_sch__dd_account_e_' 
         label='SLURM account' 

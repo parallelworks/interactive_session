@@ -1,6 +1,18 @@
 # Runs via ssh + sbatch
 set -x
 
+if [[ "${service_conda_install}" == "true" ]]; then
+    source ${service_conda_sh}
+    eval "conda activate ${service_conda_env}"
+else
+    eval "${service_load_env}"
+fi
+
+if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
+    displayErrorMessage "jupyter-notebook command not found"
+fi
+
+
 echo "starting notebook on $servicePort..."
 
 export XDG_RUNTIME_DIR=""

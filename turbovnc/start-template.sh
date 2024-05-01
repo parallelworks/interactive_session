@@ -178,6 +178,9 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     rm -f ${resource_jobdir}/service.pid
     touch ${resource_jobdir}/service.pid
 
+    chmod og+rx /run/user/$(id -u)
+    chmod 755 /run/user/$(id -u)/dconf
+
     if ! [ -z "${service_desktop}" ]; then
         eval ${service_desktop} &
         echo $! > ${resource_jobdir}/service.pid

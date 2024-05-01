@@ -178,18 +178,6 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     rm -f ${resource_jobdir}/service.pid
     touch ${resource_jobdir}/service.pid
 
-    # Fix bug (process:17924): dconf-CRITICAL **: 20:52:57.695: unable to create directory '/run/user/1002/dconf': 
-    # Permission denied.  dconf will not work properly.
-    # When the session is killed the permissions of directory /run/user/$(id -u) change from drwxr-xr-x to drwxr-----
-    rm -rf /run/user/$(id -u)/dconf
-    sudo -n mkdir /run/user/$(id -u)/ &>/dev/null
-    sudo -n chown ${USER} /run/user/$(id -u) &>/dev/null
-    sudo -n chgrp ${USER} /run/user/$(id -u) &>/dev/null
-    sudo -n  mkdir /run/user/$(id -u)/dconf  &>/dev/null
-    sudo -n  chown ${USER} /run/user/$(id -u)/dconf &>/dev/null
-    sudo -n  chgrp ${USER} /run/user/$(id -u)/dconf &>/dev/null
-    chmod og+rx /run/user/$(id -u)
-
     if ! [ -z "${service_desktop}" ]; then
         eval ${service_desktop} &
         echo $! > ${resource_jobdir}/service.pid

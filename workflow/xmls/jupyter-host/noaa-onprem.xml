@@ -19,22 +19,18 @@
         help='Select Yes to install Jupyter in miniconda environment and No to load an existing python environment '
       ></param>
       <param 
-        name='conda_sh' 
-        label='Path to conda environment' 
-        type='text' 
-        value='__WORKDIR__/pw/.miniconda/etc/profile.d/conda.sh' 
-        help='Path to use in source /path/to/conda.sh'
-        depends_on='service.conda_install'
-        show_if='true'
+        name='install_instructions' 
+        label='Install Instructions' 
+        type='hidden' 
+        value='install_command'
       ></param>
       <param 
-        name='conda_env' 
-        label='Conda environment (recommended: base)' 
+        name='install_command' 
+        label='Command to Install Jupyter' 
         type='text' 
-        value='base' 
-        help='Environment to active. The base environment enables changing kernel to other environments!'
-        depends_on='service.conda_install'
-        show_if='true'
+        value='module load intelpython; pip install notebook==6.5.7' 
+        help=''
+        show_if='service.conda_install'
       ></param>
       <param 
         name='load_env' 
@@ -45,13 +41,6 @@
         depends_on='service.conda_install'
         show_if='false'
       ></param>
-      <param name='install_instructions' 
-        show_if='service.conda_install'
-        type='select' 
-        label='Select Jupyter Notebook Installation' 
-        multiple='false'>
-          <option value="notebook6.5.4-python3.9.18" selected="true">Jupyter Notebook 6.5.4 with Python version 3.9.18</option>
-      </param>
       <param 
         name='password' 
         label='Password for notebook session' 

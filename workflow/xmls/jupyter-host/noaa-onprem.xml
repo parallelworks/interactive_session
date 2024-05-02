@@ -28,7 +28,7 @@
         name='install_command' 
         label='Command to Install Jupyter' 
         type='text' 
-        value='module load intelpython; pip install notebook==6.5.7' 
+        value='module load intelpython; pip install notebook==6.5.7 --no-warn-script-location' 
         help=''
         show_if='service.conda_install'
       ></param>

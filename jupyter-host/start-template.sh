@@ -1,12 +1,7 @@
 # Runs via ssh + sbatch
 set -x
 
-if [[ "${service_conda_install}" == "true" ]]; then
-    source ${service_conda_sh}
-    eval "conda activate ${service_conda_env}"
-else
-    eval "${service_load_env}"
-fi
+eval "${service_load_env}"
 
 if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
     displayErrorMessage "jupyter-notebook command not found"

@@ -36,7 +36,7 @@
         name='load_env' 
         label='Command to load Jupyter' 
         type='text' 
-        value='source __WORKDIR__/pw/.miniconda/etc/profile.d/conda.sh; conda activate base' 
+        value='module load intelpython' 
         help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'
         depends_on='service.conda_install'
         show_if='false'

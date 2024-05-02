@@ -1,9 +1,6 @@
 # Runs via ssh + sbatch
 set -x
 
-echo ${PATH}
-echo ${service_load_env}
-
 eval "${service_load_env}"
 
 if [ -z $(which jupyter-notebook 2> /dev/null) ]; then

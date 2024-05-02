@@ -36,7 +36,7 @@
         name='load_env' 
         label='Command to load Jupyter' 
         type='text' 
-        value='module load intelpython' 
+        value='module load intelpython; export PATH=$PATH:/home/${USER}/.local/bin' 
         help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'
       ></param>
       <param 

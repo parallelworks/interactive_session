@@ -48,8 +48,6 @@
         type='text' 
         value='source __WORKDIR__/pw/.miniconda/etc/profile.d/conda.sh; conda activate base' 
         help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'
-        depends_on='service.conda_install'
-        show_if='false'
       ></param>
     <param name='install_instructions' 
       show_if='service.conda_install'

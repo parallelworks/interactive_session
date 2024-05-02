@@ -15,8 +15,8 @@
         truevalue="Yes" 
         falsevalue="No" 
         checked="True" 
-        label="Install miniconda if not there?" 
-        help='Select Yes to install Jupyter in miniconda environment and No to load an existing python environment '
+        label="Install jupyter-notebook if not there?" 
+        help='Select Yes to install Jupyter Notebook and No to load an existing python environment '
       ></param>
       <param 
         name='install_instructions' 

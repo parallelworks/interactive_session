@@ -196,7 +196,7 @@ get_slurm_job_status() {
         export SQUEUE_HEADER="$(eval "$sshcmd ${status_cmd}" | awk 'NR==1')"
     fi
     status_column=$(echo "${SQUEUE_HEADER}" | awk '{ for (i=1; i<=NF; i++) if ($i ~ /^S/) { print i; exit } }')
-    status_response=$(eval $sshcmd ${status_cmd} | grep "\<${jobid}\>")
+    status_response=$(eval $sshcmd ${status_cmd} | awk -v jobid="${jobid}" '$1 == jobid')
     echo "${SQUEUE_HEADER}"
     echo "${status_response}"
     export job_status=$(echo ${status_response} | awk -v id="${jobid}" -v col="$status_column" '{print $col}')

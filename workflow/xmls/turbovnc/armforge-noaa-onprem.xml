@@ -22,20 +22,6 @@
         value='turbovnc'  
       ></param>
       <param 
-        name='load_env' 
-        label='Command to load forge' 
-        type='text' 
-        value='module load forge' 
-        help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'  
-      ></param>
-      <param 
-        name='bin' 
-        label='Launch command' 
-        type='text' 
-        value='forge' 
-        help=''  
-      ></param>
-      <param 
         name='vnc_exec' 
         label='Path to vncserver' 
         type='hidden' 

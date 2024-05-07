@@ -41,6 +41,12 @@
         type='hidden' 
         value='/opt/TurboVNC/bin/vncserver'  
       ></param>
+      <param 
+        name='vnc_type' 
+        label='VNC Server Type' 
+        type='hidden' 
+        value='turbovnc'
+      ></param>
     </section>
     <section name='pwrl_host' type='section' title='ARM Forge DDT and MAP' expanded='true'>
       <param 

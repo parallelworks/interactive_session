@@ -33,6 +33,13 @@
         value='/opt/TurboVNC/bin/vncserver'
       ></param>
       <param 
+        name='service_desktop' 
+        label='Desktop Session' 
+        type='hidden' 
+        value='mate-session'
+      ></param>
+    <section name='service' type='section' title='Service Inputs' expanded='false'>
+      <param 
         name='load_env' 
         label='Command to load forge' 
         type='text' 
@@ -46,12 +53,7 @@
         value='forge' 
         help=''  
       ></param>
-      <param 
-        name='service_desktop' 
-        label='Desktop Session' 
-        type='hidden' 
-        value='mate-session'
-      ></param>
+    </section>
     <section name='pwrl_host' type='section' title='Desktop Host' expanded='true'>
       <param 
         name='resource' 

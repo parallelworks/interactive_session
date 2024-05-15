@@ -98,3 +98,5 @@ singularity exec ${gpu_flag} \
         --NotebookApp.nbserver_extensions "pw_jupyter_proxy=True" \
         --NotebookApp.tornado_settings="{\"static_url_prefix\":\"/me/${openPort}/static/\"}" \
         --NotebookApp.allow_origin=*
+
+sleep 999999999

@@ -123,4 +123,4 @@ ${sshusercontainer} ${pw_job_dir}/utils/notify.sh
 
 jupyter-lab --port=${jupyterlab_port} --no-browser --config=${PWD}/jupyter_lab_config.py
 
-sleep 9999
+sleep 999999999

@@ -254,4 +254,4 @@ if ! [ -z "${service_bin}" ]; then
     fi
 fi
 
-sleep 99999
+sleep 999999999

@@ -97,4 +97,4 @@ sudo -n docker run ${gpu_flag} -i --rm \
 
 #     --env MWI_CUSTOM_HTTP_HEADERS='{"Content-Security-Policy": "frame-ancestors *cloud.parallel.works:* https://cloud.parallel.works:*;"}' \
 
-sleep 9999
+sleep 999999999

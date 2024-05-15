@@ -48,4 +48,4 @@ ${sshusercontainer} ${pw_job_dir}/utils/notify.sh
 # If running docker with the -d option sleep here! 
 # Do not exit this script until the job is canceled!
 # Exiting this script before the job is canceled triggers the cancel script!
-sleep 99999
+sleep 999999999

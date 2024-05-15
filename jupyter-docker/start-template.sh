@@ -180,4 +180,4 @@ else
     displayErrorMessage "ERROR: Jupyter Notebook version ${jupyter_major_version} is not supported. Use version 6 or 7"
 fi
 
-sleep 9999
+sleep 999999999

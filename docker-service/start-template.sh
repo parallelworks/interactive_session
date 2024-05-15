@@ -73,4 +73,4 @@ echo "Running docker command"
 echo "${service_docker_cmd}"
 eval sudo ${service_docker_cmd}
 
-sleep 9999
+sleep 999999999

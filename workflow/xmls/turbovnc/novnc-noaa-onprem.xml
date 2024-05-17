@@ -73,9 +73,15 @@
       ></param>
       <param 
         name='_sch__dd_partition_e_' 
-        label='SLURM partition' 
-        type='hidden' 
-        value='service'
+        label='Select the service partition' 
+        type='dynamicPartitionDropdown' 
+        resource='pwrl_host.resource'
+        account='pwrl_host._sch__dd_account_e_'
+        help='SLURM partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
+        depends_on='pwrl_host.jobschedulertype'
+        show_if='SLURM'
+        optional='true'
+        dependent='true'
       ></param>
       <param name='qos'
         label='Quality of Service [QoS]'

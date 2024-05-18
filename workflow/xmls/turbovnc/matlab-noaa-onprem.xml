@@ -88,11 +88,9 @@
         type='select'
         label='SLURM partition'
         help='SLURM partition to submit the interactive job' 
-        multiple='false'
         show_if='SLURM'
-      >
+        multiple='false'>
         <option value="service" selected="true">service</option>  
-        <option value="none">none</option>
       </param>
       <param name='qos'
         label='Quality of Service [QoS]'

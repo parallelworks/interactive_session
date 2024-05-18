@@ -91,7 +91,8 @@
         multiple='false'
         show_if='SLURM'
       >
-          <option value="service" selected="true">service</option>  
+        <option value="service" selected="true">service</option>  
+        <option value="none">none</option>
       </param>
       <param name='qos'
         label='Quality of Service [QoS]'

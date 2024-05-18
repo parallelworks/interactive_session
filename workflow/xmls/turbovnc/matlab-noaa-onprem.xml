@@ -89,7 +89,8 @@
         label='SLURM partition'
         help='SLURM partition to submit the interactive job' 
         multiple='false'
-        show_if='SLURM'>
+        show_if='SLURM'
+      >
           <option value="service" selected="true">service</option>  
       </param>
       <param name='qos'

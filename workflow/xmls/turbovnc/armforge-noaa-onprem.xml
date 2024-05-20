@@ -87,11 +87,15 @@
         depends_on='pwrl_host.jobschedulertype'
         show_if='SLURM'
       ></param>
-      <param 
-        name='_sch__dd_partition_e_' 
-        label='SLURM partition' 
-        type='hidden' 
-        value='service'
+      <param
+        name='_sch__dd_partition_e_'
+        type='select'
+        depends_on='pwrl_host.jobschedulertype'
+        label='SLURM partition'
+        help='SLURM partition to submit the interactive job' 
+        show_if='SLURM'
+        multiple='false'
+        options='{"SLURM":[{"value":"service", "label": "service"}]}'
       ></param>
       <param name='qos'
         label='Quality of Service [QoS]'

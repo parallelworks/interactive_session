@@ -90,9 +90,9 @@
         label='SLURM partition'
         help='SLURM partition to submit the interactive job' 
         show_if='SLURM'
-        multiple='false'>
-        <option value="service" selected="true">service</option>  
-      </param>
+        multiple='false'
+        options='{"SLURM":[{"value":"service", "label": "service"}]}'
+      ></param>
       <param name='qos'
         label='Quality of Service [QoS]'
         type="dynamicQOSDropdown"

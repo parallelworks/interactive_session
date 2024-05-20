@@ -86,6 +86,7 @@
       <param
         name='_sch__dd_partition_e_'
         type='select'
+        depends_on='pwrl_host.jobschedulertype'
         label='SLURM partition'
         help='SLURM partition to submit the interactive job' 
         show_if='SLURM'

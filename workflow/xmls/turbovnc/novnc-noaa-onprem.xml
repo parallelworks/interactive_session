@@ -74,12 +74,13 @@
       <param
         name='_sch__dd_partition_e_'
         type='select'
+        depends_on='pwrl_host.jobschedulertype'
         label='SLURM partition'
-        help='SLURM partition to submit the interactive job'
+        help='SLURM partition to submit the interactive job' 
+        show_if='SLURM'
         multiple='false'
-        show_if='SLURM'>
-          <option value="service" selected="true">service</option>
-      </param>
+        options='{"SLURM":[{"value":"service", "label": "service"}]}'
+      ></param>
       <param name='qos'
         label='Quality of Service [QoS]'
         type="dynamicQOSDropdown"

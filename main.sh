@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x
 sed -i 's|\\\\\\|\\|g' inputs.json
 cat inputs.sh
 sed -i 's|\\\\|\\|g' inputs.sh

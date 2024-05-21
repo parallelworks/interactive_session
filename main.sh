@@ -1,4 +1,6 @@
 #!/bin/bash
+sed -i 's|\\\\|\\|g' inputs.sh
+
 source /pw/.miniconda3/etc/profile.d/conda.sh
 conda activate
 

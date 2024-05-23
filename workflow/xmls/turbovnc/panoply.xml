@@ -27,7 +27,7 @@
         {'label': 'Scyld Cloud Workstation', 'value': 'scw'}]">  
       </param>
       <param 
-        name='service_load_env' 
+        name='load_env' 
         label='Command to load or install Panoply' 
         type='text' 
         value='/contrib/software/Panoply/set_panoply.sh'

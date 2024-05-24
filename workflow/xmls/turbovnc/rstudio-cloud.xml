@@ -30,7 +30,6 @@
         name='load_env' 
         label='Command to load RStudio' 
         type='text' 
-        value=''
         optional='true' 
         help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'
       ></param>
@@ -82,7 +81,6 @@
         label='Scheduler directives' 
         type='text' 
         help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' 
-        value=''
         depends_on='pwrl_host.jobschedulertype'
         show_if='SLURM'
         optional='true'  

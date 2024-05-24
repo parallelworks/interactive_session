@@ -63,7 +63,6 @@
         name='yaml' 
         label='Paste Conda Environment Defition YAML' 
         type='textarea' 
-        value='' 
         help='Copy and paste a custom Conda environment definition YAML file'
         show_if="yaml"
         depends_on='service.install_instructions'
@@ -72,7 +71,6 @@
       name='password' 
       label='Password for notebook session' 
       type='hidden' 
-      value='' 
       help='Enter password or leave blank for no password'  
     ></param>
    </section>
@@ -116,7 +114,6 @@
       label='Scheduler directives' 
       type='text' 
       help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' 
-      value=''
       depends_on='pwrl_host.jobschedulertype'
       show_if='SLURM'
       optional='true' 
@@ -126,7 +123,6 @@
       label='PBS queue' 
       type='text' 
       help='Queue to submit the interactive job. Must select one! Use [qstat -f -Q] to list all queues on the system' 
-      value=''  
       depends_on='pwrl_host.jobschedulertype'
       show_if='PBS'
     ></param>
@@ -135,7 +131,6 @@
       label='Scheduler directives' 
       type='text' 
       help='e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to separate parameters. Do not include the PBS keyword.' 
-      value=''
       depends_on='pwrl_host.jobschedulertype'
       show_if='PBS'
       optional='true'   

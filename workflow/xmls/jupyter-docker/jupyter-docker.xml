@@ -20,7 +20,6 @@
           name='mount_directories' 
           label='Docker mount volumnes' 
           type='text' 
-          value='' 
           optional='true' 
           help='Type in the mount volume options for the docker command. E.g.: -v /lustre:/lustre -v /contrib:/contrib'
         ></param>
@@ -81,7 +80,6 @@
           label='Scheduler directives' 
           type='text' 
           help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' 
-          value=''
           depends_on='pwrl_host.jobschedulertype'
           show_if='SLURM'
           optional='true' 

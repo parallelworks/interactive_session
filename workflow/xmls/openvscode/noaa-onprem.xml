@@ -31,7 +31,6 @@
           name='password' 
           label='Password for IDE session' 
           type='text' 
-          value='' 
           help='Enter password or leave blank for no password' 
           optional='true'
         ></param>
@@ -46,7 +45,6 @@
           name='github_token' 
           label='GitHub authentication token' 
           type='text' 
-          value='' 
           help=''
           optional='true'
         ></param>
@@ -122,11 +120,19 @@
         label='Scheduler directives' 
         type='text' 
         help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' 
-        value=''
         depends_on='pwrl_host.jobschedulertype'
         show_if='SLURM'
         optional='true'  
        ></param>
+      <param 
+        name='_sch__dd_nodes_e_' 
+        label='Number of nodes' 
+        type='hidden' 
+        help='Required' 
+        value='1'
+        depends_on='pwrl_host.jobschedulertype'
+        show_if='SLURM'
+      ></param>
     </section>
   </inputs>
   <outputs>

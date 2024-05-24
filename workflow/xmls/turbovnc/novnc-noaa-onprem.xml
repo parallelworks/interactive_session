@@ -98,7 +98,6 @@
         label='Walltime' 
         type='text' 
         help='e.g. 01:00:00 - Amount of time slurm will honor the interactive session.' 
-        value=''
         depends_on='pwrl_host.jobschedulertype'
         show_if='SLURM'
       ></param>
@@ -124,7 +123,7 @@
         name='scheduler_directives' 
         label='Scheduler directives' 
         type='text' 
-        help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' value=''
+        help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.'
         depends_on='pwrl_host.jobschedulertype'
         show_if='SLURM'
         optional='true'

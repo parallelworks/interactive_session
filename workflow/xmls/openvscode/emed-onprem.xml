@@ -37,7 +37,6 @@
           name='password' 
           label='Password for IDE session' 
           type='text' 
-          value='' 
           help='Enter password or leave blank for no password'
           optional='true'
         ></param>
@@ -52,7 +51,6 @@
           name='github_token' 
           label='GitHub authentication token' 
           type='text' 
-          value='' 
           help=''
           optional='true'  
         ></param>
@@ -83,7 +81,6 @@
         label='SLURM partition' 
         type='text' 
         help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
-        value=''
         optional='true'  
       ></param>
       <param 
@@ -116,7 +113,6 @@
         label='Scheduler directives' 
         type='text' 
         help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' 
-        value=''
         optional='true'  
       ></param>
     </section>

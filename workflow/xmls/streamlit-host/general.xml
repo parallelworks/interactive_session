@@ -13,7 +13,6 @@
           name='streamlit_script' 
           label='Path to the Streamlit Script in the Cluster' 
           type='text' 
-          value='' 
           help='The job fails if no path is specified or no file is found'>
         </param>
     <param 
@@ -92,7 +91,6 @@
         label='Scheduler directives' 
         type='text' 
         help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' 
-        value=''
         depends_on='pwrl_host.jobschedulertype'
         show_if='SLURM'
         optional='true'  

@@ -71,6 +71,7 @@
       name='password' 
       label='Password for notebook session' 
       type='hidden' 
+      value=''
       help='Enter password or leave blank for no password'  
     ></param>
    </section>

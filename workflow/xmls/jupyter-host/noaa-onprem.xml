@@ -197,7 +197,7 @@
         name='notebook_dir' 
         label='Directory to start JupyterHub GUI' 
         type='text' 
-        value='~/' 
+        value='__WORKDIR__' 
         help='This is the directory that you start with when the JupyterHub graphical user interface starts.'
       ></param>
    </section>

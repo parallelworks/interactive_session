@@ -73,7 +73,7 @@
         show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":"slurmshv2"}'
       ></param>
       <param 
-        name='_sch__dd_partition_e__cloud_' 
+        name='_sch__dd_partition_e__tag_cloud' 
         label='SLURM partition' 
         type='dynamicPartitionDropdown' 
         resource='pwrl_host.resource'

@@ -14,30 +14,6 @@
       type='hidden' 
       value='/swift-pw-bin/apps/noVNC-1.3.0.tgz'  
     ></param>
-      <param 
-        name='service_name' 
-        label='Service' 
-        type='hidden' 
-        value='turbovnc'
-      ></param>
-      <param 
-        name='service_vnc_type' 
-        label='VNC Server Type' 
-        type='hidden' 
-        value='turbovnc'
-      ></param>
-      <param 
-        name='service_vnc_exec' 
-        label='Path to vncserver if not in path' 
-        type='hidden' 
-        value='/opt/TurboVNC/bin/vncserver'
-      ></param>
-      <param 
-        name='service_desktop' 
-        label='Desktop Session' 
-        type='hidden' 
-        value='mate-session'
-      ></param>
     <section name='pwrl_host' type='section' title='Desktop Host' expanded='true'>
       <param 
         name='resource' 
@@ -134,6 +110,48 @@
         show_if='SLURM'
         optional='true'
       ></param>
+    </section>
+    <section name='service' type='section' title='Service' expanded='false'>
+      <param 
+        name='name_tag_slurmshv2' 
+        label='Service' 
+        type='hidden' 
+        value='turbovnc'
+        show_if='{"pwrl_host.resource.provider":"slurmshv2"}'
+      ></param>
+      <param 
+        name='vnc_type_tag_slurmshv2' 
+        label='VNC Server Type' 
+        type='hidden' 
+        value='turbovnc'
+        show_if='{"pwrl_host.resource.provider":"slurmshv2"}'
+      ></param>
+      <param 
+        name='vnc_exec_tag_slurmshv2' 
+        label='Path to vncserver if not in path' 
+        type='hidden' 
+        value='/opt/TurboVNC/bin/vncserver'
+        show_if='{"pwrl_host.resource.provider":"slurmshv2"}'
+      ></param>
+      <param 
+        name='desktop_tag_slurmshv2' 
+        label='Desktop Session' 
+        type='hidden' 
+        value='mate-session'
+        show_if='{"pwrl_host.resource.provider":"slurmshv2"}'
+      ></param>
+     <param 
+        name='name_tag_cloud' 
+        type='select' 
+        label='Select remote display protocol' 
+        help='Make sure the display protocol is installed in the host!' 
+        multiple='false'
+        show_if='{"pwrl_host.resource.provider":["gclusterv2", "pclusterv2", "azclusterv2"]}'
+        value='turbovnc'
+        options = "[{'label': 'VNC Server', 'value': 'turbovnc'}, 
+        {'label': 'Nice DCV', 'value': 'nicedcv'}, 
+        {'label': 'Scyld Cloud Workstation', 'value': 'scw'}]">  
+      </param>
     </section>
   </inputs>
   <outputs>

@@ -63,25 +63,23 @@
           <option value="SLURM">SLURM Partition</option>
       </param>
       <param 
-        name='_sch__dd_account_e_' 
+        name='_sch__dd_account_e__tag_slurmshv2' 
         label='SLURM account' 
         type='dynamicAccountDropdown' 
         help='Account to submit the interactive job' 
         resource='pwrl_host.resource'
-        depends_on='pwrl_host.jobschedulertype'
-        show_if='SLURM'
+        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":"slurmshv2"}'
       ></param>
       <param
-        name='_sch__dd_partition_e_'
+        name='_sch__dd_partition_e__tag_slurmshv2'
         type='select'
-        depends_on='pwrl_host.jobschedulertype'
         label='SLURM partition'
         help='SLURM partition to submit the interactive job' 
-        show_if='SLURM'
         multiple='false'
-        options='{"SLURM":[{"value":"service", "label": "service"}]}'
+        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":"slurmshv2"}'
+        option='[{"label": "service", "value":"service"}]'
       ></param>
-      <param name='qos'
+      <param name='qos_tag_slurmshv2'
         label='Quality of Service [QoS]'
         type="dynamicQOSDropdown"
         help="Select a QOS from the drop down menu."
@@ -89,36 +87,43 @@
         account="pwrl_host._sch__dd_account_e_"
         partition="pwrl_host._sch__dd_partition_e_"
         dependent="true"
-        depends_on='pwrl_host.jobschedulertype'
-        show_if='SLURM'
+        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":"slurmshv2"}'
       ></param>
+      <param 
+        name='_sch__dd_partition_e__tag_cloud' 
+        label='SLURM partition' 
+        type='dynamicPartitionDropdown' 
+        resource='pwrl_host.resource'
+        help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
+        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":["gclusterv2", "pclusterv2", "azclusterv2"]}'
+        optional='true'
+        dependent='false'
+      ></param>    
       <param 
         name='_sch__dd_time_e_' 
         label='Walltime' 
-        type='text' 
+        type='text'
+        value='01:00:00'
         help='e.g. 01:00:00 - Amount of time slurm will honor the interactive session.' 
-        depends_on='pwrl_host.jobschedulertype'
-        show_if='SLURM'
+        show_if='{"pwrl_host.jobschedulertype":"SLURM"}'
       ></param>
       <param 
-        name='_sch__dd_nodes_e_' 
+        name='_sch__dd_nodes_e__tag_slurmshv2' 
         label='Number of nodes' 
         type='hidden' 
         help='Required' 
         value='1'
-        depends_on='pwrl_host.jobschedulertype'
-        show_if='SLURM'
+        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":"slurmshv2"}'
       ></param>
       <param 
-        name='_sch__dd_ntasks_e_' 
+        name='_sch__dd_ntasks_e__tag_slurmshv2' 
         label='Number of tasks' 
         type='integer' 
         min="1" 
         max="100" 
         help='--ntasks=value slurm directive' 
         value='1'
-        depends_on='pwrl_host.jobschedulertype'
-        show_if='SLURM'
+        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":"slurmshv2"}'
       ></param>
       <param 
         name='scheduler_directives' 

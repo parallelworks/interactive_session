@@ -35,14 +35,15 @@
         resource='pwrl_host.resource'
         show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":"slurmshv2"}'
       ></param>
-      <param
-        name='_sch__dd_partition_e__tag_slurmshv2'
-        type='select'
-        label='SLURM partition'
-        help='SLURM partition to submit the interactive job' 
-        multiple='false'
+      <param 
+        name='_sch__dd_partition_e__tag_slurmshv2' 
+        label='SLURM partition' 
+        type='dynamicPartitionDropdown' 
+        resource='pwrl_host.resource'
+        account='pwrl_host._sch__dd_account_e_'
+        help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
         show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":"slurmshv2"}'
-        option='[{"label": "service", "value":"service"}]'
+        dependent='true'
       ></param>
       <param name='qos_tag_slurmshv2'
         label='Quality of Service [QoS]'

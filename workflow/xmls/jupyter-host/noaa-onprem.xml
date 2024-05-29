@@ -2,58 +2,6 @@
   <command interpreter='bash'>main.sh</command>
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
-   <section name='service' type='section' title='Jupyter Notebook Settings' expanded='true'>
-      <param 
-        name='name' 
-        label='Service' 
-        type='hidden' 
-        value='jupyter-host'
-      ></param>
-      <param 
-        name="conda_install" 
-        type="boolean" 
-        truevalue="Yes" 
-        falsevalue="No" 
-        checked="True" 
-        label="Install jupyter-notebook if not there?" 
-        help='Select Yes to install Jupyter Notebook and No to load an existing python environment '
-      ></param>
-      <param 
-        name='install_instructions' 
-        label='Install Instructions' 
-        type='hidden' 
-        value='install_command'
-      ></param>
-      <param 
-        name='install_command' 
-        label='Command to Install Jupyter' 
-        type='text' 
-        value='module load intelpython; pip install notebook==6.5.7 --no-warn-script-location' 
-        help=''
-        show_if='service.conda_install'
-      ></param>
-      <param 
-        name='load_env' 
-        label='Command to load Jupyter' 
-        type='text' 
-        value='module load intelpython; export PATH=$PATH:/home/${USER}/.local/bin' 
-        help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'
-      ></param>
-      <param 
-        name='password' 
-        label='Password for notebook session' 
-        type='hidden' 
-        value='' 
-        help='Enter password or leave blank for no password'
-      ></param>
-      <param 
-        name='notebook_dir' 
-        label='Directory to start JupyterHub GUI' 
-        type='text' 
-        value='~/' 
-        help='This is the directory that you start with when the JupyterHub graphical user interface starts.'
-      ></param>
-   </section>
     <section name='pwrl_host' type='section' title='Jupyter Server Host' expanded='true'>
       <param 
         name='resource' 
@@ -79,26 +27,24 @@
           <option value="SLURM">SLURM Partition</option>
       </param>   
       <param 
-        name='_sch__dd_account_e_' 
+        name='_sch__dd_account_e__tag_slurmshv2' 
         label='SLURM account' 
         type='dynamicAccountDropdown' 
         help='Account to submit the interactive job' 
         resource='pwrl_host.resource'
-        depends_on='pwrl_host.jobschedulertype'
-        show_if='SLURM'
+        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":"slurmshv2"}'
       ></param>
       <param 
-        name='_sch__dd_partition_e_' 
+        name='_sch__dd_partition_e__tag_slurmshv2' 
         label='SLURM partition' 
         type='dynamicPartitionDropdown' 
         resource='pwrl_host.resource'
         account='pwrl_host._sch__dd_account_e_'
         help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
-        depends_on='pwrl_host.jobschedulertype'
-        show_if='SLURM'
+        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":"slurmshv2"}'
         dependent='true'
       ></param>
-      <param name='qos'
+      <param name='qos_tag_slurmshv2'
         label='Quality of Service [QoS]'
         type="dynamicQOSDropdown"
         help="Select a QOS from the drop down menu."
@@ -106,8 +52,35 @@
         account="pwrl_host._sch__dd_account_e_"
         partition="pwrl_host._sch__dd_partition_e_"
         dependent="true"
-        depends_on='pwrl_host.jobschedulertype'
-        show_if='SLURM'
+        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":"slurmshv2"}'
+      ></param>
+      <param 
+        name='_sch__dd_ntasks_e__tag_slurmshv2' 
+        label='Number of tasks' 
+        type='integer' 
+        min="1" 
+        max="100" 
+        help='--ntasks=value slurm directive' 
+        value='1'
+        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":"slurmshv2"}'
+      ></param>
+      <param 
+        name='_sch__dd_nodes_e__tag_slurmshv2' 
+        label='Number of nodes' 
+        type='hidden' 
+        help='Required' 
+        value='1'
+        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":"slurmshv2"}'
+      ></param>
+      <param 
+        name='_sch__dd_partition_e__tag_cloud' 
+        label='SLURM partition' 
+        type='dynamicPartitionDropdown' 
+        resource='pwrl_host.resource'
+        help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
+        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":["gclusterv2", "pclusterv2", "azclusterv2"]}'
+        optional='true'
+        dependent='false'
       ></param>
       <param 
         name='_sch__dd_time_e_' 
@@ -115,26 +88,6 @@
         type='text' 
         help='e.g. 01:00:00 - Amount of time slurm will honor the interactive session.' 
         value='01:00:00'
-        depends_on='pwrl_host.jobschedulertype'
-        show_if='SLURM'
-      ></param>
-      <param 
-        name='_sch__dd_ntasks_e_' 
-        label='Number of tasks' 
-        type='integer' 
-        min="1" 
-        max="100" 
-        help='--ntasks=value slurm directive' 
-        value='1'
-        depends_on='pwrl_host.jobschedulertype'
-        show_if='SLURM'
-      ></param>
-      <param 
-        name='_sch__dd_nodes_e_' 
-        label='Number of nodes' 
-        type='hidden' 
-        help='Required' 
-        value='1'
         depends_on='pwrl_host.jobschedulertype'
         show_if='SLURM'
       ></param>
@@ -148,6 +101,106 @@
         optional='true'
       ></param>
     </section>
+    <section name='service' type='section' title='Jupyter Notebook Settings' expanded='true'>
+      <param 
+        name='name' 
+        label='Service' 
+        type='hidden' 
+        value='jupyter-host'
+      ></param>
+      <param 
+        name="conda_install" 
+        type="boolean" 
+        truevalue="Yes" 
+        falsevalue="No" 
+        checked="True" 
+        label="Install jupyter-notebook if not there?" 
+        help='Select Yes to install Jupyter Notebook and No to load an existing python environment '
+      ></param>
+      <param 
+        name='install_instructions_tag_slurmshv2' 
+        label='Install Instructions' 
+        type='hidden' 
+        value='install_command'
+        show_if='{"service.conda_install":"true", "pwrl_host.resource.provider":"slurmshv2"}'  
+      ></param>
+      <param 
+        name='install_command_tag_slurmshv2' 
+        label='Command to Install Jupyter' 
+        type='text' 
+        value='module load intelpython; pip install notebook==6.5.7 --no-warn-script-location' 
+        help=''
+        show_if='{"service.conda_install":"true", "pwrl_host.resource.provider":"slurmshv2"}'  
+      ></param>
+      <param 
+        name='load_env_tag_slurmshv2' 
+        label='Command to load Jupyter' 
+        type='text' 
+        value='module load intelpython; export PATH=$PATH:/home/${USER}/.local/bin' 
+        help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'
+        show_if='{"pwrl_host.resource.provider":"slurmshv2"}'
+      ></param>
+
+      <param 
+        name='conda_sh_tag_cloud' 
+        label='Path to conda environment' 
+        type='text' 
+        value='__WORKDIR__/pw/.miniconda/etc/profile.d/conda.sh' 
+        help='Path to use in source /path/to/conda.sh'
+        show_if='{"service.conda_install":"true","pwrl_host.resource.provider":["gclusterv2", "pclusterv2", "azclusterv2"]}'
+      ></param>
+      <param 
+        name='conda_env_tag_cloud' 
+        label='Conda environment (recommended: base)' 
+        type='text' 
+        value='base' 
+        help='Environment to active. The base environment enables changing kernel to other environments!'
+        show_if='{"service.conda_install":"true","pwrl_host.resource.provider":["gclusterv2", "pclusterv2", "azclusterv2"]}'
+      ></param>
+      <param 
+        name='load_env_tag_cloud' 
+        label='Command to load Jupyter' 
+        type='text' 
+        value='source __WORKDIR__/pw/.miniconda/etc/profile.d/conda.sh; conda activate base' 
+        help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'
+        show_if='{"pwrl_host.resource.provider":["gclusterv2", "pclusterv2", "azclusterv2"]}'
+      ></param>
+      <param 
+        name='install_instructions_tag_cloud' 
+        type='select' 
+        label='Select Jupyter Notebook Installation' 
+        show_if='{"service.conda_install":"true","pwrl_host.resource.provider":["gclusterv2", "pclusterv2", "azclusterv2"]}'
+        multiple='false'
+        value='notebook7.0.8-python3.12.1'
+        options = "[
+          {'label': 'Latest default versions of Jupyter Notebook and Python (not thoroughly tested)', 'value': 'latest'}, 
+          {'label': 'Jupyter Notebook 7.0.8 with Python version 3.12.1', 'value': 'notebook7.0.8-python3.12.1'}, 
+          {'label': 'Jupyter Notebook 6.5.4 with Python version 3.9.18', 'value': 'notebook6.5.4-python3.9.18'}, 
+          {'label': 'Provide custom Conda environment YAML file', 'value': 'yaml'}
+        ]">
+      </param>
+      <param
+        name='yaml_tag_cloud' 
+        label='Paste Conda Environment Defition YAML' 
+        type='textarea' 
+        help='Copy and paste a custom Conda environment definition YAML file'
+        show_if='{"service.install_instructions_tag_cloud":"yaml","pwrl_host.resource.provider":["gclusterv2", "pclusterv2", "azclusterv2"]}'
+      ></param>
+      <param 
+        name='password' 
+        label='Password for notebook session' 
+        type='hidden' 
+        value='' 
+        help='Enter password or leave blank for no password'
+      ></param>
+      <param 
+        name='notebook_dir' 
+        label='Directory to start JupyterHub GUI' 
+        type='text' 
+        value='__WORKDIR__' 
+        help='This is the directory that you start with when the JupyterHub graphical user interface starts.'
+      ></param>
+   </section>
   </inputs>
   <outputs>
   </outputs>

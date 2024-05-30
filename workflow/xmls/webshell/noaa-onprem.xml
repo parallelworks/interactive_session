@@ -33,7 +33,7 @@
         type='dynamicAccountDropdown' 
         help='Account to submit the interactive job' 
         resource='pwrl_host.resource'
-        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":"slurmshv2"}'
+        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":["slurmshv2","existing"]}'
       ></param>
       <param 
         name='_sch__dd_partition_e__tag_slurmshv2' 
@@ -42,7 +42,7 @@
         resource='pwrl_host.resource'
         account='pwrl_host._sch__dd_account_e_'
         help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
-        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":"slurmshv2"}'
+        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":["slurmshv2","existing"]}'
         dependent='true'
       ></param>
       <param name='qos_tag_slurmshv2'
@@ -53,7 +53,7 @@
         account="pwrl_host._sch__dd_account_e_"
         partition="pwrl_host._sch__dd_partition_e_"
         dependent="true"
-        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":"slurmshv2"}'
+        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":["slurmshv2","existing"]}'
       ></param>
       <param 
         name='_sch__dd_partition_e__tag_cloud' 
@@ -79,7 +79,7 @@
         type='hidden' 
         help='Required' 
         value='1'
-        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":"slurmshv2"}'
+        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":["slurmshv2","existing"]}'
       ></param>
       <param 
         name='_sch__dd_ntasks_e__tag_slurmshv2' 
@@ -89,7 +89,7 @@
         max="100" 
         help='--ntasks=value slurm directive' 
         value='1'
-        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":"slurmshv2"}'
+        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":["slurmshv2","existing"]}'
       ></param>
       <param 
         name='scheduler_directives' 

@@ -150,8 +150,14 @@
         value='turbovnc'
         options = "[{'label': 'VNC Server', 'value': 'turbovnc'}, 
         {'label': 'Nice DCV', 'value': 'nicedcv'}, 
-        {'label': 'Scyld Cloud Workstation', 'value': 'scw'}]">  
+        {'label': 'Scyld Cloud Workstation', 'value': 'scw'}]">
       </param>
+      <param 
+        name='job_name' 
+        label='Job Name' 
+        type='text'
+        value='desktop'
+      ></param>
     </section>
   </inputs>
   <outputs>

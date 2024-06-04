@@ -41,7 +41,7 @@
         type='dynamicPartitionDropdown' 
         resource='pwrl_host.resource'
         account='pwrl_host._sch__dd_account_e_'
-        help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
+        help='Partition to submit the interactive job.' 
         show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":["slurmshv2","existing"]}'
         dependent='true'
       ></param>

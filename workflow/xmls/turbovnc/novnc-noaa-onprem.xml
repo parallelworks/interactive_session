@@ -60,8 +60,8 @@
         type="dynamicQOSDropdown"
         help="Select a QOS from the drop down menu."
         resource="pwrl_host.resource"
-        account="pwrl_host._sch__dd_account_e_"
-        partition="pwrl_host._sch__dd_partition_e_"
+        account="pwrl_host._sch__dd_account_e__tag_slurmshv2"
+        partition="pwrl_host._sch__dd_partition_e__tag_slurmshv2"
         dependent="true"
         show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":["slurmshv2","existing"]}'
       ></param>

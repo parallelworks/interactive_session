@@ -114,6 +114,7 @@
         truevalue="Yes" 
         falsevalue="No" 
         checked="True" 
+        value="true"
         label="Install jupyter-notebook if not there?" 
         help='Select Yes to install Jupyter Notebook and No to load an existing python environment '
       ></param>

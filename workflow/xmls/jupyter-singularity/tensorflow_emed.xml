@@ -35,6 +35,7 @@
         truevalue="Yes" 
         falsevalue="No"
         checked="True" 
+        value="true"
         label="Use GPUs?" 
         help='Select Yes to run a CUDA application inside a container'
       ></param>

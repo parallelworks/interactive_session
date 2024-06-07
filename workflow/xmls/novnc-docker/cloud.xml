@@ -39,6 +39,7 @@
         truevalue="Yes" 
         falsevalue="No" 
         checked="False" 
+        value="false"
         label="Use GPUs?" 
         help='Select Yes to run a CUDA application inside a container'   
         float="right"

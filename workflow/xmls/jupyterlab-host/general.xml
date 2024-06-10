@@ -21,7 +21,7 @@
         type="boolean" 
         truevalue="Yes" 
         falsevalue="No" 
-        checked="True" \
+        checked="True" 
         value="true"
         label="Install miniconda environment if not there?" 
         help='Select Yes to install Jupyter in miniconda environment and No to load an existing python environment'  

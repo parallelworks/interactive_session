@@ -155,8 +155,8 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     # desktop environment
     if [[ ${jobschedulertype} == "SLURM" ]]; then
         ssh -N -f localhost &
+        echo $! > ${resource_jobdir}/service.pid
     fi
-    echo $! > ${resource_jobdir}/service.pid
     mkdir -p /run/user/$(id -u)/dconf
     chmod og+rx /run/user/$(id -u)
     chmod 755 /run/user/$(id -u)/dconf

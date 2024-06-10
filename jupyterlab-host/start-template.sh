@@ -119,7 +119,7 @@ sed -i "s|^.*c\.ServerApp\.tornado_settings.*|c.ServerApp.tornado_settings = {\"
 sed -i "s|^.*c\.ServerApp\.root_dir.*|c.ServerApp.root_dir = '${service_notebook_dir}'|" jupyter_lab_config.py
 
 # Notify platform that service is running
-${sshusercontainer} ${pw_job_dir}/utils/notify.sh
+${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 
 jupyter-lab --port=${jupyterlab_port} --no-browser --config=${PWD}/jupyter_lab_config.py
 

@@ -219,6 +219,6 @@ if ! [ -z "${service_bin}" ] && ! [[ "${service_bin}" == "__""service_bin""__" ]
 fi
 
 # Notify platform that service is running
-${sshusercontainer} ${pw_job_dir}/utils/notify.sh
+${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 
 sleep 999999999

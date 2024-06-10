@@ -367,7 +367,7 @@ body{
 HERE
 
 # Notify platform that service is running
-${sshusercontainer} ${pw_job_dir}/utils/notify.sh
+${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 
 nc -klv -p ${servicePort} -c '$PWD/httpresponse.sh'
 

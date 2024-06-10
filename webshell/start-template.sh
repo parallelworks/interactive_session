@@ -43,6 +43,6 @@ rm -rf ${PWD}/service.pid
 echo $! >> ${PWD}/service.pid
 
 # Notify platform that service is running
-${sshusercontainer} ${pw_job_dir}/utils/notify.sh
+${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 
 sleep 99999

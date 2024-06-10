@@ -82,7 +82,7 @@ def load_jupyter_server_extension(nbapp):
 HERE
 
 # Notify platform that service is ready
-${sshusercontainer} ${pw_job_dir}/utils/notify.sh
+${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 
 sudo -n docker run ${gpu_flag} -i --rm --name ${jupyter_container_name} \
     ${service_mount_directories} \
@@ -157,7 +157,7 @@ sudo docker logs ${container_name}
 # START JUPYTER WRAPPER #
 #########################
 # Notify platform that service is ready
-${sshusercontainer} ${pw_job_dir}/utils/notify.sh
+${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 
 sudo -n docker run ${gpu_flag} -i --rm --name ${jupyter_container_name} \
     ${service_mount_directories} \

@@ -216,7 +216,7 @@ rm -f ${portFile}
 sleep 6 # Need this specially in controller node or second software won't show up!
 
 # Notify platform that service is running
-${sshusercontainer} ${pw_job_dir}/utils/notify.sh
+${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 
 # Reload env in case it was deactivated in the step above (e.g.: conda activate)
 eval "${service_load_env}"

@@ -43,7 +43,7 @@ sudo -n docker run -d --name ${container_name} \
 sudo docker logs ${container_name}
 
 # Notify platform that service is running
-${sshusercontainer} ${pw_job_dir}/utils/notify.sh
+${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 
 # If running docker with the -d option sleep here! 
 # Do not exit this script until the job is canceled!

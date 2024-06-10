@@ -7,16 +7,21 @@
 source /etc/profile.d/parallelworks-env.sh
 
 pw_job_dir=$(dirname $(dirname $0))
+status="$1"
 
 source ${pw_job_dir}/inputs.sh
 
 url="/workflows/${workflow_name}/${job_number}/view"
 
 # Change job status
-echo "Changing job status to running"
-sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Running\",/" ${pw_job_dir}/service.json
+echo "Changing job status to ${status}"
+sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"${status}\",/" ${pw_job_dir}/service.json
 
-# Send notification
+if [[ "${status}" != "Running" ]]; then
+    exit 0
+fi
+
+# Send notification if status is Running
 echo "Posting notification"
 curl -s \
     -X POST -H "Content-Type: application/json" \

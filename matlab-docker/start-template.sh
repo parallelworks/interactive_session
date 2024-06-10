@@ -76,7 +76,7 @@ MWI_BASE_URL="/me/${openPort}/"
 set -x
 
 # Notify platform that service is ready
-${sshusercontainer} ${pw_job_dir}/utils/notify.sh
+${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 
 # https://docs.docker.com/config/containers/container-networking/
 #    sudo docker run -it --rm -p 8888:8888 --shm-size=512M mathworks/matlab:r2022a -browser

@@ -52,6 +52,9 @@ f_set_up_conda_from_yaml() {
 
 
 if [[ "${service_conda_install}" == "true" ]]; then
+    
+    ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Installing"
+
     service_conda_dir=$(echo "${service_conda_sh}" | sed 's|/etc/profile.d/conda.sh||')
     if [[ "${service_install_instructions}" == "install_command" ]]; then
         eval ${service_install_command}

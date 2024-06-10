@@ -63,7 +63,7 @@ base_url="/me/${openPort}/"
 set -x
 
 # Notify platform that service is ready
-${sshusercontainer} ${pw_job_dir}/utils/notify.sh
+${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 
 service_docker_cmd=${service_docker_cmd//__docker_port__/$docker_port}
 service_docker_cmd=${service_docker_cmd//__base_url__/$base_url}

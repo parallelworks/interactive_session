@@ -150,6 +150,14 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     rm -f ${resource_jobdir}/service.pid
     touch ${resource_jobdir}/service.pid
 
+    # Need this to activate pam_systemd when running under SLURM
+    # Otherwise we get permission denied messages when starting the
+    # desktop environment
+    if [[ ${jobschedulertype} == "SLURM" ]]; then
+        ssh -N -f localhost &
+        echo $! > ${resource_jobdir}/service.pid
+    fi
+    mkdir -p /run/user/$(id -u)/dconf
     chmod og+rx /run/user/$(id -u)
     chmod 755 /run/user/$(id -u)/dconf
 
@@ -159,13 +167,13 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     elif  ! [ -z $(which gnome-session) ]; then
         gsettings set org.gnome.desktop.session idle-delay 0
         gnome-session &
-        echo $! > ${resource_jobdir}/service.pid
+        echo $! >> ${resource_jobdir}/service.pid
     elif ! [ -z $(which mate-session) ]; then
         mate-session &
-        echo $! > ${resource_jobdir}/service.pid
+        echo $! >> ${resource_jobdir}/service.pid
     elif ! [ -z $(which xfce4-session) ]; then
         xfce4-session &
-        echo $! > ${resource_jobdir}/service.pid
+        echo $! >> ${resource_jobdir}/service.pid
     elif ! [ -z $(which icewm-session) ]; then
         # FIXME: Code below fails to launch desktop session
         #        Use case in onyx automatically launches the session when visual apps are launched
@@ -174,7 +182,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         #echo $! > ${resource_jobdir}/service.pid
     elif ! [ -z $(which gnome) ]; then
         gnome &
-        echo $! > ${resource_jobdir}/service.pid
+        echo $! >> ${resource_jobdir}/service.pid
     else
         # Exit script here
         #displayErrorMessage "ERROR: No desktop environment was found! Tried gnome-session, mate-session, xfce4-session and gnome"
@@ -193,7 +201,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         fi
         # Start GUI
         xfce4-session &
-        echo $! > ${resource_jobdir}/service.pid
+        echo $! >> ${resource_jobdir}/service.pid
     fi
 fi
 

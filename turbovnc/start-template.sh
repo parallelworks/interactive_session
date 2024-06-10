@@ -150,8 +150,12 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     rm -f ${resource_jobdir}/service.pid
     touch ${resource_jobdir}/service.pid
 
-    echo "DEBUG: MAKING DCONF DIRECTORY"
-    ssh -N -f localhost &
+    # Need this to activate pam_systemd when running under SLURM
+    # Otherwise we get permission denied messages when starting the
+    # desktop environment
+    if [[ ${jobschedulertype} == "SLURM" ]]; then
+        ssh -N -f localhost &
+    fi
     echo $! > ${resource_jobdir}/service.pid
     mkdir -p /run/user/$(id -u)/dconf
     chmod og+rx /run/user/$(id -u)

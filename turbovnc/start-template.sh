@@ -126,8 +126,6 @@ if ! [[ $kernel_version == *microsoft* ]]; then
 
     # Start service
     mkdir -p ~/.vnc
-    echo "DEBUG: MAKING DCONF DIRECTORY"
-    ssh localhost "mkdir -p /run/user/$(id -u)/dconf"
     ${service_vnc_exec} -kill ${DISPLAY}
 
     # To prevent the process from being killed at startime    
@@ -152,8 +150,10 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     rm -f ${resource_jobdir}/service.pid
     touch ${resource_jobdir}/service.pid
 
-    chmod og+rx /run/user/$(id -u)
-    chmod 755 /run/user/$(id -u)/dconf
+    echo "DEBUG: MAKING DCONF DIRECTORY"
+    ssh localhost "mkdir -p /run/user/$(id -u)/dconf"
+    ssh localhost "chmod og+rx /run/user/$(id -u)"
+    ssh localhost "chmod 755 /run/user/$(id -u)/dconf"
 
     if ! [ -z "${service_desktop}" ]; then
         eval ${service_desktop} &

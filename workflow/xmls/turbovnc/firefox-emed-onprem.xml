@@ -19,7 +19,6 @@
         label='Service binary' 
         type='hidden' 
         value='firefox' 
-        help='Enter the command <firefox URL>'  
     ></param>
     <param 
       name='novnc_dir' 

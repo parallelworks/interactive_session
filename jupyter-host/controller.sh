@@ -94,8 +94,10 @@ fi
 
 
 if [[ $service_install_kernels == *"julia-kernel"* ]]; then
-    curl -fsSL https://install.julialang.org | sh -s -- -y
-    source ~/.bashrc
-    source ~/.bash_profile
-    julia -e 'using Pkg; Pkg.add("IJulia")'
+    if [ -z $(which julia 2> /dev/null) ]; then
+        curl -fsSL https://install.julialang.org | sh -s -- -y
+        source ~/.bashrc
+        source ~/.bash_profile
+        julia -e 'using Pkg; Pkg.add("IJulia")'
+    fi
 fi

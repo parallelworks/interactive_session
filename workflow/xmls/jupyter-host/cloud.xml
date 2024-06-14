@@ -74,6 +74,7 @@
       label='Select additional kernels to install' 
       multiple='true'>
         <option value="julia-kernel">Julia Kernel</option>
+        <option value="R-kernel">R Kernel</option>
     </param>
       <param 
         name='password' 

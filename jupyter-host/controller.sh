@@ -92,6 +92,10 @@ if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
     displayErrorMessage "jupyter-notebook command not found"
 fi
 
+if [[ "${service_conda_install}" != "true" ]]; then
+    exit 0
+fi
+
 
 if [[ $service_install_kernels == *"julia-kernel"* ]]; then
     if [ -z $(which julia 2> /dev/null) ]; then
@@ -100,4 +104,9 @@ if [[ $service_install_kernels == *"julia-kernel"* ]]; then
         source ~/.bash_profile
         julia -e 'using Pkg; Pkg.add("IJulia")'
     fi
+fi
+
+if [[ $service_install_kernels == *"R-kernel"* ]]; then
+    conda install r-recommended r-irkernel -y
+    R -e 'IRkernel::installspec()'
 fi

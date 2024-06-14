@@ -188,7 +188,7 @@
         show_if='{"service.install_instructions_tag_cloud":"yaml","pwrl_host.resource.provider":["gclusterv2", "pclusterv2", "azclusterv2"]}'
       ></param>
       <param name='install_kernels_tag_cloud' 
-        show_if='{"service.install_instructions_tag_cloud":"yaml","pwrl_host.resource.provider":["gclusterv2", "pclusterv2", "azclusterv2"]}'
+        show_if='{"service.conda_install":"true","pwrl_host.resource.provider":["gclusterv2", "pclusterv2", "azclusterv2"]}'
         type='select' 
         label='Select additional kernels to install' 
         multiple='true'>

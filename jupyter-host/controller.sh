@@ -91,3 +91,9 @@ fi
 if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
     displayErrorMessage "jupyter-notebook command not found"
 fi
+
+
+if [[ $service_install_kernels == *"julia-kernel"* ]]; then
+    curl -fsSL https://install.julialang.org | sh -s -- -y
+    julia -e 'using Pkg; Pkg.add("IJulia")'
+fi

@@ -68,6 +68,14 @@
         show_if="yaml"
         depends_on='service.install_instructions'
     ></param>
+    <param name='install_kernels' 
+      show_if='service.conda_install'
+      type='select' 
+      label='Select additional kernels to install' 
+      multiple='true'>
+        <option value="julia-kernel">Julia Kernel</option>
+        <option value="R-kernel">R Kernel</option>
+    </param>
     <param 
       name='password' 
       label='Password for notebook session' 

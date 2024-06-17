@@ -187,6 +187,14 @@
         help='Copy and paste a custom Conda environment definition YAML file'
         show_if='{"service.install_instructions_tag_cloud":"yaml","pwrl_host.resource.provider":["gclusterv2", "pclusterv2", "azclusterv2"]}'
       ></param>
+      <param name='install_kernels_tag_cloud' 
+        show_if='{"service.conda_install":"true","pwrl_host.resource.provider":["gclusterv2", "pclusterv2", "azclusterv2"]}'
+        type='select' 
+        label='Select additional kernels to install' 
+        multiple='true'>
+          <option value="julia-kernel">Julia Kernel</option>
+          <option value="R-kernel">R Kernel</option>
+      </param>
       <param 
         name='password' 
         label='Password for notebook session' 

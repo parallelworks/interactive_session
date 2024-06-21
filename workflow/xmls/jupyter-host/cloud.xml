@@ -72,6 +72,7 @@
       show_if='service.conda_install'
       type='select' 
       label='Select additional kernels to install' 
+      optional='true'
       multiple='true'>
         <option value="julia-kernel">Julia Kernel</option>
         <option value="R-kernel">R Kernel</option>

@@ -79,6 +79,7 @@
       <param name='install_kernels' 
         show_if='service.conda_install'
         type='select' 
+        optional='true'
         label='Select additional kernels to install' 
         multiple='true'>
           <option value="julia-kernel">Julia Kernel</option>

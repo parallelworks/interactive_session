@@ -1,0 +1,183 @@
+# yaml-language-server: $schema=workflow.schema.json
+---
+name: My Workflow
+on:
+  execute:
+    inputs:
+      service:
+        type: group
+        label: Jupyter Notebook Settings
+        items:
+          name:
+            type: string
+            label: Service
+            hidden: true
+            placeholder: jupyter-host
+            optional: true
+          notebook_dir:
+            type: string
+            label: Directory to start Jupyter GUI
+            tooltip:
+                "This is the directory that you start with when the JupyterHub
+                graphical user interface starts. The default value here is your home
+                directory."
+            placeholder: __WORKDIR__
+            optional: true
+          conda_install:
+            type: boolean
+            label: Install miniconda if not there?
+            tooltip:
+                Select Yes to install Jupyter in miniconda environment and No to load
+                an existing python environment 
+            default: true
+            optional: true
+          conda_sh:
+            type: string
+            label: Path to conda environment
+            hidden: "{{!inputs.service.conda_install}}"
+            tooltip:
+              - Path to use in source /path/to/conda.sh
+            placeholder: __WORKDIR__/pw/.miniconda/etc/profile.d/conda.sh
+            optional: true
+          conda_env:
+            type: string
+            label: 'Conda environment (recommended: base)'
+            hidden: "{{!inputs.service.conda_install}}"
+            tooltip:
+              - >-
+                Environment to active. The base environment enables changing kernel to
+                other environments!
+            placeholder: base
+            optional: true
+          load_env:
+            type: string
+            label: Command to load Jupyter
+            tooltip:
+              - >-
+                To load the environment, enter the appropriate command, for example:
+                module load module-name or source path/to/env.sh.
+            placeholder: >-
+              source __WORKDIR__/pw/.miniconda/etc/profile.d/conda.sh; conda activate
+              base
+            optional: true
+          install_instructions:
+            type: dropdown
+            label: Select Jupyter Notebook Installation
+            options:
+              - value: latest
+                label: >-
+                  Latest default versions of Jupyter Notebook and Python (not
+                  thoroughly tested)
+              - value: notebook7.0.8-python3.12.1
+                label: Jupyter Notebook 7.0.8 with Python version 3.12.1
+              - value: notebook6.5.4-python3.9.18
+                label: Jupyter Notebook 6.5.4 with Python version 3.9.18
+              - value: yaml
+                label: Provide custom Conda environment YAML file
+            hidden:  "{{!inputs.service.conda_install}}"
+          yaml:
+            type: string
+            textarea: true
+            label: Paste Conda Environment Defition YAML
+            hidden: "{{'yaml' !== inputs.service.install_instructions}}"
+            tooltip:
+              - Copy and paste a custom Conda environment definition YAML file
+          install_kernels:
+            type: multi-dropdown
+            label: Select additional kernels to install
+            options:
+              - value: julia-kernel
+                label: Julia Kernel
+              - value: R-kernel
+                label: R Kernel
+            hidden:  "{{!inputs.service.conda_install}}"
+            optional: true
+          password:
+            type: string
+            label: Password for notebook session
+            hidden: true
+            tooltip:
+              - Enter password or leave blank for no password
+            placeholder: ''
+            optional: true
+        collapsed: false
+      pwrl_host:
+        type: group
+        label: Jupyter Server Host
+        items:
+          resource:
+            type: dropdown
+            label: Service host
+            options:
+              - category: My Compute
+                options:
+                  - label: User Workspace
+                    value:
+                      type: computeResource
+                      id: user_workspace
+              - category: Shared Compute
+                options: []
+            tooltip:
+              - Resource to host the service
+          nports:
+            type: string
+            label: Number of Ports to Reserve
+            hidden: true
+            placeholder: '1'
+            optional: true
+          jobschedulertype:
+            type: dropdown
+            label: 'Select Controller, SLURM Partition or PBS Queue'
+            options:
+              - value: CONTROLLER
+                label: Controller
+              - value: SLURM
+                label: SLURM Partition
+              - value: PBS
+                label: PBS Queue
+              - value: LOCAL
+                label: PW USER CONTAINER
+            tooltip:
+              - 'Job will submitted using SSH, sbatch or qsub, respectively'
+          _sch__dd_partition_e_:
+            type: slurm-partitions
+            label: SLURM partition
+            hidden: "{{ 'SLURM' !== inputs.pwrl_host.jobschedulertype}}"
+            tooltip:
+              - >-
+                Partition to submit the interactive job. Leave empty to let SLURM pick
+                the optimal option.
+            resource: "{{inputs.pwrl_host.resource}}"
+            optional: true
+          scheduler_directives_slurm:
+            type: string
+            label: Scheduler directives
+            hidden: "{{ 'SLURM' !== pwrl_host.jobschedulertype}}"
+            tooltip:
+              - >-
+                e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to
+                separate parameters. Do not include the SBATCH keyword.
+            optional: true
+          _sch__d_q___:
+            type: string
+            label: PBS queue
+            hidden: "{{'PBS' !== inputs.pwrl_host.jobschedulertype}}"
+            tooltip:
+              - >-
+                Queue to submit the interactive job. Must select one! Use [qstat -f
+                -Q] to list all queues on the system
+          scheduler_directives_pbs:
+            type: string
+            label: Scheduler directives
+            hidden: "{{'PBS' !== inputs.pwrl_host.jobschedulertype}}"
+            tooltip:
+              - >-
+                e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to
+                separate parameters. Do not include the PBS keyword.
+            optional: true
+        collapsed: false      
+jobs:
+  first-job:
+    steps:
+      - name: Run the main.sh
+        run: ./main.sh

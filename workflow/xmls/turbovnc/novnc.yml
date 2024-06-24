@@ -40,25 +40,16 @@ on:
         label: Desktop Host
         items:
           resource:
-            type: dropdown
+            type: compute-clusters
             label: Service host
-            options:
-              - category: My Compute
-                options:
-                  - label: goog
-                    value:
-                      type: computeResource
-                      id: 666c7db0043093da416ca69e
-                      provider: gclusterv2
-              - category: Shared Compute
-                options: []
+            include-workspace: true
             tooltip:
               - Resource to host the service
           nports:
             type: string
             label: Number of Ports to Reserve
             hidden: true
-            placeholder: '1'
+            default: '1'
             optional: true
           jobschedulertype:
             type: dropdown

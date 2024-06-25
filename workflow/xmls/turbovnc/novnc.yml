@@ -9,13 +9,11 @@ on:
         label: Default noVNC installation directory
         hidden: true
         default: __WORKDIR__/pw/bootstrap/noVNC-1.3.0
-        optional: true
       novnc_tgz:
         type: string
         label: Path to noVNC TGZ
         hidden: true
         default: /swift-pw-bin/apps/noVNC-1.3.0.tgz
-        optional: true
       service:
         type: group
         label: Service
@@ -33,7 +31,6 @@ on:
             tooltip:
               - Make sure the display protocol is installed in the host!
             default: turbovnc
-            optional: true
         collapsed: true
       pwrl_host:
         type: group
@@ -50,7 +47,6 @@ on:
             label: Number of Ports to Reserve
             hidden: true
             default: '1'
-            optional: true
           jobschedulertype:
             type: dropdown
             label: Select Controller, SLURM Partition or PBS Queue
@@ -72,7 +68,6 @@ on:
                 Partition to submit the interactive job. Leave empty to let SLURM pick
                 the optimal option.
             resource: "{{ inputs.pwrl_host.resource }}"
-            optional: true
           scheduler_directives_slurm:
             type: string
             label: Scheduler directives
@@ -81,7 +76,6 @@ on:
               - >-
                 e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to
                 separate parameters. Do not include the SBATCH keyword.
-            optional: true
           _sch__d_q___:
             type: string
             label: PBS queue
@@ -98,7 +92,6 @@ on:
               - >-
                 e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to
                 separate parameters. Do not include the PBS keyword.
-            optional: true
         collapsed: false
 
 jobs:

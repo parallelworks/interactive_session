@@ -43,7 +43,6 @@ on:
             type: compute-clusters
             label: Service host
             include-workspace: true
-            default: "{{ .options.0 }}"
             tooltip:
               - Resource to host the service
           nports:

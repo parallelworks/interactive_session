@@ -34,7 +34,7 @@ on:
               - Make sure the display protocol is installed in the host!
             default: turbovnc
             optional: true
-        collapsed: true
+        collapsed: false
       pwrl_host:
         type: group
         label: Desktop Host
@@ -90,6 +90,7 @@ on:
               - >-
                 Queue to submit the interactive job. Must select one! Use [qstat -f
                 -Q] to list all queues on the system
+            optional: true
           scheduler_directives_pbs:
             type: string
             label: Scheduler directives

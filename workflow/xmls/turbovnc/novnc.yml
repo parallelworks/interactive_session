@@ -1,6 +1,5 @@
 # yaml-language-server: $schema=workflow.schema.json
 ---
-name: My Workflow
 on:
   execute:
     inputs:

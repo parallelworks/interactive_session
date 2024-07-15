@@ -3,6 +3,12 @@
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
     <param 
+      name='service_name' 
+      label='Server Name' 
+      type='hidden' 
+      value='hammerspace'  
+    ></param>
+    <param 
       name='servicePort' 
       label='Server Port' 
       type='hidden' 

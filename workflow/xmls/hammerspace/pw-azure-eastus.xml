@@ -20,7 +20,7 @@
       type='hidden' 
       value='10.1.128.10'  
     ></param>
-    <section name='pwrl_host' type='section' title='Desktop Host' expanded='true'>
+    <section name='pwrl_host' type='section' title='Azure Host' expanded='true'>
     <param 
       name='resource' 
       type='computeResource' 

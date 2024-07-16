@@ -17,8 +17,7 @@
     <param 
       name='serviceHost' 
       label='Server Host' 
-      type='hidden' 
-      value='10.1.128.10'  
+      type='text' 
     ></param>
     <section name='pwrl_host' type='section' title='Azure Host' expanded='true'>
     <param 

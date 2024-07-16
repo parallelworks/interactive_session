@@ -42,7 +42,6 @@
       multiple='false'>
         <option value="CONTROLLER" selected="true">Controller</option>
         <option value="SLURM">SLURM Partition</option>
-        <option value="PBS">PBS Queue</option>
     </param>
     <param 
       name='_sch__dd_partition_e_' 
@@ -63,23 +62,6 @@
       depends_on='pwrl_host.jobschedulertype'
       show_if='SLURM'
       optional='true' 
-    ></param>
-    <param 
-      name='_sch__d_q___' 
-      label='PBS queue' 
-      type='text' 
-      help='Queue to submit the interactive job. Must select one! Use [qstat -f -Q] to list all queues on the system' 
-      depends_on='pwrl_host.jobschedulertype'
-      show_if='PBS'
-    ></param>
-    <param 
-      name='scheduler_directives_pbs' 
-      label='Scheduler directives' 
-      type='text' 
-      help='e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to separate parameters. Do not include the PBS keyword.' 
-      depends_on='pwrl_host.jobschedulertype'
-      show_if='PBS'
-      optional='true'   
     ></param>
     </section>
   </inputs>

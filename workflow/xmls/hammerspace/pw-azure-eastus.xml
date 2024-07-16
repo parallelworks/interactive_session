@@ -1,0 +1,70 @@
+<tool id='NA' name='NA'>
+  <command interpreter='bash'>main.sh</command>
+  <cancel interpreter='bash'>kill.sh</cancel>
+  <inputs>
+    <param 
+      name='service_name' 
+      label='Server Name' 
+      type='hidden' 
+      value='hammerspace'  
+    ></param>
+    <param 
+      name='servicePort' 
+      label='Server Port' 
+      type='hidden' 
+      value='8443'  
+    ></param>
+    <param 
+      name='serviceHost' 
+      label='Server Host' 
+      type='hidden' 
+      value='10.1.128.10'  
+    ></param>
+    <section name='pwrl_host' type='section' title='Desktop Host' expanded='true'>
+    <param 
+      name='resource' 
+      type='computeResource' 
+      label='Service host' 
+      help='Resource to host the service'
+      hideUserWorkspace='true' 
+    ></param>
+    <param
+     name='nports' 
+     label='Number of Ports to Reserve' 
+     type='hidden' 
+     value='1'  
+    ></param> 
+    <param 
+      name='jobschedulertype' 
+      type='select' 
+      label='Select Controller, SLURM Partition or PBS Queue' 
+      help='Job will submitted using SSH, sbatch or qsub, respectively'   
+      multiple='false'>
+        <option value="CONTROLLER" selected="true">Controller</option>
+        <option value="SLURM">SLURM Partition</option>
+    </param>
+    <param 
+      name='_sch__dd_partition_e_' 
+      label='SLURM partition' 
+      type='dynamicPartitionDropdown' 
+      resource='pwrl_host.resource'
+      help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
+      depends_on='pwrl_host.jobschedulertype'
+      show_if='SLURM'
+      optional='true'
+      dependent='false'
+    ></param>
+    <param 
+      name='scheduler_directives_slurm' 
+      label='Scheduler directives' 
+      type='text' 
+      help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' 
+      depends_on='pwrl_host.jobschedulertype'
+      show_if='SLURM'
+      optional='true' 
+    ></param>
+    </section>
+  </inputs>
+  <outputs>
+  </outputs>
+</tool>

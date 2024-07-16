@@ -124,7 +124,7 @@ echo "Generating session html"
 source ${service_name}/url.sh
 
 # FIXME: Move this to <service-name>/url.sh
-if [[ "${service_name}" == "nicedcv" ]]; then
+if [[ "${service_name}" == "nicedcv" ]] || [[ "${service_name}" == "hammerspace" ]]; then
     URL="\"/sme/${openPort}/${URLEND}"
     sed -i "s|.*URL.*|    \"URL\": \"/sme\",|" service.json
 else

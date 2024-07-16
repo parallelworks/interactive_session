@@ -38,8 +38,16 @@ echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" $
 echo "exit 0" >> ${kill_sh}
 chmod 777 ${kill_sh}
 
+if [ -z "$serviceHost" ]; then
+    serviceHost=localhost
+fi
+
 # TUNNEL COMMANDS:
-SERVER_TUNNEL_CMD="ssh ${resource_ssh_usercontainer_options} -fN -R 0.0.0.0:$openPort:localhost:\$servicePort ${USER_CONTAINER_HOST}"
+if [ -z "$servicePort" ]; then
+    SERVER_TUNNEL_CMD="ssh ${resource_ssh_usercontainer_options} -fN -R 0.0.0.0:$openPort:${serviceHost}:\$servicePort ${USER_CONTAINER_HOST}"
+else
+    SERVER_TUNNEL_CMD="ssh ${resource_ssh_usercontainer_options} -fN -R 0.0.0.0:$openPort:${serviceHost}:$servicePort ${USER_CONTAINER_HOST}"
+fi
 # Cannot have different port numbers on client and server or license checkout fails!
 LICENSE_TUNNEL_CMD="ssh ${resource_ssh_usercontainer_options} -fN -L 0.0.0.0:${advanced_options_license_server_port}:localhost:${advanced_options_license_server_port} -L 0.0.0.0:${advanced_options_license_daemon_port}:localhost:${advanced_options_license_daemon_port} ${USER_CONTAINER_HOST}"
 

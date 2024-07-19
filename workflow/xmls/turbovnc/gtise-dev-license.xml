@@ -30,7 +30,7 @@
         name='load_env' 
         label='Command to load GTISE' 
         type='text' 
-        value='export GTIHOME=/software/gtsuite; export GTISOFT_LICENSE_FILE=27032@localhost; export PATH=${GTIHOME}/bin/:${PATH}'
+        value='source /software/load-env.sh'
         optional='true' 
         help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'
       ></param>

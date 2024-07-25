@@ -23,9 +23,9 @@ if [ -d /pw/kerberos ];then
   source /pw/kerberos/source.env
   which ssh kinit
 fi
-
+workflow_utils_branch="v3-cluster"
 source inputs.sh
-if [ -z "v3-cluster" ]; then
+if [ -z "${workflow_utils_branch}" ]; then
     # If empty, clone the main default branch
     git clone https://github.com/parallelworks/workflow-utils.git
 else

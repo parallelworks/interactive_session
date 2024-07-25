@@ -25,12 +25,12 @@ if [ -d /pw/kerberos ];then
 fi
 
 source inputs.sh
-if [ -z "${workflow_utils_branch}" ]; then
+if [ -z "v3-cluster" ]; then
     # If empty, clone the main default branch
     git clone https://github.com/parallelworks/workflow-utils.git
 else
     # If not empty, clone the specified branch
-    git clone -b v3-cluster https://github.com/parallelworks/workflow-utils.git
+    git clone -b "$workflow_utils_branch" https://github.com/parallelworks/workflow-utils.git
 fi
 
 mv workflow-utils/* utils

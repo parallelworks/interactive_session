@@ -30,7 +30,7 @@ if [ -z "${workflow_utils_branch}" ]; then
     git clone https://github.com/parallelworks/workflow-utils.git
 else
     # If not empty, clone the specified branch
-    git clone -b "v3-cluster" https://github.com/parallelworks/workflow-utils.git
+    git clone -b v3-cluster https://github.com/parallelworks/workflow-utils.git
 fi
 
 mv workflow-utils/* utils

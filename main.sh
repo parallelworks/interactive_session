@@ -25,7 +25,6 @@ if [ -d /pw/kerberos ];then
 fi
 
 source inputs.sh
-
 if [ -z "${workflow_utils_branch}" ]; then
     # If empty, clone the main default branch
     git clone https://github.com/parallelworks/workflow-utils.git

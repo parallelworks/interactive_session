@@ -71,7 +71,7 @@
         type='dynamicPartitionDropdown' 
         resource='pwrl_host.resource'
         help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
-        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":["gclusterv2", "pclusterv2", "azclusterv2"]}'
+        show_if='{"pwrl_host.jobschedulertype":"SLURM","pwrl_host.resource.provider":["gclusterv2", "pclusterv2", "azclusterv2", "aws-slurm", "google-slurm", "azure-slurm"]}'
         optional='true'
         dependent='false'
       ></param>    
@@ -146,7 +146,7 @@
         label='Select remote display protocol' 
         help='Make sure the display protocol is installed in the host!' 
         multiple='false'
-        show_if='{"pwrl_host.resource.provider":["gclusterv2", "pclusterv2", "azclusterv2"]}'
+        show_if='{"pwrl_host.resource.provider":["gclusterv2", "pclusterv2", "azclusterv2", "aws-slurm", "google-slurm", "azure-slurm"]}'
         value='turbovnc'
         options = "[{'label': 'VNC Server', 'value': 'turbovnc'}, 
         {'label': 'Nice DCV', 'value': 'nicedcv'}, 

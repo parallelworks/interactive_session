@@ -1,0 +1,150 @@
+jobs:
+  main:
+    steps:
+      - name: Run
+        run: ./main.sh
+        cleanup: ./cancel.sh
+'on':
+  execute:
+    inputs:
+      service:
+        type: group
+        label: JupyterLab Settings
+        items:
+          name: 
+            type: string
+            hidden: true
+            default: jupyterlab-host
+          notebook_dir:
+            label: Directory to start Jupyter Lab GUI
+            type: string
+            default: __WORKDIR__
+            tooltip: 
+              This is the directory that you start with when the JupyterHub graphical user interface starts. The default value here is your home directory.
+          conda_install:
+            label: Install miniconda environment if not there?
+            type: boolean
+            default: true
+            tooltip:
+              Select Yes to install Jupyter in miniconda environment and No to load an existing python environment
+          conda_sh:
+            label: Path to conda environment
+            type: string
+            default: __WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh
+            hidden: "{{ inputs.service.conda_install == false }}"
+            tooltip:
+              Path to use in source /path/to/conda.sh
+          conda_env:
+            label: Conda environment
+            type: string
+            default: base
+            hidden: "{{ inputs.service.conda_install == false }}"
+            tooltip:
+              Environment to active. The base environment enables changing kernel to other environments!
+          load_env:
+            label: Command to load JupyterLab
+            type: string
+            default: source __WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base
+            hidden:  "{{ inputs.service.conda_install == true }}"
+          password:
+            label: Password for notebook session
+            type: string
+            optional: true
+            hidden: true
+            tooltip:
+              Enter password or leave blank for no password
+          install_instructions:
+            label: Select Jupyter Lab Installation
+            type: dropdown
+            hidden: "{{ inputs.service.conda_install == false }}"
+            options:
+              - value: jupyterlab4.1.5-python3.11.5
+                label: Jupyter Lab 4.1.5 with Python 3.11.5
+              - value: latest
+                label: Latest versions of Jupyter Lab and Python (not thoroughly tested)
+              - value: dask-extension-jupyterlab
+                label: Dask dependencies for PW
+              - value: yaml
+                label: Provide custom Conda environment YAML file
+          yaml:
+            label: Paste Conda Environment Defition YAML
+            type: editor
+            hidden: "{{ inputs.service.install_instructions !== yaml }}"
+            tooltip:
+              Copy and paste a custom Conda environment definition YAML file
+          install_kernels:
+            label: Select additional kernels to install
+            type: multi-dropdown
+            optional: true
+            hidden: "{{ inputs.service.conda_install == false }}"
+            options:
+              - value: julia-kernel
+                label: Julia Kernel
+              - value: R-kernel
+                label: R Kernel
+      pwrl_host:
+        type: group
+        label: JupyterLab Server Host
+        items:
+          resource:
+            type: compute-clusters
+            label: Service host
+            include-workspace: true
+            tooltip:
+              Resource to host the service
+          nports:
+            type: string
+            label: Number of Ports to Reserve
+            hidden: true
+            default: '1'
+            optional: true
+          jobschedulertype:
+            type: dropdown
+            label: Select Controller, SLURM Partition or PBS Queue
+            options:
+              - value: CONTROLLER
+                label: Controller
+              - value: SLURM
+                label: SLURM Partition
+              - value: PBS
+                label: PBS Queue
+            tooltip:
+              Job will submitted using SSH, sbatch or qsub, respectively
+          _sch__dd_partition_e_:
+            type: slurm-partitions
+            label: SLURM partition
+            hidden: "{{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
+            tooltip:
+                Partition to submit the interactive job. Leave empty to let SLURM pick
+                the optimal option.
+            resource: "{{ inputs.pwrl_host.resource }}"
+            optional: true
+          scheduler_directives_slurm:
+            type: string
+            label: Scheduler directives
+            hidden: "{{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
+            tooltip:
+                e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to
+                separate parameters. Do not include the SBATCH keyword.
+            optional: true
+          _sch__d_q___:
+            type: string
+            label: PBS queue
+            hidden: "{{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
+            tooltip:
+                Queue to submit the interactive job. Must select one! Use [qstat -f
+                -Q] to list all queues on the system
+          scheduler_directives_pbs:
+            type: string
+            label: Scheduler directives
+            hidden: "{{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
+            tooltip:
+                e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to
+                separate parameters. Do not include the PBS keyword.
+            optional: true
+        collapsed: false
+
+
+
+
+

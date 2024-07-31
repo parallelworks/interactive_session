@@ -162,10 +162,10 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     if [ ! -d /run/user/$(id -u) ]; then
         # If the directory does not exist, create it using SSH
         ssh ${USER}@${HOSTNAME} "
-        mkdir -p /run/user/${USER_ID} && \
-        chmod og+rx /run/user/${USER_ID} && \
-        mkdir -p /run/user/${USER_ID}/dconf && \
-        chmod 777 /run/user/${USER_ID}/dconf
+        mkdir -p /run/user/$(id -u) && \
+        chmod og+rx /run/user/$(id -u) && \
+        mkdir -p /run/user/$(id -u)/dconf && \
+        chmod 777 /run/user/$(id -u)/dconf
     "
         sleep 4
     fi

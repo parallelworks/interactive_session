@@ -159,7 +159,12 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         echo $! >${resource_jobdir}/service.pid
     fi
 
-    ls -ld /run/user/$(id -u)
+    if [ ! -d /run/user/$(id -u) ]; then
+        # If the directory does not exist, create it using SSH
+        ssh ${USER}@${CURRENT_HOST} "mkdir -p /run/user/$(id -u)"
+        sleep 4
+    fi
+
     mkdir -p /run/user/$(id -u)/dconf
     chmod og+rx /run/user/$(id -u)
     chmod 755 /run/user/$(id -u)/dconf

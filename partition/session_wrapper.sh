@@ -24,12 +24,12 @@ export session_sh=${PW_JOB_PATH}/session.sh
 cp resources/host/batch_header.sh ${session_sh}
 
 echo >> ${session_sh}
+cat inputs.sh >> ${session_sh}
 cat <<EOF > ${session_sh}
 unset XDG_RUNTIME_DIR
 unset XDG_SESSION_ID
 unset XDG_DATA_DIRS
 EOF
-cat inputs.sh >> ${session_sh}
 
 # ADD RUNTIME FIXES FOR EACH PLATFORM
 if ! [ -z ${RUNTIME_FIXES} ]; then

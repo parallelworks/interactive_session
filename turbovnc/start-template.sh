@@ -163,7 +163,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         # If the directory does not exist, create it using SSH
         ssh ${USER}@${HOSTNAME} "
         mkdir -p /run/user/$(id -u) && \
-        chmod og+rwx /run/user/$(id -u) && \
+        chmod 777 /run/user/$(id -u) && \
         mkdir -p /run/user/$(id -u)/dconf && \
         chmod 755 /run/user/$(id -u)/dconf
     "

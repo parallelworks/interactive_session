@@ -158,6 +158,10 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         ssh -N -f localhost &
         echo $! > ${resource_jobdir}/service.pid
     fi
+    # debug permission denied
+    echo "mkdir -p /run/user/$(id -u)/dconf"
+    echo "current dir: $(pwd)"
+    echo "current host: $(HOSTNAME)"
     mkdir -p /run/user/$(id -u)/dconf
     chmod og+rx /run/user/$(id -u)
     chmod 755 /run/user/$(id -u)/dconf

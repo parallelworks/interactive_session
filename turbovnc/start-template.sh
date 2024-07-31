@@ -161,6 +161,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     # debug permission denied
     echo "current dir: $(pwd)"
     echo "current host: ${HOSTNAME}"
+    sleep 10
     # echo permission
     ls -l /run/user/$(id -u)
 

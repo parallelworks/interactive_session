@@ -159,7 +159,6 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         echo $! >${resource_jobdir}/service.pid
     fi
 
-    su - ${USER}
     mkdir -p /run/user/$(id -u)/dconf
     chmod og+rx /run/user/$(id -u)
     chmod 755 /run/user/$(id -u)/dconf

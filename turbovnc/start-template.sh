@@ -2,6 +2,7 @@
 # https://github.com/parallelworks/issues/issues/1081
 
 # Determine if the service is running in windows using WSL
+su - ${USER}
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
 
 # Deactive default conda environments (required for emed)

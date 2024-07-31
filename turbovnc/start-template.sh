@@ -2,7 +2,6 @@
 # https://github.com/parallelworks/issues/issues/1081
 
 # Determine if the service is running in windows using WSL
-su - ${USER}
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
 
 # Deactive default conda environments (required for emed)
@@ -157,6 +156,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         echo $! >${resource_jobdir}/service.pid
     fi
 
+    su - ${USER}
     mkdir -p /run/user/$(id -u)/dconf
     chmod og+rx /run/user/$(id -u)
     chmod 755 /run/user/$(id -u)/dconf

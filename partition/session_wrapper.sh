@@ -146,6 +146,7 @@ scp stream.sh ${resource_publicIp}:${resource_jobdir}/stream-${job_number}.sh
 
 echo
 echo "Submitting ${submit_cmd} request (wait for node to become available before connecting)..."
+echo "Louis test partition"
 echo
 echo $sshcmd ${submit_cmd} ${resource_jobdir}/session-${job_number}.sh
 

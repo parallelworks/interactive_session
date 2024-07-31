@@ -136,6 +136,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         echo 'unset SESSION_MANAGER' >> ~/.vnc/xstartup
         echo 'unset DBUS_SESSION_BUS_ADDRESS' >> ~/.vnc/xstartup
         echo '/etc/X11/xinit/xinitrc' >> ~/.vnc/xstartup
+	chmod +x ~/.vnc/xstartup
     fi
     
     # service_vnc_type needs to be an input to the workflow in the XML

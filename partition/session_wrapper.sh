@@ -1,5 +1,8 @@
 #!/bin/bash
 sdir=$(dirname $0)
+unset XDG_RUNTIME_DIR
+unset XDG_SESSION_ID
+unset XDG_DATA_DIRS
 # For debugging
 env > session_wrapper.env
 

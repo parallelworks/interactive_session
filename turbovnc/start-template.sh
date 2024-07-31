@@ -155,9 +155,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         ssh -N -f localhost &
         echo $! >${resource_jobdir}/service.pid
     fi
-    echo "unset XDG_RUNTIME_DIR"
-    echo "unset XDG_SESSION_ID"
-    echo "unset XDG_DATA_DIRS"
+
     mkdir -p /run/user/$(id -u)/dconf
     chmod og+rx /run/user/$(id -u)
     chmod 755 /run/user/$(id -u)/dconf

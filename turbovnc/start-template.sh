@@ -161,7 +161,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
 
     if [ ! -d /run/user/$(id -u) ]; then
         # If the directory does not exist, create it using SSH
-        ssh ${USER}@${CURRENT_HOST} "mkdir -p /run/user/$(id -u)"
+        ssh ${USER}@${HOSTNAME} "mkdir -p /run/user/$(id -u)"
         sleep 4
     fi
 

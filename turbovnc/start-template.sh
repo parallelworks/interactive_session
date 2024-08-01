@@ -2,8 +2,12 @@
 # https://github.com/parallelworks/issues/issues/1081
 
 # davei - hack - restart the dbus daemon to fix the gnome-session crash
-echo Restarting dbus daemon to hopefully avoid gnome-session crashing... -davei
-sudo systemctl restart dbus
+if ! [ -f /tmp/dbus.restart ]; then
+
+    echo Restarting dbus daemon to hopefully avoid gnome-session crashing... -davei
+    sudo systemctl restart dbus
+    touch /tmp/dbus.restart
+fi
 
 # Determine if the service is running in windows using WSL
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')

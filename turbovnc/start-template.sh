@@ -1,10 +1,8 @@
 # Make sure no conda environment is activated! 
 # https://github.com/parallelworks/issues/issues/1081
 
-# davei - hack - restart the dbus daemon to fix the gnome-session crash
 if ! [ -f /tmp/dbus.restart ]; then
-
-    echo Restarting dbus daemon to hopefully avoid gnome-session crashing... -davei
+    echo Restarting dbus daemon 
     sudo systemctl restart dbus
     touch /tmp/dbus.restart
 fi

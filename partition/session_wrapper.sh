@@ -52,7 +52,7 @@ mkdir -p ${resource_jobdir}
 cd ${resource_jobdir}
 
 echo "Running in host \$(hostname)"
-ssh ${USER}@${HOSTNAME}
+ssh ${USER}@$(hostname)
 echo "Running in container \$(hostname)"
 sshusercontainer="ssh ${resource_ssh_usercontainer_options} -f ${USER_CONTAINER_HOST}"
 ssh ${resource_ssh_usercontainer_options} -f ${USER_CONTAINER_HOST} hostname

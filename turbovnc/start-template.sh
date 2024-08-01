@@ -1,7 +1,7 @@
 # Make sure no conda environment is activated!
 # https://github.com/parallelworks/issues/issues/1081
-# unset XDG_RUNTIME_DIR
-# unset XDG_SESSION_ID
+unset XDG_RUNTIME_DIR
+unset XDG_SESSION_ID
 unset XDG_DATA_DIRS
 
 # Determine if the service is running in windows using WSL
@@ -23,8 +23,7 @@ vnc_bin=vncserver
 
 ssh ${USER}@${HOSTNAME} <<'EOF'
     mkdir -p /run/user/$(id -u)/dconf
-    chmod og+rwx /run/user/$(id -u)
-    chmod 755 /run/user/$(id -u)/dconf
+    chmod -R 777 /run/user/$(id -u)
 EOF
 sleep 5
 

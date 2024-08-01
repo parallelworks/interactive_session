@@ -3,6 +3,7 @@
 export XDG_RUNTIME_DIR=/home/$USER/tmp/runtime-dir
 unset XDG_SESSION_ID
 unset XDG_DATA_DIRS
+unset DBUS_SESSION_BUS_ADDRESS
 
 # Determine if the service is running in windows using WSL
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')

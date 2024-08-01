@@ -1,6 +1,9 @@
 # Make sure no conda environment is activated! 
 # https://github.com/parallelworks/issues/issues/1081
 
+# davei - hack - restart the dbus daemon to fix the gnome-session crash
+echo Restarting dbus daemon to hopefully avoid gnome-session crashing... -davei
+sudo systemctl restart dbus
 
 # Determine if the service is running in windows using WSL
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')

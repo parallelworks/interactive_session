@@ -2,7 +2,7 @@
 # https://github.com/parallelworks/issues/issues/1081
 unset XDG_RUNTIME_DIR
 # unset XDG_SESSION_ID
-unset XDG_DATA_DIRS
+# unset XDG_DATA_DIRS
 
 # Determine if the service is running in windows using WSL
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')

@@ -1,8 +1,6 @@
 # Make sure no conda environment is activated!
 # https://github.com/parallelworks/issues/issues/1081
-# unset XDG_RUNTIME_DIR
-# unset XDG_SESSION_ID
-# unset XDG_DATA_DIRS
+
 
 # Determine if the service is running in windows using WSL
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
@@ -162,16 +160,6 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     mkdir -p /run/user/$(id -u)/dconf
     chmod og+rx /run/user/$(id -u)
     chmod 755 /run/user/$(id -u)/dconf
-    # if [ ! -d /run/user/$(id -u) ]; then
-    #     # If the directory does not exist, create it using SSH
-    #     ssh ${USER}@${HOSTNAME} "
-    #     mkdir -p /run/user/$(id -u) && \
-    #     chmod 777 /run/user/$(id -u) && \
-    #     mkdir -p /run/user/$(id -u)/dconf && \
-    #     chmod 755 /run/user/$(id -u)/dconf
-    # "
-    #     sleep 4
-    # fi
 
     if ! [ -z "${service_desktop}" ]; then
         eval ${service_desktop} &

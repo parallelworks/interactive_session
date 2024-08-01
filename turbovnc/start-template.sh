@@ -24,7 +24,7 @@ vnc_bin=vncserver
 ssh ${USER}@${HOSTNAME} <<'EOF'
     mkdir -p /run/user/$(id -u)/dconf
     chmod og+rwx /run/user/$(id -u)
-    chmod 755 /run/user/$(id -u)/dconf
+    chmod 777 /run/user/$(id -u)/dconf
 EOF
 sleep 5
 
@@ -166,11 +166,9 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         echo $! >${resource_jobdir}/service.pid
     fi
 
-    
-
-    mkdir -p /run/user/$(id -u)/dconf
-    chmod og+rx /run/user/$(id -u)
-    chmod 755 /run/user/$(id -u)/dconf
+    # mkdir -p /run/user/$(id -u)/dconf
+    # chmod og+rx /run/user/$(id -u)
+    # chmod 755 /run/user/$(id -u)/dconf
 
     if ! [ -z "${service_desktop}" ]; then
         eval ${service_desktop} &

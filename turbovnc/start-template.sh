@@ -2,6 +2,7 @@
 # https://github.com/parallelworks/issues/issues/1081
 
 # Determine if the service is running in windows using WSL
+ssh ${USER}@${HOSTNAME} <<'EOF'
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
 
 # Deactive default conda environments (required for emed)
@@ -156,90 +157,53 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         echo $! >${resource_jobdir}/service.pid
     fi
 
-    ssh ${USER}@${HOSTNAME} <<'EOF'
+
     mkdir -p /run/user/$(id -u)/dconf
     chmod og+rx /run/user/$(id -u)
     chmod 755 /run/user/$(id -u)/dconf
 
-    if [ -n "${service_desktop}" ]; then
+    if ! [ -z "${service_desktop}" ]; then
         eval ${service_desktop} &
         echo $! >${resource_jobdir}/service.pid
-    elif [ -n "$(which gnome-session)" ]; then
+    elif ! [ -z $(which gnome-session) ]; then
         gsettings set org.gnome.desktop.session idle-delay 0
         gnome-session &
         echo $! >>${resource_jobdir}/service.pid
-    elif [ -n "$(which mate-session)" ]; then
+    elif ! [ -z $(which mate-session) ]; then
         mate-session &
         echo $! >>${resource_jobdir}/service.pid
-    elif [ -n "$(which xfce4-session)" ]; then
+    elif ! [ -z $(which xfce4-session) ]; then
         xfce4-session &
         echo $! >>${resource_jobdir}/service.pid
-    elif [ -n "$(which icewm-session)" ]; then
-        echo "Found icewm-session"
-    elif [ -n "$(which gnome)" ]; then
+    elif ! [ -z $(which icewm-session) ]; then
+        # FIXME: Code below fails to launch desktop session
+        #        Use case in onyx automatically launches the session when visual apps are launched
+        echo Found icewm-session
+        #icewm-session &
+        #echo $! > ${resource_jobdir}/service.pid
+    elif ! [ -z $(which gnome) ]; then
         gnome &
         echo $! >>${resource_jobdir}/service.pid
     else
-        echo "WARNING: VNC desktop not found!"
+        # Exit script here
+        #displayErrorMessage "ERROR: No desktop environment was found! Tried gnome-session, mate-session, xfce4-session and gnome"
+        # The lines below do not run
+        echo "WARNING: vnc desktop not found!"
         echo "Attempting to install a desktop environment"
+        # Following https://owlhowto.com/how-to-install-xfce-on-centos-7/
+        # Install EPEL release
         sudo -n yum install epel-release -y
+        # Install Window-x system
         sudo -n yum groupinstall "X Window system" -y
+        # Install XFCE
         sudo -n yum groupinstall "Xfce" -y
-        if [ -z "$(which xfce4-session)" ]; then
-            echo "ERROR: No desktop environment was found! Tried gnome-session, mate-session, xfce4-session, and gnome"
-        else
-            xfce4-session &
-            echo $! >>${resource_jobdir}/service.pid
+        if ! [ -z $(which xfce4-session) ]; then
+            displayErrorMessage "ERROR: No desktop environment was found! Tried gnome-session, mate-session, xfce4-session and gnome"
         fi
+        # Start GUI
+        xfce4-session &
+        echo $! >>${resource_jobdir}/service.pid
     fi
-EOF
-
-    # mkdir -p /run/user/$(id -u)/dconf
-    # chmod og+rx /run/user/$(id -u)
-    # chmod 755 /run/user/$(id -u)/dconf
-
-    # if ! [ -z "${service_desktop}" ]; then
-    #     eval ${service_desktop} &
-    #     echo $! >${resource_jobdir}/service.pid
-    # elif ! [ -z $(which gnome-session) ]; then
-    #     gsettings set org.gnome.desktop.session idle-delay 0
-    #     gnome-session &
-    #     echo $! >>${resource_jobdir}/service.pid
-    # elif ! [ -z $(which mate-session) ]; then
-    #     mate-session &
-    #     echo $! >>${resource_jobdir}/service.pid
-    # elif ! [ -z $(which xfce4-session) ]; then
-    #     xfce4-session &
-    #     echo $! >>${resource_jobdir}/service.pid
-    # elif ! [ -z $(which icewm-session) ]; then
-    #     # FIXME: Code below fails to launch desktop session
-    #     #        Use case in onyx automatically launches the session when visual apps are launched
-    #     echo Found icewm-session
-    #     #icewm-session &
-    #     #echo $! > ${resource_jobdir}/service.pid
-    # elif ! [ -z $(which gnome) ]; then
-    #     gnome &
-    #     echo $! >>${resource_jobdir}/service.pid
-    # else
-    #     # Exit script here
-    #     #displayErrorMessage "ERROR: No desktop environment was found! Tried gnome-session, mate-session, xfce4-session and gnome"
-    #     # The lines below do not run
-    #     echo "WARNING: vnc desktop not found!"
-    #     echo "Attempting to install a desktop environment"
-    #     # Following https://owlhowto.com/how-to-install-xfce-on-centos-7/
-    #     # Install EPEL release
-    #     sudo -n yum install epel-release -y
-    #     # Install Window-x system
-    #     sudo -n yum groupinstall "X Window system" -y
-    #     # Install XFCE
-    #     sudo -n yum groupinstall "Xfce" -y
-    #     if ! [ -z $(which xfce4-session) ]; then
-    #         displayErrorMessage "ERROR: No desktop environment was found! Tried gnome-session, mate-session, xfce4-session and gnome"
-    #     fi
-    #     # Start GUI
-    #     xfce4-session &
-    #     echo $! >>${resource_jobdir}/service.pid
-    # fi
 fi
 
 cd ${novnc_dir}
@@ -272,3 +236,4 @@ if ! [ -z "${service_bin}" ]; then
 fi
 
 sleep 999999999
+EOF

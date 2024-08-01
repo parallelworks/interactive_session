@@ -19,12 +19,6 @@ set -x
 # Runs via ssh + sbatch
 vnc_bin=vncserver
 
-ssh ${USER}@${HOSTNAME} <<'EOF'
-    mkdir -p /run/user/$(id -u)/dconf
-    chmod -R 777 /run/user/$(id -u)
-EOF
-sleep 5
-
 if [[ $kernel_version == *microsoft* ]]; then
     novnc_dir="/opt/noVNC-1.4.0"
     service_vnc_exec=NA

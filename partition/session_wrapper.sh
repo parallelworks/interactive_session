@@ -52,9 +52,6 @@ mkdir -p ${resource_jobdir}
 cd ${resource_jobdir}
 
 echo "Running in host \$(hostname)"
-unset XDG_RUNTIME_DIR
-unset XDG_SESSION_ID
-unset XDG_DATA_DIRS
 sshusercontainer="ssh ${resource_ssh_usercontainer_options} -f ${USER_CONTAINER_HOST}"
 ssh ${resource_ssh_usercontainer_options} -f ${USER_CONTAINER_HOST} hostname
 

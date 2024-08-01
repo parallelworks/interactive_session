@@ -1,6 +1,8 @@
 # Make sure no conda environment is activated!
 # https://github.com/parallelworks/issues/issues/1081
 export XDG_RUNTIME_DIR=/home/$USER/tmp/runtime-dir
+unset XDG_SESSION_ID
+unset XDG_DATA_DIRS
 
 # Determine if the service is running in windows using WSL
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')

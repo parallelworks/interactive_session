@@ -141,12 +141,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     fi
 
     bootstrap_tgz ${novnc_tgz} ${novnc_dir}
-    #  test restart dbus
-    if ! [ -f /var/tmp/dbus.restart ]; then
-        echo Restarting dbus daemon
-        sudo systemctl restart dbus
-        touch /var/tmp/dbus.restart
-    fi
+
     # Start service
     mkdir -p ~/.vnc
     ${service_vnc_exec} -kill ${DISPLAY}

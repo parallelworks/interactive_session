@@ -153,7 +153,9 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         echo '#!/bin/sh' >~/.vnc/xstartup
         echo 'unset SESSION_MANAGER' >>~/.vnc/xstartup
         echo 'unset DBUS_SESSION_BUS_ADDRESS' >>~/.vnc/xstartup
-        echo 'eval $(dbus-launch --sh-syntax --exit-with-session)' >> ~/.vnc/xstartup
+        echo 'if [ -x /usr/bin/dbus-launch ]; then' >>~/.vnc/xstartup
+        echo '    eval $(dbus-launch --sh-syntax --exit-with-session)' >>~/.vnc/xstartup
+        echo 'fi' >>~/.vnc/xstartup
         echo '/etc/X11/xinit/xinitrc' >>~/.vnc/xstartup
         chmod +x ~/.vnc/xstartup
     fi

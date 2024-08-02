@@ -153,13 +153,13 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         echo '#!/bin/sh' >~/.vnc/xstartup
         echo 'unset SESSION_MANAGER' >>~/.vnc/xstartup
         echo 'unset DBUS_SESSION_BUS_ADDRESS' >>~/.vnc/xstartup
+        echo 'eval $(dbus-launch --sh-syntax --exit-with-session)' >> ~/.vnc/xstartup
         echo '/etc/X11/xinit/xinitrc' >>~/.vnc/xstartup
         chmod +x ~/.vnc/xstartup
     fi
 
     # service_vnc_type needs to be an input to the workflow in the XML
     # if vncserver is not tigervnc
-    echo "Testing vncserver: ${service_vnc_exec} ${DISPLAY} -SecurityTypes None"
     if [[ ${service_vnc_type} == "turbovnc" ]]; then
         ${service_vnc_exec} ${DISPLAY} -SecurityTypes None
     else
@@ -189,7 +189,6 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         chmod 755 /run/user/$(id -u)/dconf
     fi
 
-    echo "test ${service_desktop}"
     if ! [ -z "${service_desktop}" ]; then
         eval ${service_desktop} &
         echo $! >${resource_jobdir}/service.pid

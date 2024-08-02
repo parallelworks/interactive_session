@@ -13,10 +13,10 @@ else
     echo "SLURM_JOBID is not set. No changes made."
 fi
 
-if [ ! -f "/home/Louis.Le/.Xauthority" ] && [[ "$resource_type" == *slurm* ]]; then
-    touch /home/Louis.Le/.Xauthority
-    sudo chown Louis.Le /home/Louis.Le/.Xauthority
-    sudo chmod 600 /home/Louis.Le/.Xauthority
+if [ ! -f "/home/$USER/.Xauthority" ] && [[ "$resource_type" == *slurm* ]]; then
+    touch /home/$USER/.Xauthority
+    sudo chown $USER /home/$USER/.Xauthority
+    sudo chmod 600 /home/$USER/.Xauthority
     echo ".Xauthority file created and permissions set."
 else
     echo ".Xauthority file already exists or resource_type is not 'slurm'. No action needed."

@@ -1,6 +1,9 @@
-# Make sure no conda environment is activated! 
+# Make sure no conda environment is activated!
 # https://github.com/parallelworks/issues/issues/1081
-
+export XDG_RUNTIME_DIR=/home/$USER/tmp/runtime-dir
+unset XDG_SESSION_ID
+unset XDG_DATA_DIRS
+unset DBUS_SESSION_BUS_ADDRESS
 
 # Determine if the service is running in windows using WSL
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
@@ -23,7 +26,6 @@ if [[ $kernel_version == *microsoft* ]]; then
     novnc_dir="/opt/noVNC-1.4.0"
     service_vnc_exec=NA
 fi
-
 
 if [ -z ${novnc_dir} ]; then
     novnc_dir=${HOME}/pw/bootstrap/noVNC-1.3.0
@@ -65,14 +67,14 @@ fi
 # - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
 echo "Creating file ${resource_jobdir}/service-kill-${job_number}-main.sh from directory ${PWD}"
 if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
-    echo "bash ${resource_jobdir}/service-kill-${job_number}-main.sh" > ${resource_jobdir}/service-kill-${job_number}.sh
+    echo "bash ${resource_jobdir}/service-kill-${job_number}-main.sh" >${resource_jobdir}/service-kill-${job_number}.sh
 else
     # Remove .cluster.local for einteinmed!
     hname=$(hostname | sed "s/.cluster.local//g")
-    echo "ssh ${hname} 'bash -s' < ${resource_jobdir}/service-kill-${job_number}-main.sh" > ${resource_jobdir}/service-kill-${job_number}.sh
+    echo "ssh ${hname} 'bash -s' < ${resource_jobdir}/service-kill-${job_number}-main.sh" >${resource_jobdir}/service-kill-${job_number}.sh
 fi
 
-cat >> ${resource_jobdir}/service-kill-${job_number}-main.sh <<HERE
+cat >>${resource_jobdir}/service-kill-${job_number}-main.sh <<HERE
 service_pid=\$(cat ${resource_jobdir}/service.pid)
 if [ -z \${service_pid} ]; then
     echo "ERROR: No service pid was found!"
@@ -93,7 +95,6 @@ kill \${vnc_pid}
 rm ~/.vnc/\${HOSTNAME}${DISPLAY}.*
 HERE
 echo
-
 
 if ! [[ $kernel_version == *microsoft* ]]; then
 
@@ -117,7 +118,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         fi
         service_vnc_exec=$(which ${vnc_bin})
     fi
-    
+
     if [ ! -f "${service_vnc_exec}" ]; then
         displayErrorMessage "ERROR: service_vnc_exec=${service_vnc_exec} file not found! - Exiting workflow!"
     fi
@@ -128,17 +129,17 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     mkdir -p ~/.vnc
     ${service_vnc_exec} -kill ${DISPLAY}
 
-    # To prevent the process from being killed at startime    
+    # To prevent the process from being killed at startime
     if [ -f "~/.vnc/xstartup" ]; then
         sed -i '/vncserver -kill $DISPLAY/ s/^#*/#/' ~/.vnc/xstartup
     else
-        echo '#!/bin/sh' > ~/.vnc/xstartup
-        echo 'unset SESSION_MANAGER' >> ~/.vnc/xstartup
-        echo 'unset DBUS_SESSION_BUS_ADDRESS' >> ~/.vnc/xstartup
-        echo '/etc/X11/xinit/xinitrc' >> ~/.vnc/xstartup
-	chmod +x ~/.vnc/xstartup
+        echo '#!/bin/sh' >~/.vnc/xstartup
+        echo 'unset SESSION_MANAGER' >>~/.vnc/xstartup
+        echo 'unset DBUS_SESSION_BUS_ADDRESS' >>~/.vnc/xstartup
+        echo '/etc/X11/xinit/xinitrc' >>~/.vnc/xstartup
+        chmod +x ~/.vnc/xstartup
     fi
-    
+
     # service_vnc_type needs to be an input to the workflow in the XML
     # if vncserver is not tigervnc
     if [[ ${service_vnc_type} == "turbovnc" ]]; then
@@ -156,25 +157,25 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     # desktop environment
     if [[ ${jobschedulertype} == "SLURM" ]]; then
         ssh -N -f localhost &
-        echo $! > ${resource_jobdir}/service.pid
+        echo $! >${resource_jobdir}/service.pid
     fi
-    mkdir -p /run/user/$(id -u)/dconf
-    chmod og+rx /run/user/$(id -u)
-    chmod 755 /run/user/$(id -u)/dconf
+    mkdir -p $XDG_RUNTIME_DIR/dconf
+    chmod og+rx $XDG_RUNTIME_DIR
+    chmod 755 $XDG_RUNTIME_DIR/dconf
 
     if ! [ -z "${service_desktop}" ]; then
         eval ${service_desktop} &
-        echo $! > ${resource_jobdir}/service.pid
-    elif  ! [ -z $(which gnome-session) ]; then
+        echo $! >${resource_jobdir}/service.pid
+    elif ! [ -z $(which gnome-session) ]; then
         gsettings set org.gnome.desktop.session idle-delay 0
         gnome-session &
-        echo $! >> ${resource_jobdir}/service.pid
+        echo $! >>${resource_jobdir}/service.pid
     elif ! [ -z $(which mate-session) ]; then
         mate-session &
-        echo $! >> ${resource_jobdir}/service.pid
+        echo $! >>${resource_jobdir}/service.pid
     elif ! [ -z $(which xfce4-session) ]; then
         xfce4-session &
-        echo $! >> ${resource_jobdir}/service.pid
+        echo $! >>${resource_jobdir}/service.pid
     elif ! [ -z $(which icewm-session) ]; then
         # FIXME: Code below fails to launch desktop session
         #        Use case in onyx automatically launches the session when visual apps are launched
@@ -183,7 +184,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         #echo $! > ${resource_jobdir}/service.pid
     elif ! [ -z $(which gnome) ]; then
         gnome &
-        echo $! >> ${resource_jobdir}/service.pid
+        echo $! >>${resource_jobdir}/service.pid
     else
         # Exit script here
         #displayErrorMessage "ERROR: No desktop environment was found! Tried gnome-session, mate-session, xfce4-session and gnome"
@@ -202,7 +203,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         fi
         # Start GUI
         xfce4-session &
-        echo $! >> ${resource_jobdir}/service.pid
+        echo $! >>${resource_jobdir}/service.pid
     fi
 fi
 
@@ -210,9 +211,9 @@ cd ${novnc_dir}
 
 echo "Running ./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort}"
 ./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort} </dev/null &>/dev/null &
-echo $! >> ${resource_jobdir}/service.pid
+echo $! >>${resource_jobdir}/service.pid
 pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
-echo ${pid} >> ${resource_jobdir}/service.pid
+echo ${pid} >>${resource_jobdir}/service.pid
 rm -f ${portFile}
 sleep 6 # Need this specially in controller node or second software won't show up!
 
@@ -231,7 +232,7 @@ if ! [ -z "${service_bin}" ]; then
     else
         echo "Running ${service_bin} in the background"
         eval ${service_bin} &
-        echo $! >> ${resource_jobdir}/service.pid
+        echo $! >>${resource_jobdir}/service.pid
     fi
 fi
 

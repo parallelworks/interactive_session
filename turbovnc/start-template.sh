@@ -1,11 +1,35 @@
 # Make sure no conda environment is activated! 
 # https://github.com/parallelworks/issues/issues/1081
 
+# For some reason we need to restart dbus or we get a black screen
 if ! [ -f /var/tmp/dbus.restart ]; then
 	echo Restarting dbus daemon 
     	sudo systemctl restart dbus
     	touch /var/tmp/dbus.restart
 fi
+
+# Check if SLURM_JOBID is set and not empty
+if [ ! -z "$SLURM_JOBID" ]; then
+    # Set environment variables
+    export XDG_RUNTIME_DIR=/home/$USER/tmp/runtime-dir
+    unset XDG_SESSION_ID
+    unset XDG_DATA_DIRS
+    unset DBUS_SESSION_BUS_ADDRESS
+
+    echo "SLURM_JOBID is set. Environment variables updated."
+else
+    echo "SLURM_JOBID is not set. No changes made."
+fi
+
+if [ ! -f "/home/$USER/.Xauthority" ] && [[ "$resource_type" == *slurm* ]]; then
+    touch /home/$USER/.Xauthority
+    sudo chown $USER /home/$USER/.Xauthority
+    sudo chmod 600 /home/$USER/.Xauthority
+    echo ".Xauthority file created and permissions set."
+else
+    echo ".Xauthority file already exists or resource_type is not 'slurm'. No action needed."
+fi
+
 
 # Determine if the service is running in windows using WSL
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')

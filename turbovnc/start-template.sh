@@ -2,10 +2,10 @@
 # https://github.com/parallelworks/issues/issues/1081
 
 if grep -q "Rocky Linux release 8" /etc/redhat-release; then
-	if ! [ -f /tmp/dbus.restart ]; then
+	if ! [ -f /var/tmp/dbus.restart ]; then
     	echo Restarting dbus daemon 
     	sudo systemctl restart dbus
-    	touch /tmp/dbus.restart
+    	touch /var/tmp/dbus.restart
 	fi
 fi
 

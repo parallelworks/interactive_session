@@ -1,9 +1,26 @@
 # Make sure no conda environment is activated!
 # https://github.com/parallelworks/issues/issues/1081
-export XDG_RUNTIME_DIR=/home/$USER/tmp/runtime-dir
-unset XDG_SESSION_ID
-unset XDG_DATA_DIRS
-unset DBUS_SESSION_BUS_ADDRESS
+# Check if SLURM_JOBID is set and not empty
+if [ ! -z "$SLURM_JOBID" ]; then
+    # Set environment variables
+    export XDG_RUNTIME_DIR=/home/$USER/tmp/runtime-dir
+    unset XDG_SESSION_ID
+    unset XDG_DATA_DIRS
+    unset DBUS_SESSION_BUS_ADDRESS
+
+    echo "SLURM_JOBID is set. Environment variables updated."
+else
+    echo "SLURM_JOBID is not set. No changes made."
+fi
+
+if [ ! -f "/home/Louis.Le/.Xauthority" ] && [[ "$resource_type" == *slurm* ]]; then
+    touch /home/Louis.Le/.Xauthority
+    sudo chown Louis.Le /home/Louis.Le/.Xauthority
+    sudo chmod 600 /home/Louis.Le/.Xauthority
+    echo ".Xauthority file created and permissions set."
+else
+    echo ".Xauthority file already exists or resource_type is not 'slurm'. No action needed."
+fi
 
 # Determine if the service is running in windows using WSL
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
@@ -159,9 +176,17 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         ssh -N -f localhost &
         echo $! >${resource_jobdir}/service.pid
     fi
-    mkdir -p $XDG_RUNTIME_DIR/dconf
-    chmod og+rx $XDG_RUNTIME_DIR
-    chmod 755 $XDG_RUNTIME_DIR/dconf
+    # Check if SLURM_JOBID is set and not empty
+    if [ ! -z "$SLURM_JOBID" ]; then
+        mkdir -p $XDG_RUNTIME_DIR/dconf
+        chmod og+rx $XDG_RUNTIME_DIR
+        chmod 755 $XDG_RUNTIME_DIR/dconf
+
+    else
+        mkdir -p /run/user/$(id -u)/dconf
+        chmod og+rx /run/user/$(id -u)
+        chmod 755 /run/user/$(id -u)/dconf
+    fi
 
     if ! [ -z "${service_desktop}" ]; then
         eval ${service_desktop} &

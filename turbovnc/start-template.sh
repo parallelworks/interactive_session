@@ -5,6 +5,36 @@
 # Determine if the service is running in windows using WSL
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
 
+if ! [ -f /var/tmp/systemd-logind.restart ]; then
+	echo Restarting systemd-logind ...
+	sudo systemctl restart systemd-logind
+	touch /var/tmp/systemd-logind.restart
+
+fi
+
+# Check if SLURM_JOBID is set and not empty
+if [ ! -z "$SLURM_JOBID" ]; then
+    # Set environment variables
+    export XDG_RUNTIME_DIR=/home/$USER/tmp/runtime-dir
+    unset XDG_SESSION_ID
+    unset XDG_DATA_DIRS
+    unset DBUS_SESSION_BUS_ADDRESS
+
+    echo "SLURM_JOBID is set. Environment variables updated."
+else
+    echo "SLURM_JOBID is not set. No changes made."
+fi
+
+if [ ! -f "/home/$USER/.Xauthority" ] && [[ "$resource_type" == *slurm* ]]; then
+    touch /home/$USER/.Xauthority
+    sudo chown $USER /home/$USER/.Xauthority
+    sudo chmod 600 /home/$USER/.Xauthority
+    echo ".Xauthority file created and permissions set."
+else
+    echo ".Xauthority file already exists or resource_type is not 'slurm'. No action needed."
+fi
+
+
 # Deactive default conda environments (required for emed)
 export $(env | grep CONDA_PREFIX)
 echo ${CONDA_PREFIX}

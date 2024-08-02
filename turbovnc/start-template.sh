@@ -1,6 +1,15 @@
 # Make sure no conda environment is activated! 
 # https://github.com/parallelworks/issues/issues/1081
 
+if [[ "$resource_type" != slurm* && "$resource_type" != "existing" ]]; then
+	if grep -q "Rocky Linux release 8" /etc/redhat-release; then
+		if ! [ -f /var/tmp/dbus.restart ]; then
+    		echo Restarting dbus daemon 
+    		sudo systemctl restart dbus
+    		touch /var/tmp/dbus.restart
+		fi
+	fi
+fi
 
 # Determine if the service is running in windows using WSL
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')

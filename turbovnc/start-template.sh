@@ -5,6 +5,12 @@
 # Determine if the service is running in windows using WSL
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
 
+export XDG_RUNTIME_DIR=/home/$USER/tmp/runtime-dir
+unset XDG_SESSION_ID
+if [ ! -d "${XDG_RUNTIME_DIR}" ]; then
+   mkdir -p ${XDG_RUNTIME_DIR}
+fi
+
 # Deactive default conda environments (required for emed)
 export $(env | grep CONDA_PREFIX)
 echo ${CONDA_PREFIX}
@@ -129,7 +135,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     ${service_vnc_exec} -kill ${DISPLAY}
 
     # To prevent the process from being killed at startime    
-    if [ -f "~/.vnc/xstartup" ]; then
+    if [ -f "$HOME/.vnc/xstartup" ]; then
         sed -i '/vncserver -kill $DISPLAY/ s/^#*/#/' ~/.vnc/xstartup
     else
         echo '#!/bin/sh' > ~/.vnc/xstartup

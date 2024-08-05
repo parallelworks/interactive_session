@@ -1,5 +1,6 @@
 # yaml-language-server: $schema=workflow.schema.json
 ---
+sparse_checkout: "stream.sh"
 on:
   execute:
     inputs:

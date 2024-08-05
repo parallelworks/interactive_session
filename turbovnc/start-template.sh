@@ -6,8 +6,11 @@
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
 
 export XDG_RUNTIME_DIR=/home/$USER/tmp/runtime-dir-2
+echo XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR
+echo Unsetting XDG_SESSION_ID
 unset XDG_SESSION_ID
 if [ ! -d "${XDG_RUNTIME_DIR}" ]; then
+   echo "Creating XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR"
    mkdir -p ${XDG_RUNTIME_DIR}
 fi
 
@@ -136,8 +139,10 @@ if ! [[ $kernel_version == *microsoft* ]]; then
 
     # To prevent the process from being killed at startime    
     if [ -f "$HOME/.vnc/xstartup" ]; then
+	echo "$HOME/.vnc/xstartup exists. Commenting out the vncserver -kill $DISPLAY line..."
         sed -i '/vncserver -kill $DISPLAY/ s/^#*/#/' ~/.vnc/xstartup
     else
+	echo "$HOME/.vnc/xstartup not found. Creating a new one."
         echo '#!/bin/sh' > ~/.vnc/xstartup
         echo 'unset SESSION_MANAGER' >> ~/.vnc/xstartup
         echo 'unset DBUS_SESSION_BUS_ADDRESS' >> ~/.vnc/xstartup

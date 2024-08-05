@@ -12,6 +12,8 @@ unset XDG_SESSION_ID
 if [ ! -d "${XDG_RUNTIME_DIR}" ]; then
    echo "Creating XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR"
    mkdir -p ${XDG_RUNTIME_DIR}
+   echo "Setting permissions to $XDG_RUNTIME_DIR to 700"
+   chmod 700 $XDG_RUNTIME_DIR
 fi
 
 # Deactive default conda environments (required for emed)

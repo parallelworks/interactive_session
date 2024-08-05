@@ -5,7 +5,7 @@
 # Determine if the service is running in windows using WSL
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
 
-export XDG_RUNTIME_DIR=/home/$USER/tmp/runtime-dir
+export XDG_RUNTIME_DIR=/home/$USER/tmp/runtime-dir-2
 unset XDG_SESSION_ID
 if [ ! -d "${XDG_RUNTIME_DIR}" ]; then
    mkdir -p ${XDG_RUNTIME_DIR}

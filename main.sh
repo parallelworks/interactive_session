@@ -36,6 +36,7 @@ fi
 mv workflow-utils/* utils
 rm -rf workflow-utils
 
+echo "Running resource wrapper at $(hostname)"
 python utils/input_form_resource_wrapper.py
 
 if [ $? -ne 0 ]; then

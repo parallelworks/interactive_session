@@ -105,9 +105,7 @@ if [ -f "${service_name}/controller.sh" ]; then
     cat inputs.sh >>controller.sh
     cat ${service_name}/controller.sh >>controller.sh
     echo "$sshcmd << EOF\n'bash -s' < controller.sh\nEOF"
-    cat controller.sh | $sshcmd <<EOF
-'bash -s'
-EOF
+    cat controller.sh | $sshcmd 'bash -s'
 fi
 
 # RUN IN CONTROLLER, SLURM PARTITION OR PBS QUEUE?

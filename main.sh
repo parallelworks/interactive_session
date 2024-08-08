@@ -18,10 +18,10 @@ source /pw/.miniconda3/etc/profile.d/conda.sh
 conda activate
 
 # load kerberos if it exists
-if [ -d /pw/kerberos ];then
-  echo "LOADING KERBEROS SSH PACKAGES"
-  source /pw/kerberos/source.env
-  which ssh kinit
+if [ -d /pw/kerberos ]; then
+    echo "LOADING KERBEROS SSH PACKAGES"
+    source /pw/kerberos/source.env
+    which ssh kinit
 fi
 
 source inputs.sh
@@ -58,29 +58,29 @@ if [[ "$openPort" == "" ]]; then
     exit 1
 fi
 
-echo "export openPort=${openPort}" >> inputs.sh
+echo "export openPort=${openPort}" >>inputs.sh
 export sshcmd="ssh -o StrictHostKeyChecking=no ${resource_publicIp}"
-echo "export sshcmd=\"${sshcmd}\"" >> inputs.sh
+echo "export sshcmd=\"${sshcmd}\"" >>inputs.sh
 source inputs.sh
 
 # Obtain the service_name from any section of the XML
 export service_name=$(cat inputs.sh | grep service_name | cut -d'=' -f2 | tr -d '"')
-echo "export service_name=${service_name}" >> inputs.sh
+echo "export service_name=${service_name}" >>inputs.sh
 if ! [ -d "${service_name}" ]; then
     displayErrorMessage "ERROR: Directory ${service_name} was not found --> Service ${service_name} is not supported --> Exiting workflow"
     exit 1
 fi
 
 # export the users env file (for some reason not all systems are getting these upon execution)
-while read LINE; do export "$LINE"; done < ~/.env
+while read LINE; do export "$LINE"; done <~/.env
 
 export PW_JOB_PATH=$(pwd | sed "s|${HOME}||g")
-echo "export PW_JOB_PATH=${PW_JOB_PATH}" >> inputs.sh
+echo "export PW_JOB_PATH=${PW_JOB_PATH}" >>inputs.sh
 
 sed -i "s/__job_number__/${job_number}/g" inputs.sh
 
 export USER_CONTAINER_HOST="usercontainer"
-echo "export USER_CONTAINER_HOST=${USER_CONTAINER_HOST}" >> inputs.sh
+echo "export USER_CONTAINER_HOST=${USER_CONTAINER_HOST}" >>inputs.sh
 
 # LOAD PLATFORM-SPECIFIC ENVIRONMENT:
 env_sh=platforms/${PARSL_CLIENT_HOST}/env.sh
@@ -98,15 +98,17 @@ fi
 
 # RUN CONTROLLER PREPROCESSING STEP
 if [ -f "${service_name}/controller.sh" ]; then
-    echo; echo; echo "RUNNING PREPROCESSING STEP"
-    echo '#!/bin/bash' > controller.sh
-    cat inputs.sh >> controller.sh
-    cat ${service_name}/controller.sh >> controller.sh
-    echo "$sshcmd 'bash -s' < controller.sh"
-    $sshcmd 'bash -s' < controller.sh
+    echo
+    echo
+    echo "RUNNING PREPROCESSING STEP"
+    echo '#!/bin/bash' >controller.sh
+    cat inputs.sh >>controller.sh
+    cat ${service_name}/controller.sh >>controller.sh
+    echo "$sshcmd << EOF\n'bash -s' < controller.sh\nEOF"
+    $sshcmd <<EOF
+bash -s < controller.sh
+EOF
 fi
-
-
 
 # RUN IN CONTROLLER, SLURM PARTITION OR PBS QUEUE?
 if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
@@ -147,13 +149,13 @@ if ! [ -f "${session_wrapper_dir}/session_wrapper.sh" ]; then
     exit 1
 fi
 
-bash ${session_wrapper_dir}/session_wrapper.sh 
+bash ${session_wrapper_dir}/session_wrapper.sh
 
 if [ -f "kill.sh" ]; then
     # Only run if file exists. The kill.sh file is moved to _kill.sh after execution.
     # This is done to prevent the file form running twice which would generate errors.
     # We don't want kill.sh to change the status to cancelled!
-    sed -i  "s/.*sed -i.*//" kill.sh  
+    sed -i "s/.*sed -i.*//" kill.sh
     bash kill.sh
 fi
 

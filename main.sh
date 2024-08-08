@@ -27,7 +27,7 @@ fi
 source inputs.sh
 if [ -z "${workflow_utils_branch}" ]; then
     # If empty, clone the main default branch
-    git clone https://github.com/parallelworks/workflow-utils.git
+    git clone -b fix-tcsh https://github.com/parallelworks/workflow-utils.git
 else
     # If not empty, clone the specified branch
     git clone -b fix-tcsh https://github.com/parallelworks/workflow-utils.git

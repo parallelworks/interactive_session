@@ -58,7 +58,7 @@ if [[ "$openPort" == "" ]]; then
 fi
 
 echo "export openPort=${openPort}" >> inputs.sh
-export sshcmd="autossh -t -o StrictHostKeyChecking=no ${resource_publicIp} 'screen -R'"
+export sshcmd="autossh -o StrictHostKeyChecking=no ${resource_publicIp} 'screen -R'"
 echo "export sshcmd=\"${sshcmd}\"" >> inputs.sh
 source inputs.sh
 

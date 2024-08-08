@@ -104,10 +104,9 @@ if [ -f "${service_name}/controller.sh" ]; then
     echo '#!/bin/bash' >controller.sh
     cat inputs.sh >>controller.sh
     cat ${service_name}/controller.sh >>controller.sh
-    scp -o StrictHostKeyChecking=no controller.sh ${resource_publicIp}:/tmp/
     echo "$sshcmd << EOF\n'bash -s' < controller.sh\nEOF"
-    $sshcmd <<EOF
-'bash /tmp/controller.sh'
+    cat controller.sh | $sshcmd <<EOF
+'bash -s'
 EOF
 fi
 

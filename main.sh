@@ -104,8 +104,11 @@ if [ -f "${service_name}/controller.sh" ]; then
     echo '#!/bin/bash' >controller.sh
     cat inputs.sh >>controller.sh
     cat ${service_name}/controller.sh >>controller.sh
+    scp -o StrictHostKeyChecking=no controller.sh ${resource_publicIp}:/tmp/
     echo "$sshcmd << EOF\n'bash -s' < controller.sh\nEOF"
-    cat controller.sh | $sshcmd 'bash -s'
+    $sshcmd <<EOF
+'bash /tmp/controller.sh'
+EOF
 fi
 
 # RUN IN CONTROLLER, SLURM PARTITION OR PBS QUEUE?

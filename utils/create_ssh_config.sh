@@ -26,7 +26,7 @@ findAvailablePort() {
 
 user_container_ssh_port=$(findAvailablePort)
 
-cat > ~/.ssh/config <<HERE
+cat > $HOME/.ssh/config <<HERE
 Host *
     StrictHostKeyChecking no
     UserKnownHostsFile=/dev/null

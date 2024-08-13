@@ -27,8 +27,7 @@ on:
                 value: nicedcv
               - label: Scyld Cloud Workstation
                 value: scw
-            tooltip:
-              - Make sure the display protocol is installed in the host!
+            tooltip: Make sure the display protocol is installed in the host!
             default: turbovnc
             optional: true
         collapsed: false
@@ -40,8 +39,7 @@ on:
             type: compute-clusters
             label: Service host
             include-workspace: true
-            tooltip:
-              - Resource to host the service
+            tooltip: Resource to host the service
           nports:
             type: string
             label: Number of Ports to Reserve
@@ -58,42 +56,37 @@ on:
                 label: SLURM Partition
               - value: PBS
                 label: PBS Queue
-            tooltip:
-              - Job will submitted using SSH, sbatch or qsub, respectively
+            tooltip: Job will submitted using SSH, sbatch or qsub, respectively
           _sch__dd_partition_e_:
             type: slurm-partitions
             label: SLURM partition
-            hidden: "{{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
-            tooltip:
-              - >-
+            hidden: "${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
+            tooltip: >-
                 Partition to submit the interactive job. Leave empty to let SLURM pick
                 the optimal option.
-            resource: "{{ inputs.pwrl_host.resource }}"
+            resource: "${{ inputs.pwrl_host.resource }}"
             optional: true
           scheduler_directives_slurm:
             type: string
             label: Scheduler directives
-            hidden: "{{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
-            tooltip:
-              - >-
+            hidden: "${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
+            tooltip: >-
                 e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to
                 separate parameters. Do not include the SBATCH keyword.
             optional: true
           _sch__d_q___:
             type: string
             label: PBS queue
-            hidden: "{{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
-            tooltip:
-              - >-
+            hidden: "${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
+            tooltip: >-
                 Queue to submit the interactive job. Must select one! Use [qstat -f
                 -Q] to list all queues on the system
             optional: true
           scheduler_directives_pbs:
             type: string
             label: Scheduler directives
-            hidden: "{{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
-            tooltip:
-              - >-
+            hidden: "${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
+            tooltip: >-
                 e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to
                 separate parameters. Do not include the PBS keyword.
             optional: true

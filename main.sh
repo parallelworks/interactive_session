@@ -25,7 +25,7 @@ if [ -d /pw/kerberos ];then
 fi
 
 source inputs.sh
-git clone -b on-prem https://github.com/parallelworks/workflow-utils.git
+git clone -b missing-quote https://github.com/parallelworks/workflow-utils.git
 
 
 mv workflow-utils/* utils

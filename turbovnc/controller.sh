@@ -23,6 +23,8 @@ bootstrap_tgz() {
         if [[ -f "/core/pworks-main/${tgz_path}" ]]; then
             cp /core/pworks-main/${tgz_path} ${install_parent_dir}
         else
+            echo "Copying ${tgz_path} from user container"
+            echo "rsync -avzq -e \"ssh ${resource_ssh_usercontainer_options}\" ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}"
             rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
         fi
         tar -zxf ${install_parent_dir}/$(basename ${tgz_path}) -C ${install_parent_dir}

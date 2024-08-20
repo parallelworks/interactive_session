@@ -207,7 +207,8 @@ if ! [[ $kernel_version == *microsoft* ]]; then
 fi
 
 cd ${novnc_dir}
-
+# echo the current directory
+echo "Current directory: $(pwd)"
 echo "Running ./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort}"
 ./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort} </dev/null &>/dev/null &
 echo $! >> ${resource_jobdir}/service.pid

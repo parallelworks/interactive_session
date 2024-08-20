@@ -26,11 +26,11 @@ fi
 
 
 if [ -z ${novnc_dir} ]; then
-    novnc_dir=${HOME}/pw/bootstrap/noVNC-1.3.0
+    novnc_dir=${HOME}/pw/bootstrap/noVNC-1.5.0
 fi
 
 if [ -z ${novnc_tgz} ]; then
-    novnc_tgz=/swift-pw-bin/apps/noVNC-1.3.0.tgz
+    novnc_tgz=/swift-pw-bin/apps/noVNC-1.5.0.tgz
 fi
 
 # Find an available display port

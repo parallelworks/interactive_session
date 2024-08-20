@@ -33,6 +33,9 @@ if [ -z ${novnc_tgz} ]; then
     novnc_tgz=/swift-pw-bin/apps/noVNC-1.5.0.tgz
 fi
 
+novnc_dir=${HOME}/pw/bootstrap/noVNC-1.5.0
+novnc_tgz=/swift-pw-bin/apps/noVNC-1.5.0.tgz
+
 # Find an available display port
 if [[ $kernel_version == *microsoft* ]]; then
     # In windows only this port works

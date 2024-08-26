@@ -130,7 +130,6 @@ jobs:
           _sch__d_q___:
             type: string
             label: PBS queue
-            optional: true
             hidden: "${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
             tooltip:
                 Queue to submit the interactive job. Must select one! Use [qstat -f

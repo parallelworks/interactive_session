@@ -94,7 +94,7 @@ jobs:
           resource:
             type: compute-clusters
             label: Service host
-            include-workspace: true
+            include-workspace: false
             tooltip:
               Resource to host the service
           nports:

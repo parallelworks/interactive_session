@@ -82,7 +82,6 @@ jobs:
             type: multi-dropdown
             optional: true
             hidden: "${{ inputs.service.conda_install == false }}"
-            optional: "${{ .hidden }}"
             options:
               - value: julia-kernel
                 label: Julia Kernel
@@ -120,21 +119,19 @@ jobs:
             type: slurm-partitions
             label: SLURM partition
             hidden: "${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
-            optional: "${{ .hidden }}"
+            optional: true
             tooltip:
                 Partition to submit the interactive job. Leave empty to let SLURM pick
                 the optimal option.
             resource: "${{ inputs.pwrl_host.resource }}"
-            optional: true
           scheduler_directives_slurm:
             type: string
             label: Scheduler directives
             hidden: "${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
-            optional: "${{ .hidden }}"
+            optional: true
             tooltip:
                 e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to
                 separate parameters. Do not include the SBATCH keyword.
-            optional: true
           _sch__d_q___:
             type: string
             label: PBS queue
@@ -147,9 +144,8 @@ jobs:
             type: string
             label: Scheduler directives
             hidden: "${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
-            optional: "${{ .hidden }}"
+            optional: true
             tooltip:
                 e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to
                 separate parameters. Do not include the PBS keyword.
-            optional: true
         collapsed: false

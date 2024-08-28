@@ -4,6 +4,8 @@
 # service_copilot_url="https://marketplace.visualstudio.com/_apis/public/gallery/publishers/GitHub/vsextensions/copilot/latest/vspackage"
 service_copilot_usercontainer_path="${PW_JOB_PATH}/${service_name}/GitHub.copilot-latest.vsix"
 
+sshusercontainer="ssh ${resource_ssh_usercontainer_options_controller} -f ${USER_CONTAINER_HOST}"
+
 displayErrorMessage() {
     echo $(date): $1
     ${sshusercontainer} "sed -i \"s|.*ERROR_MESSAGE.*|    \\\"ERROR_MESSAGE\\\": \\\"$1\\\"|\" ${PW_JOB_PATH}/service.json"

@@ -65,8 +65,7 @@ ${service_exec} \
     ${password_flag} \
     ${service_directory}
 
-
-exit 0
+sleep 999999999
 # For openvscode-server
 ${service_exec} \
     --port ${servicePort} \

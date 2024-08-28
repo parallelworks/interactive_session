@@ -11,6 +11,22 @@ displayErrorMessage() {
     exit 1
 }
 
+init_code_server_settings() {
+    local settings_dir=${HOME}/.local/share/code-server/User
+    local settings_json=${settings_dir}/settings.json
+    mkdir -p ${settings_dir}
+
+cat > "${settings_json}" <<EOL
+{
+    "github.copilot.advanced": {},
+    "files.exclude": {
+        "**/.*": true
+    }
+}
+EOL
+
+}
+
 install_code_server() {
     mkdir -p ${service_parent_install_dir}
     # Install code server
@@ -20,6 +36,8 @@ install_code_server() {
     rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" ${USER_CONTAINER_HOST}:${service_copilot_usercontainer_path} ${service_parent_install_dir}
     wget -P ${service_parent_install_dir} -O ${service_copilot_vsix_path} ${service_copilot_url}
     ${service_exec} --install-extensions ${service_copilot_vsix_path}
+    # Initialize default settings
+    init_code_server_settings
 }
 
 if [ -z ${service_parent_install_dir} ]; then

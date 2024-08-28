@@ -10,7 +10,6 @@ displayErrorMessage() {
     echo $(date): $1
     ${sshusercontainer} "sed -i \"s|.*ERROR_MESSAGE.*|    \\\"ERROR_MESSAGE\\\": \\\"$1\\\"|\" ${PW_JOB_PATH}/service.json"
     ${sshusercontainer} "sed -i \"s|.*JOB_STATUS.*|    \\\"JOB_STATUS\\\": \\\"FAILED\\\",|\" ${PW_JOB_PATH}/service.json"
-    exit 1
 }
 
 
@@ -74,5 +73,7 @@ fi
 
 if [ ! -f ${service_exec} ]; then
     displayErrorMessage "Error missing ${service_exec}"
+    sleep 1
+    exit 1
 fi
 

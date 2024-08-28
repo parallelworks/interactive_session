@@ -34,6 +34,13 @@
           value='openvscode'  
         ></param>
         <param 
+          name='download_url' 
+          label='Download URL' 
+          type='text' 
+          value='https://github.com/coder/code-server/releases/download/v4.92.2/code-server-4.92.2-linux-amd64.tar.gz'
+          help='Downloads or uses the code-server server version specified in the URL' 
+        ></param>
+        <param 
           name='password' 
           label='Password for IDE session' 
           type='text' 

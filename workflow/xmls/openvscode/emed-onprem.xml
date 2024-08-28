@@ -51,7 +51,7 @@
           name='directory' 
           label='Directory to open in VS code' 
           type='text' 
-          value='~/' 
+          value='__WORKDIR__' 
           help=''  
         ></param>
         <param 

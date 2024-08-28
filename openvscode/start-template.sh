@@ -54,13 +54,13 @@ HERE
 
 
 # START SERVICE
-echo ${service_exec} --bind-addr=localhost:${servicePort} ${gh_flag} ${password_flag} ${service_directory}
+echo ${service_exec} --bind-addr=0.0.0.0:${servicePort} ${gh_flag} ${password_flag} ${service_directory}
 
 # Notify platform that service is running
 ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 
 ${service_exec} \
-    --bind-addr=localhost:${servicePort} \
+    --bind-addr=0.0.0.0:${servicePort} \
     ${gh_flag} \
     ${password_flag} \
     ${service_directory}

@@ -1,15 +1,14 @@
 # Runs via ssh + sbatch
 set -x
 
-# Order of priority for server_exec:
-# 1. If server server_exec --> Use this
-# 2. If not:
-#     2.1: If server_exec is in PATH --> Use this
-#     2.2: Else --> bootstrap TGZ
-#     2.3: Else --> Search in install paths
+# code-server-4.92.2-linux-amd64.tar.gz
+service_tgz_basename=$(echo ${service_download_url} | rev | cut -d'/' -f1 | rev)
+# code-server-4.92.2-linux-amd64
+service_tgz_stem=$(echo ${service_tgz_basename} | sed "s|.tar.gz||g")
 
-#server_bin="openvscode-server"
-server_bin="code-server"
+service_tgz_path=${service_parent_install_dir}/${service_tgz_basename}
+service_install_dir=${service_parent_install_dir}/${service_tgz_stem}
+service_exec=${service_install_dir}/bin/code-server
 
 
 # SET DEFAULTS:
@@ -31,16 +30,6 @@ else
     password_flag="--auth=password"
 fi
 
-if [ -z ${service_install_dir} ]; then
-    service_install_dir=${HOME}/pw/code-server-4.7.0-linux-amd64
-fi
-
-if [ -z ${service_tgz_path} ]; then
-    service_tgz_path=/swift-pw-bin/apps/code-server-4.7.0-linux-amd64.tar.gz
-fi
-
-install_paths="${HOME}/pw/*/bin /opt/*/bin /shared/*/bin"
-
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
 # - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
@@ -60,57 +49,13 @@ pkill \${service_pid}
 HERE
 
 
-bootstrap_tgz() {
-    tgz_path=$1
-    install_dir=$2
-    # Check if the code directory is present
-    # - if not copy from user container -> /swift-pw-bin/noVNC-1.3.0.tgz
-    if ! [ -d "${install_dir}" ]; then
-        echo "Bootstrapping ${install_dir}"
-        install_parent_dir=$(dirname ${install_dir})
-        mkdir -p ${install_parent_dir}
-
-        # first check if the noVNC file is available on the node
-        if [[ -f "/core/pworks-main/${tgz_path}" ]]; then
-            cp /core/pworks-main/${tgz_path} ${install_parent_dir}
-        else
-            rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" ${USER_CONTAINER_HOST}:${tgz_path} ${install_parent_dir}
-        fi
-        tar -zxf ${install_parent_dir}/$(basename ${tgz_path}) -C ${install_parent_dir}
-    fi
-}
-
-
 # START SERVICE
-
-if [ -z ${server_exec} ] || [[ "${server_exec}" == "__""server_exec""__" ]]; then
-    # If no server_exec is provided
-    if ! [ -z $(which ${server_bin}) ]; then
-        # If server binary is in the path use it
-        server_exec=$(which ${server_bin})
-    else
-        # Else bootstrap (install) -- Does nothing unless install_dir does not exist
-        bootstrap_tgz ${service_tgz_path} ${service_install_dir}
-        server_exec=${service_install_dir}/bin/${server_bin}
-    fi
-
-    # Search for the binary in install_paths
-    if [ ! -f "${server_exec}" ]; then
-        server_exec=$(find ${install_paths} -maxdepth 1 -mindepth 1 -name ${server_bin}  2>/dev/null | head -n1)
-    fi
-fi
-
-if [ ! -f "${server_exec}" ]; then
-    displayErrorMessage "ERROR: server_exec=${server_exec} file not found! - Exiting workflow!"
-    exit 1
-fi
-
-echo ${server_exec} --bind-addr=localhost:${servicePort} ${gh_flag} ${password_flag} ${service_directory}
+echo ${service_exec} --bind-addr=localhost:${servicePort} ${gh_flag} ${password_flag} ${service_directory}
 
 # Notify platform that service is running
 ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 
-${server_exec} \
+${service_exec} \
     --bind-addr=localhost:${servicePort} \
     ${gh_flag} \
     ${password_flag} \
@@ -119,7 +64,7 @@ ${server_exec} \
 
 exit 0
 # For openvscode-server
-${server_exec} \
+${service_exec} \
     --port ${servicePort} \
     --without-connection-token \
     --host localhost

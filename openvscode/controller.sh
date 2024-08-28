@@ -11,6 +11,7 @@ displayErrorMessage() {
     exit 1
 }
 
+
 init_code_server_settings() {
     local settings_dir=${HOME}/.local/share/code-server/User
     local settings_json=${settings_dir}/settings.json
@@ -39,6 +40,12 @@ install_code_server() {
     # Initialize default settings
     init_code_server_settings
 }
+
+. /etc/os-release
+# Check if the ID or NAME variable indicates CentOS
+if [[ "$ID" == "centos" || "$NAME" == *"CentOS"* ]]; then
+    displayErrorMessage "Code Server is no longer supported on CentOS 7"
+fi
 
 if [ -z ${service_parent_install_dir} ]; then
     service_parent_install_dir=${HOME}/pw/software

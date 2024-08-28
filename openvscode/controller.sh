@@ -45,6 +45,7 @@ install_code_server() {
 # Check if the ID or NAME variable indicates CentOS
 if [[ "$ID" == "centos" || "$NAME" == *"CentOS"* ]]; then
     displayErrorMessage "Code Server is no longer supported on CentOS 7"
+    exit 1
 fi
 
 if [ -z ${service_parent_install_dir} ]; then

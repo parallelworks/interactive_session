@@ -105,6 +105,11 @@ if [ -f "${service_name}/controller.sh" ]; then
     $sshcmd 'bash -s' < controller.sh
 fi
 
+job_status=$(jq -r '.JOB_STATUS' service.json)
+if [ "$job_status" == "FAILED" ]; then
+    echo "Job status is FAILED."
+    exit 1
+fi
 
 
 # RUN IN CONTROLLER, SLURM PARTITION OR PBS QUEUE?

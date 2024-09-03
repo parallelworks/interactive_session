@@ -40,6 +40,8 @@ install_code_server() {
     ${service_exec} --install-extensions ${service_copilot_vsix_path}
     # Initialize default settings
     init_code_server_settings
+    # Clean tgz
+    rm ${service_tgz_path}
 }
 
 . /etc/os-release

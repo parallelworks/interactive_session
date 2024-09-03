@@ -1,6 +1,12 @@
 # Make sure no conda environment is activated! 
 # https://github.com/parallelworks/issues/issues/1081
 
+if [ -z ${service_novnc_parent_install_dir} ]; then
+    service_novnc_parent_install_dir=${HOME}/pw/software
+fi
+
+service_novnc_tgz_stem=$(echo ${service_novnc_tgz_basename} | sed "s|.tar.gz||g" | sed "s|.tgz||g")
+service_novnc_install_dir=${service_novnc_parent_install_dir}/${service_novnc_tgz_stem}
 
 # Determine if the service is running in windows using WSL
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
@@ -16,21 +22,12 @@ if ! [ -z "${CONDA_PREFIX}" ]; then
 fi
 
 set -x
+
 # Runs via ssh + sbatch
 vnc_bin=vncserver
 
 if [[ $kernel_version == *microsoft* ]]; then
-    novnc_dir="/opt/noVNC-1.4.0"
     service_vnc_exec=NA
-fi
-
-
-if [ -z ${novnc_dir} ]; then
-    novnc_dir=${HOME}/pw/bootstrap/noVNC-1.3.0
-fi
-
-if [ -z ${novnc_tgz} ]; then
-    novnc_tgz=/swift-pw-bin/apps/noVNC-1.3.0.tgz
 fi
 
 # Find an available display port
@@ -122,8 +119,6 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         displayErrorMessage "ERROR: service_vnc_exec=${service_vnc_exec} file not found! - Exiting workflow!"
     fi
 
-    bootstrap_tgz ${novnc_tgz} ${novnc_dir}
-
     # Start service
     mkdir -p ~/.vnc
     ${service_vnc_exec} -kill ${DISPLAY}
@@ -206,7 +201,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     fi
 fi
 
-cd ${novnc_dir}
+cd ${service_novnc_install_dir}
 
 echo "Running ./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort}"
 ./utils/novnc_proxy --vnc localhost:${displayPort} --listen localhost:${servicePort} </dev/null &>/dev/null &

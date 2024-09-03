@@ -9,10 +9,10 @@
       value='__WORKDIR__/pw/bootstrap/noVNC-1.3.0'  
     ></param>
     <param 
-      name='novnc_tgz' 
-      label='Path to noVNC TGZ' 
+      name='service_novnc_tgz_basename' 
+      label='Basename of the novnc tgz file' 
       type='hidden' 
-      value='/swift-pw-bin/apps/noVNC-1.3.0.tgz'  
+      value='noVNC-1.3.0.tgz'  
     ></param>
     <section name='service' type='section' title='Service' expanded='false'>
       <param 

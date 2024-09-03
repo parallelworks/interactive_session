@@ -1,5 +1,12 @@
 # Runs via ssh + sbatch
 
+if [ -z ${service_novnc_parent_install_dir} ]; then
+    service_novnc_parent_install_dir=${HOME}/pw/software
+fi
+
+service_novnc_tgz_stem=$(echo ${service_novnc_tgz_basename} | sed "s|.tar.gz||g" | sed "s|.tgz||g")
+service_novnc_install_dir=${service_novnc_parent_install_dir}/${service_novnc_tgz_stem}
+
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
 # - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
@@ -25,21 +32,9 @@ HERE
 
 cd ~/
 
-# Check if the noVNC directory is present
-# - if not copy from user container -> /swift-pw-bin/apps/noVNC-1.3.0.tgz
-if ! [ -d "$(echo ~/pw/noVNC-1.3.0)" ]; then
-    echo "Bootstrapping noVNC"
-    set -x
-    mkdir -p ~/pw
-    rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" ${USER_CONTAINER_HOST}:/swift-pw-bin/apps/noVNC-1.3.0.tgz ~/pw
-    tar -zxf ~/pw/noVNC-1.3.0.tgz -C ~/pw
-    set +x
-fi
-chmod +x ./pw/noVNC-1.3.0/ttyd.x86_64
-
 rm -rf ${PWD}/service.pid
 
-./pw/noVNC-1.3.0/ttyd.x86_64 -p $servicePort bash &
+${service_novnc_install_dir}/ttyd.x86_64 -p $servicePort bash &
 echo $! >> ${PWD}/service.pid
 
 # Notify platform that service is running

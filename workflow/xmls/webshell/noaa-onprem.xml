@@ -2,6 +2,18 @@
   <command interpreter='bash'>main.sh</command>
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
+      <param 
+      name='service_novnc_parent_install_dir' 
+      label='noVNC installation directory' 
+      type='hidden' 
+      value='__WORKDIR__/pw/software'  
+    ></param>
+    <param 
+      name='service_novnc_tgz_basename' 
+      label='Basename of the novnc tgz file' 
+      type='hidden' 
+      value='noVNC-1.3.0.tgz'  
+    ></param>
     <param name='service_name' label='Service' type='hidden' value='webshell'  ></param>
     <section name='pwrl_host' type='section' title='Server Host' expanded='true'>
       <param 

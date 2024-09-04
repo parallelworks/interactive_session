@@ -7,7 +7,7 @@ sed -i 's|\\\\|\\|g' inputs.sh
 ./utils/steps/input_form_resource_wrapper.sh
 ./utils/steps/process_inputs_sh.sh
 
-source inputs.sh
+source resources/host/inputs.sh
 
 # Need to move files from utils directory to avoid updating the sparse checkout
 cp utils/service.json .

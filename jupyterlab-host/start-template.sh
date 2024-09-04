@@ -40,12 +40,12 @@ fi
 # START NGINX WRAPPER #
 #######################
 
-echo "Starting nginx wrapper on service port ${servicePort}"
+echo "Starting nginx wrapper on service port ${service_port}"
 
 # Write config file
 cat >> config.conf <<HERE
 server {
- listen ${servicePort};
+ listen ${service_port};
  server_name _;
  index index.html index.htm index.php;
  add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
@@ -78,7 +78,7 @@ else
         displayErrorMessage "ERROR: NGINX DOCKER CONTAINER CANNOT START PW BECAUSE USER ${USER} DOES NOT HAVE SUDO PRIVILEGES"
     fi
 
-    container_name="nginx-${servicePort}"
+    container_name="nginx-${service_port}"
     # Remove container when job is canceled
     echo "sudo docker stop ${container_name}" >> cancel.sh
     echo "sudo docker rm ${container_name}" >> cancel.sh

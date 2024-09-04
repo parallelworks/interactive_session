@@ -10,10 +10,10 @@ if [ -z "$serviceHost" ]; then
 fi
 
 # TUNNEL COMMAND:
-if [ -z "$servicePort" ]; then
-    SERVER_TUNNEL_CMD="ssh ${resource_ssh_usercontainer_options} -fN -R 0.0.0.0:$openPort:${serviceHost}:\${servicePort} ${USER_CONTAINER_HOST}"
+if [ -z "$service_port" ]; then
+    SERVER_TUNNEL_CMD="ssh ${resource_ssh_usercontainer_options} -fN -R 0.0.0.0:$openPort:${serviceHost}:\${service_port} ${USER_CONTAINER_HOST}"
 else
-    SERVER_TUNNEL_CMD="ssh ${resource_ssh_usercontainer_options} -fN -R 0.0.0.0:$openPort:${serviceHost}:${servicePort} ${USER_CONTAINER_HOST}"
+    SERVER_TUNNEL_CMD="ssh ${resource_ssh_usercontainer_options} -fN -R 0.0.0.0:$openPort:${serviceHost}:${service_port} ${USER_CONTAINER_HOST}"
 fi
 # Cannot have different port numbers on client and server or license checkout fails!
 LICENSE_TUNNEL_CMD="ssh ${resource_ssh_usercontainer_options} -fN -L 0.0.0.0:${advanced_options_license_server_port}:localhost:${advanced_options_license_server_port} -L 0.0.0.0:${advanced_options_license_daemon_port}:localhost:${advanced_options_license_daemon_port} ${USER_CONTAINER_HOST}"
@@ -104,15 +104,15 @@ elif [ -f "${resource_workdir}/pw/remote.sh" ]; then
     ${resource_workdir}/pw/remote.sh
 fi
 
-# Find an available servicePort. Could be anywhere in the form (<section_name>_servicePort)
-servicePort=$(env | grep servicePort | cut -d'=' -f2)
-if [ -z "\${servicePort}" ]; then
-    servicePort=\$(findAvailablePort)
+# Find an available service_port. Could be anywhere in the form (<section_name>_service_port)
+service_port=$(env | grep service_port | cut -d'=' -f2)
+if [ -z "\${service_port}" ]; then
+    service_port=\$(findAvailablePort)
 fi
-echo \${servicePort} > service.port
+echo \${service_port} > service.port
 
 echo
-echo Starting interactive session - sessionPort: \$servicePort tunnelPort: $openPort
+echo Starting interactive session - sessionPort: \$service_port tunnelPort: $openPort
 echo Test command to run in user container: telnet localhost $openPort
 echo
 

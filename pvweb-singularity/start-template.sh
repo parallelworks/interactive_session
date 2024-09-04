@@ -38,7 +38,7 @@ singularity run ${gpu_flag} \
     /opt/paraview/install/bin/pvpython '"${EXTRA_PVPYTHON_ARGS}"' \
     /opt/paraview/install/share/paraview-5.6/web/visualizer/server/pvw-visualizer.py \
     --content /opt/paraview/install/share/paraview-5.6/web/visualizer/www \
-    --port ${servicePort} \
+    --port ${service_port} \
     --data /data \
     --viewport-max-width ${service_viewport_max_width} \
     --viewport-max-height ${service_viewport_max_height} \

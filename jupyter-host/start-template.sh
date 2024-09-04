@@ -8,7 +8,7 @@ if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
 fi
 
 
-echo "starting notebook on $servicePort..."
+echo "starting notebook on $service_port..."
 
 export XDG_RUNTIME_DIR=""
 
@@ -73,7 +73,7 @@ ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 
 export PYTHONPATH=${PWD}
 jupyter-notebook \
-    --port=${servicePort} \
+    --port=${service_port} \
     --ip=0.0.0.0 \
     --NotebookApp.default_url="/me/${openPort}/tree" \
     --NotebookApp.iopub_data_rate_limit=10000000000 \
@@ -97,13 +97,13 @@ echo "rm /tmp/${jupyterserver_port}.port.used" >> cancel.sh
 # START NGINX WRAPPER #
 #######################
 
-echo "Starting nginx wrapper on service port ${servicePort}"
+echo "Starting nginx wrapper on service port ${service_port}"
 
 # Write config file
 cat >> config.conf <<HERE
 server {
- listen ${servicePort};
- server_name ${servicePort};
+ listen ${service_port};
+ server_name ${service_port};
  index index.html index.htm index.php;
  add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
  add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
@@ -134,7 +134,7 @@ if [ -f "${service_nginx_sif}" ]; then
 else
     echo "Running docker container nginx"
     
-    container_name="nginx-${servicePort}"
+    container_name="nginx-${service_port}"
     # Remove container when job is canceled
     echo "sudo docker stop ${container_name}" >> cancel.sh
     echo "sudo docker rm ${container_name}" >> cancel.sh

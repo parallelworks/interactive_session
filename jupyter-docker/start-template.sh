@@ -5,7 +5,7 @@ set -x
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
-jupyter_container_name="jupyter-${servicePort}"
+jupyter_container_name="jupyter-${service_port}"
 echo "sudo docker stop ${jupyter_container_name}" >> cancel.sh
 echo "sudo docker rm ${jupyter_container_name}" >> cancel.sh
 
@@ -88,10 +88,10 @@ sudo -n docker run ${gpu_flag} -i --rm --name ${jupyter_container_name} \
     ${service_mount_directories} \
     -v ${HOME}:${HOME} \
     -e PYTHONPATH=${PWD} \
-    -p ${servicePort}:${servicePort} \
+    -p ${service_port}:${service_port} \
     ${service_docker_repo} \
     jupyter-notebook \
-        --port=${servicePort} \
+        --port=${service_port} \
         --ip=0.0.0.0 \
         --NotebookApp.default_url="/me/${openPort}/tree" \
         --NotebookApp.iopub_data_rate_limit=10000000000 \
@@ -116,12 +116,12 @@ echo "rm /tmp/${jupyterserver_port}.port.used" >> cancel.sh
 # START NGINX WRAPPER #
 #######################
 
-echo "Starting nginx wrapper on service port ${servicePort}"
+echo "Starting nginx wrapper on service port ${service_port}"
 
 # Write config file
 cat >> config.conf <<HERE
 server {
- listen ${servicePort};
+ listen ${service_port};
  server_name _;
  index index.html index.htm index.php;
  add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
@@ -141,7 +141,7 @@ server {
 }
 HERE
 
-container_name="nginx-${servicePort}"
+container_name="nginx-${service_port}"
 # Remove container when job is canceled
 echo "sudo docker stop ${container_name}" >> cancel.sh
 echo "sudo docker rm ${container_name}" >> cancel.sh

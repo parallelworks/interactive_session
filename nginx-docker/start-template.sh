@@ -9,7 +9,7 @@
 # - job_number: PW job number, e.g.: 00001
 
 
-# servicePort: This value can be specified in the input form. Otherwise, the workflow 
+# service_port: This value can be specified in the input form. Otherwise, the workflow 
 #              selects any available port in the range 6000-9000
 
 # Check if the user can execute commands with sudo
@@ -18,7 +18,7 @@ if ! sudo -v >/dev/null 2>&1; then
 fi
 
 # Run docker container
-container_name="nginx-${servicePort}"
+container_name="nginx-${service_port}"
 
 # CREATE CANCEL SCRIPT TO REMOVE DOCKER CONTAINER WHEN THE PW JOB IS CANCELED
 if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
@@ -37,7 +37,7 @@ sudo service docker start
 
 sudo -n docker run -d --name ${container_name} \
     ${service_mount_directories} -v ${HOME}:${HOME} \
-    -p $servicePort:80 \
+    -p $service_port:80 \
     ${service_docker_repo}
 
 sudo docker logs ${container_name}

@@ -9,7 +9,7 @@
       value='nicedcv'  
     ></param>
     <param 
-      name='servicePort' 
+      name='service_port' 
       label='Service Port' 
       type='hidden' 
       value='8443'  

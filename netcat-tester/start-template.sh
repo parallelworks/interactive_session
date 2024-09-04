@@ -369,6 +369,6 @@ HERE
 # Notify platform that service is running
 ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 
-nc -klv -p ${servicePort} -c '$PWD/httpresponse.sh'
+nc -klv -p ${service_port} -c '$PWD/httpresponse.sh'
 
 done

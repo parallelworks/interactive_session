@@ -6,6 +6,7 @@ sed -i 's|\\\\|\\|g' inputs.sh
 
 ./utils/steps/input_form_resource_wrapper.sh
 ./utils/steps/process_inputs_sh.sh
+./utils/steps/controller_preprocessing.sh
 
 source resources/host/inputs.sh
 

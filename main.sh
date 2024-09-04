@@ -12,31 +12,6 @@ source resources/host/inputs.sh
 # Need to move files from utils directory to avoid updating the sparse checkout
 cp utils/service.json .
 
-
-if ! [ -f "${CONDA_PYTHON_EXE}" ]; then
-    echo "WARNING: Environment variable CONDA_PYTHON_EXE is pointing to a missing file ${CONDA_PYTHON_EXE}!"
-    echo "         Modifying its value: export CONDA_PYTHON_EXE=$(which python3)"
-    # Wont work unless it has requests...
-    export CONDA_PYTHON_EXE=$(which python3)
-fi
-
-# RUN CONTROLLER PREPROCESSING STEP
-if [ -f "${service_name}/controller.sh" ]; then
-    echo; echo; echo "RUNNING PREPROCESSING STEP"
-    echo '#!/bin/bash' > controller.sh
-    cat resources/host/inputs.sh >> controller.sh
-    cat ${service_name}/controller.sh >> controller.sh
-    echo "$sshcmd 'bash -s' < controller.sh"
-    $sshcmd 'bash -s' < controller.sh
-fi
-
-job_status=$(jq -r '.JOB_STATUS' service.json)
-if [ "$job_status" == "FAILED" ]; then
-    echo "Job status is FAILED."
-    exit 1
-fi
-
-
 # RUN IN CONTROLLER, SLURM PARTITION OR PBS QUEUE?
 if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
     echo "Submitting ssh job to ${resource_publicIp}"

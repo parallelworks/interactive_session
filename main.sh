@@ -11,12 +11,6 @@ cp utils/service.json .
 
 source lib.sh
 
-# Processing resource inputs
-source /etc/profile.d/parallelworks.sh
-source /etc/profile.d/parallelworks-env.sh
-source /pw/.miniconda3/etc/profile.d/conda.sh
-conda activate
-
 # load kerberos if it exists
 if [ -d /pw/kerberos ];then
   echo "LOADING KERBEROS SSH PACKAGES"

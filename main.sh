@@ -7,11 +7,12 @@ sed -i 's|\\\\|\\|g' inputs.sh
 ./utils/steps/input_form_resource_wrapper.sh
 ./utils/steps/process_inputs_sh.sh
 ./utils/steps/controller_preprocessing.sh
+# FIXME: Need to move files from utils directory to avoid updating the sparse checkout
+cp utils/service.json .
+./utils/steps/prepare_service_json.sh
 
 source resources/host/inputs.sh
 
-# Need to move files from utils directory to avoid updating the sparse checkout
-cp utils/service.json .
 
 # RUN IN CONTROLLER, SLURM PARTITION OR PBS QUEUE?
 if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
@@ -25,26 +26,6 @@ else
     session_wrapper_dir=partition
 fi
 
-# SERVICE URL
-echo "Generating session html"
-source ${service_name}/url.sh
-
-# FIXME: Move this to <service-name>/url.sh
-if [[ "${service_name}" == "nicedcv" ]] || [[ "${service_name}" == "hammerspace" ]]; then
-    URL="\"/sme/${openPort}/${URLEND}"
-    sed -i "s|.*URL.*|    \"URL\": \"/sme\",|" service.json
-else
-    URL="\"/me/${openPort}/${URLEND}"
-    sed -i "s|.*URL.*|    \"URL\": \"/me\",|" service.json
-fi
-
-# JSON values cannot contain quotes "
-#URL_JSON=$(echo ${URL} | sed 's|\"|\\\\\"|g')
-#sed -i "s|.*URL.*|    \"URL\": \"${URL_JSON}\",|" service.json
-sed -i "s|.*PORT.*|    \"PORT\": \"${openPort}\",|" service.json
-SLUG=$(echo ${URLEND} | sed 's|\"|\\\\\"|g')
-sed -i "s|.*SLUG.*|    \"SLUG\": \"${SLUG}\",|" service.json
-echo
 
 # RUNNING SESSION WRAPPER
 if ! [ -f "${session_wrapper_dir}/session_wrapper.sh" ]; then

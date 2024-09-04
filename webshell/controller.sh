@@ -15,7 +15,7 @@ download_and_install() {
 
     # 2. Navigate into the repository directory
     cd interactive_session
-    git checkout download-dependencies
+    #git checkout download-dependencies
 
     # 3. Initialize sparse-checkout
     git sparse-checkout init

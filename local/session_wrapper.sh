@@ -40,9 +40,9 @@ source lib.sh
 echo \$$ > ${job_number}.pid
 
 # When running apps locally there is no tunnel and ports are the same
-servicePort=${openPort} 
+service_port=${openPort} 
 
-if [ -z "\${servicePort}" ]; then
+if [ -z "\${service_port}" ]; then
     displayErrorMessage "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
 fi
 

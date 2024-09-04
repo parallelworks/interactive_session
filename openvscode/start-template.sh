@@ -47,20 +47,20 @@ else
 fi
 
 cat >> ${resource_jobdir}/service-kill-${job_number}-main.sh <<HERE
-service_pid=\$(ps -x | grep ${server_bin} | grep ${servicePort} | awk '{print \$1}')
+service_pid=\$(ps -x | grep ${server_bin} | grep ${service_port} | awk '{print \$1}')
 kill \${service_pid}
 pkill \${service_pid}
 HERE
 
 
 # START SERVICE
-echo ${service_exec} --bind-addr=0.0.0.0:${servicePort} ${gh_flag} ${password_flag} ${service_directory}
+echo ${service_exec} --bind-addr=0.0.0.0:${service_port} ${gh_flag} ${password_flag} ${service_directory}
 
 # Notify platform that service is running
 ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 
 ${service_exec} \
-    --bind-addr=0.0.0.0:${servicePort} \
+    --bind-addr=0.0.0.0:${service_port} \
     ${gh_flag} \
     ${password_flag} \
     ${service_directory}
@@ -68,7 +68,7 @@ ${service_exec} \
 sleep 999999999
 # For openvscode-server
 ${service_exec} \
-    --port ${servicePort} \
+    --port ${service_port} \
     --without-connection-token \
     --host localhost
 

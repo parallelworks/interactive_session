@@ -34,7 +34,7 @@ cd ~/
 
 rm -rf ${PWD}/service.pid
 
-${service_novnc_install_dir}/ttyd.x86_64 -p $servicePort bash &
+${service_novnc_install_dir}/ttyd.x86_64 -p $service_port bash &
 echo $! >> ${PWD}/service.pid
 
 # Notify platform that service is running

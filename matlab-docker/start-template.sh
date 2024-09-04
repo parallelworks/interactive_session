@@ -10,12 +10,12 @@ echo "rm /tmp/${matlab_port}.port.used" >> cancel.sh
 # START NGINX WRAPPER #
 #######################
 
-echo "Starting nginx wrapper on service port ${servicePort}"
+echo "Starting nginx wrapper on service port ${service_port}"
 
 # Write config file
 cat >> config.conf <<HERE
 server {
- listen ${servicePort};
+ listen ${service_port};
  server_name _;
  index index.html index.htm index.php;
  add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
@@ -36,7 +36,7 @@ server {
 HERE
 
 echo "Running docker container nginx"
-container_name="nginx-${servicePort}"
+container_name="nginx-${service_port}"
 # Remove container when job is canceled
 echo "sudo docker stop ${container_name}" >> cancel.sh
 echo "sudo docker rm ${container_name}" >> cancel.sh
@@ -54,7 +54,7 @@ sudo docker logs ${container_name}
 # START MATLAB DOCKER #
 #######################
 sudo docker pull ${container_name}
-container_name="matlab-${servicePort}"
+container_name="matlab-${service_port}"
 echo "sudo docker stop ${container_name}" >> cancel.sh
 echo "sudo docker rm ${container_name}" >> cancel.sh
 

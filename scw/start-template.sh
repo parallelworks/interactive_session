@@ -19,7 +19,7 @@ cat > "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/scyld-cloud-wo
     <!-- <LocalCursor>true</LocalCursor> -->
     <LogLevel>debug</LogLevel>
     <PathPrefix></PathPrefix>
-    <Port>${servicePort}</Port>
+    <Port>${service_port}</Port>
     <Security>
       <SameOriginHeaders>disabled</SameOriginHeaders>
     </Security>
@@ -76,10 +76,10 @@ cat > "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/scyld-cloud-wo
 </config>
 END
 
-echo "starting SCW on port $servicePort"
+echo "starting SCW on port $service_port"
 
 while true; do
-    check_logs=$(cat "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/log/scyld-cloud-workstation.log" | grep "port ${servicePort}")
+    check_logs=$(cat "/c/Program Files/Penguin Computing/Scyld Cloud Workstation/log/scyld-cloud-workstation.log" | grep "port ${service_port}")
     if [ -z "${check_logs}" ]; then
         echo "Restarting Service"
         # Stop SCW service
@@ -122,7 +122,7 @@ cat > "./scyld-cloud-workstation.xml" << END
     <!-- <LocalCursor>true</LocalCursor> -->
     <LogLevel>debug</LogLevel>
     <PathPrefix></PathPrefix>
-    <Port>${servicePort}</Port>
+    <Port>${service_port}</Port>
     <Security>
       <SameOriginHeaders>disabled</SameOriginHeaders>
     </Security>
@@ -230,7 +230,7 @@ sudo cp custom.conf /etc/gdm/custom.conf
 sudo systemctl restart gdm
 
 
-echo; echo "starting SCW on port $servicePort"
+echo; echo "starting SCW on port $service_port"
 
 sudo systemctl restart scyld-cloud-workstation
 

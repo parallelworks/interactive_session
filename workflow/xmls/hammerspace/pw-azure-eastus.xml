@@ -9,7 +9,7 @@
       value='hammerspace'  
     ></param>
     <param 
-      name='servicePort' 
+      name='service_port' 
       label='Server Port' 
       type='hidden' 
       value='8443'  

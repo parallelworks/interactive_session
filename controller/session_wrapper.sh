@@ -43,10 +43,10 @@ if [ -z "$serviceHost" ]; then
 fi
 
 # TUNNEL COMMANDS:
-if [ -z "$servicePort" ]; then
-    SERVER_TUNNEL_CMD="ssh ${resource_ssh_usercontainer_options} -fN -R 0.0.0.0:$openPort:${serviceHost}:\$servicePort ${USER_CONTAINER_HOST}"
+if [ -z "$service_port" ]; then
+    SERVER_TUNNEL_CMD="ssh ${resource_ssh_usercontainer_options} -fN -R 0.0.0.0:$openPort:${serviceHost}:\$service_port ${USER_CONTAINER_HOST}"
 else
-    SERVER_TUNNEL_CMD="ssh ${resource_ssh_usercontainer_options} -fN -R 0.0.0.0:$openPort:${serviceHost}:$servicePort ${USER_CONTAINER_HOST}"
+    SERVER_TUNNEL_CMD="ssh ${resource_ssh_usercontainer_options} -fN -R 0.0.0.0:$openPort:${serviceHost}:$service_port ${USER_CONTAINER_HOST}"
 fi
 # Cannot have different port numbers on client and server or license checkout fails!
 LICENSE_TUNNEL_CMD="ssh ${resource_ssh_usercontainer_options} -fN -L 0.0.0.0:${advanced_options_license_server_port}:localhost:${advanced_options_license_server_port} -L 0.0.0.0:${advanced_options_license_daemon_port}:localhost:${advanced_options_license_daemon_port} ${USER_CONTAINER_HOST}"
@@ -102,12 +102,12 @@ findAvailablePort() {
 # Note that job started running
 echo \$$ > ${job_number}.pid
 
-# Find an available servicePort
-servicePort=\$(findAvailablePort)
-echo \${servicePort} > service.port
+# Find an available service_port
+service_port=\$(findAvailablePort)
+echo \${service_port} > service.port
 
 echo
-echo Starting interactive session - sessionPort: \$servicePort tunnelPort: $openPort
+echo Starting interactive session - sessionPort: \$service_port tunnelPort: $openPort
 echo Test command to run in user container: telnet localhost $openPort
 echo
 
@@ -124,7 +124,7 @@ fi
 
 echo "Exit code: \$?"
 echo "Starting session..."
-rm -f /tmp/\${servicePort}.port.used 
+rm -f /tmp/\${service_port}.port.used 
 HERE
 
 

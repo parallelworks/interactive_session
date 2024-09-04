@@ -81,7 +81,7 @@ singularity run ${gpu_flag} \
     ${service_path_to_sing} \
     /usr/lib/rstudio-server/bin/rserver \
     --www-address=0.0.0.0 \
-    --www-port=${servicePort}  \
+    --www-port=${service_port}  \
     --www-proxy-localhost=0 \
     --auth-none=1 \
     --www-frame-origin=same

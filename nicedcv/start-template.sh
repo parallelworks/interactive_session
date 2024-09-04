@@ -139,10 +139,10 @@ virtual-session-xdcv-args=\"-listen tcp\"
 #target-fps = 30
 
 [connectivity]
-web-listen-endpoints=['0.0.0.0:${servicePort}','[::]:${servicePort}']
+web-listen-endpoints=['0.0.0.0:${service_port}','[::]:${service_port}']
 web-x-frame-options=\"ALLOW-FROM https://0.0.0.0\"
 web-extra-http-headers=[(\"Content-Security-Policy\", \"frame-ancestors 'self' https://*\")]
-web-port=${servicePort}
+web-port=${service_port}
 # web-url-path=\"/me/51533/\"
 #enable-quic-frontend=true
 #quic-port=8444

@@ -87,7 +87,7 @@ singularity exec ${gpu_flag} \
     ${mount_dirs} \
     ${service_path_to_sing} \
     jupyter-notebook \
-        --port=${servicePort} \
+        --port=${service_port} \
         --ip=0.0.0.0 \
         --NotebookApp.default_url="/me/${openPort}/tree" \
         --NotebookApp.iopub_data_rate_limit=10000000000 \

@@ -1,0 +1,44 @@
+<tool id='NA' name='NA'>
+  <command interpreter='bash'>main.sh</command>
+  <cancel interpreter='bash'>kill.sh</cancel>
+  <inputs>
+   <section name='service' type='section' title='ngenCERF' expanded='true'>
+      <param 
+        name='name' 
+        label='Service' 
+        type='hidden' 
+        value='ngencerf'  
+      ></param>
+      <param 
+        name='existing_port' 
+        label='Service Port' 
+        type='text' 
+        value='3000'
+        help='Listening port of the existing server'  
+      ></param>
+    </section>
+    <section name='pwrl_host' type='section' title='ngenCERF Host' expanded='true'>
+      <param 
+        name='resource' 
+        type='computeResource' 
+        label='Service host' 
+        hideUserWorkspace='true' 
+        help='Resource to host the service'
+      ></param>
+      <param 
+        name='nports' 
+        label='Number of Ports to Reserve' 
+        type='hidden' 
+        value='1'  
+      ></param>
+      <param 
+        name='jobschedulertype' 
+        label='Select Controller or SLURM Partition' 
+        type='hidden' 
+        value='CONTROLLER'  
+      ></param> 
+    </section>
+  </inputs>
+  <outputs>
+  </outputs>
+</tool>

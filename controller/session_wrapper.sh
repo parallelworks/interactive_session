@@ -13,7 +13,7 @@ kill_ports="${openPort} ${advanced_options_license_server_port} ${advanced_optio
 # KILL_SSH: Part of the kill_sh that runs on the remote host with ssh
 kill_ssh=${PW_JOB_PATH}/kill_ssh.sh
 echo "#!/bin/bash" > ${kill_ssh}
-cat inputs.sh >> ${kill_ssh} 
+cat resources/host/inputs.sh >> ${kill_ssh} 
 if [ -f "${service_name}/kill-template.sh" ]; then
     echo "Adding kill server script ${service_name}/kill-template.sh to ${kill_ssh}"
     cat ${service_name}/kill-template.sh >> ${kill_ssh}
@@ -26,7 +26,7 @@ sed -i "s/__KILL_PORTS__/${kill_ports}/g" ${kill_ssh}
 kill_sh=${PW_JOB_PATH}/kill.sh
 echo "#!/bin/bash" > ${kill_sh}
 echo "mv ${kill_sh} ${kill_sh}.completed" >> ${kill_sh}
-cat inputs.sh >> ${kill_sh}
+cat resources/host/inputs.sh >> ${kill_sh}
 echo "echo Running ${kill_sh}" >> ${kill_sh}
 # Add kill_ssh
 cat >> ${kill_sh} <<HERE
@@ -55,7 +55,7 @@ LICENSE_TUNNEL_CMD="ssh ${resource_ssh_usercontainer_options} -fN -L 0.0.0.0:${a
 echo "Generating session script"
 session_sh=${PW_JOB_PATH}/session.sh
 echo "#!/bin/bash" > ${session_sh}
-cat inputs.sh >> ${session_sh}
+cat resources/host/inputs.sh >> ${session_sh}
 # Need this on some systems when running code with ssh
 # - CAREFUL! This command can change your ${PWD} directory
 echo "source ~/.bashrc" >>  ${session_sh}

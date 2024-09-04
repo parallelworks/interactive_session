@@ -9,21 +9,21 @@ sed -i 's|\\\\|\\|g' inputs.sh
 cp utils/service.json .
 
 # Load and process inputs
-source inputs.sh
+source resources/host/inputs.sh
 export openPort=$(echo ${resource_ports} | sed "s|___| |g" | cut -d ' ' -f1)
 if [[ "$openPort" == "" ]]; then
     displayErrorMessage "ERROR - cannot find open port..."
     exit 1
 fi
 
-echo "export openPort=${openPort}" >> inputs.sh
+echo "export openPort=${openPort}" >> resources/host/inputs.sh
 export sshcmd="ssh -o StrictHostKeyChecking=no ${resource_publicIp}"
-echo "export sshcmd=\"${sshcmd}\"" >> inputs.sh
-source inputs.sh
+echo "export sshcmd=\"${sshcmd}\"" >> resources/host/inputs.sh
+source resources/host/inputs.sh
 
 # Obtain the service_name from any section of the XML
-export service_name=$(cat inputs.sh | grep service_name | cut -d'=' -f2 | tr -d '"')
-echo "export service_name=${service_name}" >> inputs.sh
+export service_name=$(cat resources/host/inputs.sh | grep service_name | cut -d'=' -f2 | tr -d '"')
+echo "export service_name=${service_name}" >> resources/host/inputs.sh
 
 if ! [ -d "${service_name}" ]; then
     displayErrorMessage "ERROR: Directory ${service_name} was not found --> Service ${service_name} is not supported --> Exiting workflow"
@@ -31,12 +31,12 @@ if ! [ -d "${service_name}" ]; then
 fi
 
 export PW_JOB_PATH=$(pwd | sed "s|${HOME}||g")
-echo "export PW_JOB_PATH=${PW_JOB_PATH}" >> inputs.sh
+echo "export PW_JOB_PATH=${PW_JOB_PATH}" >> resources/host/inputs.sh
 
-sed -i "s/__job_number__/${job_number}/g" inputs.sh
+sed -i "s/__job_number__/${job_number}/g" resources/host/inputs.sh
 
 export USER_CONTAINER_HOST="usercontainer"
-echo "export USER_CONTAINER_HOST=${USER_CONTAINER_HOST}" >> inputs.sh
+echo "export USER_CONTAINER_HOST=${USER_CONTAINER_HOST}" >> resources/host/inputs.sh
 
 
 if ! [ -f "${CONDA_PYTHON_EXE}" ]; then
@@ -50,7 +50,7 @@ fi
 if [ -f "${service_name}/controller.sh" ]; then
     echo; echo; echo "RUNNING PREPROCESSING STEP"
     echo '#!/bin/bash' > controller.sh
-    cat inputs.sh >> controller.sh
+    cat resources/host/inputs.sh >> controller.sh
     cat ${service_name}/controller.sh >> controller.sh
     echo "$sshcmd 'bash -s' < controller.sh"
     $sshcmd 'bash -s' < controller.sh

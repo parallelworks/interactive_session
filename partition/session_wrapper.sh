@@ -24,7 +24,7 @@ export session_sh=${PW_JOB_PATH}/session.sh
 cp resources/host/batch_header.sh ${session_sh}
 
 echo >> ${session_sh}
-cat inputs.sh >> ${session_sh}
+cat resources/host/inputs.sh >> ${session_sh}
 
 # ADD RUNTIME FIXES FOR EACH PLATFORM
 if ! [ -z ${RUNTIME_FIXES} ]; then
@@ -167,7 +167,7 @@ fi
 # KILL_SSH: Part of the kill_sh that runs on the remote host with ssh
 kill_ssh=${PW_JOB_PATH}/kill_ssh.sh
 echo "#!/bin/bash" > ${kill_ssh}
-cat inputs.sh >> ${kill_ssh} 
+cat resources/host/inputs.sh >> ${kill_ssh} 
 if [ -f "${service_name}/kill-template.sh" ]; then
     echo "Adding kill server script ${service_name}/kill-template.sh to ${kill_ssh}"
     cat ${service_name}/kill-template.sh >> ${kill_ssh}
@@ -178,7 +178,7 @@ echo ${cancel_cmd} ${jobid} >> ${kill_ssh}
 kill_sh=${PW_JOB_PATH}/kill.sh
 echo "#!/bin/bash" > ${kill_sh}
 echo "mv ${kill_sh} ${kill_sh}.completed" >> ${kill_sh}
-cat inputs.sh >> ${kill_sh}
+cat resources/host/inputs.sh >> ${kill_sh}
 echo "echo Running ${kill_sh}" >> ${kill_sh}
 echo "$sshcmd 'bash -s' < ${kill_ssh}" >> ${kill_sh}
 echo "echo Finished running ${kill_sh}" >> ${kill_sh}

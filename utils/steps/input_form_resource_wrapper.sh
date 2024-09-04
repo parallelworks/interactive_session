@@ -22,7 +22,3 @@ fi
 if ! [ -f "resources/host/inputs.sh" ]; then
     displayErrorMessage "ERROR - Missing file ./resources/host/inputs.sh. Resource wrapper failed"
 fi
-
-# Use inputs as processed by the resource wrapper
-# - ONLY do this if there is 1 resource!
-cp resources/host/inputs.sh inputs.sh

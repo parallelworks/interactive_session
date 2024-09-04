@@ -15,5 +15,4 @@ if [ -d /pw/kerberos ];then
   which ssh kinit
 fi
 
-
 source lib.sh

@@ -24,6 +24,7 @@ source inputs.sh
 # Obtain the service_name from any section of the XML
 export service_name=$(cat inputs.sh | grep service_name | cut -d'=' -f2 | tr -d '"')
 echo "export service_name=${service_name}" >> inputs.sh
+
 if ! [ -d "${service_name}" ]; then
     displayErrorMessage "ERROR: Directory ${service_name} was not found --> Service ${service_name} is not supported --> Exiting workflow"
     exit 1
@@ -37,12 +38,6 @@ sed -i "s/__job_number__/${job_number}/g" inputs.sh
 export USER_CONTAINER_HOST="usercontainer"
 echo "export USER_CONTAINER_HOST=${USER_CONTAINER_HOST}" >> inputs.sh
 
-# LOAD PLATFORM-SPECIFIC ENVIRONMENT:
-env_sh=platforms/${PARSL_CLIENT_HOST}/env.sh
-if ! [ -f "${env_sh}" ]; then
-    env_sh=platforms/default/env.sh
-fi
-source ${env_sh}
 
 if ! [ -f "${CONDA_PYTHON_EXE}" ]; then
     echo "WARNING: Environment variable CONDA_PYTHON_EXE is pointing to a missing file ${CONDA_PYTHON_EXE}!"

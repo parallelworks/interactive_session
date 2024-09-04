@@ -4,28 +4,10 @@
   <inputs>
     <section name='service' type='section' title='OpenVSCode Settings' expanded='true'>
         <param 
-          name='install_dir' 
-          label='Default OpenVSCode installation directory' 
-          type='hidden'
-          value='__WORKDIR__/pw/bootstrap/code-server-4.7.0-linux-amd64'
-        ></param>
-        <param 
-          name='tgz_path' 
-          label='Path to bootstrap TGZ' 
-          type='hidden' 
-          value='/swift-pw-bin/apps/code-server-4.7.0-linux-amd64.tar.gz'
-        ></param>
-        <param 
           name='name' 
           label='Service' 
           type='hidden' 
           value='openvscode'
-        ></param>
-        <param 
-          name='exec' 
-          label='Service' 
-          type='hidden' 
-          value=''
         ></param>
         <param 
           name='download_url' 

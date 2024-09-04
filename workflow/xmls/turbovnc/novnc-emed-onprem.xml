@@ -24,7 +24,7 @@
       name='service_novnc_tgz_basename' 
       label='Basename of the novnc tgz file' 
       type='hidden' 
-      value='noVNC-1.5.0.tar.gz'  
+      value='noVNC-1.5.0.tgz'  
     ></param>
     <section name='pwrl_host' type='section' title='Desktop Host' expanded='true'>
       <param 

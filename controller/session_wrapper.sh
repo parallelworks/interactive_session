@@ -7,11 +7,11 @@ source lib.sh
 
 # CREATE KILL FILE:
 # - NEEDS TO BE MADE BEFORE RUNNING SESSION SCRIPT!
-# - When the job is killed PW runs ${PW_JOB_PATH}/kill.sh
+# - When the job is killed PW runs ${pw_job_dir}/kill.sh
 kill_ports="${openPort} ${advanced_options_license_server_port} ${advanced_options_license_daemon_port}"
 
 # KILL_SSH: Part of the kill_sh that runs on the remote host with ssh
-kill_ssh=${PW_JOB_PATH}/kill_ssh.sh
+kill_ssh=${pw_job_dir}/kill_ssh.sh
 echo "#!/bin/bash" > ${kill_ssh}
 cat resources/host/inputs.sh >> ${kill_ssh} 
 if [ -f "${service_name}/kill-template.sh" ]; then
@@ -23,7 +23,7 @@ cat ${sdir}/kill_session.sh >> ${kill_ssh}
 sed -i "s/__KILL_PORTS__/${kill_ports}/g" ${kill_ssh}
 
 # KILL_SH: File that runs on the user space
-kill_sh=${PW_JOB_PATH}/kill.sh
+kill_sh=${pw_job_dir}/kill.sh
 echo "#!/bin/bash" > ${kill_sh}
 echo "mv ${kill_sh} ${kill_sh}.completed" >> ${kill_sh}
 cat resources/host/inputs.sh >> ${kill_sh}
@@ -34,7 +34,7 @@ $sshcmd 'bash -s' < ${kill_ssh}
 bash ${sdir}/kill_tunnels.sh
 echo Finished running ${kill_sh}
 HERE
-echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" ${PW_JOB_PATH}/service.json >> ${kill_sh}
+echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" ${pw_job_dir}/service.json >> ${kill_sh}
 echo "exit 0" >> ${kill_sh}
 chmod 777 ${kill_sh}
 
@@ -53,7 +53,7 @@ LICENSE_TUNNEL_CMD="ssh ${resource_ssh_usercontainer_options} -fN -L 0.0.0.0:${a
 
 # Initiallize session batch file:
 echo "Generating session script"
-session_sh=${PW_JOB_PATH}/session.sh
+session_sh=${pw_job_dir}/session.sh
 echo "#!/bin/bash" > ${session_sh}
 cat resources/host/inputs.sh >> ${session_sh}
 # Need this on some systems when running code with ssh
@@ -70,8 +70,8 @@ sshusercontainer="ssh ${resource_ssh_usercontainer_options} -f ${USER_CONTAINER_
 
 displayErrorMessage() {
     echo \$(date): \$1
-    \${sshusercontainer} "sed -i \"s|.*ERROR_MESSAGE.*|    \\\\\"ERROR_MESSAGE\\\\\": \\\\\"\$1\\\\\"|\" ${PW_JOB_PATH}/service.json"
-    \${sshusercontainer} "sed -i \"s|.*JOB_STATUS.*|    \\\\\"JOB_STATUS\\\\\": \\\\\"FAILED\\\\\",|\" ${PW_JOB_PATH}/service.json"
+    \${sshusercontainer} "sed -i \"s|.*ERROR_MESSAGE.*|    \\\\\"ERROR_MESSAGE\\\\\": \\\\\"\$1\\\\\"|\" ${pw_job_dir}/service.json"
+    \${sshusercontainer} "sed -i \"s|.*JOB_STATUS.*|    \\\\\"JOB_STATUS\\\\\": \\\\\"FAILED\\\\\",|\" ${pw_job_dir}/service.json"
     exit 1
 }
 
@@ -145,7 +145,7 @@ echo "$sshcmd 'bash -s' < ${session_sh}"
 echo
 
 # Run service
-$sshcmd 'bash -s' < ${session_sh} #&> ${PW_JOB_PATH}/session-${job_number}.out
+$sshcmd 'bash -s' < ${session_sh} #&> ${pw_job_dir}/session-${job_number}.out
 
 if [ $? -eq 0 ]; then
     sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Completed\",/" service.json

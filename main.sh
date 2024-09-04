@@ -30,9 +30,6 @@ if ! [ -d "${service_name}" ]; then
     exit 1
 fi
 
-export PW_JOB_PATH=$(pwd | sed "s|${HOME}||g")
-echo "export PW_JOB_PATH=${PW_JOB_PATH}" >> resources/host/inputs.sh
-
 sed -i "s/__job_number__/${job_number}/g" resources/host/inputs.sh
 
 export USER_CONTAINER_HOST="usercontainer"

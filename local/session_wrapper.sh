@@ -7,10 +7,10 @@ source lib.sh
 
 # CREATE KILL FILE:
 # - NEEDS TO BE MADE BEFORE RUNNING SESSION SCRIPT!
-# - When the job is killed PW runs ${PW_JOB_PATH}/kill.sh
+# - When the job is killed PW runs ${pw_job_dir}/kill.sh
 kill_ports="${openPort}"
 # Initialize kill.sh
-kill_sh=${PW_JOB_PATH}/kill.sh
+kill_sh=${pw_job_dir}/kill.sh
 
 echo "#!/bin/bash" > ${kill_sh}
 echo "echo Running ${kill_sh}" >> ${kill_sh}
@@ -25,12 +25,12 @@ cat  ${sdir}/clear_ports.sh  >> ${kill_sh}
 sed -i "s/__KILL_PORTS__/${kill_ports}/g" ${kill_sh}
 echo "kill \$(ps -x | grep ${job_number} | grep ${workflow_name} | grep -v grep | awk '{print \$1}')" >> ${kill_sh}
 echo "echo Finished running ${kill_sh}" >> ${kill_sh}
-echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" ${PW_JOB_PATH}/service.json >> ${kill_sh}
+echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" ${pw_job_dir}/service.json >> ${kill_sh}
 chmod 777 ${kill_sh}
 
 # Initiallize session batch file:
 echo "Generating session script"
-session_sh=${PW_JOB_PATH}/session.sh
+session_sh=${pw_job_dir}/session.sh
 echo "#!/bin/bash" > ${session_sh}
 echo "mv ${kill_sh} ${kill_sh}.completed" >> ${kill_sh}
 cat resources/host/inputs.sh >> ${session_sh}

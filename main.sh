@@ -3,36 +3,10 @@ source utils/load-env.sh
 
 sed -i 's|\\\\|\\|g' inputs.sh
 
-# change permissions of run directly so we can execute all files
-chmod 777 * -Rf
+./utils/steps/input_form_resource_wrapper.sh
+
 # Need to move files from utils directory to avoid updating the sparse checkout
 cp utils/service.json .
-
-
-source inputs.sh
-if [ -z "${workflow_utils_branch}" ]; then
-    # If empty, clone the main default branch
-    git clone https://github.com/parallelworks/workflow-utils.git
-else
-    # If not empty, clone the specified branch
-    git clone -b "$workflow_utils_branch" https://github.com/parallelworks/workflow-utils.git
-fi
-
-mv workflow-utils/* utils
-rm -rf workflow-utils
-
-python utils/input_form_resource_wrapper.py
-
-if [ $? -ne 0 ]; then
-    displayErrorMessage "ERROR - Resource wrapper failed"
-fi
-
-if ! [ -f "resources/host/inputs.sh" ]; then
-    displayErrorMessage "ERROR - Missing file ./resources/host/inputs.sh. Resource wrapper failed"
-fi
-# Use inputs as processed by the resource wrapper
-# - ONLY do this if there is 1 resource!
-cp resources/host/inputs.sh inputs.sh
 
 # Load and process inputs
 source inputs.sh

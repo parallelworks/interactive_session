@@ -1,22 +1,13 @@
 #!/bin/bash
-sed -i 's|\\\\|\\|g' inputs.sh
+source utils/load-env.sh
 
-source /pw/.miniconda3/etc/profile.d/conda.sh
-conda activate
+sed -i 's|\\\\|\\|g' inputs.sh
 
 # change permissions of run directly so we can execute all files
 chmod 777 * -Rf
 # Need to move files from utils directory to avoid updating the sparse checkout
 cp utils/service.json .
 
-source lib.sh
-
-# load kerberos if it exists
-if [ -d /pw/kerberos ];then
-  echo "LOADING KERBEROS SSH PACKAGES"
-  source /pw/kerberos/source.env
-  which ssh kinit
-fi
 
 source inputs.sh
 if [ -z "${workflow_utils_branch}" ]; then
@@ -63,9 +54,6 @@ if ! [ -d "${service_name}" ]; then
     displayErrorMessage "ERROR: Directory ${service_name} was not found --> Service ${service_name} is not supported --> Exiting workflow"
     exit 1
 fi
-
-# export the users env file (for some reason not all systems are getting these upon execution)
-while read LINE; do export "$LINE"; done < ~/.env
 
 export PW_JOB_PATH=$(pwd | sed "s|${HOME}||g")
 echo "export PW_JOB_PATH=${PW_JOB_PATH}" >> inputs.sh

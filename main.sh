@@ -1,4 +1,14 @@
 #!/bin/bash
+
+# Define a cleanup function
+cleanup() {
+    ./utils/steps/clean_and_exit.sh 2>&1 | tee clean_and_exit.out
+}
+
+# Set the trap to call cleanup on script exit
+trap cleanup EXIT
+
+
 ./utils/steps/preprocessing.sh 2>&1 | tee preprocessing.out || exit 1
 ./utils/steps/input_form_resource_wrapper.sh 2>&1 | tee input_form_resource_wrapper.out || exit 1
 ./utils/steps/process_inputs_sh.sh 2>&1 | tee process_inputs_sh.out || exit 1

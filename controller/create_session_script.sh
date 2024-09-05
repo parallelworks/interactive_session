@@ -18,7 +18,6 @@ LICENSE_TUNNEL_CMD="ssh ${resource_ssh_usercontainer_options} -fN -L 0.0.0.0:${a
 
 # Initiallize session batch file:
 echo "Generating session script"
-session_sh=${pw_job_dir}/session.sh
 echo "#!/bin/bash" > ${session_sh}
 cat resources/host/inputs.sh >> ${session_sh}
 # Need this on some systems when running code with ssh

@@ -3,7 +3,6 @@ source utils/load-env.sh
 source resources/host/inputs.sh
 source lib.sh
 
-
 # SET SESSIONS' REMOTE DIRECTORY
 ${sshcmd} mkdir -p ${resource_jobdir}
 

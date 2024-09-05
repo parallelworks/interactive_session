@@ -42,3 +42,6 @@ echo "export session_wrapper_dir=${session_wrapper_dir}" >> resources/host/input
 # Paths to the scripts to kill the jobs
 echo "export kill_ssh=${pw_job_dir}/kill_ssh.sh" >> resources/host/inputs.sh
 echo "export kill_sh=${pw_job_dir}/kill.sh" >> resources/host/inputs.sh
+
+# Path to the session script
+echo "export session_sh=${pw_job_dir}/session.sh"  >> resources/host/inputs.sh

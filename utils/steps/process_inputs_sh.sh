@@ -31,7 +31,8 @@ echo "export USER_CONTAINER_HOST=${USER_CONTAINER_HOST}" >> resources/host/input
 if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
     session_wrapper_dir=controller
 elif [[ ${jobschedulertype} == "LOCAL" ]]; then
-    session_wrapper_dir=local
+    displayErrorMessage "ERROR: Unsupported option ${jobschedulertype}=LOCAL"
+    exit 1
 else
     session_wrapper_dir=partition
 fi

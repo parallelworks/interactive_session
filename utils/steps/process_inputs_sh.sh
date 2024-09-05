@@ -26,3 +26,13 @@ sed -i "s/__job_number__/${job_number}/g" resources/host/inputs.sh
 
 export USER_CONTAINER_HOST="usercontainer"
 echo "export USER_CONTAINER_HOST=${USER_CONTAINER_HOST}" >> resources/host/inputs.sh
+
+# RUN IN CONTROLLER, SLURM PARTITION OR PBS QUEUE?
+if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
+    session_wrapper_dir=controller
+elif [[ ${jobschedulertype} == "LOCAL" ]]; then
+    session_wrapper_dir=local
+else
+    session_wrapper_dir=partition
+fi
+echo "export session_wrapper_dir=${session_wrapper_dir}" >> resources/host/inputs.sh

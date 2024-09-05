@@ -2,6 +2,8 @@
 source utils/load-env.sh
 source inputs.sh
 
+set -x
+
 if [ -z "${workflow_utils_branch}" ]; then
     # If empty, clone the main default branch
     git clone https://github.com/parallelworks/workflow-utils.git

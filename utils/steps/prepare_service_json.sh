@@ -3,6 +3,8 @@
 source utils/load-env.sh
 source resources/host/inputs.sh
 
+set -x 
+
 echo "Editing the service.json file"
 
 source ${service_name}/url.sh

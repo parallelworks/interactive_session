@@ -2,6 +2,8 @@
 source utils/load-env.sh
 source resources/host/inputs.sh
 
+set -x
+
 export openPort=$(echo ${resource_ports} | sed "s|___| |g" | cut -d ' ' -f1)
 if [[ "$openPort" == "" ]]; then
     displayErrorMessage "ERROR - cannot find open port..."

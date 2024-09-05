@@ -2,6 +2,8 @@
 source utils/load-env.sh
 source resources/host/inputs.sh
 
+set -x
+
 # CREATE KILL FILE:
 # - NEEDS TO BE MADE BEFORE RUNNING SESSION SCRIPT!
 # - When the job is killed PW runs ${pw_job_dir}/kill.sh

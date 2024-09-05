@@ -4,6 +4,8 @@
 source utils/load-env.sh
 source resources/host/inputs.sh
 
+set -x
+
 if [ -f "${service_name}/controller.sh" ]; then
     echo; echo; echo "RUNNING PREPROCESSING STEP"
     echo '#!/bin/bash' > controller.sh

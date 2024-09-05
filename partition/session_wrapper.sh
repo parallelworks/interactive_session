@@ -162,29 +162,7 @@ if [[ "${jobid}" == "" ]];then
     displayErrorMessage "ERROR submitting job - exiting the workflow"
 fi
 
-# CREATE KILL FILE:
-# - When the job is killed PW runs ${pw_job_dir}/job-number/kill.sh
-# KILL_SSH: Part of the kill_sh that runs on the remote host with ssh
-kill_ssh=${pw_job_dir}/kill_ssh.sh
-echo "#!/bin/bash" > ${kill_ssh}
-cat resources/host/inputs.sh >> ${kill_ssh} 
-if [ -f "${service_name}/kill-template.sh" ]; then
-    echo "Adding kill server script ${service_name}/kill-template.sh to ${kill_ssh}"
-    cat ${service_name}/kill-template.sh >> ${kill_ssh}
-fi
 echo ${cancel_cmd} ${jobid} >> ${kill_ssh}
-
-# Initialize kill.sh
-kill_sh=${pw_job_dir}/kill.sh
-echo "#!/bin/bash" > ${kill_sh}
-echo "mv ${kill_sh} ${kill_sh}.completed" >> ${kill_sh}
-cat resources/host/inputs.sh >> ${kill_sh}
-echo "echo Running ${kill_sh}" >> ${kill_sh}
-echo "$sshcmd 'bash -s' < ${kill_ssh}" >> ${kill_sh}
-echo "echo Finished running ${kill_sh}" >> ${kill_sh}
-echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" ${pw_job_dir}/service.json >> ${kill_sh}
-echo "exit 0" >> ${kill_sh}
-chmod 777 ${kill_sh}
 
 echo
 echo "Submitted job: ${jobid}"

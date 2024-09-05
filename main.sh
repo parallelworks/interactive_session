@@ -10,10 +10,10 @@ sed -i 's|\\\\|\\|g' inputs.sh
 # FIXME: Need to move files from utils directory to avoid updating the sparse checkout
 cp utils/service.json .
 ./utils/steps/prepare_service_json.sh
+./utils/steps/initialize_cancel_script.sh
 ./utils/steps/launch_job.sh
 
 source resources/host/inputs.sh
-
 
 if [ -f "kill.sh" ]; then
     # Only run if file exists. The kill.sh file is moved to _kill.sh after execution.

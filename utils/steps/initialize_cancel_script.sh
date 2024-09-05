@@ -26,7 +26,6 @@ echo "echo Running ${kill_sh}" >> ${kill_sh}
 # Add kill_ssh
 cat >> ${kill_sh} <<HERE
 $sshcmd 'bash -s' < ${kill_ssh}
-bash ${sdir}/kill_tunnels.sh
 echo Finished running ${kill_sh}
 HERE
 echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" ${pw_job_dir}/service.json >> ${kill_sh}

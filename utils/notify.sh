@@ -9,7 +9,7 @@ source /etc/profile.d/parallelworks-env.sh
 pw_job_dir=$(dirname $(dirname $0))
 status="$1"
 
-source ${pw_job_dir}/inputs.sh
+source ${pw_job_dir}/resources/host/inputs.sh
 
 url="/workflows/${workflow_name}/${job_number}/view"
 

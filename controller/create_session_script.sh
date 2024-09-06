@@ -1,42 +1,7 @@
 #!/bin/bash
-sdir=$(dirname $0)
-# For debugging
-env > session_wrapper.env
-
+source utils/load-env.sh
+source resources/host/inputs.sh
 source lib.sh
-
-# CREATE KILL FILE:
-# - NEEDS TO BE MADE BEFORE RUNNING SESSION SCRIPT!
-# - When the job is killed PW runs ${PW_JOB_PATH}/kill.sh
-kill_ports="${openPort} ${advanced_options_license_server_port} ${advanced_options_license_daemon_port}"
-
-# KILL_SSH: Part of the kill_sh that runs on the remote host with ssh
-kill_ssh=${PW_JOB_PATH}/kill_ssh.sh
-echo "#!/bin/bash" > ${kill_ssh}
-cat inputs.sh >> ${kill_ssh} 
-if [ -f "${service_name}/kill-template.sh" ]; then
-    echo "Adding kill server script ${service_name}/kill-template.sh to ${kill_ssh}"
-    cat ${service_name}/kill-template.sh >> ${kill_ssh}
-fi
-cat ${sdir}/kill_tunnels.sh >> ${kill_ssh}
-cat ${sdir}/kill_session.sh >> ${kill_ssh}
-sed -i "s/__KILL_PORTS__/${kill_ports}/g" ${kill_ssh}
-
-# KILL_SH: File that runs on the user space
-kill_sh=${PW_JOB_PATH}/kill.sh
-echo "#!/bin/bash" > ${kill_sh}
-echo "mv ${kill_sh} ${kill_sh}.completed" >> ${kill_sh}
-cat inputs.sh >> ${kill_sh}
-echo "echo Running ${kill_sh}" >> ${kill_sh}
-# Add kill_ssh
-cat >> ${kill_sh} <<HERE
-$sshcmd 'bash -s' < ${kill_ssh}
-bash ${sdir}/kill_tunnels.sh
-echo Finished running ${kill_sh}
-HERE
-echo "sed -i \"s/.*JOB_STATUS.*/    \\\"JOB_STATUS\\\": \\\"Cancelled\\\",/\"" ${PW_JOB_PATH}/service.json >> ${kill_sh}
-echo "exit 0" >> ${kill_sh}
-chmod 777 ${kill_sh}
 
 if [ -z "$serviceHost" ]; then
     serviceHost=localhost
@@ -53,9 +18,8 @@ LICENSE_TUNNEL_CMD="ssh ${resource_ssh_usercontainer_options} -fN -L 0.0.0.0:${a
 
 # Initiallize session batch file:
 echo "Generating session script"
-session_sh=${PW_JOB_PATH}/session.sh
 echo "#!/bin/bash" > ${session_sh}
-cat inputs.sh >> ${session_sh}
+cat resources/host/inputs.sh >> ${session_sh}
 # Need this on some systems when running code with ssh
 # - CAREFUL! This command can change your ${PWD} directory
 echo "source ~/.bashrc" >>  ${session_sh}
@@ -70,8 +34,8 @@ sshusercontainer="ssh ${resource_ssh_usercontainer_options} -f ${USER_CONTAINER_
 
 displayErrorMessage() {
     echo \$(date): \$1
-    \${sshusercontainer} "sed -i \"s|.*ERROR_MESSAGE.*|    \\\\\"ERROR_MESSAGE\\\\\": \\\\\"\$1\\\\\"|\" ${PW_JOB_PATH}/service.json"
-    \${sshusercontainer} "sed -i \"s|.*JOB_STATUS.*|    \\\\\"JOB_STATUS\\\\\": \\\\\"FAILED\\\\\",|\" ${PW_JOB_PATH}/service.json"
+    \${sshusercontainer} "sed -i \"s|.*ERROR_MESSAGE.*|    \\\\\"ERROR_MESSAGE\\\\\": \\\\\"\$1\\\\\"|\" ${pw_job_dir}/service.json"
+    \${sshusercontainer} "sed -i \"s|.*JOB_STATUS.*|    \\\\\"JOB_STATUS\\\\\": \\\\\"FAILED\\\\\",|\" ${pw_job_dir}/service.json"
     exit 1
 }
 
@@ -136,20 +100,4 @@ fi
 # Note that job is no longer running
 echo >> ${session_sh}
 
-chmod 777 ${session_sh}
-
-echo
-sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Submitted\",/" service.json
-echo "Submitting ssh job (wait for node to become available before connecting)..."
-echo "$sshcmd 'bash -s' < ${session_sh}"
-echo
-
-# Run service
-$sshcmd 'bash -s' < ${session_sh} #&> ${PW_JOB_PATH}/session-${job_number}.out
-
-if [ $? -eq 0 ]; then
-    sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Completed\",/" service.json
-else
-    sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Failed\",/" service.json
-fi
-
+chmod +x ${session_sh}

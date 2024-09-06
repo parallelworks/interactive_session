@@ -38,8 +38,8 @@ download_and_install() {
 
 displayErrorMessage() {
     echo $(date): $1
-    ${sshusercontainer} "sed -i \"s|.*ERROR_MESSAGE.*|    \\\"ERROR_MESSAGE\\\": \\\"$1\\\"|\" ${PW_JOB_PATH}/service.json"
-    ${sshusercontainer} "sed -i \"s|.*JOB_STATUS.*|    \\\"JOB_STATUS\\\": \\\"FAILED\\\",|\" ${PW_JOB_PATH}/service.json"
+    ${sshusercontainer} "sed -i \"s|.*ERROR_MESSAGE.*|    \\\"ERROR_MESSAGE\\\": \\\"$1\\\"|\" ${pw_job_dir}/service.json"
+    ${sshusercontainer} "sed -i \"s|.*JOB_STATUS.*|    \\\"JOB_STATUS\\\": \\\"FAILED\\\",|\" ${pw_job_dir}/service.json"
 }
 
 echo; echo

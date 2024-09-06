@@ -24,32 +24,6 @@ jobs:
 'on':
   execute:
     inputs:
-      service:
-        type: group
-        label: Service
-        items:
-          novnc_parent_install_dir:
-            label: noVNC installation directory
-            type: string
-            hidden: true
-            default: __WORKDIR__/pw/software
-          novnc_tgz_basename:
-            label: Basename of the novnc tgz file
-            type: string
-            hidden: true
-            default: noVNC-1.5.0.tgz
-          name:
-            type: dropdown
-            label: Select remote display protocol
-            options:
-              - label: VNC Server
-                value: turbovnc
-              - label: Nice DCV
-                value: nicedcv
-              - label: Scyld Cloud Workstation
-                value: scw
-            tooltip: Make sure the display protocol is installed in the host!
-            default: turbovnc
       pwrl_host:
         type: group
         label: Service Host
@@ -111,3 +85,29 @@ jobs:
               e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ;
               to separate parameters. Do not include the PBS keyword.
         collapsed: false
+      service:
+        type: group
+        label: Service
+        items:
+          novnc_parent_install_dir:
+            label: noVNC installation directory
+            type: string
+            hidden: true
+            default: __WORKDIR__/pw/software
+          novnc_tgz_basename:
+            label: Basename of the novnc tgz file
+            type: string
+            hidden: true
+            default: noVNC-1.5.0.tgz
+          name:
+            type: dropdown
+            label: Select remote display protocol
+            options:
+              - label: VNC Server
+                value: turbovnc
+              - label: Nice DCV
+                value: nicedcv
+              - label: Scyld Cloud Workstation
+                value: scw
+            tooltip: Make sure the display protocol is installed in the host!
+            default: turbovnc

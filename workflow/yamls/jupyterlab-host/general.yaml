@@ -7,6 +7,69 @@ jobs:
 'on':
   execute:
     inputs:
+      pwrl_host:
+        type: group
+        label: JupyterLab Server Host
+        items:
+          resource:
+            type: compute-clusters
+            label: Service host
+            include-workspace: false
+            tooltip:
+              Resource to host the service
+          nports:
+            type: string
+            label: Number of Ports to Reserve
+            hidden: true
+            default: "1"
+            optional: true
+          jobschedulertype:
+            type: dropdown
+            label: Select Controller, SLURM Partition or PBS Queue
+            default: CONTROLLER
+            options:
+              - value: CONTROLLER
+                label: Controller
+              - value: SLURM
+                label: SLURM Partition
+              - value: PBS
+                label: PBS Queue
+            tooltip:
+              Job will submitted using SSH, sbatch or qsub, respectively
+          _sch__dd_partition_e_:
+            type: slurm-partitions
+            label: SLURM partition
+            hidden: "${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
+            optional: true
+            tooltip:
+                Partition to submit the interactive job. Leave empty to let SLURM pick
+                the optimal option.
+            resource: "${{ inputs.pwrl_host.resource }}"
+          scheduler_directives_slurm:
+            type: string
+            label: Scheduler directives
+            hidden: "${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
+            optional: true
+            tooltip:
+                e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to
+                separate parameters. Do not include the SBATCH keyword.
+          _sch__d_q___:
+            type: string
+            label: PBS queue
+            hidden: "${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
+            optional: "${{ .hidden }}"
+            tooltip:
+                Queue to submit the interactive job. Must select one! Use [qstat -f
+                -Q] to list all queues on the system
+          scheduler_directives_pbs:
+            type: string
+            label: Scheduler directives
+            hidden: "${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
+            optional: true
+            tooltip:
+                e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to
+                separate parameters. Do not include the PBS keyword.
+        collapsed: false
       service:
         type: group
         label: JupyterLab Settings
@@ -88,66 +151,3 @@ jobs:
                 label: Julia Kernel
               - value: R-kernel
                 label: R Kernel
-      pwrl_host:
-        type: group
-        label: JupyterLab Server Host
-        items:
-          resource:
-            type: compute-clusters
-            label: Service host
-            include-workspace: false
-            tooltip:
-              Resource to host the service
-          nports:
-            type: string
-            label: Number of Ports to Reserve
-            hidden: true
-            default: "1"
-            optional: true
-          jobschedulertype:
-            type: dropdown
-            label: Select Controller, SLURM Partition or PBS Queue
-            default: CONTROLLER
-            options:
-              - value: CONTROLLER
-                label: Controller
-              - value: SLURM
-                label: SLURM Partition
-              - value: PBS
-                label: PBS Queue
-            tooltip:
-              Job will submitted using SSH, sbatch or qsub, respectively
-          _sch__dd_partition_e_:
-            type: slurm-partitions
-            label: SLURM partition
-            hidden: "${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
-            optional: true
-            tooltip:
-                Partition to submit the interactive job. Leave empty to let SLURM pick
-                the optimal option.
-            resource: "${{ inputs.pwrl_host.resource }}"
-          scheduler_directives_slurm:
-            type: string
-            label: Scheduler directives
-            hidden: "${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
-            optional: true
-            tooltip:
-                e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to
-                separate parameters. Do not include the SBATCH keyword.
-          _sch__d_q___:
-            type: string
-            label: PBS queue
-            hidden: "${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
-            optional: "${{ .hidden }}"
-            tooltip:
-                Queue to submit the interactive job. Must select one! Use [qstat -f
-                -Q] to list all queues on the system
-          scheduler_directives_pbs:
-            type: string
-            label: Scheduler directives
-            hidden: "${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
-            optional: true
-            tooltip:
-                e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to
-                separate parameters. Do not include the PBS keyword.
-        collapsed: false

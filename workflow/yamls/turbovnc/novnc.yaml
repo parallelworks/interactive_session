@@ -33,7 +33,7 @@ jobs:
             type: string
             hidden: true
             default: __WORKDIR__/pw/software
-          service_novnc_tgz_basename:
+          novnc_tgz_basename:
             label: Basename of the novnc tgz file
             type: string
             hidden: true

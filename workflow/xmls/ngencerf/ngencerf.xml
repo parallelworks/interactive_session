@@ -10,6 +10,12 @@
         value='ngencerf'  
       ></param>
       <param 
+        name='ngencerf_ui_dir' 
+        label='Service' 
+        type='hidden' 
+        value='/ngencerf-app/nextgen_ui'  
+      ></param>
+      <param 
         name='existing_port' 
         label='Service Port' 
         type='text' 

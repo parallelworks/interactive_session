@@ -2,6 +2,10 @@
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
+#################
+# NGINX WRAPPER #
+#################
+
 echo "Starting nginx wrapper on service port ${service_port}"
 
 # Write config file
@@ -53,13 +57,43 @@ sudo docker run  -d --name ${container_name} \
 # Print logs
 sudo docker logs ${container_name}
 
-# build and serve the app
-docker compose run --service-ports --entrypoint bash  ngencerf-ui
-export NGENCERF_BASE_URL=/me/54238/api/
-npm run generate
-npx serve .output/public/
+
+###############
+# NGENCERF-UI #
+############### 
+# service_ngencerf_ui_dir=/ngencerf-app/nextgen_ui/compose.yaml
+cat >> ${service_ngencerf_ui_dir}/compose.yaml <<HERE
+
+name: ngencerf-ui
+
+services:
+  ngencerf-app:
+    build: 
+      context: .
+      secrets:
+        - gitlab_token
+    ports:
+      - "${service_existing_port}:3000"
+    environment:
+      - NUXT_HOST=0.0.0.0
+      - NUXT_PORT=3000
+      - NUXT_APP_BASE_URL=/me/${openPort}/
+      - NGENCERF_BASE_URL=/me/${openPort}/api/
+       
+secrets:
+  gitlab_token:
+    file: ~/.gitlab_token
+HERE
 
 # Notify platform that service is running
 ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
+
+# Run ngencerf-app
+container_name="ngencerf-ui-ngencerf-app-${service_port}"
+echo "sudo docker stop ${container_name}" >> cancel.sh
+cd ${ngencerf_ui_dir}
+docker compose run --rm --service-ports --entrypoint bash --name ${container_name}\
+  ngencerf-app -c "npm run generate && npx --yes serve .output/public/"
+
 
 sleep infinity

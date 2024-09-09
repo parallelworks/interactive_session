@@ -26,7 +26,7 @@ jobs:
     inputs:
       pwrl_host:
         type: group
-        label: JupyterLab Server Host
+        label: Jupyter Server Host
         items:
           resource:
             type: compute-clusters
@@ -89,12 +89,12 @@ jobs:
         collapsed: false
       service:
         type: group
-        label: JupyterLab Settings
+        label: Jupyter Notebook Settings
         items:
           name: 
             type: string
             hidden: true
-            default: jupyterlab-host
+            default: jupyter-host
           notebook_dir:
             label: Directory to start Jupyter Lab GUI
             type: string
@@ -124,7 +124,7 @@ jobs:
             tooltip:
               Environment to active. The base environment enables changing kernel to other environments!
           load_env:
-            label: Command to load JupyterLab
+            label: Command to load Jupyter Notebook
             type: string
             default: source __WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base
             hidden:  "${{ inputs.service.conda_install == true }}"

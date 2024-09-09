@@ -1,3 +1,4 @@
+
 # Required at least for servers running in controller node!
 KILL_PORTS="__KILL_PORTS__"
 for kill_port in ${KILL_PORTS}; do

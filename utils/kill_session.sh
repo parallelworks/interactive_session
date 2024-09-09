@@ -1,3 +1,4 @@
+
 # RUNS IN THE CONTROLLER NODE:
 # - Kill the session script pid and its child processes
 job_pid_file=${resource_jobdir}/${job_number}.pid

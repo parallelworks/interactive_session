@@ -95,9 +95,9 @@ echo "sudo docker stop ${container_name}" >> cancel.sh
 cd ${service_ngencerf_docker_dir}
 
 # This command fails
-docker compose run --rm --service-ports --entrypoint bash --name ${container_name}\
-  ngencerf-ui -c "npm update && npm run generate && npx --yes serve .output/public/"
+#docker compose run --rm --service-ports --entrypoint bash --name ${container_name}\
+#  ngencerf-ui -c "npm run generate && npx --yes serve .output/public/"
 
-#docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-app
+docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui 
 
 sleep infinity

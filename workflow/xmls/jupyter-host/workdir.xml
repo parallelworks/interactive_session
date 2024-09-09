@@ -1,170 +1,151 @@
-jobs:
-  main:
-    steps:
-      - name: Preprocessing
-        run: ./utils/steps/preprocessing.sh 
-      - name: Run Input Form Resource Wrapper
-        run: ./utils/steps/input_form_resource_wrapper.sh
-      - name: Process Inputs
-        run: ./utils/steps/process_inputs_sh.sh 
-      - name: Controller Preprocessing
-        run: ./utils/steps/controller_preprocessing.sh
-      - name: Prepare Service JSON
-        run: ./utils/steps/prepare_service_json.sh 
-      - name: Initialize Cancel Script
-        run: ./utils/steps/initialize_cancel_script.sh
-      - name: Create Session Script
-        run: ./utils/steps/create_session_script.sh
-      - name: Launch Job and Wait
-        run: ./utils/steps/launch_job_and_wait.sh
-        cleanup: ./kill.sh
-      - name: Clean and Exit
-        run: ./utils/steps/clean_and_exit.sh
-        
-'on':
-  execute:
-    inputs:
-      pwrl_host:
-        type: group
-        label: JupyterLab Server Host
-        items:
-          resource:
-            type: compute-clusters
-            label: Service host
-            include-workspace: false
-            tooltip:
-              Resource to host the service
-          nports:
-            type: string
-            label: Number of Ports to Reserve
-            hidden: true
-            default: "1"
-            optional: true
-          jobschedulertype:
-            type: dropdown
-            label: Select Controller, SLURM Partition or PBS Queue
-            default: CONTROLLER
-            options:
-              - value: CONTROLLER
-                label: Controller
-              - value: SLURM
-                label: SLURM Partition
-              - value: PBS
-                label: PBS Queue
-            tooltip:
-              Job will submitted using SSH, sbatch or qsub, respectively
-          _sch__dd_partition_e_:
-            type: slurm-partitions
-            label: SLURM partition
-            hidden: "${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
-            optional: true
-            tooltip:
-                Partition to submit the interactive job. Leave empty to let SLURM pick
-                the optimal option.
-            resource: "${{ inputs.pwrl_host.resource }}"
-          scheduler_directives_slurm:
-            type: string
-            label: Scheduler directives
-            hidden: "${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
-            optional: true
-            tooltip:
-                e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to
-                separate parameters. Do not include the SBATCH keyword.
-          _sch__d_q___:
-            type: string
-            label: PBS queue
-            hidden: "${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
-            optional: "${{ .hidden }}"
-            tooltip:
-                Queue to submit the interactive job. Must select one! Use [qstat -f
-                -Q] to list all queues on the system
-          scheduler_directives_pbs:
-            type: string
-            label: Scheduler directives
-            hidden: "${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
-            optional: true
-            tooltip:
-                e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to
-                separate parameters. Do not include the PBS keyword.
-        collapsed: false
-      service:
-        type: group
-        label: JupyterLab Settings
-        items:
-          name: 
-            type: string
-            hidden: true
-            default: jupyterlab-host
-          notebook_dir:
-            label: Directory to start Jupyter Lab GUI
-            type: string
-            default: __WORKDIR__
-            tooltip: 
-              This is the directory that you start with when the JupyterHub graphical user interface starts. The default value here is your home directory.
-          conda_install:
-            label: Install miniconda environment if not there?
-            type: boolean
-            default: true
-            tooltip:
-              Select Yes to install Jupyter in miniconda environment and No to load an existing python environment
-          conda_sh:
-            label: Path to conda environment
-            type: string
-            default: __WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh
-            hidden: "${{ inputs.service.conda_install == false }}"
-            optional: "${{ .hidden }}"
-            tooltip:
-              Path to use in source /path/to/conda.sh
-          conda_env:
-            label: Conda environment
-            type: string
-            default: base
-            hidden: "${{ inputs.service.conda_install == false }}"
-            optional: "${{ .hidden }}"
-            tooltip:
-              Environment to active. The base environment enables changing kernel to other environments!
-          load_env:
-            label: Command to load JupyterLab
-            type: string
-            default: source __WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base
-            hidden:  "${{ inputs.service.conda_install == true }}"
-            optional: "${{ .hidden }}"
-          password:
-            label: Password for notebook session
-            type: string
-            optional: true
-            hidden: true
-            tooltip:
-              Enter password or leave blank for no password
-          install_instructions:
-            label: Select Jupyter Lab Installation
-            type: dropdown
-            hidden: "${{ inputs.service.conda_install == false }}"
-            optional: "${{ .hidden }}"
-            default: notebook7.0.8-python3.12.1
-            options:
-              - value: latest
-                label: Latest default versions of Jupyter Notebook and Python (not thoroughly tested)
-              - value: notebook7.0.8-python3.12.1
-                label: Jupyter Notebook 7.0.8 with Python version 3.12.1
-              - value: notebook6.5.4-python3.9.18
-                label: Jupyter Notebook 6.5.4 with Python version 3.9.18
-              - value: yaml
-                label: Provide custom Conda environment YAML file
-          yaml:
-            label: Paste Conda Environment Defition YAML
-            type: editor
-            hidden: "${{ inputs.service.install_instructions !== yaml }}"
-            optional: "${{ .hidden }}"
-            tooltip:
-              Copy and paste a custom Conda environment definition YAML file
-          install_kernels:
-            label: Select additional kernels to install
-            type: multi-dropdown
-            optional: true
-            hidden: "${{ inputs.service.conda_install == false }}"
-            options:
-              - value: julia-kernel
-                label: Julia Kernel
-              - value: R-kernel
-                label: R Kernel
+<tool id='NA' name='NA'>
+  <command interpreter='bash'>main.sh</command>
+  <cancel interpreter='bash'>kill.sh</cancel>
+  <inputs>
+   <section name='service' type='section' title='Jupyter Notebook Settings' expanded='true'>
+    <param 
+      name='name' 
+      label='Service' 
+      type='hidden' 
+      value='jupyter-host'  
+    ></param>
+   	<param 
+      name='notebook_dir' 
+      label='Directory to start Jupyter GUI' 
+      type='text' 
+      value='__WORKDIR__' 
+      help='This is the directory that you start with when the JupyterHub graphical user interface starts. The default value here is your home directory.'
+    ></param>
+    <param 
+      name="conda_install" 
+      type="boolean" 
+      truevalue="Yes" 
+      falsevalue="No" 
+      checked="True" 
+      value="true"
+      label="Install miniconda if not there?" 
+      help='Select Yes to install Jupyter in miniconda environment and No to load an existing python environment '
+      float="right"
+    ></param>
+    <param 
+      name='conda_sh' 
+      label='Path to conda environment' 
+      type='text' 
+      value='__WORKDIR__/pw/.miniconda/etc/profile.d/conda.sh' 
+      help='Path to use in source /path/to/conda.sh'
+      show_if='service.conda_install'
+    ></param>
+    <param 
+      name='conda_env' 
+      label='Conda environment (recommended: base)' 
+      type='text' 
+      value='base' 
+      help='Environment to active. The base environment enables changing kernel to other environments!'
+      show_if='service.conda_install'
+    ></param>
+    <param 
+      name='load_env' 
+      label='Command to load Jupyter' 
+      type='text' 
+      value='source __WORKDIR__/pw/.miniconda/etc/profile.d/conda.sh; conda activate base' 
+      help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'
+    ></param>
+    <param name='install_instructions' 
+      show_if='service.conda_install'
+      type='select' 
+      label='Select Jupyter Notebook Installation' 
+      multiple='false'>
+        <option value="latest">Latest default versions of Jupyter Notebook and Python (not thoroughly tested)</option>
+        <option value="notebook7.0.8-python3.12.1" selected="true">Jupyter Notebook 7.0.8 with Python version 3.12.1</option>
+        <option value="notebook6.5.4-python3.9.18">Jupyter Notebook 6.5.4 with Python version 3.9.18</option>
+        <option value="yaml">Provide custom Conda environment YAML file</option>
+    </param>
+    <param
+        name='yaml' 
+        label='Paste Conda Environment Defition YAML' 
+        type='textarea' 
+        help='Copy and paste a custom Conda environment definition YAML file'
+        show_if="yaml"
+        depends_on='service.install_instructions'
+    ></param>
+    <param name='install_kernels' 
+      show_if='service.conda_install'
+      type='select' 
+      optional='true'
+      label='Select additional kernels to install' 
+      multiple='true'>
+        <option value="julia-kernel">Julia Kernel</option>
+        <option value="R-kernel">R Kernel</option>
+    </param>
+    <param 
+      name='password' 
+      label='Password for notebook session' 
+      type='hidden' 
+      value=''
+      help='Enter password or leave blank for no password'  
+    ></param>
+   </section>
+   <section name='pwrl_host' type='section' title='Jupyter Server Host' expanded='true'>
+    <param 
+      name='resource' 
+      type='computeResource' 
+      label='Service host' 
+      help='Resource to host the service'
+    ></param>
+    <param
+     name='nports' 
+     label='Number of Ports to Reserve' 
+     type='hidden' 
+     value='1'  
+    ></param> 
+    <param 
+      name='jobschedulertype' 
+      type='select' 
+      label='Select Controller, SLURM Partition or PBS Queue' 
+      help='Job will submitted using SSH, sbatch or qsub, respectively'   
+      multiple='false'>
+        <option value="CONTROLLER" selected="true">Controller</option>
+        <option value="SLURM">SLURM Partition</option>
+        <option value="PBS">PBS Queue</option>
+        <option value="LOCAL">PW USER CONTAINER</option>
+    </param>
+    <param 
+      name='_sch__dd_partition_e_' 
+      label='SLURM partition' 
+      type='dynamicPartitionDropdown' 
+      resource='pwrl_host.resource'
+      help='Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.' 
+      depends_on='pwrl_host.jobschedulertype'
+      show_if='SLURM'
+      optional='true' 
+      dependent='false'  
+    ></param>
+    <param 
+      name='scheduler_directives_slurm' 
+      label='Scheduler directives' 
+      type='text' 
+      help='e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.' 
+      depends_on='pwrl_host.jobschedulertype'
+      show_if='SLURM'
+      optional='true' 
+    ></param>
+    <param 
+      name='_sch__d_q___' 
+      label='PBS queue' 
+      type='text' 
+      help='Queue to submit the interactive job. Must select one! Use [qstat -f -Q] to list all queues on the system' 
+      depends_on='pwrl_host.jobschedulertype'
+      show_if='PBS'
+    ></param>
+    <param 
+      name='scheduler_directives_pbs' 
+      label='Scheduler directives' 
+      type='text' 
+      help='e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to separate parameters. Do not include the PBS keyword.' 
+      depends_on='pwrl_host.jobschedulertype'
+      show_if='PBS'
+      optional='true'   
+    ></param>
+   </section>
+  </inputs>
+</tool>

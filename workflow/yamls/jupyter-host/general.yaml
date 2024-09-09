@@ -26,7 +26,7 @@ jobs:
     inputs:
       pwrl_host:
         type: group
-        label: JupyterLab Server Host
+        label: Jupyter Server Host
         items:
           resource:
             type: compute-clusters
@@ -89,12 +89,12 @@ jobs:
         collapsed: false
       service:
         type: group
-        label: JupyterLab Settings
+        label: Jupyter Notebook Settings
         items:
           name: 
             type: string
             hidden: true
-            default: jupyterlab-host
+            default: jupyter-host
           notebook_dir:
             label: Directory to start Jupyter Lab GUI
             type: string
@@ -124,7 +124,7 @@ jobs:
             tooltip:
               Environment to active. The base environment enables changing kernel to other environments!
           load_env:
-            label: Command to load JupyterLab
+            label: Command to load Jupyter Notebook
             type: string
             default: source __WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base
             hidden:  "${{ inputs.service.conda_install == true }}"
@@ -141,14 +141,14 @@ jobs:
             type: dropdown
             hidden: "${{ inputs.service.conda_install == false }}"
             optional: "${{ .hidden }}"
-            default: jupyterlab4.1.5-python3.11.5
+            default: notebook7.0.8-python3.12.1
             options:
-              - value: jupyterlab4.1.5-python3.11.5
-                label: Jupyter Lab 4.1.5 with Python 3.11.5
               - value: latest
-                label: Latest versions of Jupyter Lab and Python (not thoroughly tested)
-              - value: dask-extension-jupyterlab
-                label: Dask dependencies for PW
+                label: Latest default versions of Jupyter Notebook and Python (not thoroughly tested)
+              - value: notebook7.0.8-python3.12.1
+                label: Jupyter Notebook 7.0.8 with Python version 3.12.1
+              - value: notebook6.5.4-python3.9.18
+                label: Jupyter Notebook 6.5.4 with Python version 3.9.18
               - value: yaml
                 label: Provide custom Conda environment YAML file
           yaml:

@@ -1,0 +1,108 @@
+jobs:
+  main:
+    steps:
+      - name: Preprocessing
+        run: ./utils/steps/preprocessing.sh 
+      - name: Run Input Form Resource Wrapper
+        run: ./utils/steps/input_form_resource_wrapper.sh
+      - name: Process Inputs
+        run: ./utils/steps/process_inputs_sh.sh 
+      - name: Controller Preprocessing
+        run: ./utils/steps/controller_preprocessing.sh
+      - name: Prepare Service JSON
+        run: ./utils/steps/prepare_service_json.sh 
+      - name: Initialize Cancel Script
+        run: ./utils/steps/initialize_cancel_script.sh
+      - name: Create Session Script
+        run: ./utils/steps/create_session_script.sh
+      - name: Launch Job and Wait
+        run: ./utils/steps/launch_job_and_wait.sh
+        cleanup: ./kill.sh
+      - name: Clean and Exit
+        run: ./utils/steps/clean_and_exit.sh
+        
+'on':
+  execute:
+    inputs:
+      pwrl_host:
+        type: group
+        label: Server Host
+        items:
+          resource:
+            type: compute-clusters
+            label: Service host
+            include-workspace: false
+            tooltip:
+              Resource to host the service
+          nports:
+            type: string
+            label: Number of Ports to Reserve
+            hidden: true
+            default: "1"
+            optional: true
+          jobschedulertype:
+            type: dropdown
+            label: Select Controller, SLURM Partition or PBS Queue
+            default: CONTROLLER
+            options:
+              - value: CONTROLLER
+                label: Controller
+              - value: SLURM
+                label: SLURM Partition
+              - value: PBS
+                label: PBS Queue
+            tooltip:
+              Job will submitted using SSH, sbatch or qsub, respectively
+          _sch__dd_partition_e_:
+            type: slurm-partitions
+            label: SLURM partition
+            hidden: "${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
+            optional: true
+            tooltip:
+                Partition to submit the interactive job. Leave empty to let SLURM pick
+                the optimal option.
+            resource: "${{ inputs.pwrl_host.resource }}"
+          scheduler_directives_slurm:
+            type: string
+            label: Scheduler directives
+            hidden: "${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
+            optional: true
+            tooltip:
+                e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to
+                separate parameters. Do not include the SBATCH keyword.
+          _sch__d_q___:
+            type: string
+            label: PBS queue
+            hidden: "${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
+            optional: "${{ .hidden }}"
+            tooltip:
+                Queue to submit the interactive job. Must select one! Use [qstat -f
+                -Q] to list all queues on the system
+          scheduler_directives_pbs:
+            type: string
+            label: Scheduler directives
+            hidden: "${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
+            optional: true
+            tooltip:
+                e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to
+                separate parameters. Do not include the PBS keyword.
+        collapsed: false
+      service:
+        type: group
+        hidden: true
+        label: VS Code Settings
+        items:
+          name: 
+            type: string
+            hidden: true
+            default: webshell
+          novnc_parent_install_dir:
+            label: noVNC installation directory
+            type: string
+            hidden: true
+            default: __WORKDIR__/pw/software
+          novnc_tgz_basename:
+            label: Basename of the novnc tgz file
+            type: string
+            hidden: true
+            default: noVNC-1.3.0.tgz

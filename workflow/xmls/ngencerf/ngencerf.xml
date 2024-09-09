@@ -19,7 +19,7 @@
         name='ngencerf_docker_dir' 
         label='Directory with ngencerf_docker' 
         type='hidden' 
-        value='/ngencerf-app/nextgen_docker'  
+        value='/ngencerf-app/ngencerf-docker'  
       ></param>
       <param 
         name='existing_port' 

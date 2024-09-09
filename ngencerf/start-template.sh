@@ -1,4 +1,5 @@
 # Initialize cancel script
+set -x
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 

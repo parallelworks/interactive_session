@@ -63,7 +63,7 @@ sudo docker logs ${container_name}
 # NGENCERF-UI #
 ############### 
 # service_ngencerf_ui_dir=/ngencerf-app/nextgen_ui/compose.yaml
-cat >> ${service_ngencerf_ui_dir}/compose.yaml <<HERE
+cat > ${service_ngencerf_ui_dir}/compose.yaml <<HERE
 
 name: ngencerf-ui
 

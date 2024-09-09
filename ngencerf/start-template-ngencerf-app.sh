@@ -92,12 +92,12 @@ ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 # Run ngencerf-app
 container_name="ngencerf-ui-ngencerf-app-${service_port}"
 echo "sudo docker stop ${container_name}" >> cancel.sh
-cd ${service_ngencerf_docker_dir}
+cd ${service_ngencerf_ui_dir}
 
 # This command fails
-docker compose run --rm --service-ports --entrypoint bash --name ${container_name}\
-  ngencerf-app -c "npm run generate && npx --yes serve .output/public/"
+#docker compose run --rm --service-ports --entrypoint bash --name ${container_name}\
+#  ngencerf-app -c "npm run generate && npx --yes serve .output/public/"
 
-#docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-app
+docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-app
 
 sleep infinity

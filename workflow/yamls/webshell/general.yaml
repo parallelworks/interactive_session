@@ -95,7 +95,7 @@ jobs:
           name: 
             type: string
             hidden: true
-            default: openvscode
+            default: webshell
           novnc_parent_install_dir:
             label: noVNC installation directory
             type: string

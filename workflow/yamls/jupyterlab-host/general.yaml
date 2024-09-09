@@ -1,9 +1,26 @@
 jobs:
   main:
     steps:
-      - name: Run
-        run: ./main.sh
-        cleanup: ./cancel.sh
+      - name: Preprocessing
+        run: ./utils/steps/preprocessing.sh 
+      - name: Run Input Form Resource Wrapper
+        run: ./utils/steps/input_form_resource_wrapper.sh
+      - name: Process Inputs
+        run: ./utils/steps/process_inputs_sh.sh 
+      - name: Controller Preprocessing
+        run: ./utils/steps/controller_preprocessing.sh
+      - name: Prepare Service JSON
+        run: ./utils/steps/prepare_service_json.sh 
+      - name: Initialize Cancel Script
+        run: ./utils/steps/initialize_cancel_script.sh
+      - name: Create Session Script
+        run: ./utils/steps/create_session_script.sh
+      - name: Launch Job and Wait
+        run: ./utils/steps/launch_job_and_wait.sh
+        cleanup: ./kill.sh
+      - name: Clean and Exit
+        run: ./utils/steps/clean_and_exit.sh
+        
 'on':
   execute:
     inputs:

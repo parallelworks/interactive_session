@@ -97,7 +97,10 @@ cd ${service_ngencerf_docker_dir}
 # This command fails
 #docker compose run --rm --service-ports --entrypoint bash --name ${container_name}\
 #  ngencerf-ui -c "npm run generate && npx --yes serve .output/public/"
+# TODO: How about yeah, just run docker compose up from /ngencerf-app/ngencerf-docker/ folder?
 
-docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui 
+#docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui 
+docker compose up
+
 
 sleep infinity

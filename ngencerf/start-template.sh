@@ -90,16 +90,10 @@ HERE
 ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 
 # Run ngencerf-app
-container_name="ngencerf-ui-ngencerf-app-${service_port}"
-echo "sudo docker stop ${container_name}" >> cancel.sh
+#container_name="ngencerf-ui-ngencerf-app-${service_port}"
+#echo "sudo docker stop ${container_name}" >> cancel.sh
 cd ${service_ngencerf_docker_dir}
 
-# This command fails
-#docker compose run --rm --service-ports --entrypoint bash --name ${container_name}\
-#  ngencerf-ui -c "npm run generate && npx --yes serve .output/public/"
-# TODO: How about yeah, just run docker compose up from /ngencerf-app/ngencerf-docker/ folder?
-
-#docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui 
 docker compose up
 
 

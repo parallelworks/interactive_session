@@ -80,7 +80,6 @@ services:
       - NUXT_HOST=0.0.0.0
       - NUXT_PORT=3000
       - NUXT_APP_BASE_URL=/me/${openPort}/
-      - NGENCERF_BASE_URL=/me/${openPort}/api/
        
 secrets:
   gitlab_token:

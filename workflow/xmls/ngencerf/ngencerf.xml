@@ -11,9 +11,15 @@
       ></param>
       <param 
         name='ngencerf_ui_dir' 
-        label='Service' 
+        label='Directory with ngencerf_ui' 
         type='hidden' 
         value='/ngencerf-app/nextgen_ui'  
+      ></param>
+      <param 
+        name='ngencerf_docker_dir' 
+        label='Directory with ngencerf_docker' 
+        type='hidden' 
+        value='/ngencerf-app/ngencerf-docker'  
       ></param>
       <param 
         name='existing_port' 

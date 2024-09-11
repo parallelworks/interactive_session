@@ -20,7 +20,7 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
  location / {
-     proxy_pass http://127.0.0.1:${service_existing_port};
+     proxy_pass http://127.0.0.1:${service_existing_port}/me/${openPort}/;
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";
@@ -31,7 +31,7 @@ server {
  }
 
  location /api/ {
-     proxy_pass http://127.0.0.1:8000;
+     proxy_pass http://127.0.0.1:8000/;
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";
@@ -45,8 +45,9 @@ HERE
 
 container_name="nginx-${service_port}"
 # Remove container when job is canceled
-echo "sudo docker stop ${container_name}" >> cancel.sh
-echo "sudo docker rm ${container_name}" >> cancel.sh
+#echo "sudo docker stop ${container_name}" >> cancel.sh
+#echo "sudo docker rm ${container_name}" >> cancel.sh
+
 # Start container
 sudo service docker start
 touch empty
@@ -63,7 +64,7 @@ sudo docker logs ${container_name}
 # NGENCERF-UI #
 ############### 
 # service_ngencerf_ui_dir=/ngencerf-app/nextgen_ui/compose.yaml
-cat >> ${service_ngencerf_ui_dir}/compose.yaml <<HERE
+cat > ${service_ngencerf_ui_dir}/compose.yaml <<HERE
 
 name: ngencerf-ui
 
@@ -79,7 +80,6 @@ services:
       - NUXT_HOST=0.0.0.0
       - NUXT_PORT=3000
       - NUXT_APP_BASE_URL=/me/${openPort}/
-      - NGENCERF_BASE_URL=/me/${openPort}/api/
        
 secrets:
   gitlab_token:
@@ -90,11 +90,17 @@ HERE
 ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 
 # Run ngencerf-app
-container_name="ngencerf-ui-ngencerf-app-${service_port}"
-echo "sudo docker stop ${container_name}" >> cancel.sh
-cd ${ngencerf_ui_dir}
-docker compose run --rm --service-ports --entrypoint bash --name ${container_name}\
-  ngencerf-app -c "npm run generate && npx --yes serve .output/public/"
+#container_name="ngencerf-ui-ngencerf-app-${service_port}"
+#echo "sudo docker stop ${container_name}" >> cancel.sh
+cd ${service_ngencerf_docker_dir}
+
+# This command fails
+#docker compose run --rm --service-ports --entrypoint bash --name ${container_name}\
+#  ngencerf-ui -c "npm run generate && npx --yes serve .output/public/"
+# TODO: How about yeah, just run docker compose up from /ngencerf-app/ngencerf-docker/ folder?
+
+#docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui 
+docker compose up
 
 
 sleep infinity

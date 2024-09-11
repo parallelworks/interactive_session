@@ -79,13 +79,14 @@ services:
     environment:
       - NUXT_HOST=0.0.0.0
       - NUXT_PORT=3000
-      - NUXT_APP_BASE_URL=/me/${openPort}/
-      - NGENCERF_BASE_URL=/me/${openPort}/api/
        
 secrets:
   gitlab_token:
     file: ~/.gitlab_token
 HERE
+
+#      - NUXT_APP_BASE_URL=/me/${openPort}/
+#      - NGENCERF_BASE_URL=/me/${openPort}/api/
 
 # Notify platform that service is running
 ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"

@@ -47,7 +47,7 @@ jobs:
                 label: Controller
               - value: SLURM
                 label: SLURM Partition
-            tooltip: Job will submitted using SSH or sbatch, respectively
+            tooltip: Job will be submitted using SSH or sbatch, respectively
           _sch__dd_account_e__tag_existing:
             label: SLURM account 
             type:  slurm-accounts

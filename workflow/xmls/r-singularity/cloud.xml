@@ -46,7 +46,7 @@
         name='jobschedulertype' 
         type='select' 
         label='Select Controller or SLURM Partition' 
-        help='Job will submitted using SSH or sbatch, respectively'      
+        help='Job will be submitted using SSH or sbatch, respectively'      
         multiple='false'>
           <option value="CONTROLLER" selected="true">Controller</option>
           <option value="SLURM">SLURM Partition</option>

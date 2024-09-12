@@ -52,7 +52,7 @@ jobs:
               - value: PBS
                 label: PBS Queue
             tooltip:
-              Job will submitted using SSH, sbatch or qsub, respectively
+              Job will be submitted using SSH, sbatch or qsub, respectively
           _sch__dd_partition_e_:
             type: slurm-partitions
             label: SLURM partition

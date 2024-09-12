@@ -2,15 +2,15 @@ jobs:
   main:
     steps:
       - name: Preprocessing
-        run: ./utils/steps/preprocessing.sh 
+        run: ./utils/steps/preprocessing.sh
       - name: Run Input Form Resource Wrapper
         run: ./utils/steps/input_form_resource_wrapper.sh
       - name: Process Inputs
-        run: ./utils/steps/process_inputs_sh.sh 
+        run: ./utils/steps/process_inputs_sh.sh
       - name: Controller Preprocessing
         run: ./utils/steps/controller_preprocessing.sh
       - name: Prepare Service JSON
-        run: ./utils/steps/prepare_service_json.sh 
+        run: ./utils/steps/prepare_service_json.sh
       - name: Initialize Cancel Script
         run: ./utils/steps/initialize_cancel_script.sh
       - name: Create Session Script
@@ -20,104 +20,105 @@ jobs:
         cleanup: ./kill.sh
       - name: Clean and Exit
         run: ./utils/steps/clean_and_exit.sh
-        
 'on':
   execute:
     inputs:
       pwrl_host:
         type: group
-        label: Server Host
+        label: Service Host
         items:
           resource:
             type: compute-clusters
             label: Service host
             include-workspace: false
-            tooltip:
-              Resource to host the service
+            tooltip: Resource to host the service
+            provider:
+               - gclusterv2
+               - pclusterv2
+               - azclusterv2
+               - aws-slurm
+               - google-slurm
+               - azure-slurm
           nports:
-            type: number
+            type: string
             label: Number of Ports to Reserve
             hidden: true
-            default: 1
+            default: '1'
             optional: true
           jobschedulertype:
             type: dropdown
-            label: Select Controller, SLURM Partition or PBS Queue
+            label: Select Controller or SLURM Partition
             default: CONTROLLER
             options:
               - value: CONTROLLER
                 label: Controller
               - value: SLURM
                 label: SLURM Partition
-              - value: PBS
-                label: PBS Queue
-            tooltip:
-              Job will be submitted using SSH, sbatch or qsub, respectively
-          _sch__dd_partition_e_:
+            tooltip: Job will submitted using SSH or sbatch, respectively
+          _sch__dd_account_e__tag_existing:
+            label: SLURM account
+            type: slurm-accounts
+            resource: ${{ inputs.pwrl_host.resource }}
+            tooltip: Account to submit the interactive job
+            ignore: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+          _sch__dd_partition_e__tag_existing:
+            label: SLURM partition
+            type: slurm-partitions
+            resource: ${{ inputs.pwrl_host.resource }}
+            tooltip: SLURM partition to submit the interactive job
+            ignore: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+          qos_tag_existing:
+            label: Quality of Service [QoS]
+            type: slurm-qos
+            resource: ${{ inputs.pwrl_host.resource }}
+            tooltip: Select a QOS from the drop down menu
+            ignore: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+          _sch__dd_partition_e__tag_cloud:
             type: slurm-partitions
             label: SLURM partition
             hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
-            ignore: ${{ .hidden }}
             optional: true
-            tooltip:
-                Partition to submit the interactive job. Leave empty to let SLURM pick
-                the optimal option.
+            tooltip: >-
+              Partition to submit the interactive job. Leave empty to let SLURM
+              pick the optimal option.
             resource: ${{ inputs.pwrl_host.resource }}
           scheduler_directives_slurm:
             type: string
             label: Scheduler directives
             hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
-            ignore: ${{ .hidden }}
             optional: true
-            tooltip:
-                e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to
-                separate parameters. Do not include the SBATCH keyword.
-          _sch__d_q___:
-            type: string
-            label: PBS queue
-            hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
-            ignore: ${{ .hidden }}
-            optional: ${{ .hidden }}
-            tooltip:
-                Queue to submit the interactive job. Must select one! Use [qstat -f
-                -Q] to list all queues on the system
-          scheduler_directives_pbs:
-            type: string
-            label: Scheduler directives
-            hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
-            ignore: ${{ .hidden }}
-            optional: true
-            tooltip:
-                e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to
-                separate parameters. Do not include the PBS keyword.
+            tooltip: >-
+              e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ;
+              to separate parameters. Do not include the SBATCH keyword.
         collapsed: false
       service:
         type: group
-        label: VS Code Settings
+        label: Service
+        hidden: ${{ 'existing' === inputs.pwrl_host.resource.provider }}
         items:
-          name: 
+          novnc_parent_install_dir:
+            label: noVNC installation directory
             type: string
             hidden: true
-            default: openvscode
-          download_url:
-            label: Download URL
+            default: __WORKDIR__/pw/software
+          novnc_tgz_basename:
+            label: Basename of the novnc tgz file
             type: string
-            default: https://github.com/coder/code-server/releases/download/v4.92.2/code-server-4.92.2-linux-amd64.tar.gz
-            tooltip: 
-              Downloads or uses the code-server server version specified in the URL
-          password:
-            label: Password for IDE session
-            type: string
-            optional: true
-            tooltip: 
-              Enter password or leave blank for no password
-          directory:
-            label: Directory to open in VS Code
-            type: string
-            default: __WORKDIR__
-            tooltip: 
-              Directory to open in VS code
-          github_token:
-            label: GitHub authentication token
-            type: string
-            optional: true
+            hidden: true
+            default: noVNC-1.5.0.tgz
+          name:
+            type: dropdown
+            label: Select remote display protocol
+            options:
+              - label: VNC Server
+                value: turbovnc
+              - label: Nice DCV
+                value: nicedcv
+              - label: Scyld Cloud Workstation
+                value: scw
+            tooltip: Make sure the display protocol is installed in the host!
+            default: turbovnc
+            ignore: ${{ 'existing' === inputs.pwrl_host.resource.provider }}

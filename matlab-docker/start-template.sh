@@ -75,6 +75,11 @@ MWI_BASE_URL="/me/${openPort}/"
 # Docker supports mounting directories that do not exist (singularity does not)
 set -x
 
+# Pull docker container
+${sshusercontainer} "${pw_job_dir}/utils/notify.sh Installing"
+
+sudo docker pull  ${service_docker_repo} 
+
 # Notify platform that service is ready
 ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 

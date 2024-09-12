@@ -35,10 +35,10 @@ jobs:
             tooltip:
               Resource to host the service
           nports:
-            type: string
+            type: number
             label: Number of Ports to Reserve
             hidden: true
-            default: "1"
+            default: 1
             optional: true
           jobschedulertype:
             type: dropdown
@@ -52,20 +52,22 @@ jobs:
               - value: PBS
                 label: PBS Queue
             tooltip:
-              Job will submitted using SSH, sbatch or qsub, respectively
+              Job will be submitted using SSH, sbatch or qsub, respectively
           _sch__dd_partition_e_:
             type: slurm-partitions
             label: SLURM partition
-            hidden: "${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
+            ignore: ${{ .hidden }}
             optional: true
             tooltip:
                 Partition to submit the interactive job. Leave empty to let SLURM pick
                 the optimal option.
-            resource: "${{ inputs.pwrl_host.resource }}"
+            resource: ${{ inputs.pwrl_host.resource }}
           scheduler_directives_slurm:
             type: string
             label: Scheduler directives
-            hidden: "${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
+            ignore: ${{ .hidden }}
             optional: true
             tooltip:
                 e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to
@@ -73,15 +75,17 @@ jobs:
           _sch__d_q___:
             type: string
             label: PBS queue
-            hidden: "${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
-            optional: "${{ .hidden }}"
+            hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
             tooltip:
                 Queue to submit the interactive job. Must select one! Use [qstat -f
                 -Q] to list all queues on the system
           scheduler_directives_pbs:
             type: string
             label: Scheduler directives
-            hidden: "${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
+            hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
+            ignore: ${{ .hidden }}
             optional: true
             tooltip:
                 e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to
@@ -111,36 +115,37 @@ jobs:
             label: Path to conda environment
             type: string
             default: __WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh
-            hidden: "${{ inputs.service.conda_install == false }}"
-            optional: "${{ .hidden }}"
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
             tooltip:
               Path to use in source /path/to/conda.sh
           conda_env:
             label: Conda environment
             type: string
             default: base
-            hidden: "${{ inputs.service.conda_install == false }}"
-            optional: "${{ .hidden }}"
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
             tooltip:
               Environment to active. The base environment enables changing kernel to other environments!
           load_env:
             label: Command to load JupyterLab
             type: string
             default: source __WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base
-            hidden:  "${{ inputs.service.conda_install == true }}"
-            optional: "${{ .hidden }}"
+            hidden:  ${{ inputs.service.conda_install == true }}
+            ignore: ${{ .hidden }}
           password:
             label: Password for notebook session
             type: string
             optional: true
             hidden: true
+            ignore: true
             tooltip:
               Enter password or leave blank for no password
           install_instructions:
             label: Select Jupyter Lab Installation
             type: dropdown
-            hidden: "${{ inputs.service.conda_install == false }}"
-            optional: "${{ .hidden }}"
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
             default: jupyterlab4.1.5-python3.11.5
             options:
               - value: jupyterlab4.1.5-python3.11.5
@@ -154,15 +159,17 @@ jobs:
           yaml:
             label: Paste Conda Environment Defition YAML
             type: editor
-            hidden: "${{ inputs.service.install_instructions !== yaml }}"
-            optional: "${{ .hidden }}"
+            hidden: ${{ inputs.service.install_instructions !== yaml }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
             tooltip:
               Copy and paste a custom Conda environment definition YAML file
           install_kernels:
             label: Select additional kernels to install
             type: multi-dropdown
             optional: true
-            hidden: "${{ inputs.service.conda_install == false }}"
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
             options:
               - value: julia-kernel
                 label: Julia Kernel

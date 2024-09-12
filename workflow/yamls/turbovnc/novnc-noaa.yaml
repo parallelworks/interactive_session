@@ -38,29 +38,71 @@ jobs:
             label: Number of Ports to Reserve
             hidden: true
             default: 1
-            optional: true
           jobschedulertype:
             type: dropdown
-            label: Select Controller, SLURM Partition or PBS Queue
+            label: Select Controller or SLURM Partition
             default: CONTROLLER
             options:
               - value: CONTROLLER
                 label: Controller
               - value: SLURM
                 label: SLURM Partition
-              - value: PBS
-                label: PBS Queue
-            tooltip: Job will be submitted using SSH, sbatch or qsub, respectively
-          _sch__dd_partition_e_:
+            tooltip: Job will be submitted using SSH or sbatch, respectively
+          _sch__dd_account_e__tag_existing:
+            label: SLURM account 
+            type:  slurm-accounts
+            resource: ${{ inputs.pwrl_host.resource }}
+            tooltip: Account to submit the interactive job
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
+          _sch__dd_partition_e__tag_existing:
+            label: SLURM partition
+            type:  slurm-partitions
+            resource: ${{ inputs.pwrl_host.resource }}
+            tooltip: SLURM partition to submit the interactive job
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
+          qos_tag_existing:
+            label: Quality of Service [QoS]
+            type: slurm-qos
+            resource: ${{ inputs.pwrl_host.resource }}
+            tooltip: Select a QOS from the drop down menu
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
+          _sch__dd_ntasks_e__tag_existing:
+            label: Number of tasks
+            type:  number
+            min: 1
+            max: 100
+            default: 1
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+          _sch__dd_nodes_e__tag_existing:
+            label: Number of nodes
+            type:  number
+            default: 1
+            hidden: true
+            ignore: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+          _sch__dd_partition_e__tag_cloud:
             type: slurm-partitions
             label: SLURM partition
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' === inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: >-
               Partition to submit the interactive job. Leave empty to let SLURM
               pick the optimal option.
             resource: ${{ inputs.pwrl_host.resource }}
+          _sch__dd_time_e_:
+            label: Walltime
+            type: string
+            default: 01:00:00
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  }}
+            ignore: ${{ .hidden }}
+            tooltip: e.g. 01:00:00 - Amount of time slurm will honor the interactive session.
           scheduler_directives_slurm:
             type: string
             label: Scheduler directives
@@ -70,28 +112,11 @@ jobs:
             tooltip: >-
               e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ;
               to separate parameters. Do not include the SBATCH keyword.
-          _sch__d_q___:
-            type: string
-            label: PBS queue
-            hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
-            ignore: ${{ .hidden }}
-            optional: ${{ .hidden }}
-            tooltip: >-
-              Queue to submit the interactive job. Must select one! Use [qstat
-              -f -Q] to list all queues on the system
-          scheduler_directives_pbs:
-            type: string
-            label: Scheduler directives
-            hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
-            ignore: ${{ .hidden }}
-            optional: true
-            tooltip: >-
-              e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ;
-              to separate parameters. Do not include the PBS keyword.
         collapsed: false
       service:
         type: group
         label: Service
+        hidden: ${{ 'existing' === inputs.pwrl_host.resource.provider }}
         items:
           novnc_parent_install_dir:
             label: noVNC installation directory
@@ -115,3 +140,17 @@ jobs:
                 value: scw
             tooltip: Make sure the display protocol is installed in the host!
             default: turbovnc
+          vnc_type:
+            label: VNC Server Type
+            type: string
+            default: turbovnc
+            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+          desktop:
+            label: Desktop Session
+            type: string
+            default: mate-session
+            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+
+        

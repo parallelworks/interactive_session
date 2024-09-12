@@ -35,10 +35,10 @@ jobs:
             tooltip:
               Resource to host the service
           nports:
-            type: string
+            type: number
             label: Number of Ports to Reserve
             hidden: true
-            default: "1"
+            default: 1
             optional: true
           jobschedulertype:
             type: dropdown
@@ -52,20 +52,22 @@ jobs:
               - value: PBS
                 label: PBS Queue
             tooltip:
-              Job will submitted using SSH, sbatch or qsub, respectively
+              Job will be submitted using SSH, sbatch or qsub, respectively
           _sch__dd_partition_e_:
             type: slurm-partitions
             label: SLURM partition
-            hidden: "${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
+            ignore: ${{ .hidden }}
             optional: true
             tooltip:
                 Partition to submit the interactive job. Leave empty to let SLURM pick
                 the optimal option.
-            resource: "${{ inputs.pwrl_host.resource }}"
+            resource: ${{ inputs.pwrl_host.resource }}
           scheduler_directives_slurm:
             type: string
             label: Scheduler directives
-            hidden: "${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}"
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
+            ignore: ${{ .hidden }}
             optional: true
             tooltip:
                 e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to
@@ -73,15 +75,17 @@ jobs:
           _sch__d_q___:
             type: string
             label: PBS queue
-            hidden: "${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
-            optional: "${{ .hidden }}"
+            hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
             tooltip:
                 Queue to submit the interactive job. Must select one! Use [qstat -f
                 -Q] to list all queues on the system
           scheduler_directives_pbs:
             type: string
             label: Scheduler directives
-            hidden: "${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}"
+            hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
+            ignore: ${{ .hidden }}
             optional: true
             tooltip:
                 e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to

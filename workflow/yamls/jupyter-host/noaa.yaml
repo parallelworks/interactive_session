@@ -1,0 +1,220 @@
+jobs:
+  main:
+    steps:
+      - name: Preprocessing
+        run: ./utils/steps/preprocessing.sh 
+      - name: Run Input Form Resource Wrapper
+        run: ./utils/steps/input_form_resource_wrapper.sh
+      - name: Process Inputs
+        run: ./utils/steps/process_inputs_sh.sh 
+      - name: Controller Preprocessing
+        run: ./utils/steps/controller_preprocessing.sh
+      - name: Prepare Service JSON
+        run: ./utils/steps/prepare_service_json.sh 
+      - name: Initialize Cancel Script
+        run: ./utils/steps/initialize_cancel_script.sh
+      - name: Create Session Script
+        run: ./utils/steps/create_session_script.sh
+      - name: Launch Job and Wait
+        run: ./utils/steps/launch_job_and_wait.sh
+        cleanup: ./kill.sh
+      - name: Clean and Exit
+        run: ./utils/steps/clean_and_exit.sh
+
+'on':
+  execute:
+    inputs:
+      pwrl_host:
+        type: group
+        label: Service Host
+        items:
+          resource:
+            type: compute-clusters
+            label: Service host
+            include-workspace: false
+            tooltip: Resource to host the service
+          nports:
+            type: number
+            label: Number of Ports to Reserve
+            hidden: true
+            default: 1
+          jobschedulertype:
+            type: dropdown
+            label: Select Controller or SLURM Partition
+            default: CONTROLLER
+            options:
+              - value: CONTROLLER
+                label: Controller
+              - value: SLURM
+                label: SLURM Partition
+            tooltip: Job will be submitted using SSH or sbatch, respectively
+          _sch__dd_account_e__tag_existing:
+            label: SLURM account 
+            type:  slurm-accounts
+            resource: ${{ inputs.pwrl_host.resource }}
+            tooltip: Account to submit the interactive job
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
+          _sch__dd_partition_e__tag_existing:
+            label: SLURM partition
+            type:  slurm-partitions
+            resource: ${{ inputs.pwrl_host.resource }}
+            tooltip: SLURM partition to submit the interactive job
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
+          qos_tag_existing:
+            label: Quality of Service [QoS]
+            type: slurm-qos
+            resource: ${{ inputs.pwrl_host.resource }}
+            tooltip: Select a QOS from the drop down menu
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
+          _sch__dd_ntasks_e__tag_existing:
+            label: Number of tasks
+            type:  number
+            min: 1
+            max: 100
+            default: 1
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+          _sch__dd_nodes_e__tag_existing:
+            label: Number of nodes
+            type:  number
+            default: 1
+            hidden: true
+            ignore: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+          _sch__dd_partition_e__tag_cloud:
+            type: slurm-partitions
+            label: SLURM partition
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' === inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            optional: true
+            tooltip: >-
+              Partition to submit the interactive job. Leave empty to let SLURM
+              pick the optimal option.
+            resource: ${{ inputs.pwrl_host.resource }}
+          _sch__dd_time_e_:
+            label: Walltime
+            type: string
+            default: 01:00:00
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  }}
+            ignore: ${{ .hidden }}
+            tooltip: e.g. 01:00:00 - Amount of time slurm will honor the interactive session.
+          scheduler_directives_slurm:
+            type: string
+            label: Scheduler directives
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
+            ignore: ${{ .hidden }}
+            optional: true
+            tooltip: >-
+              e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ;
+              to separate parameters. Do not include the SBATCH keyword.
+        collapsed: false
+      service:
+        type: group
+        label: Jupyter Notebook Settings
+        items:
+          name: 
+            type: string
+            hidden: true
+            default: jupyter-host
+          password:
+            label: Password for notebook session
+            type: string
+            optional: true
+            hidden: true
+            ignore: true
+            tooltip:
+              Enter password or leave blank for no password
+          notebook_dir:
+            label: Directory to start Jupyter Lab GUI
+            type: string
+            default: __WORKDIR__
+            tooltip: 
+              This is the directory that you start with when the JupyterHub graphical user interface starts. The default value here is your home directory.
+          conda_install:
+            label: Install miniconda environment if not there?
+            type: boolean
+            default: true
+            tooltip:
+              Select Yes to install Jupyter in miniconda environment and No to load an existing python environment
+          conda_sh:
+            label: Path to conda environment
+            type: string
+            default: __WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh
+            hidden: ${{ inputs.service.conda_install == false || 'existing' === inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            tooltip:
+              Path to use in source /path/to/conda.sh
+          conda_env:
+            label: Conda environment
+            type: string
+            default: base
+            hidden: ${{ inputs.service.conda_install == false || 'existing' === inputs.pwrl_host.resource.provider }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip:
+              Environment to active. The base environment enables changing kernel to other environments!
+          load_env_tag_cloud:
+            label: Command to load Jupyter Notebook
+            type: string
+            default: source __WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base
+            hidden:  ${{ 'existing' === inputs.pwrl_host.resource.provider }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+          load_env_tag_existing:
+            label: Command to load Jupyter Notebook
+            type: string
+            default: module load intelpython; export PATH=$PATH:/home/${USER}/.local/bin
+            hidden:  ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+          install_instructions_tag_cloud:
+            label: Install Instructions
+            type: dropdown
+            hidden: ${{ inputs.service.conda_install == false || 'existing' === inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            default: notebook7.0.8-python3.12.1
+            options:
+              - value: latest
+                label: Latest default versions of Jupyter Notebook and Python (not thoroughly tested)
+              - value: notebook7.0.8-python3.12.1
+                label: Jupyter Notebook 7.0.8 with Python version 3.12.1
+              - value: notebook6.5.4-python3.9.18
+                label: Jupyter Notebook 6.5.4 with Python version 3.9.18
+              - value: yaml
+                label: Provide custom Conda environment YAML file
+          install_instructions_tag_existing:
+            label: Install Instructions
+            type: string
+            default: install_command
+            hidden: true
+            ignore:  ${{ inputs.service.conda_install == false || 'existing' !== inputs.pwrl_host.resource.provider }}
+          yaml:
+            label: Paste Conda Environment Defition YAML
+            type: editor
+            hidden: ${{ inputs.service.install_instructions_tag_cloud !== yaml }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip:
+              Copy and paste a custom Conda environment definition YAML file
+          install_kernels:
+            label: Select additional kernels to install
+            type: multi-dropdown
+            optional: true
+            hidden: ${{ inputs.service.conda_install == false ||  'existing' === inputs.pwrl_host.resource.provider}}
+            ignore: ${{ .hidden }}
+            options:
+              - value: julia-kernel
+                label: Julia Kernel
+              - value: R-kernel
+                label: R Kernel
+          install_command:
+            label: Command to install Jupyter
+            type: string
+            default: module load intelpython; pip install notebook==6.5.7 --no-warn-script-location
+            hidden:  ${{ inputs.service.conda_install == false || 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}

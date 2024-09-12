@@ -20,19 +20,27 @@ jobs:
         cleanup: ./kill.sh
       - name: Clean and Exit
         run: ./utils/steps/clean_and_exit.sh
-
+        
 'on':
   execute:
     inputs:
       pwrl_host:
         type: group
-        label: Service Host
+        label: Server Host
         items:
           resource:
             type: compute-clusters
             label: Service host
             include-workspace: false
-            tooltip: Resource to host the service
+            provider:
+              - gclusterv2
+              - pclusterv2
+              - azclusterv2
+              - aws-slurm
+              - google-slurm
+              - azure-slurm
+            tooltip:
+              Resource to host the service
           nports:
             type: number
             label: Number of Ports to Reserve
@@ -50,16 +58,17 @@ jobs:
                 label: SLURM Partition
               - value: PBS
                 label: PBS Queue
-            tooltip: Job will be submitted using SSH, sbatch or qsub, respectively
+            tooltip:
+              Job will be submitted using SSH, sbatch or qsub, respectively
           _sch__dd_partition_e_:
             type: slurm-partitions
             label: SLURM partition
             hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
-            tooltip: >-
-              Partition to submit the interactive job. Leave empty to let SLURM
-              pick the optimal option.
+            tooltip:
+                Partition to submit the interactive job. Leave empty to let SLURM pick
+                the optimal option.
             resource: ${{ inputs.pwrl_host.resource }}
           scheduler_directives_slurm:
             type: string
@@ -67,51 +76,49 @@ jobs:
             hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
-            tooltip: >-
-              e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ;
-              to separate parameters. Do not include the SBATCH keyword.
+            tooltip:
+                e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to
+                separate parameters. Do not include the SBATCH keyword.
           _sch__d_q___:
             type: string
             label: PBS queue
             hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
-            tooltip: >-
-              Queue to submit the interactive job. Must select one! Use [qstat
-              -f -Q] to list all queues on the system
+            tooltip:
+                Queue to submit the interactive job. Must select one! Use [qstat -f
+                -Q] to list all queues on the system
           scheduler_directives_pbs:
             type: string
             label: Scheduler directives
             hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
-            tooltip: >-
-              e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ;
-              to separate parameters. Do not include the PBS keyword.
+            tooltip:
+                e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to
+                separate parameters. Do not include the PBS keyword.
         collapsed: false
       service:
         type: group
-        label: Service
+        label: Matlab Docker Settings
         items:
-          novnc_parent_install_dir:
-            label: noVNC installation directory
+          name: 
             type: string
             hidden: true
-            default: __WORKDIR__/pw/software
-          novnc_tgz_basename:
-            label: Basename of the novnc tgz file
+            default: matlab-docker
+          docker_repo:
+            label: Docker repository
             type: string
-            hidden: true
-            default: noVNC-1.5.0.tgz
-          name:
-            type: dropdown
-            label: Select remote display protocol
-            options:
-              - label: VNC Server
-                value: turbovnc
-              - label: Nice DCV
-                value: nicedcv
-              - label: Scyld Cloud Workstation
-                value: scw
-            tooltip: Make sure the display protocol is installed in the host!
-            default: turbovnc
+            default: mathworks/matlab:r2022a
+            tooltip: Docker repository to start with docker run
+          mount_directories:
+            label: Docker mount volumnes
+            type: string
+            optional: true
+            tooltip: 
+              "Type in the mount volume options for the docker command. E.g.: -v /lustre:/lustre -v /contrib:/contrib"
+          use_gpus:
+            label: Use GPUs?
+            type: boolean
+            default: false
+            tooltip: Select Yes to run a CUDA application inside a container

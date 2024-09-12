@@ -115,42 +115,33 @@ jobs:
         collapsed: false
       service:
         type: group
-        label: Service
-        hidden: ${{ 'existing' === inputs.pwrl_host.resource.provider }}
+        label: VS Code Settings
+        collapsed: true
         items:
-          novnc_parent_install_dir:
-            label: noVNC installation directory
+          name: 
             type: string
             hidden: true
-            default: __WORKDIR__/pw/software
-          novnc_tgz_basename:
-            label: Basename of the novnc tgz file
+            default: openvscode
+          download_url:
+            label: Download URL
             type: string
-            hidden: true
-            default: noVNC-1.5.0.tgz
-          name:
-            type: dropdown
-            label: Select remote display protocol
-            options:
-              - label: VNC Server
-                value: turbovnc
-              - label: Nice DCV
-                value: nicedcv
-              - label: Scyld Cloud Workstation
-                value: scw
-            tooltip: Make sure the display protocol is installed in the host!
-            default: turbovnc
-          vnc_type:
-            label: VNC Server Type
+            default: https://github.com/coder/code-server/releases/download/v4.92.2/code-server-4.92.2-linux-amd64.tar.gz
+            tooltip: 
+              Downloads or uses the code-server server version specified in the URL
+          password:
+            label: Password for IDE session
             type: string
-            default: turbovnc
-            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
-            ignore: ${{ .hidden }}
-          desktop:
-            label: Desktop Session
+            optional: true
+            tooltip: 
+              Enter password or leave blank for no password
+          directory:
+            label: Directory to open in VS Code
             type: string
-            default: mate-session
-            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
-            ignore: ${{ .hidden }}
-
+            default: __WORKDIR__
+            tooltip: 
+              Directory to open in VS code
+          github_token:
+            label: GitHub authentication token
+            type: string
+            optional: true
         

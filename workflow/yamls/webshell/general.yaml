@@ -94,7 +94,7 @@ jobs:
       service:
         type: group
         hidden: true
-        label: VS Code Settings
+        label: Webshell
         items:
           name: 
             type: string

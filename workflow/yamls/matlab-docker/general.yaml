@@ -120,5 +120,5 @@ jobs:
           use_gpus:
             label: Use GPUs?
             type: boolean
-            default: true
+            default: false
             tooltip: Select Yes to run a CUDA application inside a container

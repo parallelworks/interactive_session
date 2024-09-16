@@ -45,8 +45,8 @@ HERE
 
 container_name="nginx-${service_port}"
 # Remove container when job is canceled
-#echo "sudo docker stop ${container_name}" >> cancel.sh
-#echo "sudo docker rm ${container_name}" >> cancel.sh
+echo "sudo docker stop ${container_name}" >> cancel.sh
+echo "sudo docker rm ${container_name}" >> cancel.sh
 
 # Start container
 sudo service docker start
@@ -72,18 +72,13 @@ services:
   ngencerf-app:
     build: 
       context: .
-      secrets:
-        - gitlab_token
     ports:
       - "${service_existing_port}:3000"
     environment:
       - NUXT_HOST=0.0.0.0
       - NUXT_PORT=3000
       - NUXT_APP_BASE_URL=/me/${openPort}/
-       
-secrets:
-  gitlab_token:
-    file: ~/.gitlab_token
+
 HERE
 
 # Notify platform that service is running
@@ -100,7 +95,7 @@ cd ${service_ngencerf_docker_dir}
 # TODO: How about yeah, just run docker compose up from /ngencerf-app/ngencerf-docker/ folder?
 
 #docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui 
-docker compose up
+docker compose -f production-pw.yaml up
 
 
 sleep infinity

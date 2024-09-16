@@ -23,10 +23,16 @@
       ></param>
       <param 
         name='existing_port' 
-        label='Service Port' 
+        label='NGENCERF Port' 
         type='text' 
         value='3000'
-        help='Listening port of the existing server'  
+      ></param>
+      <param 
+        name='port' 
+        label='NGINX Port' 
+        type='hidden' 
+        value='3010'
+        help='Needs to be fixed because other sessions need to be able to connect to the running service'
       ></param>
     </section>
     <section name='pwrl_host' type='section' title='ngenCERF Host' expanded='true'>

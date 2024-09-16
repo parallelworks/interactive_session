@@ -74,14 +74,14 @@ sudo docker logs ${container_name}
 # NGENCERF-UI #
 ############### 
 # service_ngencerf_ui_dir=/ngencerf-app/nextgen_ui/compose.yaml
-cat > ${service_ngencerf_ui_dir}/compose.yaml <<HERE
+cat > ${service_ngencerf_ui_dir}/production-pw.yaml <<HERE
 
 name: ngencerf-ui
 
 services:
   ngencerf-app:
     build: 
-      context: .
+      dockerfile: ./Dockerfile.production-pw
     ports:
       - "${service_existing_port}:3000"
     environment:
@@ -105,7 +105,12 @@ cd ${service_ngencerf_docker_dir}
 # TODO: How about yeah, just run docker compose up from /ngencerf-app/ngencerf-docker/ folder?
 
 #docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui 
-docker compose -f production-pw.yaml up
+
+if [[ "${service_build}" == "true" ]]; then
+    docker compose -f production-pw.yaml up --build
+else
+    docker compose -f production-pw.yaml up
+fi
 
 
 sleep infinity

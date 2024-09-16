@@ -22,6 +22,17 @@
         value='/ngencerf-app/ngwpc-3835/ngencerf-docker'  
       ></param>
       <param 
+        name="build" 
+        type="boolean" 
+        truevalue="Yes" 
+        falsevalue="No" 
+        checked="False"
+        value="false" 
+        label="Build Docker Containers?" 
+        help='Select Yes to build the docker container running docker compose up --build'
+        float="right"
+      ></param>
+      <param 
         name='existing_port' 
         label='NGENCERF Port' 
         type='text' 

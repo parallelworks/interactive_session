@@ -81,7 +81,7 @@ name: ngencerf-ui
 services:
   ngencerf-app:
     build: 
-      dockerfile: ./Dockerfile.production-pw
+      dockerfile: ${service_ngencerf_ui_dir}/Dockerfile.production-pw
     ports:
       - "${service_existing_port}:3000"
     environment:

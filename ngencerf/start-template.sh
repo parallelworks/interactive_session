@@ -81,7 +81,7 @@ name: ngencerf-ui
 services:
   ngencerf-app:
     build: 
-      context .
+      context: .
       dockerfile: ./Dockerfile.production-pw
     ports:
       - "${service_existing_port}:3000"

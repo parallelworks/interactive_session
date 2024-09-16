@@ -8,6 +8,8 @@ chmod +x cancel.sh
 container_id=$(docker ps -q --filter "name=ngencerf-ngencerf-ui")
 if ! [ -z "${container_id}" ]; then
   echo "UI containers are already running"
+  # Notify platform that service is running
+  ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
   sleep infinity
 fi
 

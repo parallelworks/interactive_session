@@ -3,6 +3,14 @@ set -x
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
+
+# Do nothing if containers are already running
+container_id=$(docker ps -q --filter "name=ngencerf-ngencerf-ui")
+if ! [ -z "${container_id}" ]; then
+  echo "UI containers are already running"
+  sleep infinity
+fi
+
 #################
 # NGINX WRAPPER #
 #################

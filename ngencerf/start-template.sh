@@ -13,6 +13,23 @@ if ! [ -z "${container_id}" ]; then
   sleep infinity
 fi
 
+##################################
+# Launch SLURM Wrapper Flask App #
+##################################
+# Transfer Python script
+rsync -avzq -e "ssh ${resource_ssh_usercontainer_options_controller}" usercontainer:${pw_job_dir}/${service_name}/slurm-wrapper-app.py slurm-wrapper-app.py
+if ! [ -f slurm-wrapper-app.py ]; then
+   displayErrorMessage "SLURM wrapper slurm-wrapper-app.py app not found "
+fi
+
+# Install Flask
+pip3.8 install Flask --user ${USER}
+pip3.8 install gunicorn --user ${USER}
+# Start Flask app using gunicorn
+nohup gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app.log 2>&1 &
+slurm_wrapper_pid=$!
+echo "kill ${slurm_wrapper_pid}" >> cancel.sh
+
 #################
 # NGINX WRAPPER #
 #################

@@ -22,6 +22,10 @@ if ! [ -f slurm-wrapper-app.py ]; then
    displayErrorMessage "SLURM wrapper slurm-wrapper-app.py app not found "
 fi
 
+# Make sure permissions are set properly
+sudo chown -R ${USER} ${LOCAL_DATA_DIR}
+sudo chmod -R u+rw ${LOCAL_DATA_DIR}
+
 # Install Flask
 sudo pip3.8 install Flask
 sudo pip3.8 install gunicorn

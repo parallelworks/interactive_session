@@ -2,6 +2,18 @@
   <command interpreter='bash'>main.sh</command>
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
+    <param 
+        name='CONTAINER_DATA_DIR' 
+        label='Path to the data directory within the container' 
+        type='hidden' 
+        value='/ngencerf/data/'  
+    ></param>
+    <param 
+        name='LOCAL_DATA_DIR' 
+        label='Path to the data directory on the cluster' 
+        type='hidden' 
+        value='/ngencerf-app/data/ngen-cal-data/'  
+    ></param>
    <section name='service' type='section' title='ngenCERF' expanded='true'>
       <param 
         name='name' 
@@ -22,11 +34,34 @@
         value='/ngencerf-app/ngencerf-docker'  
       ></param>
       <param 
+        name='slurm_app_workers' 
+        label='Workers for SLURM wrapper app' 
+        type='hidden' 
+        value='2'  
+      ></param>
+      <param 
+        name="build" 
+        type="boolean" 
+        truevalue="Yes" 
+        falsevalue="No" 
+        checked="False"
+        value="false" 
+        label="Build Docker Containers?" 
+        help='Select Yes to build the docker container running docker compose up --build'
+        float="right"
+      ></param>
+      <param 
         name='existing_port' 
-        label='Service Port' 
+        label='NGENCERF Port' 
         type='text' 
         value='3000'
-        help='Listening port of the existing server'  
+      ></param>
+      <param 
+        name='port' 
+        label='NGINX Port' 
+        type='hidden' 
+        value='3010'
+        help='Needs to be fixed because other sessions need to be able to connect to the running service'
       ></param>
     </section>
     <section name='pwrl_host' type='section' title='ngenCERF Host' expanded='true'>

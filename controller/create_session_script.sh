@@ -66,9 +66,11 @@ findAvailablePort() {
 # Note that job started running
 echo \$$ > ${job_number}.pid
 
-# Find an available service_port
-service_port=\$(findAvailablePort)
-echo \${service_port} > service.port
+if [ -z "$service_port" ]; then
+    # Find an available service_port
+    service_port=\$(findAvailablePort)
+    echo \${service_port} > service.port
+fi
 
 echo
 echo Starting interactive session - sessionPort: \$service_port tunnelPort: $openPort

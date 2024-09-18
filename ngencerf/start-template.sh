@@ -3,6 +3,13 @@ set -x
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
+if [[ "${service_only_connect}" == "true" ]]; then
+    echo "Connecting to existing ngencerf service listening on port ${service_existing_port}"
+    # Notify platform that service is running
+    ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
+    sleep infinity
+fi
+
 
 #################
 # NGINX WRAPPER #
@@ -57,13 +64,6 @@ touch empty
 singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} &
 echo "kill ${pid}" >> cancel.sh
 
-
-if [[ "${service_only_connect}" == "true" ]]; then
-    echo "Connecting to existing ngencerf service listening on port ${service_existing_port}"
-    # Notify platform that service is running
-    ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
-    sleep infinity
-fi
 
 ##################################
 # Launch SLURM Wrapper Flask App #

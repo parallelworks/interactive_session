@@ -47,9 +47,9 @@
       ></param>
       <param 
         name='nginx_sif' 
-        label='Workers for SLURM wrapper app' 
+        label='NGINX Singularity container' 
         type='hidden' 
-        value='2'  
+        value='/ngencerf-app/singularity/nginx-unprivileged.sif'  
       ></param>
       <param 
         name="build" 

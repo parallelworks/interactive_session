@@ -62,6 +62,8 @@ sudo docker logs ${container_name}
 
 if [[ "${service_only_connect}" == "true" ]]; then
     echo "Connecting to existing ngencerf service listening on port ${service_existing_port}"
+    # Notify platform that service is running
+    ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
     sleep infinity
 fi
 

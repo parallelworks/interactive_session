@@ -4,36 +4,6 @@ echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
 
-# Do nothing if containers are already running
-container_id=$(docker ps -q --filter "name=ngencerf-ngencerf-ui")
-if ! [ -z "${container_id}" ]; then
-  echo "UI containers are already running"
-  # Notify platform that service is running
-  ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
-  sleep infinity
-fi
-
-##################################
-# Launch SLURM Wrapper Flask App #
-##################################
-# Transfer Python script
-rsync -avzq -e "ssh ${resource_ssh_usercontainer_options_controller}" usercontainer:${pw_job_dir}/${service_name}/slurm-wrapper-app.py slurm-wrapper-app.py
-if ! [ -f slurm-wrapper-app.py ]; then
-   displayErrorMessage "SLURM wrapper slurm-wrapper-app.py app not found "
-fi
-
-# Make sure permissions are set properly
-sudo chown -R ${USER} ${LOCAL_DATA_DIR}
-sudo chmod -R u+rw ${LOCAL_DATA_DIR}
-
-# Install Flask
-sudo pip3.8 install Flask
-sudo pip3.8 install gunicorn
-# Start Flask app using gunicorn
-nohup gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app.log 2>&1 &
-slurm_wrapper_pid=$!
-echo "kill ${slurm_wrapper_pid}" >> cancel.sh
-
 #################
 # NGINX WRAPPER #
 #################
@@ -89,6 +59,33 @@ sudo docker run  -d --name ${container_name} \
 
 # Print logs
 sudo docker logs ${container_name}
+
+if [[ "${service_only_connect}" == "true" ]]; then
+    echo "Connecting to existing ngencerf service listening on port ${service_existing_port}"
+    sleep infinity
+fi
+
+##################################
+# Launch SLURM Wrapper Flask App #
+##################################
+# Transfer Python script
+rsync -avzq -e "ssh ${resource_ssh_usercontainer_options_controller}" usercontainer:${pw_job_dir}/${service_name}/slurm-wrapper-app.py slurm-wrapper-app.py
+if ! [ -f slurm-wrapper-app.py ]; then
+   displayErrorMessage "SLURM wrapper slurm-wrapper-app.py app not found "
+fi
+
+# Make sure permissions are set properly
+sudo chown -R ${USER} ${LOCAL_DATA_DIR}
+sudo chmod -R u+rw ${LOCAL_DATA_DIR}
+
+# Install Flask
+sudo pip3.8 install Flask
+sudo pip3.8 install gunicorn
+# Start Flask app using gunicorn
+nohup gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app.log 2>&1 &
+slurm_wrapper_pid=$!
+echo "kill ${slurm_wrapper_pid}" >> cancel.sh
+
 
 
 ###############

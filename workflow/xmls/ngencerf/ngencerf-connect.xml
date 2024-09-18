@@ -22,6 +22,12 @@
         value='true'
       ></param>
       <param 
+        name='nginx_sif' 
+        label='NGINX Singularity container' 
+        type='hidden' 
+        value='/ngencerf-app/singularity/nginx-unprivileged.sif'  
+      ></param>
+      <param 
         name='existing_port' 
         label='NGENCERF Port' 
         type='text' 

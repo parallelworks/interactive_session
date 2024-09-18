@@ -8,18 +8,6 @@
       type='hidden' 
       value='50505'  
     ></param>
-    <param 
-        name='CONTAINER_DATA_DIR' 
-        label='Path to the data directory within the container' 
-        type='hidden' 
-        value='/ngencerf/data/'  
-    ></param>
-    <param 
-        name='LOCAL_DATA_DIR' 
-        label='Path to the data directory on the cluster' 
-        type='hidden' 
-        value='/ngencerf-app/data/ngen-cal-data/'  
-    ></param>
    <section name='service' type='section' title='ngenCERF' expanded='true'>
       <param 
         name='name' 
@@ -28,39 +16,10 @@
         value='ngencerf'  
       ></param>
       <param 
-        name='ngencerf_ui_dir' 
-        label='Directory with ngencerf_ui' 
+        name='only_connect' 
+        label='Only connect to a running service' 
         type='hidden' 
-        value='/ngencerf-app/nextgen_ui'  
-      ></param>
-      <param 
-        name='ngencerf_docker_dir' 
-        label='Directory with ngencerf_docker' 
-        type='hidden' 
-        value='/ngencerf-app/ngencerf-docker'  
-      ></param>
-      <param 
-        name='slurm_app_workers' 
-        label='Workers for SLURM wrapper app' 
-        type='hidden' 
-        value='2'  
-      ></param>
-      <param 
-        name='nginx_sif' 
-        label='NGINX Singularity container' 
-        type='hidden' 
-        value='/ngencerf-app/singularity/nginx-unprivileged.sif'  
-      ></param>
-      <param 
-        name="build" 
-        type="boolean" 
-        truevalue="Yes" 
-        falsevalue="No" 
-        checked="False"
-        value="false" 
-        label="Build Docker Containers?" 
-        help='Select Yes to build the docker container running docker compose up --build'
-        float="right"
+        value='true'
       ></param>
       <param 
         name='existing_port' 

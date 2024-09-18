@@ -3,36 +3,13 @@ set -x
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
-
-# Do nothing if containers are already running
-container_id=$(docker ps -q --filter "name=ngencerf-ngencerf-ui")
-if ! [ -z "${container_id}" ]; then
-  echo "UI containers are already running"
-  # Notify platform that service is running
-  ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
-  sleep infinity
+if [[ "${service_only_connect}" == "true" ]]; then
+    echo "Connecting to existing ngencerf service listening on port ${service_existing_port}"
+    # Notify platform that service is running
+    ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
+    sleep infinity
 fi
 
-##################################
-# Launch SLURM Wrapper Flask App #
-##################################
-# Transfer Python script
-rsync -avzq -e "ssh ${resource_ssh_usercontainer_options_controller}" usercontainer:${pw_job_dir}/${service_name}/slurm-wrapper-app.py slurm-wrapper-app.py
-if ! [ -f slurm-wrapper-app.py ]; then
-   displayErrorMessage "SLURM wrapper slurm-wrapper-app.py app not found "
-fi
-
-# Make sure permissions are set properly
-sudo chown -R ${USER} ${LOCAL_DATA_DIR}
-sudo chmod -R u+rw ${LOCAL_DATA_DIR}
-
-# Install Flask
-sudo pip3.8 install Flask
-sudo pip3.8 install gunicorn
-# Start Flask app using gunicorn
-nohup gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app.log 2>&1 &
-slurm_wrapper_pid=$!
-echo "kill ${slurm_wrapper_pid}" >> cancel.sh
 
 #################
 # NGINX WRAPPER #
@@ -74,21 +51,41 @@ server {
 }
 HERE
 
-container_name="nginx-${service_port}"
-# Remove container when job is canceled
-echo "sudo docker stop ${container_name}" >> cancel.sh
-echo "sudo docker rm ${container_name}" >> cancel.sh
+if ! [ -f "${service_nginx_sif}" ]; then
+   displayErrorMessage "NGINX proxy singularity container was not found ${service_nginx_sif}"
+fi
 
-# Start container
-sudo service docker start
+echo "Running singularity container ${service_nginx_sif}"
+# We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
+# and other users cannot use the node. Was not able to change this in the config.conf.
+mkdir -p ./tmp
+# Need to overwrite default configuration!
 touch empty
-sudo docker run  -d --name ${container_name} \
-    -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
-    -v $PWD/empty:/etc/nginx/conf.d/default.conf \
-    --network=host nginxinc/nginx-unprivileged:1.25.3
+singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} &
+echo "kill ${pid}" >> cancel.sh
 
-# Print logs
-sudo docker logs ${container_name}
+
+##################################
+# Launch SLURM Wrapper Flask App #
+##################################
+# Transfer Python script
+rsync -avzq -e "ssh ${resource_ssh_usercontainer_options_controller}" usercontainer:${pw_job_dir}/${service_name}/slurm-wrapper-app.py slurm-wrapper-app.py
+if ! [ -f slurm-wrapper-app.py ]; then
+   displayErrorMessage "SLURM wrapper slurm-wrapper-app.py app not found "
+fi
+
+# Make sure permissions are set properly
+sudo chown -R ${USER} ${LOCAL_DATA_DIR}
+sudo chmod -R u+rw ${LOCAL_DATA_DIR}
+
+# Install Flask
+sudo pip3.8 install Flask
+sudo pip3.8 install gunicorn
+# Start Flask app using gunicorn
+nohup gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app.log 2>&1 &
+slurm_wrapper_pid=$!
+echo "kill ${slurm_wrapper_pid}" >> cancel.sh
+
 
 
 ###############

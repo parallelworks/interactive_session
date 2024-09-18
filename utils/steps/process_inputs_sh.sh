@@ -4,10 +4,12 @@ source resources/host/inputs.sh
 
 set -x
 
-export openPort=$(echo ${resource_ports} | sed "s|___| |g" | cut -d ' ' -f1)
-if [[ "$openPort" == "" ]]; then
-    displayErrorMessage "ERROR - cannot find open port..."
-    exit 1
+if [ -z "${openPort}" ]; then
+    export openPort=$(echo ${resource_ports} | sed "s|___| |g" | cut -d ' ' -f1)
+    if [[ "$openPort" == "" ]]; then
+        displayErrorMessage "ERROR - cannot find open port..."
+        exit 1
+    fi
 fi
 
 echo "export openPort=${openPort}" >> resources/host/inputs.sh

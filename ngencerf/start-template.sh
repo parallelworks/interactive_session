@@ -44,21 +44,19 @@ server {
 }
 HERE
 
-container_name="nginx-${service_port}"
-# Remove container when job is canceled
-echo "sudo docker stop ${container_name}" >> cancel.sh
-echo "sudo docker rm ${container_name}" >> cancel.sh
+if ! [ -f "${service_nginx_sif}" ]; then
+   displayErrorMessage "NGINX proxy singularity container was not found ${service_nginx_sif}"
+fi
 
-# Start container
-sudo service docker start
+echo "Running singularity container ${service_nginx_sif}"
+# We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
+# and other users cannot use the node. Was not able to change this in the config.conf.
+mkdir -p ./tmp
+# Need to overwrite default configuration!
 touch empty
-sudo docker run  -d --name ${container_name} \
-    -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
-    -v $PWD/empty:/etc/nginx/conf.d/default.conf \
-    --network=host nginxinc/nginx-unprivileged:1.25.3
+singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} &
+echo "kill ${pid}" >> cancel.sh
 
-# Print logs
-sudo docker logs ${container_name}
 
 if [[ "${service_only_connect}" == "true" ]]; then
     echo "Connecting to existing ngencerf service listening on port ${service_existing_port}"

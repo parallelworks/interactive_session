@@ -46,6 +46,12 @@
         value='2'  
       ></param>
       <param 
+        name='nginx_sif' 
+        label='Workers for SLURM wrapper app' 
+        type='hidden' 
+        value='2'  
+      ></param>
+      <param 
         name="build" 
         type="boolean" 
         truevalue="Yes" 

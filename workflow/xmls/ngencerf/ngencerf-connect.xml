@@ -2,6 +2,12 @@
   <command interpreter='bash'>main.sh</command>
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
+    <param 
+      name='openPort' 
+      label='Service port on the user container' 
+      type='hidden' 
+      value='50505'  
+    ></param>
    <section name='service' type='section' title='ngenCERF' expanded='true'>
       <param 
         name='name' 

@@ -3,6 +3,12 @@
   <cancel interpreter='bash'>kill.sh</cancel>
   <inputs>
     <param 
+      name='openPort' 
+      label='Service port on the user container' 
+      type='hidden' 
+      value='50505'  
+    ></param>
+    <param 
         name='CONTAINER_DATA_DIR' 
         label='Path to the data directory within the container' 
         type='hidden' 

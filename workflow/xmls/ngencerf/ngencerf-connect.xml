@@ -12,7 +12,7 @@
       <param 
         name='only_connect' 
         label='Only connect to a running service' 
-        type='text' 
+        type='hidden' 
         value='true'
       ></param>
       <param 

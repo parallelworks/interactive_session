@@ -15,8 +15,8 @@ try:
     response = requests.post(url, data=job_data)
     
     if response.status_code == 200:
-        job_id = response.json().get('job_id')
-        print(f"Job submitted successfully! Job ID: {job_id}")
+        slurm_job_id = response.json().get('slurm_job_id')
+        print(f"Job submitted successfully! SLURM ob ID: {slurm_job_id}")
     else:
         print(f"Failed to submit job: {response.json().get('error')}")
 except Exception as e:

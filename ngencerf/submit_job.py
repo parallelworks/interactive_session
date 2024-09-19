@@ -7,7 +7,9 @@ url = 'http://localhost:5000/submit-job'
 job_data = {
     'job_id': '12345', 
     'job_type': 'calibration',
-    'input_file': '/ngencerf/data/test_calib/kge_dds/cfe_noah/01123000/Input/01123000_config_calib.yaml' 
+    'input_file': '/ngencerf/data/test_calib/kge_dds/cfe_noah/01123000/Input/01123000_config_calib.yaml',
+    'job_stage': 'this-is-a-string',
+    'output_file': 'test.out'
 }
 
 try:

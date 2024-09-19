@@ -11,6 +11,14 @@ if [[ "${service_only_connect}" == "true" ]]; then
 fi
 
 
+if ! [ -f "${service_nginx_sif}" ]; then
+   displayErrorMessage "NGINX proxy singularity container was not found ${service_nginx_sif}"
+fi
+
+if ! [ -f "${NGEN_CAL_SINGULARITY_CONTAINER_PATH}" ]; then
+   displayErrorMessage "NGEN-CAL singularity container was not found ${NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
+fi
+
 #################
 # NGINX WRAPPER #
 #################
@@ -50,10 +58,6 @@ server {
  }
 }
 HERE
-
-if ! [ -f "${service_nginx_sif}" ]; then
-   displayErrorMessage "NGINX proxy singularity container was not found ${service_nginx_sif}"
-fi
 
 echo "Running singularity container ${service_nginx_sif}"
 # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 

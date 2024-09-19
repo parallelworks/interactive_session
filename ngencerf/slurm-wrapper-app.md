@@ -17,7 +17,7 @@ POST /submit-job
 **Request Parameters:**
 - `job_id`: (string, required) Unique identifier for the `ngen-cal` job.
 - `job_type`: (string, required) Type of job: either `calibration` or `validation`.
-- `input_file`: (string, required) Path to the ngen-cal input file inside the container (e.g., `/ngencerf/data/input.yaml`).
+- `input_file`: (string, required) Path to the ngen-cal input file inside the container (e.g., `/ngencerf/data/test_calib/kge_dds/cfe_noah/01123000/Input/01123000_config_calib.yaml`).
 
 
 **Response:**
@@ -28,7 +28,7 @@ POST /submit-job
 curl -X POST http://<controller-ip>:5000/submit-job \
     -F "job_id=ngen_cal_123" \
     -F "job_type=calibration" \
-    -F "input_file=/ngencerf/data/input.yaml"
+    -F "input_file=/ngencerf/data/test_calib/kge_dds/cfe_noah/01123000/Input/01123000_config_calib.yaml"
 ```
 
 **Note:**

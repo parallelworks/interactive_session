@@ -24,8 +24,8 @@ def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage
         script.write('#SBATCH --nodes=1\n')
         script.write('#SBATCH --ntasks-per-node=1\n')
         script.write(f'#SBATCH --output={output_file}\n')
-        script.write(f'job_id={job_id}\n')
-        script.write(f'job_stage={job_stage}\n')
+        script.write(f"job_id=\"{job_id}\"\n")
+        script.write(f"job_stage=\"{job_stage}\"\n")
         script.write(f'{cmd}\n')
         script.write(f'echo Job Completed\n')
     

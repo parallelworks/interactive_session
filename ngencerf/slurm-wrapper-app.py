@@ -13,10 +13,9 @@ SINGULARITY_CMD = f"singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} {NG
 
 app = Flask(__name__)
 
-def write_slurm_script(job_id, job_type, input_file, input_file_local):
+def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage, output_file):
     # FIXME: remove test write commands
     job_script = input_file_local.replace('.yaml', '.slurm.sh')
-    job_out = input_file_local.replace('.yaml', '.slurm.out')
 
     cmd = f"{SINGULARITY_CMD} {job_type} {input_file}"
     with open(job_script, 'w') as script:
@@ -24,9 +23,9 @@ def write_slurm_script(job_id, job_type, input_file, input_file_local):
         script.write(f'#SBATCH --job-name={job_id}\n')
         script.write('#SBATCH --nodes=1\n')
         script.write('#SBATCH --ntasks-per-node=1\n')
-        script.write('#SBATCH --nodes=1\n')
-        script.write(f'#SBATCH --output={job_out}\n')
+        script.write(f'#SBATCH --output={output_file}\n')
         script.write(f'job_id={job_id}\n')
+        script.write(f'job_stage={job_stage}\n')
         script.write(f'{cmd}\n')
         script.write(f'echo Job Completed\n')
     
@@ -41,6 +40,10 @@ def submit_job():
     job_type = request.form.get('job_type')  
     # Path to the ngen-cal input file within the container
     input_file = request.form.get('input_file')
+    # Job stage string for callback
+    job_stage = request.form.get('job_stage')
+    # Path to the SLURM job log file in the controller node
+    output_file = request.form.get('output_file')
 
     if not job_id:
         return jsonify({"error": "No job ID provided"}), 400
@@ -53,6 +56,12 @@ def submit_job():
     if not input_file:
         return jsonify({"error": "No ngen-cal input file provided"}), 400
     
+    if not job_stage:
+        return jsonify({"error": "No job_stage provided"}), 400
+    
+    if not output_file:
+        return jsonify({"error": "No output_file provided"}), 400
+    
     # Check the file exists on the shared file system
     # Path to the input file on the shared file system
     input_file_local = input_file.replace(CONTAINER_DATA_DIR, LOCAL_DATA_DIR)
@@ -61,7 +70,7 @@ def submit_job():
 
     try:
         # Save the script to the job's directory
-        job_script = write_slurm_script(job_id, job_type, input_file, input_file_local)
+        job_script = write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage, output_file)
 
         # Use subprocess to run sbatch and capture the output
         result = subprocess.run(["sbatch", job_script], capture_output=True, text=True)

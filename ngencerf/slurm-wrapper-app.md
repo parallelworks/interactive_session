@@ -5,7 +5,7 @@ This Flask-based API is designed to submit, monitor, and cancel jobs for the nge
 The environment variables are defined in the XML or YAML definition file of the `ngencerf_start` workflow.
 - `LOCAL_DATA_DIR`: Path to the data directory on the shared filesystem (e.g., `/ngencerf-app/data/ngen-cal-data/`).
 - `CONTAINER_DATA_DIR`: Path to the data directory within the container (e.g., `/ngencerf/data/`).
-- `SINGULARITY_CONTAINER_PATH`: Path to the Singularity container that includes `ngen-cal`.
+- `NGEN_CAL_SINGULARITY_CONTAINER_PATH`: Path to the Singularity container that includes `ngen-cal`.
 
 ## API Endpoints
 ### 1. Submit a Job

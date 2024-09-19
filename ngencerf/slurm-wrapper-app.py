@@ -7,9 +7,9 @@ LOCAL_DATA_DIR = os.environ.get('LOCAL_DATA_DIR') #"/ngencerf-app/data/ngen-cal-
 # Path to the data directory within the container
 CONTAINER_DATA_DIR = os.environ.get('CONTAINER_DATA_DIR') #"/ngencerf/data/"
 # Path to the singularity container with ngen-cal
-SINGULARITY_CONTAINER_PATH = os.environ.get('SINGULARITY_CONTAINER_PATH')
+NGEN_CAL_SINGULARITY_CONTAINER_PATH = os.environ.get('NGEN_CAL_SINGULARITY_CONTAINER_PATH')
 # Command to launch singularity
-SINGULARITY_CMD = f"singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} {SINGULARITY_CONTAINER_PATH}"
+SINGULARITY_CMD = f"singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} {NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
 
 app = Flask(__name__)
 

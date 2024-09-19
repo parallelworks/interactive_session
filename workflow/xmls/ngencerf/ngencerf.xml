@@ -9,7 +9,7 @@
       value='50505'  
     ></param>
     <param 
-        name='SINGULARITY_CONTAINER_PATH' 
+        name='NGEN_CAL_SINGULARITY_CONTAINER_PATH' 
         label='Path to the ngen-cal singularity container' 
         type='hidden' 
         value='/ngencerf-app/singularity/ngen-cal.sif'  

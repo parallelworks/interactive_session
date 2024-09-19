@@ -65,7 +65,7 @@
       <param 
         name='existing_port' 
         label='NGENCERF Port' 
-        type='text' 
+        type='hidden' 
         value='3000'
       ></param>
       <param 

@@ -8,33 +8,31 @@
       type='hidden' 
       value='50505'  
     ></param>
-   <section name='service' type='section' title='ngenCERF' expanded='true'>
       <param 
-        name='name' 
+        name='service_name' 
         label='Service' 
         type='hidden' 
         value='ngencerf'  
       ></param>
       <param 
-        name='only_connect' 
+        name='service_only_connect' 
         label='Only connect to a running service' 
         type='hidden' 
         value='true'
       ></param>
       <param 
-        name='existing_port' 
+        name='service_existing_port' 
         label='NGENCERF Port' 
         type='text' 
         value='3000'
       ></param>
       <param 
-        name='port' 
+        name='service_port' 
         label='NGINX Port' 
         type='hidden' 
         value='3010'
         help='Needs to be fixed because other sessions need to be able to connect to the running service'
       ></param>
-    </section>
     <section name='pwrl_host' type='section' title='ngenCERF Host' expanded='true'>
       <param 
         name='resource' 

@@ -2,9 +2,14 @@ import subprocess
 import os
 from flask import Flask, request, jsonify
 
+# Path to the data directory in the shared filesystem
 LOCAL_DATA_DIR = os.environ.get('LOCAL_DATA_DIR') #"/ngencerf-app/data/ngen-cal-data/"
+# Path to the data directory within the container
 CONTAINER_DATA_DIR = os.environ.get('CONTAINER_DATA_DIR') #"/ngencerf/data/"
-SINGULARITY_CMD = f"singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} /ngencerf-app/singularity/ngen-cal.sif"
+# Path to the singularity container with ngen-cal
+SINGULARITY_CONTAINER_PATH = os.environ.get('SINGULARITY_CONTAINER_PATH')
+# Command to launch singularity
+SINGULARITY_CMD = f"singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} {SINGULARITY_CONTAINER_PATH}"
 
 app = Flask(__name__)
 
@@ -65,37 +70,37 @@ def submit_job():
             return jsonify({"error": result.stderr.strip()}), 500
 
         # Parse SLURM job ID from sbatch output
-        job_id = result.stdout.strip().split()[-1]
+        slurm_job_id = result.stdout.strip().split()[-1]
 
-        return jsonify({"job_id": job_id}), 200
+        return jsonify({"slurm_job_id": slurm_job_id}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/job-status', methods=['GET'])
 def job_status():
     # Get job ID from request
-    job_id = request.args.get('job_id')
+    slurm_job_id = request.args.get('slurm_job_id')
     
-    if not job_id:
+    if not slurm_job_id:
         return jsonify({"error": "No job ID provided"}), 400
 
     try:
         # First, try to get job status using squeue (for pending or running jobs)
-        result = subprocess.run(["squeue", "--job", job_id, "--format=%T", "--noheader"], capture_output=True, text=True)
+        result = subprocess.run(["squeue", "--job", slurm_job_id, "--format=%T", "--noheader"], capture_output=True, text=True)
 
         if result.returncode == 0 and result.stdout.strip():
             # If the job is found in squeue, return its status
             job_status = result.stdout.strip()
-            return jsonify({"job_id": job_id, "status": job_status}), 200
+            return jsonify({"slurm_job_id": slurm_job_id, "status": job_status}), 200
 
         # If squeue doesn't return a status, fall back to sacct for completed/failed jobs
-        result = subprocess.run(["sacct", "--jobs", job_id, "--format=State", "--noheader"], capture_output=True, text=True)
+        result = subprocess.run(["sacct", "--jobs", slurm_job_id, "--format=State", "--noheader"], capture_output=True, text=True)
 
         if result.returncode == 0 and result.stdout.strip():
             # Parse only the first line from sacct output
             job_status = result.stdout.strip().splitlines()[0]
 
-            return jsonify({"job_id": job_id, "status": job_status}), 200
+            return jsonify({"slurm_job_id": slurm_job_id, "status": job_status}), 200
 
         # If sacct also doesn't return a status, return job not found error
         return jsonify({"error": "Job not found"}), 404
@@ -106,19 +111,19 @@ def job_status():
 @app.route('/cancel-job', methods=['POST'])
 def cancel_job():
     # Get job ID from request
-    job_id = request.form.get('job_id')
+    slurm_job_id = request.form.get('slurm_job_id')
 
-    if not job_id:
+    if not slurm_job_id:
         return jsonify({"error": "No job ID provided"}), 400
 
     try:
         # Use subprocess to run scancel
-        result = subprocess.run(["scancel", job_id], capture_output=True, text=True)
+        result = subprocess.run(["scancel", slurm_job_id], capture_output=True, text=True)
 
         if result.returncode != 0:
             return jsonify({"error": result.stderr.strip()}), 500
 
-        return jsonify({"message": f"Job {job_id} cancelled successfully"}), 200
+        return jsonify({"message": f"Job {slurm_job_id} cancelled successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

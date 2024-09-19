@@ -7,7 +7,7 @@ url = 'http://localhost:5000/job-status'
 slurm_job_id = '4'
 
 # Parameters for the request
-params = {'job_id': slurm_job_id}
+params = {'slurm_job_id': slurm_job_id}
 
 try:
     # Make a GET request to query the job status

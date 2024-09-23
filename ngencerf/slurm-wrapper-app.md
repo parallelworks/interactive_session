@@ -34,7 +34,7 @@ curl -X POST http://<controller-ip>:5000/submit-job \
     -F "input_file=/ngencerf/data/test_calib/kge_dds/cfe_noah/01123000/Input/01123000_config_calib.yaml" \
     -F "job_stage=this-is-a-string" \
     -F "output_file=test.out" \
-    -F "auth_token=authentication-token
+    -F "auth_token=authentication-token"
 ```
 
 **Note:**

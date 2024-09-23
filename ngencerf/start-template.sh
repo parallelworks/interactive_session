@@ -88,7 +88,8 @@ sudo -n pip3.8 install gunicorn
 sudo -n pip3.8 install requests
 
 # Start Flask app using gunicorn
-sudo nohup gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app.log 2>&1 &
+#gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app.log 2>&1 &
+sudo nohup python3.8 slurm-wrapper-app.py > slurm-wrapper-app.log 2>&1 &
 slurm_wrapper_pid=$!
 echo "sudo kill ${slurm_wrapper_pid}" >> cancel.sh
 

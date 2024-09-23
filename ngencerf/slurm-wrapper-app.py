@@ -20,7 +20,7 @@ app = Flask(__name__)
 def grant_access():
     try:
         # Grant read and write access to the LOCAL_DATA_DIR
-        command = f"sudo chmod -R 775 {LOCAL_DATA_DIR}"
+        command = f"sudo chmod -R 777 {LOCAL_DATA_DIR}"
         subprocess.run(command, shell=True, check=True)
         return {"success": True, "message": f"Access granted to {LOCAL_DATA_DIR}"}
     except subprocess.CalledProcessError as e:

@@ -22,7 +22,7 @@ def grant_access():
         # Grant read and write access to the LOCAL_DATA_DIR
         command = f"sudo chmod -R 775 {LOCAL_DATA_DIR}"
         subprocess.run(command, shell=True, check=True)
-        return {"success": True, "message": f"Access granted to {local_data_dir}"}
+        return {"success": True, "message": f"Access granted to {LOCAL_DATA_DIR}"}
     except subprocess.CalledProcessError as e:
         return {"success": False, "message": str(e)}
 
@@ -112,7 +112,7 @@ def submit_job():
         # FIXME: Remove
         grant_access()
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
-        
+
         # Save the script to the job's directory
         job_script = write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage, output_file, auth_token)
 

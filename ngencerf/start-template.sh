@@ -79,8 +79,8 @@ if ! [ -f slurm-wrapper-app.py ]; then
 fi
 
 # Make sure permissions are set properly
-#sudo chown -R ${USER} ${LOCAL_DATA_DIR}
-#sudo chmod -R u+rw ${LOCAL_DATA_DIR}
+#sudo -n chown -R ${USER} ${LOCAL_DATA_DIR}
+sudo -n chmod -R u+rw ${LOCAL_DATA_DIR}
 
 # Install Flask
 sudo -n pip3.8 install Flask

@@ -89,9 +89,12 @@ sudo -n pip3.8 install requests
 
 # Start Flask app using gunicorn
 #gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app.log 2>&1 &
-sudo env LOCAL_DATA_DIR=${LOCAL_DATA_DIR} CONTAINER_DATA_DIR=${CONTAINER_DATA_DIR}  NGEN_CAL_SINGULARITY_CONTAINER_PATH=${NGEN_CAL_SINGULARITY_CONTAINER_PATH} python3.8 slurm-wrapper-app.py > slurm-wrapper-app.log 2>&1 &
+#sudo env LOCAL_DATA_DIR=${LOCAL_DATA_DIR} CONTAINER_DATA_DIR=${CONTAINER_DATA_DIR}  NGEN_CAL_SINGULARITY_CONTAINER_PATH=${NGEN_CAL_SINGULARITY_CONTAINER_PATH} python3.8 slurm-wrapper-app.py > slurm-wrapper-app.log 2>&1 &
+#slurm_wrapper_pid=$!
+#echo "sudo kill ${slurm_wrapper_pid}" >> cancel.sh
+gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app.log 2>&1 &
 slurm_wrapper_pid=$!
-echo "sudo kill ${slurm_wrapper_pid}" >> cancel.sh
+echo "kill ${slurm_wrapper_pid}" >> cancel.sh
 
 
 

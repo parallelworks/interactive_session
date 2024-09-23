@@ -79,12 +79,12 @@ if ! [ -f slurm-wrapper-app.py ]; then
 fi
 
 # Make sure permissions are set properly
-sudo chown -R ${USER} ${LOCAL_DATA_DIR}
-sudo chmod -R u+rw ${LOCAL_DATA_DIR}
+#sudo chown -R ${USER} ${LOCAL_DATA_DIR}
+#sudo chmod -R u+rw ${LOCAL_DATA_DIR}
 
 # Install Flask
-sudo pip3.8 install Flask
-sudo pip3.8 install gunicorn
+sudo -n pip3.8 install Flask
+sudo -n pip3.8 install gunicorn
 # Start Flask app using gunicorn
 nohup gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app.log 2>&1 &
 slurm_wrapper_pid=$!

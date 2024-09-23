@@ -115,7 +115,7 @@ def submit_job():
         os.makedirs(os.path.dirname(output_file_local), exist_ok=True)
 
         # Save the script to the job's directory
-        job_script = write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage, output_file, auth_token)
+        job_script = write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage, output_file_local, auth_token)
 
         # Use subprocess to run sbatch and capture the output
         result = subprocess.run(["sbatch", job_script], capture_output=True, text=True)

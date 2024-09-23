@@ -20,6 +20,8 @@ POST /submit-job
 - `input_file`: (string, required) Path to the ngen-cal input file inside the container (e.g., `/ngencerf/data/test_calib/kge_dds/cfe_noah/01123000/Input/01123000_config_calib.yaml`).
 - `job_stage`: (string, required) Required to initiate the callback.
 - `output_file`: (string, required) Path to the SLURM job log file in the controller node.
+- `auth_token`: (string, required) Token to authenticate with http://localhost:8000/calibration/slurm_callback/.
+
 
 **Response:**
 - `slurm_job_id`: The SLURM job ID (different from the ngen-cal job ID).
@@ -31,7 +33,8 @@ curl -X POST http://<controller-ip>:5000/submit-job \
     -F "job_type=calibration" \
     -F "input_file=/ngencerf/data/test_calib/kge_dds/cfe_noah/01123000/Input/01123000_config_calib.yaml" \
     -F "job_stage=this-is-a-string" \
-    -F "output_file=test.out" 
+    -F "output_file=test.out" \
+    -F "auth_token=authentication-token
 ```
 
 **Note:**
@@ -39,7 +42,7 @@ curl -X POST http://<controller-ip>:5000/submit-job \
 - The `slurm_job_id` is the SLURM-specific job identifier assigned when the job is submitted to the SLURM scheduler.
 
 
-### 2. Submit a Job
+### 2. Check Job Status
 Check the status of a submitted SLURM job.
 
 **Endpoint:** 
@@ -51,7 +54,9 @@ GET /job-status
 
 **Response:**
 - `slurm_job_id`: The SLURM job ID (different from the ngen-cal job ID).
-- `status`: The current status of the job as reported by the SLURM scheduler (PENDING, RUNNING, COMPLETED, FAILED, etc.).
+- `job_id`: (string, required) Unique identifier for the `ngen-cal` job.
+- `job_stage`: (string, required) Required to initiate the callback.
+- `auth_token`: (string, required) Token to authenticate with http://localhost:8000/calibration/slurm_callback/.
 
 **Curl Example:**
 ```
@@ -74,7 +79,10 @@ POST /cancel-job
 **Curl Example:**
 ```
 curl -X POST http://<controller-ip>:5000/cancel-job \
-    -F "slurm_job_id=123456"
+    -F "slurm_job_id=123456" \
+    -F "job_id=123" \
+    -F "job_stage=CALIBRATION" \
+    -F "auth_token=authentication-token" 
 ```
 
 ## Error Handling

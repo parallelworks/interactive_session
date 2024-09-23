@@ -5,7 +5,10 @@ url = 'http://localhost:5000/cancel-job'
 
 # SLURM Job ID to cancel
 slurm_job_data = {
-    'slurm_job_id': '4'
+    'slurm_job_id': '4',
+    'process_id': '141_peter',
+    'job_stage': "CALIBRATION",
+    'auth_token': 'Authentication-token'
 }
 
 try:

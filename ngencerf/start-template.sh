@@ -66,7 +66,7 @@ mkdir -p ./tmp
 # Need to overwrite default configuration!
 touch empty
 singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} &
-echo "kill ${pid}" >> cancel.sh
+echo "kill $!" >> cancel.sh
 
 
 ##################################
@@ -92,7 +92,10 @@ sudo -n pip3.8 install requests
 #sudo env LOCAL_DATA_DIR=${LOCAL_DATA_DIR} CONTAINER_DATA_DIR=${CONTAINER_DATA_DIR}  NGEN_CAL_SINGULARITY_CONTAINER_PATH=${NGEN_CAL_SINGULARITY_CONTAINER_PATH} python3.8 slurm-wrapper-app.py > slurm-wrapper-app.log 2>&1 &
 #slurm_wrapper_pid=$!
 #echo "sudo kill ${slurm_wrapper_pid}" >> cancel.sh
-gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app.log 2>&1 &
+
+#gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app.log 2>&1 &
+python3.8 slurm-wrapper-app.py > slurm-wrapper-app.log 2>&1 &
+
 slurm_wrapper_pid=$!
 echo "kill ${slurm_wrapper_pid}" >> cancel.sh
 

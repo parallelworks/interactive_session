@@ -105,6 +105,7 @@ def submit_job():
     # Check the file exists on the shared file system
     # Path to the input file on the shared file system
     input_file_local = input_file.replace(CONTAINER_DATA_DIR, LOCAL_DATA_DIR)
+    output_file_local = output_file.replace(CONTAINER_DATA_DIR, LOCAL_DATA_DIR)
     if not os.path.exists(input_file_local):
         return jsonify({"error": f"File path '{input_file_local}' does not exist on the shared filesystem under {LOCAL_DATA_DIR}."}), 400
 

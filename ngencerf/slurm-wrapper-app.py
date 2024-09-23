@@ -112,7 +112,7 @@ def submit_job():
     try:
         # FIXME: Remove
         grant_access()
-        os.makedirs(os.path.dirname(output_file), exist_ok=True)
+        os.makedirs(os.path.dirname(output_file_local), exist_ok=True)
 
         # Save the script to the job's directory
         job_script = write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage, output_file, auth_token)

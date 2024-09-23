@@ -1,6 +1,7 @@
 import subprocess
 import os
 from flask import Flask, request, jsonify
+import requests
 
 # Path to the data directory in the shared filesystem
 LOCAL_DATA_DIR = os.environ.get('LOCAL_DATA_DIR') #"/ngencerf-app/data/ngen-cal-data/"
@@ -10,24 +11,48 @@ CONTAINER_DATA_DIR = os.environ.get('CONTAINER_DATA_DIR') #"/ngencerf/data/"
 NGEN_CAL_SINGULARITY_CONTAINER_PATH = os.environ.get('NGEN_CAL_SINGULARITY_CONTAINER_PATH')
 # Command to launch singularity
 SINGULARITY_CMD = f"singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} {NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
+# CALLBACK URL
+CALLBACK_URL = 'http://localhost:8000/calibration/slurm_callback/'
 
 app = Flask(__name__)
 
-def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage, output_file):
+def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage, output_file, auth_token):
     # FIXME: remove test write commands
     job_script = input_file_local.replace('.yaml', '.slurm.sh')
 
     cmd = f"{SINGULARITY_CMD} {job_type} {input_file}"
+
+    # Write the SLURM script
     with open(job_script, 'w') as script:
         script.write('#!/bin/bash\n')
         script.write(f'#SBATCH --job-name={job_id}\n')
         script.write('#SBATCH --nodes=1\n')
         script.write('#SBATCH --ntasks-per-node=1\n')
         script.write(f'#SBATCH --output={output_file}\n')
+
+        # Define variables for job ID and stage
         script.write(f"job_id=\"{job_id}\"\n")
         script.write(f"job_stage=\"{job_stage}\"\n")
-        script.write(f'{cmd}\n')
-        script.write(f'echo Job Completed\n')
+        
+        # Execute the singularity command
+        script.write(f'{cmd}\n') 
+        
+        # Check if the command was successful and set the job status accordingly
+        script.write('if [ $? -eq 0 ]; then\n')
+        script.write('    job_status="DONE"\n')
+        script.write('else\n')
+        script.write('    job_status="FAILED"\n')
+        script.write('fi\n')
+        
+        # Send the status back using the curl command
+        script.write(f'curl --location \'{CALLBACK_URL}\' \\\n')
+        script.write('    --header \'Content-Type: application/json\' \\\n')
+        script.write(f'    --header \'Authorization: Bearer {auth_token}\' \\\n')
+        script.write(f'    --data \'{{"process_id": "{job_id}", "stage": "{job_stage}", "job_status": "$job_status"}}\'\n')
+        
+        # Print a message indicating the job completion
+        script.write('echo Job Completed with status $job_status\n')
+
     
     return job_script
 
@@ -44,6 +69,8 @@ def submit_job():
     job_stage = request.form.get('job_stage')
     # Path to the SLURM job log file in the controller node
     output_file = request.form.get('output_file')
+    # Path to the SLURM job log file in the controller node
+    auth_token = request.form.get('auth_token')
 
     if not job_id:
         return jsonify({"error": "No job ID provided"}), 400
@@ -62,6 +89,9 @@ def submit_job():
     if not output_file:
         return jsonify({"error": "No output_file provided"}), 400
     
+    if not auth_token:
+        return jsonify({"error": "No auth_token provided"}), 400
+
     # Check the file exists on the shared file system
     # Path to the input file on the shared file system
     input_file_local = input_file.replace(CONTAINER_DATA_DIR, LOCAL_DATA_DIR)
@@ -70,7 +100,7 @@ def submit_job():
 
     try:
         # Save the script to the job's directory
-        job_script = write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage, output_file)
+        job_script = write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage, output_file, auth_token)
 
         # Use subprocess to run sbatch and capture the output
         result = subprocess.run(["sbatch", job_script], capture_output=True, text=True)
@@ -121,9 +151,24 @@ def job_status():
 def cancel_job():
     # Get job ID from request
     slurm_job_id = request.form.get('slurm_job_id')
+     # ngen-cal job id
+    job_id = request.form.get('job_id')
+    # Job stage string for callback
+    job_stage = request.form.get('job_stage')
+    # Auth token for callback
+    auth_token = request.form.get('auth_token')
 
     if not slurm_job_id:
         return jsonify({"error": "No job ID provided"}), 400
+    
+    if not job_id:
+        return jsonify({"error": "No job ID provided"}), 400
+
+    if not job_stage:
+        return jsonify({"error": "No job_stage provided"}), 400
+
+    if not auth_token:
+        return jsonify({"error": "No auth_token provided"}), 400
 
     try:
         # Use subprocess to run scancel
@@ -131,7 +176,25 @@ def cancel_job():
 
         if result.returncode != 0:
             return jsonify({"error": result.stderr.strip()}), 500
+        
+        # Trigger the callback to notify job cancellation using requests
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {auth_token}'
+        }
+        payload = {
+            "process_id": job_id,
+            "stage": job_stage,
+            "job_status": "CANCELED"
+        }
 
+        # Send the callback request
+        response = requests.post(CALLBACK_URL, headers=headers, json=payload)
+
+        # Check if the callback was successful
+        if response.status_code != 200:
+            return jsonify({"error": f"Callback failed: {response.text}"}), 500
+        
         return jsonify({"message": f"Job {slurm_job_id} cancelled successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

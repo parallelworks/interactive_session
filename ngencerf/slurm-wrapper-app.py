@@ -16,6 +16,16 @@ CALLBACK_URL = 'http://localhost:8000/calibration/slurm_callback/'
 
 app = Flask(__name__)
 
+
+def grant_access():
+    try:
+        # Grant read and write access to the LOCAL_DATA_DIR
+        command = f"sudo chmod -R 775 {LOCAL_DATA_DIR}"
+        subprocess.run(command, shell=True, check=True)
+        return {"success": True, "message": f"Access granted to {local_data_dir}"}
+    except subprocess.CalledProcessError as e:
+        return {"success": False, "message": str(e)}
+
 def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage, output_file, auth_token):
     # FIXME: remove test write commands
     job_script = input_file_local.replace('.yaml', '.slurm.sh')
@@ -99,6 +109,8 @@ def submit_job():
         return jsonify({"error": f"File path '{input_file_local}' does not exist on the shared filesystem under {LOCAL_DATA_DIR}."}), 400
 
     try:
+        # FIXME: Remove
+        grant_access()
         # Save the script to the job's directory
         job_script = write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage, output_file, auth_token)
 

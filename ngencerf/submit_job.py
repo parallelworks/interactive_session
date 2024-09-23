@@ -9,7 +9,8 @@ job_data = {
     'job_type': 'calibration',
     'input_file': '/ngencerf/data/test_calib/kge_dds/cfe_noah/01123000/Input/01123000_config_calib.yaml',
     'job_stage': 'this-is-a-string',
-    'output_file': 'test.out'
+    'output_file': 'test.out',
+    'auth_token': 'this-is-the-auth-token'
 }
 
 try:

@@ -12,7 +12,7 @@ NGEN_CAL_SINGULARITY_CONTAINER_PATH = os.environ.get('NGEN_CAL_SINGULARITY_CONTA
 # Command to launch singularity
 SINGULARITY_CMD = f"singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} {NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
 # CALLBACK URL
-CALLBACK_URL = 'http://localhost:8000/calibration/slurm_callback/'
+CALLBACK_URL = os.environ.get('CALLBACK_URL') #'http://localhost:8000/calibration/slurm_callback/'
 
 app = Flask(__name__)
 

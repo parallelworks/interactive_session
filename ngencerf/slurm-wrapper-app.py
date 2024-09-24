@@ -23,16 +23,19 @@ job_data = {}
 
 hostname = socket.gethostname()
 
-def grant_access():
+def grant_ownership(job_dir):
     try:
-        # Grant read and write access to the LOCAL_DATA_DIR
-        command = f"sudo chmod -R 777 {LOCAL_DATA_DIR}"
-        subprocess.run(command, shell=True, check=True)
-        return {"success": True, "message": f"Access granted to {LOCAL_DATA_DIR}"}
+        # Get the current user's UID and GID
+        current_uid = os.getuid()
+        current_gid = os.getgid()
+        # Change ownership of the directory to the current user
+        command_chown = f"sudo chown -R {current_uid}:{current_gid} {job_dir}"
+        subprocess.run(command_chown, shell=True, check=True)
+        return {"success": True, "message": f"Access granted to {job_dir}"}
     except subprocess.CalledProcessError as e:
         return {"success": False, "message": str(e)}
 
-def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage, output_file, auth_token):
+def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage, output_file_local, auth_token):
     # FIXME: remove test write commands
     job_script = input_file_local.replace('.yaml', '.slurm.sh')
 
@@ -44,7 +47,7 @@ def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage
         script.write(f'#SBATCH --job-name={job_id}\n')
         script.write('#SBATCH --nodes=1\n')
         script.write('#SBATCH --ntasks-per-node=1\n')
-        script.write(f'#SBATCH --output={output_file}\n')
+        script.write(f'#SBATCH --output={output_file_local}\n')
         
         # Execute the singularity command
         script.write(f'{cmd}\n') 
@@ -118,7 +121,8 @@ def submit_job():
 
     try:
         # FIXME: Remove
-        grant_access()
+        job_dir = os.path.dirname(os.path.dirname(input_file_local))
+        grant_ownership(job_dir)
         os.makedirs(os.path.dirname(output_file_local), exist_ok=True)
 
         # Save the script to the job's directory
@@ -203,9 +207,11 @@ def cancel_job():
     try:
         # Use subprocess to run scancel
         result = subprocess.run(["scancel", slurm_job_id], capture_output=True, text=True)
-
+        
         if result.returncode != 0:
             return jsonify({"error": result.stderr.strip()}), 500
+        
+        del job_data[slurm_job_id]
         
         # Trigger the callback to notify job cancellation using requests
         headers = {
@@ -225,7 +231,6 @@ def cancel_job():
         if response.status_code != 200:
             return jsonify({"error": f"Callback failed: {response.text}"}), 500
         
-        del job_data[slurm_job_id]
         return jsonify({"message": f"Job {slurm_job_id} cancelled successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

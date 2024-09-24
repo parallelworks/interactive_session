@@ -79,10 +79,7 @@ POST /cancel-job
 **Curl Example:**
 ```
 curl -X POST http://<controller-ip>:5000/cancel-job \
-    -F "slurm_job_id=123456" \
-    -F "job_id=123" \
-    -F "job_stage=CALIBRATION" \
-    -F "auth_token=authentication-token" 
+    -F "slurm_job_id=123456" 
 ```
 
 ## Error Handling

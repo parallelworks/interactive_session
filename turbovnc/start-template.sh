@@ -1,6 +1,32 @@
 # Make sure no conda environment is activated! 
 # https://github.com/parallelworks/issues/issues/1081
 
+start_desktop_with_retries() {
+    local service_desktop="$1"
+    local max_retries=5
+    local retry_count=0
+
+    while true; do
+        eval ${service_desktop} &  # Run the command in the background
+        service_desktop_pid=$!
+        sleep $((2+retry_count))   # Wait for a short moment to let the command attempt to start
+
+        # Check if the process is running
+        if pgrep -x "$(basename ${service_desktop})" > /dev/null; then
+            echo "${service_desktop} started successfully."
+            break
+        else
+            echo "Failed to start ${service_desktop}. Retrying..."
+            ((retry_count++))
+            if [ ${retry_count} -ge ${max_retries} ]; then
+                echo "Reached maximum retries. Exiting."
+                return 1
+            fi
+        fi
+    done
+}
+
+
 if [ -z ${service_novnc_parent_install_dir} ]; then
     service_novnc_parent_install_dir=${HOME}/pw/software
 fi
@@ -198,9 +224,8 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     chmod 755 /run/user/$(id -u)/dconf
 
     # Start desktop here too just in case
-    eval ${service_desktop} &
-    echo "$!" >> ${resource_jobdir}/service.pid
-
+    start_desktop_with_retries ${service_desktop} 
+    echo "${service_desktop_pid}" >> ${resource_jobdir}/service.pid
 fi
 
 cd ${service_novnc_install_dir}

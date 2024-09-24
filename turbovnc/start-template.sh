@@ -1,30 +1,48 @@
 # Make sure no conda environment is activated! 
 # https://github.com/parallelworks/issues/issues/1081
 
-start_desktop_with_retries() {
-    local service_desktop="$1"
+start_gnome_session_with_retries() {
     local max_retries=5
     local retry_count=0
 
-    while true; do
-        eval ${service_desktop} &  # Run the command in the background
-        service_desktop_pid=$!
-        sleep $((2+retry_count))   # Wait for a short moment to let the command attempt to start
+    # Function to check if the session is already running on the global DISPLAY
+    is_session_running() {
+        for pid in $(ps -ef | grep gnome-session-binary | grep -v grep | awk '{print $2}'); do
+            display=$(cat /proc/${pid}/environ | tr '\0' '\n' | grep DISPLAY | cut -d'=' -f2)
+            if [[ "${DISPLAY}" == "${display}" ]]; then
+                return 0
+            fi
+        done
+        return 1
+    }
 
-        # Check if the process is running
-        if pgrep -x "$(basename ${service_desktop})" > /dev/null; then
-            echo "${service_desktop} started successfully."
-            break
+    # First check if the session is already running
+    if is_session_running; then
+        echo "A gnome-session is already running on display $DISPLAY."
+        return 0
+    fi
+
+    # Attempt to start the service if it's not running
+    while true; do
+        gnome-session &  # Start the session
+        service_desktop_pid=$!
+        sleep $((2+retry_count))  # Wait for a short moment to let the command attempt to start
+
+        # Check if the session is now running
+        if is_session_running; then
+            echo "gnome-session started successfully on display $DISPLAY."
+            break  # Exit the loop if the service started
         else
-            echo "Failed to start ${service_desktop}. Retrying..."
+            echo "Failed to start gnome-session on display $DISPLAY. Retrying..."
             ((retry_count++))
-            if [ ${retry_count} -ge ${max_retries} ]; then
+            if [ $retry_count -ge $max_retries ]; then
                 echo "Reached maximum retries. Exiting."
-                return 1
+                return 1  # Exit the function with a non-zero status
             fi
         fi
     done
 }
+
 
 
 if [ -z ${service_novnc_parent_install_dir} ]; then
@@ -195,10 +213,6 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         echo '/etc/X11/xinit/xinitrc' >> ~/.vnc/xstartup
         chmod +x ~/.vnc/xstartup
     fi
-    
-    if ! grep -q gnome-session turbovnc/start-template.sh; then
-        echo "${service_desktop} &" >> ~/.vnc/xstartup
-    fi
 
     # service_vnc_type needs to be an input to the workflow in the XML
     # if vncserver is not tigervnc
@@ -219,12 +233,18 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         ssh -N -f localhost &
         echo $! > ${resource_jobdir}/service.pid
     fi
+    
     mkdir -p /run/user/$(id -u)/dconf
     chmod og+rx /run/user/$(id -u)
     chmod 755 /run/user/$(id -u)/dconf
 
     # Start desktop here too just in case
-    start_desktop_with_retries ${service_desktop} 
+    if [[ ${service_desktop} == "gnome-session" ]]; then
+        start_gnome_session_with_retries
+    else
+        eval ${service_desktop} &
+        service_desktop_pid=$!
+    fi
     echo "${service_desktop_pid}" >> ${resource_jobdir}/service.pid
 fi
 

@@ -60,15 +60,16 @@ def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage
         script.write('fi\n')
         
         # Send the status back using the curl command
-        script.write(f'curl --location \'{CALLBACK_URL}\' \\\n')
-        script.write('    --header \'Content-Type: application/json\' \\\n')
-        script.write(f'    --header \'Authorization: Bearer {auth_token}\' \\\n')
-        script.write(f'    --data \'{{"process_id": "{job_id}", "stage": "{job_stage}", "job_status": "$job_status"}}\'\n')
-        
+        script.write(f'curl --location "{CALLBACK_URL}" \\\n')
+        script.write('    --header "Content-Type: application/json" \\\n')
+        script.write(f'    --header "Authorization: Bearer {auth_token}" \\\n')
+        script.write(f'    --data "{{\\"process_id\\": \\"{job_id}\\", \\"stage\\": \\"{job_stage}\\", \\"job_status\\": \\"$job_status\\"}}"\n')
+
         # Added: Trigger a callback to clean up job_data entry after job completion
-        script.write(f'curl --location \'http://{hostname}:5000/cleanup-job\' \\\n')
-        script.write('    --header \'Content-Type: application/json\' \\\n')
-        script.write(f'    --data \'{{"slurm_job_id": "$SLURM_JOB_ID"}}\'\n')
+        script.write(f'curl --location "http://{hostname}:5000/cleanup-job" \\\n')
+        script.write('    --header "Content-Type: application/json" \\\n')
+        script.write(f'    --data "{{\\"slurm_job_id\\": \\"$SLURM_JOB_ID\\"}}"\n')
+
 
         # Print a message indicating the job completion
         script.write('echo Job Completed with status $job_status\n')

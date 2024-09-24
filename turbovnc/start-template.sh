@@ -195,10 +195,6 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         echo '/etc/X11/xinit/xinitrc' >> ~/.vnc/xstartup
         chmod +x ~/.vnc/xstartup
     fi
-    
-    if ! grep -q gnome-session turbovnc/start-template.sh; then
-        echo "${service_desktop} &" >> ~/.vnc/xstartup
-    fi
 
     # service_vnc_type needs to be an input to the workflow in the XML
     # if vncserver is not tigervnc

@@ -12,15 +12,15 @@ start_desktop_with_retries() {
         sleep $((2+retry_count))   # Wait for a short moment to let the command attempt to start
 
         # Check if the process is running
-        if pgrep -x "$(basename ${service_desktop})" > /dev/null; then
+        if ps -p "${service_pid}" > /dev/null; then
             echo "${service_desktop} started successfully."
-            break
+            break  # Exit the loop if the service started
         else
             echo "Failed to start ${service_desktop}. Retrying..."
             ((retry_count++))
-            if [ ${retry_count} -ge ${max_retries} ]; then
+            if [ $retry_count -ge $max_retries ]; then
                 echo "Reached maximum retries. Exiting."
-                return 1
+                return 1  # Exit the function with a non-zero status
             fi
         fi
     done
@@ -215,6 +215,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         ssh -N -f localhost &
         echo $! > ${resource_jobdir}/service.pid
     fi
+    
     mkdir -p /run/user/$(id -u)/dconf
     chmod og+rx /run/user/$(id -u)
     chmod 755 /run/user/$(id -u)/dconf

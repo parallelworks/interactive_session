@@ -3,7 +3,7 @@ import os
 from flask import Flask, request, jsonify
 import requests
 import socket
-
+import json
 
 # Path to the data directory in the shared filesystem
 LOCAL_DATA_DIR = os.environ.get('LOCAL_DATA_DIR') #"/ngencerf-app/data/ngen-cal-data/"
@@ -220,7 +220,7 @@ def cancel_job():
         }
 
         # Send the callback request
-        response = requests.post(CALLBACK_URL, headers=headers, json=payload)
+        response = requests.post(CALLBACK_URL, headers=headers, data=json.dumps(payload))
 
         # Check if the callback was successful
         if response.status_code != 200:

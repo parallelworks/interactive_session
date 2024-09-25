@@ -18,9 +18,6 @@ CALLBACK_URL = os.environ.get('CALLBACK_URL') #'http://localhost:8000/calibratio
 
 app = Flask(__name__)
 
-# Dictionary to store job details keyed by job_id
-job_data = {}
-
 hostname = socket.gethostname()
 
 def grant_ownership(job_dir):
@@ -64,12 +61,6 @@ def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage
         script.write('    --header "Content-Type: application/json" \\\n')
         script.write(f'    --header "Authorization: Bearer {auth_token}" \\\n')
         script.write(f'    --data "{{\\"process_id\\": \\"{job_id}\\", \\"stage\\": \\"{job_stage}\\", \\"job_status\\": \\"$job_status\\"}}"\n')
-
-        # Added: Trigger a callback to clean up job_data entry after job completion
-        script.write(f'curl --location "http://{hostname}:5000/cleanup-job" \\\n')
-        script.write('    --header "Content-Type: application/json" \\\n')
-        script.write(f'    --data "{{\\"slurm_job_id\\": \\"$SLURM_JOB_ID\\"}}"\n')
-
 
         # Print a message indicating the job completion
         script.write('echo Job Completed with status $job_status\n')
@@ -138,14 +129,6 @@ def submit_job():
         # Parse SLURM job ID from sbatch output
         slurm_job_id = result.stdout.strip().split()[-1]
 
-        # Store job details in the dictionary
-        job_data[slurm_job_id] = {
-            'job_stage': job_stage,
-            'auth_token': auth_token,
-            'job_id': job_id
-        }
-
-
         return jsonify({"slurm_job_id": slurm_job_id}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -189,15 +172,6 @@ def cancel_job():
 
     if not slurm_job_id:
         return jsonify({"error": "No job ID provided"}), 400
-    
-    # Retrieve job details from the dictionary using slurm_job_id as the key
-    job_details = job_data.get(slurm_job_id)
-    if not job_details:
-        return jsonify({"error": "Job not found"}), 404
-    
-    job_stage = job_details['job_stage']
-    auth_token = job_details['auth_token']
-    job_id = job_details['job_id']
 
     try:
         # Use subprocess to run scancel
@@ -206,45 +180,11 @@ def cancel_job():
         if result.returncode != 0:
             return jsonify({"error": result.stderr.strip()}), 500
         
-        del job_data[slurm_job_id]
-        
-        # Trigger the callback to notify job cancellation using requests
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {auth_token}'
-        }
-        payload = {
-            "process_id": job_id,
-            "stage": job_stage,
-            "job_status": "CANCELED"
-        }
-
-        # Send the callback request
-        response = requests.post(CALLBACK_URL, headers=headers, data=json.dumps(payload))
-
-        # Check if the callback was successful
-        if response.status_code != 200:
-            return jsonify({"error": f"Callback failed: {response.text}"}), 500
         
         return jsonify({"message": f"Job {slurm_job_id} cancelled successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-@app.route('/cleanup-job', methods=['POST'])
-def cleanup_job():
-    slurm_job_id = request.json.get('slurm_job_id')
-
-    if not slurm_job_id:
-        return jsonify({"error": "No SLURM job ID provided"}), 400
-
-    # Check if the job exists in the dictionary
-    if slurm_job_id in job_data:
-        # Remove the job entry from the dictionary
-        del job_data[slurm_job_id]
-        return jsonify({"message": f"Job {slurm_job_id} removed from job_data"}), 200
-    else:
-        return jsonify({"error": f"Job {slurm_job_id} not found in job_data"}), 404
 
 
 if __name__ == '__main__':

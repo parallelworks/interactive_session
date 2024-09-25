@@ -122,6 +122,12 @@ jobs:
             type: string
             hidden: true
             default: openvscode
+          parent_install_dir:
+            label: Parent Install Directory
+            type: string
+            default: __WORKDIR__/pw/software
+            tooltip: 
+              Defaults to ~/pw/software. Make sure there is enough disk space available!
           download_url:
             label: Download URL
             type: string

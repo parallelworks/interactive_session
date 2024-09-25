@@ -109,6 +109,13 @@
           value='openvscode'  
         ></param>
         <param 
+          name='parent_install_dir' 
+          label='Parent Install Directory' 
+          type='text' 
+          value='__WORKDIR__/pw/software'
+          help='Defaults to ~/pw/software. Make sure there is enough disk space available!' 
+        ></param>
+        <param 
           name='download_url' 
           label='Download URL' 
           type='text' 

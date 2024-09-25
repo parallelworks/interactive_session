@@ -186,12 +186,6 @@ def job_status():
 def cancel_job():
     # Get job ID from request
     slurm_job_id = request.form.get('slurm_job_id')
-    # ngen-cal job id
-    job_id = request.form.get('job_id')
-    # Job stage string for callback
-    job_stage = request.form.get('job_stage')
-    # Auth token for callback
-    auth_token = request.form.get('auth_token')
 
     if not slurm_job_id:
         return jsonify({"error": "No job ID provided"}), 400

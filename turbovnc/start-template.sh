@@ -4,9 +4,11 @@
 
 
 start_gnome_session_with_retries() {
+    k=1
     while true; do
         gnome-session
-        sleep 2
+        sleep $((k*60))
+        k=$((k+1))
     done
 }
 
@@ -207,7 +209,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
 
     # Start desktop here too just in case
     if [[ ${service_desktop} == "gnome-session" ]]; then
-        start_gnome_session_with_retries &
+        start_gnome_session_with_retries &> /dev/null &
         service_desktop_pid=$!
     else
         eval ${service_desktop} &

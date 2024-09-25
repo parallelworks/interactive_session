@@ -3,7 +3,7 @@ import os
 from flask import Flask, request, jsonify
 import requests
 import socket
-
+import json
 
 # Path to the data directory in the shared filesystem
 LOCAL_DATA_DIR = os.environ.get('LOCAL_DATA_DIR') #"/ngencerf-app/data/ngen-cal-data/"
@@ -186,12 +186,6 @@ def job_status():
 def cancel_job():
     # Get job ID from request
     slurm_job_id = request.form.get('slurm_job_id')
-    # ngen-cal job id
-    job_id = request.form.get('job_id')
-    # Job stage string for callback
-    job_stage = request.form.get('job_stage')
-    # Auth token for callback
-    auth_token = request.form.get('auth_token')
 
     if not slurm_job_id:
         return jsonify({"error": "No job ID provided"}), 400
@@ -226,7 +220,7 @@ def cancel_job():
         }
 
         # Send the callback request
-        response = requests.post(CALLBACK_URL, headers=headers, json=payload)
+        response = requests.post(CALLBACK_URL, headers=headers, data=json.dumps(payload))
 
         # Check if the callback was successful
         if response.status_code != 200:

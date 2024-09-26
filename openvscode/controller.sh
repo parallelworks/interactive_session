@@ -55,6 +55,7 @@ fi
 if [ -z ${service_parent_install_dir} ]; then
     service_parent_install_dir=${HOME}/pw/software
 fi
+mkdir -p ${service_parent_install_dir}
 
 # code-server-4.92.2-linux-amd64.tar.gz
 service_tgz_basename=$(echo ${service_download_url} | rev | cut -d'/' -f1 | rev)

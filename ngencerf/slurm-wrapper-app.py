@@ -2,6 +2,7 @@ import subprocess
 import os
 from flask import Flask, request, jsonify
 import socket
+hostname = socket.gethostname()
 
 # Path to the data directory in the shared filesystem
 LOCAL_DATA_DIR = os.environ.get('LOCAL_DATA_DIR') #"/ngencerf-app/data/ngen-cal-data/"
@@ -9,14 +10,14 @@ LOCAL_DATA_DIR = os.environ.get('LOCAL_DATA_DIR') #"/ngencerf-app/data/ngen-cal-
 CONTAINER_DATA_DIR = os.environ.get('CONTAINER_DATA_DIR') #"/ngencerf/data/"
 # Path to the singularity container with ngen-cal
 NGEN_CAL_SINGULARITY_CONTAINER_PATH = os.environ.get('NGEN_CAL_SINGULARITY_CONTAINER_PATH')
+# URL to callback from ngencal to the other services
+NGENCERF_URL=f"http://{hostname}:8000"
 # Command to launch singularity
-SINGULARITY_CMD = f"singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} --env VAR1=value1 {NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
+SINGULARITY_CMD = f"singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} --env NGENCERF_URL={NGENCERF_URL} {NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
 # CALLBACK URL
 CALLBACK_URL = os.environ.get('CALLBACK_URL') #'http://localhost:8000/calibration/slurm_callback/'
 
 app = Flask(__name__)
-
-hostname = socket.gethostname()
 
 def grant_ownership(job_dir):
     try:

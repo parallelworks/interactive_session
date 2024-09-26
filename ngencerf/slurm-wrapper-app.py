@@ -1,9 +1,7 @@
 import subprocess
 import os
 from flask import Flask, request, jsonify
-import requests
 import socket
-import json
 
 # Path to the data directory in the shared filesystem
 LOCAL_DATA_DIR = os.environ.get('LOCAL_DATA_DIR') #"/ngencerf-app/data/ngen-cal-data/"
@@ -12,7 +10,7 @@ CONTAINER_DATA_DIR = os.environ.get('CONTAINER_DATA_DIR') #"/ngencerf/data/"
 # Path to the singularity container with ngen-cal
 NGEN_CAL_SINGULARITY_CONTAINER_PATH = os.environ.get('NGEN_CAL_SINGULARITY_CONTAINER_PATH')
 # Command to launch singularity
-SINGULARITY_CMD = f"singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} {NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
+SINGULARITY_CMD = f"singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} --env VAR1=value1 {NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
 # CALLBACK URL
 CALLBACK_URL = os.environ.get('CALLBACK_URL') #'http://localhost:8000/calibration/slurm_callback/'
 

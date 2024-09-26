@@ -85,7 +85,6 @@ sudo -n chmod -R u+rw ${LOCAL_DATA_DIR}
 # Install Flask
 sudo -n pip3.8 install Flask
 sudo -n pip3.8 install gunicorn
-sudo -n pip3.8 install requests
 
 # Start Flask app using gunicorn
 #gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app.log 2>&1 &

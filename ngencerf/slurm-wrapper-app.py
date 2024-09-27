@@ -47,6 +47,7 @@ def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage
         script.write('#SBATCH --ntasks-per-node=1\n')
         script.write(f'#SBATCH --output={output_file_local}\n')
         script.write('\n')
+        script.write('echo Running Job $SLURM_JOB_ID \n\n')
         
         # Execute the singularity command
         script.write(f'{cmd}\n') 

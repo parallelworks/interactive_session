@@ -48,8 +48,6 @@ def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage
         script.write(f'#SBATCH --output={output_file_local}\n')
         script.write('\n')
         
-        script.write('echo Running Job $SLURM_JOB_ID \n\n')
-        
         # Execute the singularity command
         script.write(f'{cmd}\n') 
         script.write('echo\n\n')
@@ -66,15 +64,12 @@ def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage
         script.write('echo Job Completed with status $job_status\n')
         script.write('echo\n\n')
 
-        # Try to capture performance with "Reserved" first
-        # Cannot run sacct directly on the compute node
-        script.write(f'ssh -o StrictHostKeyChecking=no {CONTROLLER_HOSTNAME} sacct -j $SLURM_JOB_ID -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Reserved >> {performance_log}\n')
-
-        # If "Reserved" doesn't work, try "Planned"
-        script.write('if [ $? -ne 0 ]; then\n')
-        script.write(f'    ssh -o StrictHostKeyChecking=no {CONTROLLER_HOSTNAME} sacct -j $SLURM_JOB_ID -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Planned >> {performance_log}\n')
-        script.write('fi\n')
+        # Call the Flask endpoint to get job status
+        script.write(f'curl --location -X POST http://{CONTROLLER_HOSTNAME}:5000/run-sacct \\\n')
+        script.write(f'    --form "slurm_job_id=$SLURM_JOB_ID" \\\n')
+        script.write(f'    --form "output_file={performance_log}"\n')
         script.write('echo\n\n')
+
 
         # Send the status back using the curl command
         script.write(f'curl --location "{CALLBACK_URL}" \\\n')
@@ -201,6 +196,34 @@ def cancel_job():
         
         return jsonify({"message": f"Job {slurm_job_id} cancelled successfully"}), 200
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+@app.route('/run-sacct', methods=['POST'])
+def run_sacct():
+    # Get the SLURM job ID from the request
+    slurm_job_id = request.form.get('slurm_job_id')
+    # Get the output file path where to write the output
+    output_file = request.form.get('output_file')
+
+    if not slurm_job_id:
+        return jsonify({"error": "No SLURM job ID provided"}), 400
+
+    if not output_file:
+        return jsonify({"error": "No output file provided"}), 400
+
+    try:
+        # Your existing code for running the sacct command
+        # For example:
+        performance_log = output_file.replace('stdout', 'performance')
+        cmd = f'sacct -j {slurm_job_id} -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Reserved > {performance_log}'
+        
+        subprocess.run(cmd, shell=True, check=True)
+
+        return jsonify({"success": True, "message": f"Job status written to {performance_log}"}), 200
+
+    except subprocess.CalledProcessError as e:
         return jsonify({"error": str(e)}), 500
 
 

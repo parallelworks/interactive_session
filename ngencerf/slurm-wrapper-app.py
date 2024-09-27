@@ -2,7 +2,8 @@ import subprocess
 import os
 from flask import Flask, request, jsonify
 import socket
-hostname = socket.gethostname()
+
+CONTROLLER_HOSTNAME = socket.gethostname()
 
 # Path to the data directory in the shared filesystem
 LOCAL_DATA_DIR = os.environ.get('LOCAL_DATA_DIR') #"/ngencerf-app/data/ngen-cal-data/"
@@ -11,9 +12,9 @@ CONTAINER_DATA_DIR = os.environ.get('CONTAINER_DATA_DIR') #"/ngencerf/data/"
 # Path to the singularity container with ngen-cal
 NGEN_CAL_SINGULARITY_CONTAINER_PATH = os.environ.get('NGEN_CAL_SINGULARITY_CONTAINER_PATH')
 # URL to callback from ngencal to the other services
-NGENCERF_URL=f"http://{hostname}:8000"
+NGENCERF_URL=f"http://{CONTROLLER_HOSTNAME}:8000"
 # Command to launch singularity
-SINGULARITY_CMD = f"singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} --env NGENCERF_URL={NGENCERF_URL} {NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
+SINGULARITY_CMD = f"/usr/bin/time -v singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} --env NGENCERF_URL={NGENCERF_URL} {NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
 # CALLBACK URL
 CALLBACK_URL = os.environ.get('CALLBACK_URL') #'http://localhost:8000/calibration/slurm_callback/'
 
@@ -32,8 +33,9 @@ def grant_ownership(job_dir):
         return {"success": False, "message": str(e)}
 
 def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage, output_file_local, auth_token):
-    # FIXME: remove test write commands
     job_script = input_file_local.replace('.yaml', '.slurm.sh')
+    # Performance statistics
+    performance_log = output_file_local.replace('stdout', 'performance')
 
     cmd = f"{SINGULARITY_CMD} {job_type} {input_file}"
 
@@ -44,25 +46,40 @@ def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage
         script.write('#SBATCH --nodes=1\n')
         script.write('#SBATCH --ntasks-per-node=1\n')
         script.write(f'#SBATCH --output={output_file_local}\n')
+        script.write('\n')
         
         # Execute the singularity command
         script.write(f'{cmd}\n') 
-        
+        script.write('echo\n\n')
+
         # Check if the command was successful and set the job status accordingly
         script.write('if [ $? -eq 0 ]; then\n')
         script.write('    job_status="DONE"\n')
         script.write('else\n')
         script.write('    job_status="FAILED"\n')
         script.write('fi\n')
-        
+        script.write('echo\n\n')
+
+        # Print a message indicating the job completion
+        script.write('echo Job Completed with status $job_status\n')
+        script.write('echo\n\n')
+
+        # Try to capture performance with "Reserved" first
+        # Cannot run sacct directly on the compute node
+        script.write(f'ssh {CONTROLLER_HOSTNAME} sacct -j $SLURM_JOB_ID -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Reserved >> {performance_log}\n')
+
+        # If "Reserved" doesn't work, try "Planned"
+        script.write('if [ $? -ne 0 ]; then\n')
+        script.write(f'    ssh {CONTROLLER_HOSTNAME} sacct -j $SLURM_JOB_ID -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Planned >> {performance_log}\n')
+        script.write('fi\n')
+        script.write('echo\n\n')
+
         # Send the status back using the curl command
         script.write(f'curl --location "{CALLBACK_URL}" \\\n')
         script.write('    --header "Content-Type: application/json" \\\n')
         script.write(f'    --header "Authorization: Bearer {auth_token}" \\\n')
         script.write(f'    --data "{{\\"process_id\\": \\"{job_id}\\", \\"stage\\": \\"{job_stage}\\", \\"job_status\\": \\"$job_status\\"}}"\n')
-
-        # Print a message indicating the job completion
-        script.write('echo Job Completed with status $job_status\n')
+        script.write('\n')
 
     
     return job_script

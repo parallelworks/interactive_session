@@ -119,7 +119,7 @@ jobs:
           load_env:
             label: Command to load RStudio to the PATH
             type: string
-            default: sudo yum install octave.x86_64 -y
+            default: sudo yum install -y qt5-qttools-libs-help octave
             optional: true
             tooltip: To load the environment, enter the appropriate command, for example, module load module-name or source path/to/env.sh.
           bin:

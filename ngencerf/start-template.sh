@@ -3,6 +3,16 @@ set -x
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
+# Check if the public key is already in authorized_keys
+if grep -q -f "${HOME}/.ssh/pw_id_rsa.pub" "${HOME}/.ssh/authorized_keys"; then
+    echo "Public key is already in the authorized_keys file."
+else
+    # Append the public key to authorized_keys if it's not already there
+    cat "${HOME}/.ssh/pw_id_rsa.pub" >> "${HOME}/.ssh/authorized_keys"
+    echo "Public key added to authorized_keys."
+fi
+chmod 600 ${HOME}/.ssh/authorized_keys
+
 if [[ "${service_only_connect}" == "true" ]]; then
     echo "Connecting to existing ngencerf service listening on port ${service_existing_port}"
     # Notify platform that service is running

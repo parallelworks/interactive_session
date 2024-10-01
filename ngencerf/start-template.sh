@@ -18,7 +18,7 @@ else
     cat "${HOME}/.ssh/pw_id_rsa.pub" >> "${HOME}/.ssh/authorized_keys"
     echo "Public key added to authorized_keys."
 fi
-chmod 600 ${HOME}/.ssh/authorized_keys ${HOME}/.ssh/pw_id_rsa
+chmod 600 ${HOME}/.ssh/authorized_keys ${HOME}/.ssh/pw_id_rsa ${HOME}/.ssh/pw_id_rsa.pub
 
 
 

@@ -72,7 +72,7 @@ def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage
         # sacct_cmd depends on the SLURM version!
         #sacct_cmd = 'sacct -j $SLURM_JOB_ID -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Planned'
         ssh_cmd = f'ssh -i ~/.ssh/pw_id_rsa -o StrictHostKeyChecking=no {CONTROLLER_HOSTNAME}'
-        script.write(f'sbatch --dependency=afterok:$SLURM_JOB_ID --wrap=\"{ssh_cmd} ${sacct_cmd} >> {performance_log}\"\n')
+        script.write(f'sbatch --dependency=afterok:$SLURM_JOB_ID --wrap=\"{ssh_cmd} {sacct_cmd} >> {performance_log}\"\n')
 
         # Send the status back using the curl command
         script.write(f'curl --location "{CALLBACK_URL}" \\\n')

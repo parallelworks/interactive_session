@@ -3,6 +3,13 @@ set -x
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
+if [[ "${service_only_connect}" == "true" ]]; then
+    echo "Connecting to existing ngencerf service listening on port ${service_existing_port}"
+    # Notify platform that service is running
+    ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
+    sleep infinity
+fi
+
 # Check if the public key is already in authorized_keys
 if grep -q -f "${HOME}/.ssh/pw_id_rsa.pub" "${HOME}/.ssh/authorized_keys"; then
     echo "Public key is already in the authorized_keys file."
@@ -11,14 +18,8 @@ else
     cat "${HOME}/.ssh/pw_id_rsa.pub" >> "${HOME}/.ssh/authorized_keys"
     echo "Public key added to authorized_keys."
 fi
-chmod 600 ${HOME}/.ssh/authorized_keys
+chmod 600 ${HOME}/.ssh/authorized_keys ${HOME}/.ssh/pw_id_rsa
 
-if [[ "${service_only_connect}" == "true" ]]; then
-    echo "Connecting to existing ngencerf service listening on port ${service_existing_port}"
-    # Notify platform that service is running
-    ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
-    sleep infinity
-fi
 
 
 if ! [ -f "${service_nginx_sif}" ]; then

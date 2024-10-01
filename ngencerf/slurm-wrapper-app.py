@@ -208,7 +208,7 @@ def run_sacct():
     # Get the SLURM job ID from the request
     slurm_job_id = request.form.get('slurm_job_id')
     # Get the output file path where to write the output
-    performance_file = request.form.get('output_file')
+    performance_file = request.form.get('performance_file')
 
     if not slurm_job_id:
         return jsonify({"error": "No SLURM job ID provided"}), 400

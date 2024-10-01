@@ -68,11 +68,11 @@ def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage
 
         # Try to capture performance with "Reserved" first
         # Cannot run sacct directly on the compute node
-        script.write(f'ssh -i ~/.ssh/pw_id_rsa.pub -o StrictHostKeyChecking=no {CONTROLLER_HOSTNAME} sacct -j $SLURM_JOB_ID -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Reserved >> {performance_log}\n')
+        script.write(f'ssh -i ~/.ssh/pw_id_rsa -o StrictHostKeyChecking=no {CONTROLLER_HOSTNAME} sacct -j $SLURM_JOB_ID -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Reserved >> {performance_log}\n')
 
         # If "Reserved" doesn't work, try "Planned"
         script.write('if [ $? -ne 0 ]; then\n')
-        script.write(f'    ssh -i ~/.ssh/pw_id_rsa.pub -o StrictHostKeyChecking=no {CONTROLLER_HOSTNAME} sacct -j $SLURM_JOB_ID -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Planned >> {performance_log}\n')
+        script.write(f'    ssh -i ~/.ssh/pw_id_rsa -o StrictHostKeyChecking=no {CONTROLLER_HOSTNAME} sacct -j $SLURM_JOB_ID -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Planned >> {performance_log}\n')
         script.write('fi\n')
         script.write('echo\n\n')
 

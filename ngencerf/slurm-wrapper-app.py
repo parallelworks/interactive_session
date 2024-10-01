@@ -203,5 +203,26 @@ def cancel_job():
 
 
 
+@app.route('/run-sacct', methods=['POST'])
+def run_sacct():
+    # Get the SLURM job ID from the request
+    slurm_job_id = request.form.get('slurm_job_id')
+    # Get the output file path where to write the output
+    performance_file = request.form.get('output_file')
+
+    if not slurm_job_id:
+        return jsonify({"error": "No SLURM job ID provided"}), 400
+    if not performance_file:
+        return jsonify({"error": "No performance file path provided"}), 400
+    try:
+        # Your existing code for running the sacct command
+        # For example:
+        cmd = f'sacct -j {slurm_job_id} -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Reserved > {performance_file}'
+        
+        subprocess.run(cmd, shell=True, check=True)
+        return jsonify({"success": True, "message": f"Job status written to {performance_file}"}), 200
+    except subprocess.CalledProcessError as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

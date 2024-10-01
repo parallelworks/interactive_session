@@ -1,15 +1,6 @@
 # Make sure no conda environment is activated! 
 # https://github.com/parallelworks/issues/issues/1081
 
-if [[ "$resource_type" != slurm* && "$resource_type" != "existing" ]]; then
-	if grep -q "Rocky Linux release 8" /etc/redhat-release; then
-		if ! [ -f /var/tmp/dbus.restart ]; then
-    		echo Restarting dbus daemon 
-    		sudo systemctl restart dbus
-    		touch /var/tmp/dbus.restart
-		fi
-	fi
-fi
 
 
 start_gnome_session_with_retries() {

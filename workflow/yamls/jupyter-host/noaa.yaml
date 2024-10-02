@@ -196,7 +196,7 @@ jobs:
           yaml:
             label: Paste Conda Environment Defition YAML
             type: editor
-            hidden: ${{ inputs.service.install_instructions_tag_cloud !== yaml ||  inputs.service.conda_install == false}}
+            hidden: ${{ inputs.service.install_instructions_tag_cloud !== yaml ||  inputs.service.conda_install == false || 'existing' === inputs.pwrl_host.resource.provider }}
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}
             tooltip:

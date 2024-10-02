@@ -57,13 +57,17 @@ jobs:
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
           _sch__dd_partition_e__tag_existing:
+            type: dropdown
             label: SLURM partition
-            type:  slurm-partitions
-            resource: ${{ inputs.pwrl_host.resource }}
-            tooltip: SLURM partition to submit the interactive job
             hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
-            optional: ${{ .hidden }}
+            options:
+              - label: service
+                value: service 
+            default: service           
+            tooltip: >-
+              Partition to submit the interactive job. Leave empty to let SLURM
+              pick the optimal option.
           qos_tag_existing:
             label: Quality of Service [QoS]
             type: slurm-qos

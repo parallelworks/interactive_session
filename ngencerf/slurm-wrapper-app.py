@@ -15,8 +15,12 @@ NGEN_CAL_SINGULARITY_CONTAINER_PATH = os.environ.get('NGEN_CAL_SINGULARITY_CONTA
 NGENCERF_URL=f"http://{CONTROLLER_HOSTNAME}:8000"
 # Command to launch singularity
 SINGULARITY_CMD = f"/usr/bin/time -v singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} --env NGENCERF_URL={NGENCERF_URL} {NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
+# Command to obtain git hashes
+SINGULARITY_CMD_EXEC = f"singularity exec -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} --env NGENCERF_URL={NGENCERF_URL} {NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
 # CALLBACK URL
 CALLBACK_URL = os.environ.get('CALLBACK_URL') #'http://localhost:8000/calibration/slurm_callback/'
+# Files with the git hashes within ngen-cal container
+NGEN_CAL_GIT_HASH_FILES = '/ngen-app/ngen/.git/HEAD /ngen-app/ngen/.git/HEAD'
 
 app = Flask(__name__)
 
@@ -31,6 +35,26 @@ def grant_ownership(job_dir):
         return {"success": True, "message": f"Access granted to {job_dir}"}
     except subprocess.CalledProcessError as e:
         return {"success": False, "message": str(e)}
+    
+def get_git_hashes():
+    """Retrieve git commit hashes from the ngen-cal container."""
+    try:
+        command = f'{SINGULARITY_CMD_EXEC} cat {NGEN_CAL_GIT_HASH_FILES}'
+        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+        if result.returncode != 0:
+            return None, result.stderr.strip()
+        
+        # The output should contain two lines, one for each commit hash
+        hashes = result.stdout.strip().splitlines()
+        if len(hashes) != 2:
+            output = ', '.join(hashes)
+            return None, f"Unexpected output from singularity command {output}"
+        
+        ngen_commit_hash = hashes[0].split()[-1]  # Extract the last part of the line
+        ngen_cal_commit_hash = hashes[1].split()[-1]
+        return ngen_commit_hash, ngen_cal_commit_hash
+    except Exception as e:
+        return None, str(e)
 
 def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage, output_file_local, auth_token):
     job_script = input_file_local.replace('.yaml', '.slurm.sh')
@@ -127,6 +151,11 @@ def submit_job():
     if not os.path.exists(input_file_local):
         return jsonify({"error": f"File path '{input_file_local}' does not exist on the shared filesystem under {LOCAL_DATA_DIR}."}), 400
 
+    # Get commit hashes before job submission
+    ngen_commit_hash, ngen_cal_commit_hash = get_git_hashes()
+    if ngen_commit_hash is None:  # Check for error during hash retrieval
+        return jsonify({"error": ngen_cal_commit_hash}), 500
+
     try:
         # FIXME: Remove
         job_dir = os.path.dirname(os.path.dirname(input_file_local))
@@ -145,7 +174,7 @@ def submit_job():
         # Parse SLURM job ID from sbatch output
         slurm_job_id = result.stdout.strip().split()[-1]
 
-        return jsonify({"slurm_job_id": slurm_job_id}), 200
+        return jsonify({"slurm_job_id": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_cal_commit_hash": ngen_cal_commit_hash}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

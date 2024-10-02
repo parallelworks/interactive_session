@@ -136,7 +136,7 @@ jobs:
             tooltip: 
               This is the directory that you start with when the JupyterHub graphical user interface starts. The default value here is your home directory.
           conda_install:
-            label: Install miniconda environment if not there?
+            label: Install Jupyter-Notebook If Not There?
             type: boolean
             default: true
             tooltip:

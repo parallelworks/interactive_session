@@ -159,7 +159,7 @@ jobs:
           yaml:
             label: Paste Conda Environment Defition YAML
             type: editor
-            hidden: ${{ inputs.service.install_instructions !== yaml }}
+            hidden: ${{ inputs.service.install_instructions !== yaml ||  inputs.service.conda_install == false }}
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}
             tooltip:

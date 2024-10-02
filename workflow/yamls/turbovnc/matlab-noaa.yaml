@@ -130,7 +130,6 @@ jobs:
           name:
             type: dropdown
             label: Select remote display protocol
-            hidden: ${{ 'existing' === inputs.pwrl_host.resource.provider }}
             options:
               - label: VNC Server
                 value: turbovnc
@@ -140,12 +139,13 @@ jobs:
                 value: scw
             tooltip: Make sure the display protocol is installed in the host!
             default: turbovnc
+            hidden: ${{ 'existing' === inputs.pwrl_host.resource.provider }}
           vnc_type:
             label: VNC Server Type
             type: string
             default: turbovnc
             hidden: true
-            ignore:  ${{ 'existing' === inputs.pwrl_host.resource.provider }}
+            ignore: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
           desktop:
             label: Desktop Session
             type: string

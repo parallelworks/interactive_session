@@ -116,7 +116,6 @@ jobs:
       service:
         type: group
         label: Service
-        hidden: ${{ 'existing' === inputs.pwrl_host.resource.provider }}
         items:
           novnc_parent_install_dir:
             label: noVNC installation directory
@@ -131,6 +130,7 @@ jobs:
           name:
             type: dropdown
             label: Select remote display protocol
+            hidden: ${{ 'existing' === inputs.pwrl_host.resource.provider }}
             options:
               - label: VNC Server
                 value: turbovnc
@@ -145,12 +145,27 @@ jobs:
             type: string
             default: turbovnc
             hidden: true
-            ignore: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore:  ${{ 'existing' === inputs.pwrl_host.resource.provider }}
           desktop:
             label: Desktop Session
             type: string
             default: mate-session
             hidden: true
             ignore: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+          load_env:
+            label: Command to load MATLAB to the PATH
+            type: string
+            default: module load matlab
+            tooltip: "To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh."
+          bin:
+            label: Command to launch MATLAB
+            type: string
+            default: matlab -desktop
+            tooltip: Command to start MATLAB
+          background:
+            label: Run service in background
+            type: boolean
+            default: true
+            hidden: true
 
         

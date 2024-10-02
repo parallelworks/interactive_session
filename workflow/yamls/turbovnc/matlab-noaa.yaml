@@ -120,7 +120,6 @@ jobs:
       service:
         type: group
         label: Service
-        hidden: ${{ 'existing' === inputs.pwrl_host.resource.provider }}
         items:
           novnc_parent_install_dir:
             label: noVNC installation directory
@@ -144,6 +143,7 @@ jobs:
                 value: scw
             tooltip: Make sure the display protocol is installed in the host!
             default: turbovnc
+            hidden: ${{ 'existing' === inputs.pwrl_host.resource.provider }}
           vnc_type:
             label: VNC Server Type
             type: string
@@ -156,5 +156,20 @@ jobs:
             default: mate-session
             hidden: true
             ignore: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+          load_env:
+            label: Command to load MATLAB to the PATH
+            type: string
+            default: module load matlab
+            tooltip: "To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh."
+          bin:
+            label: Command to launch MATLAB
+            type: string
+            default: matlab -desktop
+            tooltip: Command to start MATLAB
+          background:
+            label: Run service in background
+            type: boolean
+            default: true
+            hidden: true
 
         

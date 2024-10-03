@@ -186,12 +186,12 @@ jobs:
             type: dropdown
             hidden: ${{ inputs.service.conda_install == false || ('existing' === inputs.pwrl_host.resource.provider  &&  inputs.service.use_conda == false) }}
             ignore: ${{ .hidden }}
-            default: notebook7.0.8-python3.12.1
+            default: notebook7.2.2-python3.12.2
             options:
               - value: latest
                 label: Latest default versions of Jupyter Notebook and Python (not thoroughly tested)
-              - value: notebook7.0.8-python3.12.1
-                label: Jupyter Notebook 7.0.8 with Python version 3.12.1
+              - value: notebook7.2.2-python3.12.2
+                label: Jupyter Notebook 7.2.2 with Python version 3.12.2
               - value: notebook6.5.4-python3.9.18
                 label: Jupyter Notebook 6.5.4 with Python version 3.9.18
               - value: yaml

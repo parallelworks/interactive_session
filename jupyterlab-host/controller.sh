@@ -15,10 +15,10 @@ f_install_miniconda() {
     echo "Installing Miniconda3-latest-Linux-x86_64.sh"
     conda_repo="https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"
     ID=$(date +%s)-${RANDOM} # This script may run at the same time!
-    nohup wget --no-check-certificate ${conda_repo} -O /tmp/miniconda-${ID}.sh 2>&1 > /tmp/miniconda_wget-${ID}.out
+    wget --no-check-certificate ${conda_repo} -O /tmp/miniconda-${ID}.sh
     rm -rf ${install_dir}
     mkdir -p $(dirname ${install_dir})
-    nohup bash /tmp/miniconda-${ID}.sh -b -p ${install_dir} 2>&1 > /tmp/miniconda_sh-${ID}.out
+    bash /tmp/miniconda-${ID}.sh -b -p ${install_dir}
 }
 
 f_set_up_conda_from_yaml() {

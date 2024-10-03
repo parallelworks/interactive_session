@@ -172,10 +172,10 @@
         label='Select Jupyter Notebook Installation' 
         show_if='{"service.conda_install":"true","pwrl_host.resource.provider":["gclusterv2", "pclusterv2", "azclusterv2", "aws-slurm", "google-slurm", "azure-slurm"]}'
         multiple='false'
-        value='notebook7.0.8-python3.12.1'
+        value='notebook7.2.2-python3.12.2'
         options = "[
           {'label': 'Latest default versions of Jupyter Notebook and Python (not thoroughly tested)', 'value': 'latest'}, 
-          {'label': 'Jupyter Notebook 7.0.8 with Python version 3.12.1', 'value': 'notebook7.0.8-python3.12.1'}, 
+          {'label': 'Jupyter Notebook 7.2.2 with Python version 3.12.2', 'value': 'notebook7.2.2-python3.12.2'}, 
           {'label': 'Jupyter Notebook 6.5.4 with Python version 3.9.18', 'value': 'notebook6.5.4-python3.9.18'}, 
           {'label': 'Provide custom Conda environment YAML file', 'value': 'yaml'}
         ]">

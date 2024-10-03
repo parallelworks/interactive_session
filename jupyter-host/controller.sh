@@ -76,9 +76,9 @@ if [[ "${service_conda_install}" == "true" ]]; then
             eval "conda activate ${service_conda_env}"
         }
         if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
-            conda install -c anaconda jupyter -y
-            conda install nb_conda_kernels -y
-            conda install -c anaconda jinja2 -y
+            conda install conda-forge::jupyter-book -y
+            conda install conda-forge::nb_conda_kernels -y
+            conda install conda-forge::jinja2 -y
         fi
     else
         rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" usercontainer:${pw_job_dir}/${service_name}/${service_install_instructions}.yaml conda.yaml

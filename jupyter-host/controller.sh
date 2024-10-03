@@ -1,6 +1,12 @@
 
 sshusercontainer="ssh ${resource_ssh_usercontainer_options_controller} -f ${USER_CONTAINER_HOST}"
 
+service_conda_sh=${service_conda_install_dir}/etc/profile.d/conda.sh
+service_conda_parent_install_dir=$(dirname ${service_conda_install_dir})
+if [ -z "${service_nginx_sif}" ]; then
+    service_nginx_sif=${service_conda_parent_install_dir}/nginx-unprivileged.sif
+fi
+
 
 displayErrorMessage() {
     echo $(date): $1
@@ -51,16 +57,46 @@ f_set_up_conda_from_yaml() {
 }
 
 
+download_singularity_container() {
+    # 1. Clone the repository with --no-checkout
+    export GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no'
+    # Needed for emed
+    git config --global --unset http.sslbackend
+    git clone --no-checkout https://github.com/parallelworks/interactive_session.git
+
+    # 2. Navigate into the repository directory
+    cd interactive_session
+    #git checkout download-dependencies
+
+    # 3. Initialize sparse-checkout
+    git sparse-checkout init
+
+    # 4. Configure sparse-checkout to include only the desired file
+    echo downloads/jupyter/nginx-unprivileged.sif > .git/info/sparse-checkout
+
+    # 5. Perform the checkout
+    git checkout
+
+    # 6. Extract tgz
+    cp downloads/jupyter/nginx-unprivileged.sif ${service_nginx_sif}
+
+    # 7. Clean
+    cd ../
+    rm -rf interactive_session
+    
+}
+
+
+
 if [[ "${service_conda_install}" == "true" ]]; then
     
     ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Installing"
 
-    service_conda_dir=$(echo "${service_conda_sh}" | sed 's|/etc/profile.d/conda.sh||')
     if [[ "${service_install_instructions}" == "install_command" ]]; then
         eval ${service_install_command}
     elif [[ "${service_install_instructions}" == "yaml" ]]; then
         printf "%b" "${service_yaml}" > conda.yaml
-        f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
+        f_set_up_conda_from_yaml ${service_conda_install_dir} ${service_conda_env} conda.yaml
     elif [[ "${service_install_instructions}" == "latest" ]]; then
         {
             source ${service_conda_sh}
@@ -82,7 +118,7 @@ if [[ "${service_conda_install}" == "true" ]]; then
         fi
     else
         rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" usercontainer:${pw_job_dir}/${service_name}/${service_install_instructions}.yaml conda.yaml
-        f_set_up_conda_from_yaml ${service_conda_dir} ${service_conda_env} conda.yaml
+        f_set_up_conda_from_yaml ${service_conda_install_dir} ${service_conda_env} conda.yaml
     fi
 else
     eval "${service_load_env}"
@@ -109,4 +145,16 @@ fi
 if [[ $service_install_kernels == *"R-kernel"* ]]; then
     conda install r-recommended r-irkernel -y
     R -e 'IRkernel::installspec()'
+fi
+
+
+# Download singularity container if required
+jupyter_major_version=$(jupyter notebook --version | cut -d'.' -f1)
+echo "Jupyter version is"
+jupyter notebook --version 
+
+if [ "${jupyter_major_version}" -ge 7 ]; then
+    if [ -f "${service_nginx_sif}" ]; then
+        download_singularity_container
+    fi
 fi

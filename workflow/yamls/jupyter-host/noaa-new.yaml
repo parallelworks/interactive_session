@@ -150,14 +150,13 @@ jobs:
             ignore: ${{ .hidden }}
             tooltip:
               Select Yes to install Jupyter in miniconda environment and No to load an existing python environment
-          conda_sh:
-            label: Path to conda environment
+          conda_install_dir:
+            label: Path for Conda Installation Directory
             type: string
-            default: __WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh
+            default: __WORKDIR__/pw/software/.miniconda3c
             hidden: ${{ inputs.service.conda_install == false || ('existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
             ignore: ${{ .hidden }}
-            tooltip:
-              Path to use in source /path/to/conda.sh
+            tooltip: Ensure the directory has sufficient space for Conda and its packages.
           conda_env:
             label: Conda environment
             type: string
@@ -168,7 +167,7 @@ jobs:
             tooltip:
               Environment to active. The base environment enables changing kernel to other environments!
           load_env_tag_cloud:
-            label: Command to load Jupyter Notebook
+            label: Command to load Jupyter Notebook to the PATH
             type: string
             default: source __WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base
             hidden:  ${{ 'existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false}}

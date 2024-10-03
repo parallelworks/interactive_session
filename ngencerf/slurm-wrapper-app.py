@@ -92,7 +92,7 @@ def write_slurm_script(job_id, job_type, input_file, input_file_local, job_stage
 
         # Try to capture performance with "Reserved" first
         # Cannot run sacct directly on the compute node
-        sacct_cmd = 'sacct -j $SLURM_JOB_ID -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Reserved'
+        sacct_cmd = 'sacct -j $SLURM_JOB_ID -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Reserved --parsable --units=K'
         # sacct_cmd depends on the SLURM version!
         #sacct_cmd = 'sacct -j $SLURM_JOB_ID -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Planned'
         ssh_cmd = f'ssh -i ~/.ssh/pw_id_rsa -o StrictHostKeyChecking=no {CONTROLLER_HOSTNAME}'
@@ -246,7 +246,7 @@ def run_sacct():
     try:
         # Your existing code for running the sacct command
         # For example:
-        cmd = f'sacct -j {slurm_job_id} -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Reserved > {performance_file}'
+        cmd = f'sacct -j {slurm_job_id} -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Reserved --parsable --units=K > {performance_file}'
         
         subprocess.run(cmd, shell=True, check=True)
         return jsonify({"success": True, "message": f"Job status written to {performance_file}"}), 200

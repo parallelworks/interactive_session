@@ -170,7 +170,7 @@ jobs:
             label: Command to load Jupyter Notebook to the PATH
             type: string
             default: source __WORKDIR__/pw/software/.miniconda3c/etc/profile.d/conda.sh; conda activate base
-            hidden:  ${{ 'existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false}}
+            hidden:  ${{ inputs.service.conda_install == false || ('existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}
           load_env_tag_existing:

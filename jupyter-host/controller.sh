@@ -154,7 +154,7 @@ echo "Jupyter version is"
 jupyter notebook --version 
 
 if [ "${jupyter_major_version}" -ge 7 ]; then
-    if [ -f "${service_nginx_sif}" ]; then
+    if ! [ -f "${service_nginx_sif}" ]; then
         echo; echo "Downloading nginx singularity from Github"
         download_singularity_container
     fi

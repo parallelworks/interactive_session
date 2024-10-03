@@ -20,7 +20,7 @@ SINGULARITY_CMD_EXEC = f"singularity exec -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DI
 # CALLBACK URL
 CALLBACK_URL = os.environ.get('CALLBACK_URL') #'http://localhost:8000/calibration/slurm_callback/'
 # Files with the git hashes within ngen-cal container
-NGEN_CAL_GIT_HASH_FILES = '/ngen-app/ngen/.git/HEAD /ngen-app/ngen/.git/HEAD'
+NGEN_CAL_GIT_HASH_FILES = '/ngen-app/ngen/.git/HEAD /ngen-app/ngen-cal/.git/HEAD'
 
 app = Flask(__name__)
 

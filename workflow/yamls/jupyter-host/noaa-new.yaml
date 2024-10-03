@@ -141,11 +141,20 @@ jobs:
             default: true
             tooltip:
               Select Yes to install Jupyter in miniconda environment and No to load an existing python environment
+          use_conda:
+            label: Use Conda?
+            type: boolean
+            default: false
+            hidden:  ${{ 'existing' !== inputs.pwrl_host.resource.provider  }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip:
+              Select Yes to install Jupyter in miniconda environment and No to load an existing python environment
           conda_sh:
             label: Path to conda environment
             type: string
             default: __WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh
-            hidden: ${{ inputs.service.conda_install == false || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ inputs.service.conda_install == false || ('existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
             ignore: ${{ .hidden }}
             tooltip:
               Path to use in source /path/to/conda.sh
@@ -153,7 +162,7 @@ jobs:
             label: Conda environment
             type: string
             default: base
-            hidden: ${{ inputs.service.conda_install == false || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ inputs.service.conda_install == false || ('existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}
             tooltip:
@@ -162,27 +171,27 @@ jobs:
             label: Command to load Jupyter Notebook
             type: string
             default: source __WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base
-            hidden:  ${{ 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden:  ${{ 'existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false}}
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}
           load_env_tag_existing:
             label: Command to load Jupyter Notebook
             type: string
             default: module load intelpython; export PATH=$PATH:/home/${USER}/.local/bin
-            hidden:  ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden:  ${{ 'existing' !== inputs.pwrl_host.resource.provider ||  inputs.service.use_conda == true }}
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}
           install_instructions_tag_cloud:
             label: Install Instructions
             type: dropdown
-            hidden: ${{ inputs.service.conda_install == false || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ inputs.service.conda_install == false || ('existing' === inputs.pwrl_host.resource.provider  &&  inputs.service.use_conda == false) }}
             ignore: ${{ .hidden }}
-            default: notebook7.0.8-python3.12.1
+            default: notebook7.2.2-python3.12.2
             options:
               - value: latest
                 label: Latest default versions of Jupyter Notebook and Python (not thoroughly tested)
-              - value: notebook7.0.8-python3.12.1
-                label: Jupyter Notebook 7.0.8 with Python version 3.12.1
+              - value: notebook7.2.2-python3.12.2
+                label: Jupyter Notebook 7.2.2 with Python version 3.12.2
               - value: notebook6.5.4-python3.9.18
                 label: Jupyter Notebook 6.5.4 with Python version 3.9.18
               - value: yaml
@@ -192,11 +201,11 @@ jobs:
             type: string
             default: install_command
             hidden: true
-            ignore:  ${{ inputs.service.conda_install == false || 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore:  ${{ inputs.service.conda_install == false || 'existing' !== inputs.pwrl_host.resource.provider ||  inputs.service.use_conda == true  }}
           yaml:
             label: Paste Conda Environment Defition YAML
             type: editor
-            hidden: ${{ inputs.service.install_instructions_tag_cloud !== yaml ||  inputs.service.conda_install == false || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ inputs.service.install_instructions_tag_cloud !== yaml ||  inputs.service.conda_install == false  ||  ('existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}
             tooltip:
@@ -205,7 +214,7 @@ jobs:
             label: Select additional kernels to install
             type: multi-dropdown
             optional: true
-            hidden: ${{ inputs.service.conda_install == false ||  'existing' === inputs.pwrl_host.resource.provider}}
+            hidden: ${{ inputs.service.conda_install == false ||  ('existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false)  }}
             ignore: ${{ .hidden }}
             options:
               - value: julia-kernel
@@ -216,5 +225,5 @@ jobs:
             label: Command to install Jupyter
             type: string
             default: module load intelpython; pip install notebook==6.5.7 --no-warn-script-location
-            hidden:  ${{ inputs.service.conda_install == false || 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden:  ${{ inputs.service.conda_install == false || 'existing' !== inputs.pwrl_host.resource.provider  ||  inputs.service.use_conda == true  }}
             ignore: ${{ .hidden }}

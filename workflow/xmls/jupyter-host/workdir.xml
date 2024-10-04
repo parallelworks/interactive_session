@@ -28,11 +28,19 @@
       float="right"
     ></param>
     <param 
-      name='conda_sh' 
-      label='Path to conda environment' 
+      name='parent_install_dir' 
+      label='Parent Install Directory' 
       type='text' 
-      value='__WORKDIR__/pw/.miniconda/etc/profile.d/conda.sh' 
-      help='Path to use in source /path/to/conda.sh'
+      value='__WORKDIR__/pw/software' 
+      help='Software dependencies are installed in this directory. Ensure the directory has sufficient space!'
+      show_if='service.conda_install'
+    ></param>
+    <param 
+      name='conda_install_dir' 
+      label='Name of the Conda Installation Directory' 
+      type='text' 
+      value='.miniconda3c' 
+      help='Ensure the directory has sufficient space for Conda and its packages.'
       show_if='service.conda_install'
     ></param>
     <param 
@@ -47,8 +55,10 @@
       name='load_env' 
       label='Command to load Jupyter' 
       type='text' 
-      value='source __WORKDIR__/pw/.miniconda/etc/profile.d/conda.sh; conda activate base' 
+      value='source __WORKDIR__/pw/software/.miniconda3c/etc/profile.d/conda.sh; conda activate base' 
       help='To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'
+      show_if="false"
+      depends_on='service.conda_install'
     ></param>
     <param name='install_instructions' 
       show_if='service.conda_install'

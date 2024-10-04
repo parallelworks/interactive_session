@@ -1,12 +1,25 @@
 # Runs via ssh + sbatch
 set -x
 
+
+if [ -z ${service_parent_install_dir} ]; then
+    service_parent_install_dir=${HOME}/pw/software
+fi
+
+if [ -z "${service_nginx_sif}" ]; then
+    service_nginx_sif=${service_parent_install_dir}/nginx-unprivileged.sif
+fi
+
+if [ -z "${service_load_env}" ]; then
+    service_conda_sh=${service_parent_install_dir}/${service_conda_install_dir}/etc/profile.d/conda.sh
+    service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
+fi
+
 eval "${service_load_env}"
 
 if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
     displayErrorMessage "jupyter-notebook command not found"
 fi
-
 
 echo "starting notebook on $service_port..."
 
@@ -122,32 +135,14 @@ server {
 }
 HERE
 
-if [ -f "${service_nginx_sif}" ]; then
-    echo "Running singularity container ${service_nginx_sif}"
-    # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
-    # and other users cannot use the node. Was not able to change this in the config.conf.
-    mkdir -p ./tmp
-    # Need to overwrite default configuration!
-    touch empty
-    singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} &
-    echo "kill ${pid}" >> cancel.sh
-else
-    echo "Running docker container nginx"
-    
-    container_name="nginx-${service_port}"
-    # Remove container when job is canceled
-    echo "sudo docker stop ${container_name}" >> cancel.sh
-    echo "sudo docker rm ${container_name}" >> cancel.sh
-    # Start container
-    sudo service docker start
-    touch empty
-    sudo docker run  -d --name ${container_name}  \
-        -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
-        -v ${PWD}/empty:/etc/nginx/conf.d/default.conf \
-        --network=host nginxinc/nginx-unprivileged:1.25.3
-    # Print logs
-    sudo docker logs ${container_name}
-fi
+echo "Running singularity container ${service_nginx_sif}"
+# We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
+# and other users cannot use the node. Was not able to change this in the config.conf.
+mkdir -p ./tmp
+# Need to overwrite default configuration!
+touch empty
+singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} &
+echo "kill ${pid}" >> cancel.sh
 
 export JUPYTER_CONFIG_DIR=${PWD}
 jupyter notebook --generate-config

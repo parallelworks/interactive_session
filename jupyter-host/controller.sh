@@ -1,10 +1,13 @@
 
 sshusercontainer="ssh ${resource_ssh_usercontainer_options_controller} -f ${USER_CONTAINER_HOST}"
 
-service_conda_sh=${service_conda_install_dir}/etc/profile.d/conda.sh
-service_conda_parent_install_dir=$(dirname ${service_conda_install_dir})
+if [ -z ${service_parent_install_dir} ]; then
+    service_parent_install_dir=${HOME}/pw/software
+fi
+
+service_conda_sh=${service_parent_install_dir}/${service_conda_install_dir}/etc/profile.d/conda.sh
 if [ -z "${service_nginx_sif}" ]; then
-    service_nginx_sif=${service_conda_parent_install_dir}/nginx-unprivileged.sif
+    service_nginx_sif=${service_parent_install_dir}/nginx-unprivileged.sif
 fi
 
 
@@ -96,7 +99,7 @@ if [[ "${service_conda_install}" == "true" ]]; then
         eval ${service_install_command}
     elif [[ "${service_install_instructions}" == "yaml" ]]; then
         printf "%b" "${service_yaml}" > conda.yaml
-        f_set_up_conda_from_yaml ${service_conda_install_dir} ${service_conda_env} conda.yaml
+        f_set_up_conda_from_yaml ${service_parent_install_dir}/${service_conda_install_dir} ${service_conda_env} conda.yaml
     elif [[ "${service_install_instructions}" == "latest" ]]; then
         {
             source ${service_conda_sh}
@@ -118,7 +121,7 @@ if [[ "${service_conda_install}" == "true" ]]; then
         fi
     else
         rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" usercontainer:${pw_job_dir}/${service_name}/${service_install_instructions}.yaml conda.yaml
-        f_set_up_conda_from_yaml ${service_conda_install_dir} ${service_conda_env} conda.yaml
+        f_set_up_conda_from_yaml ${service_parent_install_dir}/${service_conda_install_dir} ${service_conda_env} conda.yaml
     fi
     service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
 fi

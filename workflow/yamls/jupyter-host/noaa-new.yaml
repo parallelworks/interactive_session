@@ -150,10 +150,17 @@ jobs:
             ignore: ${{ .hidden }}
             tooltip:
               Select Yes to install Jupyter in miniconda environment and No to load an existing python environment
-          conda_install_dir:
-            label: Path for Conda Installation Directory
+          parent_install_dir:
+            label: Parent Install Directory  
             type: string
-            default: __WORKDIR__/pw/software/.miniconda3c
+            default:  __WORKDIR__/pw/software
+            hidden: ${{ inputs.service.conda_install == false || ('existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
+            ignore: ${{ .hidden }}
+            tooltip: Software dependencies are installed in this directory. Ensure the directory has sufficient space!
+          conda_install_dir:
+            label: Name of the Conda Installation Directory
+            type: string
+            default: .miniconda3c
             hidden: ${{ inputs.service.conda_install == false || ('existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
             ignore: ${{ .hidden }}
             tooltip: Ensure the directory has sufficient space for Conda and its packages.

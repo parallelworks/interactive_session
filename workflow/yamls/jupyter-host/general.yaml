@@ -105,12 +105,20 @@ jobs:
             default: __WORKDIR__
             tooltip: 
               This is the directory that you start with when the JupyterHub graphical user interface starts. The default value here is your home directory.
-          conda_install:
-            label: Install miniconda environment if not there?
-            type: boolean
-            default: true
-            tooltip:
-              Select Yes to install Jupyter in miniconda environment and No to load an existing python environment
+          parent_install_dir:
+            label: Parent Install Directory  
+            type: string
+            default:  __WORKDIR__/pw/software
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
+            tooltip: Software dependencies are installed in this directory. Ensure the directory has sufficient space!
+          conda_install_dir:
+            label: Name of the Conda Installation Directory
+            type: string
+            default: .miniconda3c
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
+            tooltip: Ensure the directory has sufficient space for Conda and its packages.
           conda_sh:
             label: Path to conda environment
             type: string

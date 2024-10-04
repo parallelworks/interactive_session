@@ -1,6 +1,11 @@
 # Runs via ssh + sbatch
 set -x
 
+if [ -z "${service_load_env}" ]; then
+    service_conda_sh=${service_conda_install_dir}/etc/profile.d/conda.sh
+    service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
+fi
+
 eval "${service_load_env}"
 
 if [ -z $(which jupyter-notebook 2> /dev/null) ]; then

@@ -121,7 +121,6 @@ if [[ "${service_conda_install}" == "true" ]]; then
         f_set_up_conda_from_yaml ${service_conda_install_dir} ${service_conda_env} conda.yaml
     fi
     service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
-    echo "export service_load_env=${service_load_env}" >> resources/host/inputs.sh 
 fi
 eval "${service_load_env}"
 

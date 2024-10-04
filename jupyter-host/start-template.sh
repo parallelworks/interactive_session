@@ -1,6 +1,10 @@
 # Runs via ssh + sbatch
 set -x
 
+if [ -z "${service_nginx_sif}" ]; then
+    service_nginx_sif=${service_conda_parent_install_dir}/nginx-unprivileged.sif
+fi
+
 if [ -z "${service_load_env}" ]; then
     service_conda_sh=${service_conda_install_dir}/etc/profile.d/conda.sh
     service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"

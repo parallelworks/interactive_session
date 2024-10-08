@@ -7,12 +7,6 @@ sed -i "s/.*JOB_STATUS.*/    \"JOB_STATUS\": \"Submitted\",/" service.json
 
 
 if [[ "${use_screen}" == "true" ]]; then
-    # Streaming
-    # Don't really know the extension of the --pushpath. Can't controll with PBS (FIXME)
-    stream_args="--host ${USER_CONTAINER_HOST} --pushpath ${pw_job_dir}/stream.out --pushfile ${resource_jobdir}/logs.out --delay 30 --masterIp ${resource_privateIp}"
-    stream_cmd="bash ${resource_jobdir}/stream-${job_number}.sh ${stream_args} &"
-    echo; echo "Streaming command:"; echo "${stream_cmd}"; echo
-    echo ${stream_cmd} >> ${session_sh}
 
     # Prepare remote directory
     ${sshcmd} mkdir -p ${resource_jobdir}

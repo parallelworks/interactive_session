@@ -26,7 +26,7 @@ cat resources/host/inputs.sh >> ${session_sh}
 # ADD STREAMING
 if [[ "${advanced_options_stream}" != "false" ]]; then
     # Don't really know the extension of the --pushpath. Can't controll with PBS (FIXME)
-    stream_args="--host ${USER_CONTAINER_HOST} --pushpath ${pw_job_dir}/logs.out --pushfile logs.out --delay 30 --masterIp ${resource_privateIp}"
+    stream_args="--host ${USER_CONTAINER_HOST} --pushpath ${pw_job_dir}/stream.out --pushfile logs.out --delay 30 --masterIp ${resource_privateIp}"
     stream_cmd="bash stream-${job_number}.sh ${stream_args} &"
     echo; echo "Streaming command:"; echo "${stream_cmd}"; echo
     echo ${stream_cmd} >> ${session_sh}

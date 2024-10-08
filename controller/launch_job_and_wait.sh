@@ -15,7 +15,7 @@ if [[ "${use_screen}" == "true" ]]; then
     
     # Launch job
     screen_session_name="${workflow_name}-${job_number}"
-    echo "Submitting session with the following command"
+    echo "Submitting session using screen command"
     $sshcmd "screen -dmS ${screen_session_name} bash -c \"${resource_jobdir}/session-${job_number}.sh > ${resource_jobdir}/logs.out 2>&1\""
 
     # Prepare cleanup script

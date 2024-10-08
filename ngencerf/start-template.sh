@@ -103,8 +103,6 @@ sudo -n pip3.8 install gunicorn
 #slurm_wrapper_pid=$!
 #echo "sudo kill ${slurm_wrapper_pid}" >> cancel.sh
 
-export CALLBACK_URL="http://${HOSTNAME}:8000/calibration/slurm_callback/"
-
 #gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app.log 2>&1 &
 python3.8 slurm-wrapper-app.py > slurm-wrapper-app.log 2>&1 &
 

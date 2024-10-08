@@ -29,6 +29,15 @@ if ! [ -z "${resource_jobdir}" ] && ! [[ "${resource_jobdir}" == "default" ]]; t
     echo "cd ${resource_jobdir}" >> ${session_sh}
 fi
 
+if [[ "${use_screen}" == "true" ]]; then
+    # Streaming
+    # Don't really know the extension of the --pushpath. Can't controll with PBS (FIXME)
+    stream_args="--host ${USER_CONTAINER_HOST} --pushpath ${pw_job_dir}/stream.out --pushfile ${resource_jobdir}/logs.out --delay 30 --masterIp ${resource_privateIp}"
+    stream_cmd="bash ${resource_jobdir}/stream-${job_number}.sh ${stream_args} &"
+    echo; echo "Streaming command:"; echo "${stream_cmd}"; echo
+    echo ${stream_cmd} >> ${session_sh}
+fi
+
 cat >> ${session_sh} <<HERE
 sshusercontainer="ssh ${resource_ssh_usercontainer_options} -f ${USER_CONTAINER_HOST}"
 

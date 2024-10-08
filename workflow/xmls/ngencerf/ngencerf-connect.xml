@@ -8,6 +8,12 @@
       type='hidden' 
       value='50505'  
     ></param>
+    <param 
+      name='use_screen' 
+      label='Use screen to run controller sessions' 
+      type='hidden' 
+      value='true'  
+    ></param>
       <param 
         name='service_name' 
         label='Service' 

@@ -10,6 +10,7 @@ if [[ "${use_screen}" == "true" ]]; then
     # Prepare remote directory
     ${sshcmd} mkdir -p ${resource_jobdir}
     scp stream.sh ${resource_publicIp}:${resource_jobdir}/stream-${job_number}.sh
+    scp ${session_sh} ${resource_publicIp}:${resource_jobdir}/session-${job_number}.sh
     
     # Don't really know the extension of the --pushpath. Can't controll with PBS (FIXME)
     stream_args="--host ${USER_CONTAINER_HOST} --pushpath ${pw_job_dir}/stream.out --pushfile logs.out --delay 30 --masterIp ${resource_privateIp}"
@@ -21,7 +22,7 @@ if [[ "${use_screen}" == "true" ]]; then
     screen_session_name="${workflow_name}-${job_number}"
     echo "Submitting session with the following command"
     echo "$sshcmd \"screen -dmS ${screen_session_name} bash -c \\"bash -s > ${resource_jobdir}/logs.out 2>&1\\"\" < ${session_sh}"
-    $sshcmd "screen -dmS ${job_name} bash -c \"bash -s > ${resource_jobdir}/logs.out 2>&1\"" < ${session_sh}
+    $sshcmd "screen -dmS ${screen_session_name} bash -c \"bash -s > ${resource_jobdir}/logs.out 2>&1\"" < ${session_sh}
 
     # Prepare cleanup script
     echo "screen -X -S ${screen_session_name} quit" >> ${kill_ssh}

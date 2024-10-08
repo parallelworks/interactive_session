@@ -60,6 +60,12 @@ get_pbs_job_status() {
 
 }
 
+
+touch stream.out
+tail -f stream.out &
+tail_pid=$!
+echo "kill ${tail_pid}" >> kill.sh
+
 # Job status file writen by remote script:
 while true; do
     sleep 15

@@ -26,14 +26,22 @@
         label="Install miniconda environment if not there?" 
         help='Select Yes to install Jupyter in miniconda environment and No to load an existing python environment'  
       ></param>
-      <param 
-        name='conda_sh' 
-        label='Path to conda environment' 
-        type='text' 
-        value='__WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh' 
-        help='Path to use in source /path/to/conda.sh'
-        show_if='service.conda_install'
-      ></param>
+    <param 
+      name='parent_install_dir' 
+      label='Parent Install Directory' 
+      type='text' 
+      value='__WORKDIR__/pw/software' 
+      help='Software dependencies are installed in this directory. Ensure the directory has sufficient space!'
+      show_if='service.conda_install'
+    ></param>
+    <param 
+      name='conda_install_dir' 
+      label='Name of the Conda Installation Directory' 
+      type='text' 
+      value='.miniconda3c' 
+      help='Ensure the directory has sufficient space for Conda and its packages.'
+      show_if='service.conda_install'
+    ></param>
       <param 
         name='conda_env' 
         label='Conda environment (recommended: base)' 

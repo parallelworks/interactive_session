@@ -80,7 +80,7 @@ server {
 }
 HERE
 
-if [[ "${resource_type}" == "existing" ]]; then
+if [[ "${resource_type}" == "existing" || "${resource_type}" == "slurmshv2" ]]; then
     echo "Running singularity container ${service_nginx_sif}"
     # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
     # and other users cannot use the node. Was not able to change this in the config.conf.

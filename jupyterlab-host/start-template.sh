@@ -80,19 +80,17 @@ server {
 }
 HERE
 
-if [ -f "${service_nginx_sif}" ]; then
+if [[ "${resource_type}" == "existing" ]]; then
     echo "Running singularity container ${service_nginx_sif}"
     # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
     # and other users cannot use the node. Was not able to change this in the config.conf.
     mkdir -p ./tmp
+    # Need to overwrite default configuration!
     touch empty
     singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} &
-    echo "kill $!" >> cancel.sh
+    pid=$!
+    echo "kill ${pid}" >> cancel.sh
 else
-    if ! sudo -n true 2>/dev/null; then
-        displayErrorMessage "ERROR: NGINX DOCKER CONTAINER CANNOT START PW BECAUSE USER ${USER} DOES NOT HAVE SUDO PRIVILEGES"
-    fi
-
     container_name="nginx-${service_port}"
     # Remove container when job is canceled
     echo "sudo docker stop ${container_name}" >> cancel.sh
@@ -107,6 +105,7 @@ else
     # Print logs
     sudo docker logs ${container_name}
 fi
+
 
 ####################
 # START JUPYTERLAB #

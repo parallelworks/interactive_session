@@ -120,7 +120,7 @@ jobs:
           name: 
             type: string
             hidden: true
-            default: jupyter-host
+            default: jupyterlab-host
           password:
             label: Password for notebook session
             type: string

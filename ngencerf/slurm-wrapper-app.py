@@ -14,9 +14,9 @@ NGEN_CAL_SINGULARITY_CONTAINER_PATH = os.environ.get('NGEN_CAL_SINGULARITY_CONTA
 # URL to callback from ngencal to the other services
 NGENCERF_URL=f"http://{CONTROLLER_HOSTNAME}:8000"
 # Command to launch singularity
-SINGULARITY_CMD = f"/usr/bin/time -v singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} --env NGENCERF_URL={NGENCERF_URL} {NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
+SINGULARITY_RUN_CMD = f"/usr/bin/time -v singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} --env NGENCERF_URL={NGENCERF_URL} {NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
 # Command to obtain git hashes
-SINGULARITY_CMD_EXEC = f"singularity exec -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} --env NGENCERF_URL={NGENCERF_URL} {NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
+SINGULARITY_EXEC_CMD = f"singularity exec -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} --env NGENCERF_URL={NGENCERF_URL} {NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
 # CALLBACK URLs
 CALLBACK_URL = f'http://{CONTROLLER_HOSTNAME}:8000/calibration/slurm_callback/'
 
@@ -40,7 +40,7 @@ def grant_ownership(job_dir):
 def get_git_hashes():
     """Retrieve git commit hashes from the ngen-cal container."""
     try:
-        command = f'{SINGULARITY_CMD_EXEC} cat {NGEN_CAL_GIT_HASH_FILES}'
+        command = f'{SINGULARITY_EXEC_CMD} cat {NGEN_CAL_GIT_HASH_FILES}'
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
         if result.returncode != 0:
             return None, result.stderr.strip()
@@ -57,7 +57,7 @@ def get_git_hashes():
     except Exception as e:
         return None, str(e)
 
-def get_callback(callback_url, auth_token, **kwargs):
+def get_callback(auth_token, **kwargs):
     # Prepare the data dictionary excluding the auth_token
     data = {key: value for key, value in kwargs.items()}
 
@@ -74,12 +74,10 @@ def get_callback(callback_url, auth_token, **kwargs):
 
     return callback_command    
 
-def write_slurm_script(run_id, job_type, input_file, input_file_local, output_file_local, callback):
+def write_slurm_script(run_id, input_file_local, output_file_local, singularity_run_cmd, callback):
     job_script = input_file_local.replace('.yaml', '.slurm.sh')
     # Performance statistics
     performance_log = output_file_local.replace('stdout', 'performance')
-
-    cmd = f"{SINGULARITY_CMD} {job_type} {input_file}"
 
     # Write the SLURM script
     with open(job_script, 'w') as script:
@@ -93,7 +91,7 @@ def write_slurm_script(run_id, job_type, input_file, input_file_local, output_fi
         script.write('echo Running Job $SLURM_JOB_ID \n\n')
         
         # Execute the singularity command
-        script.write(f'{cmd}\n') 
+        script.write(f'{singularity_run_cmd}\n') 
         script.write('echo\n\n')
 
         # Check if the command was successful and set the job status accordingly
@@ -122,7 +120,7 @@ def write_slurm_script(run_id, job_type, input_file, input_file_local, output_fi
     
     return job_script
 
-def submit_job(input_file, output_file, job_id, job_type, callback):
+def submit_job(input_file, output_file, job_id, singularity_run_cmd, callback):
     # Check the file exists on the shared file system
     # Path to the input file on the shared file system
     input_file_local = input_file.replace(CONTAINER_DATA_DIR, LOCAL_DATA_DIR)
@@ -142,7 +140,7 @@ def submit_job(input_file, output_file, job_id, job_type, callback):
         os.makedirs(os.path.dirname(output_file_local), exist_ok=True)
 
         # Save the script to the job's directory
-        job_script = write_slurm_script(job_id, job_type, input_file, input_file_local, output_file_local, callback)
+        job_script = write_slurm_script(job_id, input_file_local, output_file_local, singularity_run_cmd, callback)
 
         # Use subprocess to run sbatch and capture the output
         result = subprocess.run(["sbatch", job_script], capture_output=True, text=True)
@@ -168,11 +166,6 @@ def submit_calibration_job():
     output_file = request.form.get('output_file')
     # Path to the SLURM job log file in the controller node
     auth_token = request.form.get('auth_token')
-    # ngen-cal job type: calibration or validation
-    job_type = request.form.get('job_type')  
-    # Job stage string for callback
-    job_stage = request.form.get('job_stage')
-
 
     if not calibration_run_id:
         return jsonify({"error": "No job ID provided"}), 400
@@ -186,32 +179,20 @@ def submit_calibration_job():
     if not auth_token:
         return jsonify({"error": "No auth_token provided"}), 400
     
-    if not job_type:
-        return jsonify({"error": "No job directory provided"}), 400
-    
-    elif job_type not in ['calibration', 'validation']:
-        return jsonify({"error": "Invalid job type. Must be 'calibration' or 'validation'."}), 400
-
-    
-    if not job_stage:
-        return jsonify({"error": "No job_stage provided"}), 400
-    
+    singularity_run_cmd = f"{SINGULARITY_RUN_CMD} calibration {input_file}"
     
     try:
         # Get callback
         callback = get_callback(
-            CALLBACK_URL, 
             auth_token,
             calibration_run_id = calibration_run_id,
-            stage = job_stage,
             job_status = "$job_status"
         )
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-    return submit_job(input_file, output_file, calibration_run_id, job_type, callback)
-    
+    return submit_job(input_file, output_file, calibration_run_id, singularity_run_cmd, callback)
 
 @app.route('/submit-validation-job', methods=['POST'])
 def submit_validation_job():
@@ -223,13 +204,13 @@ def submit_validation_job():
     output_file = request.form.get('output_file')
     # Path to the SLURM job log file in the controller node
     auth_token = request.form.get('auth_token')
+    # ngen-cal job type: calibration or validation
+    job_type = request.form.get('job_type')
     # Worker name
     worker_name = request.form.get('worker_name')
     # Iteration
     iteration = request.form.get('iteration')
 
-    # ngen-cal job type: calibration or validation
-    job_type = 'validation'
 
     if not validation_run_id:
         return jsonify({"error": "No job ID provided"}), 400
@@ -242,33 +223,39 @@ def submit_validation_job():
 
     if not auth_token:
         return jsonify({"error": "No auth_token provided"}), 400
-
-    if not worker_name:
-        return jsonify({"error": "No worker_name provided"}), 400
-
-    if not iteration:
-        return jsonify({"error": "No iteration provided"}), 400
+    
+    # Validate job type and inputs specific to `valid_iteration`
+    if job_type == 'valid_iteration':
+        if not worker_name:
+            return jsonify({"error": "No worker_name provided for job_type 'valid_iteration'"}), 400
+        if not iteration:
+            return jsonify({"error": "No iteration provided for job_type 'valid_iteration'"}), 400
         
-    try:
-        iteration_int = int(iteration)  # Attempt to convert to an integer
-    except ValueError:
-        return jsonify({"error": "Invalid iteration provided; must be an integer"}), 400
+        try:
+            iteration_int = int(iteration)  # Attempt to convert to an integer
+        except ValueError:
+            return jsonify({"error": "Invalid iteration provided; must be an integer"}), 400
+    
+
+    if job_type in ['valid_control', 'valid_best']:
+        singularity_run_cmd = f"{SINGULARITY_RUN_CMD} validation {input_file}"
+    elif job_type == 'valid_iteration':
+        singularity_run_cmd = f"{SINGULARITY_RUN_CMD} validation {input_file} {worker_name} {iteration}"
+    else:
+        return jsonify({"error": "Invalid job_type provided; must be one of 'valid_control', 'valid_best', or 'valid_iteration'"}), 400
 
     try:
         # Get callback
         callback = get_callback(
-            CALLBACK_URL, 
             auth_token,
             validation_run_id = validation_run_id,
-            worker_name = worker_name,
-            iteration = iteration,
             job_status = "$job_status"
         )
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-    return submit_job(input_file, output_file, validation_run_id, job_type, callback)
+    return submit_job(input_file, output_file, validation_run_id, singularity_run_cmd, callback)
 
 @app.route('/job-status', methods=['GET'])
 def job_status():

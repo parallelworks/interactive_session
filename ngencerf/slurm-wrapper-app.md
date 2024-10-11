@@ -17,7 +17,6 @@ POST /submit-calibration-job
 **Request Parameters:**
 - `calibration_run_id`: (string, required) Unique identifier for the `ngen-cal` calibration job.
 - `input_file`: (string, required) Path to the ngen-cal input file inside the container (e.g., `/ngencerf/data/test_calib/kge_dds/cfe_noah/01123000/Input/01123000_config_calib.yaml`).
-- `job_stage`: (string, required) Required to initiate the callback.
 - `output_file`: (string, required) Path to the SLURM job log file in the controller node.
 - `auth_token`: (string, required) Token to authenticate with `http://localhost:8000/calibration/slurm_callback/`.
 
@@ -53,10 +52,11 @@ POST /submit-validation-job
 **Request Parameters:**
 - `validation_run_id`: (string, required) Unique identifier for the `ngen-cal` validation job.
 - `input_file`: (string, required) Path to the ngen-cal input file inside the container (e.g., `/ngencerf/data/test_calib/kge_dds/cfe_noah/01123000/Input/01123000_config_validation.yaml`).
-- `worker_name`: (string, required) Name of the worker processing the job.
-- `iteration`: (integer, required) Current iteration number for the validation job.
 - `output_file`: (string, required) Path to the SLURM job log file in the controller node.
 - `auth_token`: (string, required) Token to authenticate with `http://localhost:8000/calibration/slurm_callback/`.
+- `job_type`: (string, required) The type of job to run using the ngen-cal container. Must be one of the following: valid_control, valid_best or valid_iteration.
+- `worker_name`: (string, required only for valid_iteration) Name of the worker processing the job.
+- `iteration`: (integer, required only for valid_iteration) Current iteration number for the validation job.
 
 **Response:**
 - `slurm_job_id`: The SLURM job ID (different from the ngen-cal job ID).

@@ -240,7 +240,7 @@ def submit_validation_job():
     if job_type in ['valid_control', 'valid_best']:
         singularity_run_cmd = f"{SINGULARITY_RUN_CMD} validation {input_file}"
     elif job_type == 'valid_iteration':
-        singularity_run_cmd = f"{SINGULARITY_RUN_CMD} validation {input_file} {worker_name} {iteration}"
+        singularity_run_cmd = f"{SINGULARITY_RUN_CMD} validation_iteration {input_file} {worker_name} {iteration}"
     else:
         return jsonify({"error": "Invalid job_type provided; must be one of 'valid_control', 'valid_best', or 'valid_iteration'"}), 400
 

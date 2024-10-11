@@ -8,32 +8,30 @@ The environment variables are defined in the XML or YAML definition file of the 
 - `NGEN_CAL_SINGULARITY_CONTAINER_PATH`: Path to the Singularity container that includes `ngen-cal`.
 
 ## API Endpoints
-### 1. Submit a Job
-Submit a `ngen-cal` job to SLURM. The job type can be either a `calibration` or `validation` job.
+### 1. Submit a Calibration Job
+Submit a `ngen-cal` calibration job to SLURM.
 **Endpoint:** 
 ```
-POST /submit-job
+POST /submit-calibration-job
 ```
 **Request Parameters:**
-- `job_id`: (string, required) Unique identifier for the `ngen-cal` job.
-- `job_type`: (string, required) Type of job: either `calibration` or `validation`.
+- `calibration_run_id`: (string, required) Unique identifier for the `ngen-cal` calibration job.
 - `input_file`: (string, required) Path to the ngen-cal input file inside the container (e.g., `/ngencerf/data/test_calib/kge_dds/cfe_noah/01123000/Input/01123000_config_calib.yaml`).
-- `job_stage`: (string, required) Required to initiate the callback.
 - `output_file`: (string, required) Path to the SLURM job log file in the controller node.
-- `auth_token`: (string, required) Token to authenticate with http://localhost:8000/calibration/slurm_callback/.
-
+- `auth_token`: (string, required) Token to authenticate with `http://localhost:8000/calibration/slurm_callback/`.
 
 **Response:**
 - `slurm_job_id`: The SLURM job ID (different from the ngen-cal job ID).
+- `ngen_commit_hash`: Commit hash of the ngen repository
+- `ngen_cal_commit_hash`: Commit hash of the ngen-cal repository
 
 **Curl Example:**
 ```
-curl -X POST http://<controller-ip>:5000/submit-job \
-    -F "job_id=ngen_cal_123" \
-    -F "job_type=calibration" \
+curl -X POST http://<controller-ip>:5000/submit-calibration-job \
+    -F "calibration_run_id=ngen_cal_123" \
     -F "input_file=/ngencerf/data/test_calib/kge_dds/cfe_noah/01123000/Input/01123000_config_calib.yaml" \
     -F "job_stage=this-is-a-string" \
-    -F "output_file=test.out" \
+    -F "output_file=/ngencerf/data/test_calib/kge_dds/cfe_noah/01123000/Input/01123000_config_stdout.out" \
     -F "auth_token=authentication-token"
 ```
 
@@ -41,6 +39,40 @@ curl -X POST http://<controller-ip>:5000/submit-job \
 - The `job_id` is the unique identifier for the ngen-cal job.
 - The `slurm_job_id` is the SLURM-specific job identifier assigned when the job is submitted to the SLURM scheduler.
 
+
+### 2. Submit a Validation Job
+Submit a ngen-cal validation job to SLURM. Endpoint:
+
+**Endpoint:** 
+```
+POST /submit-validation-job
+```
+
+
+**Request Parameters:**
+- `validation_run_id`: (string, required) Unique identifier for the `ngen-cal` validation job.
+- `input_file`: (string, required) Path to the ngen-cal input file inside the container (e.g., `/ngencerf/data/test_calib/kge_dds/cfe_noah/01123000/Input/01123000_config_validation.yaml`).
+- `output_file`: (string, required) Path to the SLURM job log file in the controller node.
+- `auth_token`: (string, required) Token to authenticate with `http://localhost:8000/calibration/slurm_callback/`.
+- `job_type`: (string, required) The type of job to run using the ngen-cal container. Must be one of the following: valid_control, valid_best or valid_iteration.
+- `worker_name`: (string, required only for valid_iteration) Name of the worker processing the job.
+- `iteration`: (integer, required only for valid_iteration) Current iteration number for the validation job.
+
+**Response:**
+- `slurm_job_id`: The SLURM job ID (different from the ngen-cal job ID).
+- `ngen_commit_hash`: Commit hash of the ngen repository
+- `ngen_cal_commit_hash`: Commit hash of the ngen-cal repository
+
+**Curl Example:**
+```
+curl -X POST http://<controller-ip>:5000/submit-validation-job \
+    -F "validation_run_id=ngen_val_123" \
+    -F "input_file=/ngencerf/data/test_calib/kge_dds/cfe_noah/01123000/Input/01123000_config_validation.yaml" \
+    -F "worker_name=worker1" \
+    -F "iteration=1" \
+    -F "output_file=test.out" \
+    -F "auth_token=authentication-token"
+```
 
 ### 2. Check Job Status
 Check the status of a submitted SLURM job.

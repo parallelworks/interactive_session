@@ -3,7 +3,7 @@ jobs:
     steps:
       - name: Preprocessing
         run: ./utils/steps/preprocessing.sh 
-      - name: Run Input Form Resource Wrapper
+      - name: Validating Target Resource
         run: ./utils/steps/input_form_resource_wrapper.sh
       - name: Process Inputs
         run: ./utils/steps/process_inputs_sh.sh 

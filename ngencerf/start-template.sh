@@ -139,6 +139,9 @@ ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 # Run ngencerf-app
 #container_name="ngencerf-ui-ngencerf-app-${service_port}"
 #echo "sudo docker stop ${container_name}" >> cancel.sh
+echo "cd ${service_ngencerf_docker_dir}" >> cancel.sh
+echo "docker compose -f production-pw.yaml down" >> cancel.sh
+
 cd ${service_ngencerf_docker_dir}
 
 # This command fails
@@ -147,9 +150,6 @@ cd ${service_ngencerf_docker_dir}
 # TODO: How about yeah, just run docker compose up from /ngencerf-app/ngencerf-docker/ folder?
 
 #docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui 
-
-echo "cd ${service_ngencerf_docker_dir}" >> cancel.sh
-echo "docker compose -f production-pw.yaml down" >> cancel.sh
 
 if [[ "${service_build}" == "true" ]]; then
     docker compose -f production-pw.yaml up --build -d

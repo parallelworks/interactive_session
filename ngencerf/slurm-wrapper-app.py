@@ -17,8 +17,6 @@ NGENCERF_URL=f"http://{CONTROLLER_HOSTNAME}:8000"
 SINGULARITY_RUN_CMD = f"/usr/bin/time -v singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} --env NGENCERF_URL={NGENCERF_URL} {NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
 # Command to obtain git hashes
 SINGULARITY_EXEC_CMD = f"singularity exec -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} --env NGENCERF_URL={NGENCERF_URL} {NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
-# CALLBACK URLs
-CALLBACK_URL = f'http://{CONTROLLER_HOSTNAME}:8000/calibration/slurm_callback/'
 
 # Files with the git hashes within ngen-cal container
 NGEN_CAL_GIT_HASH_FILES = '/ngen-app/ngen/.git/HEAD /ngen-app/ngen-cal/.git/HEAD'
@@ -57,7 +55,7 @@ def get_git_hashes():
     except Exception as e:
         return None, str(e)
 
-def get_callback(auth_token, **kwargs):
+def get_callback(callback_url, auth_token, **kwargs):
     # Prepare the data dictionary excluding the auth_token
     data = {key: value for key, value in kwargs.items()}
 
@@ -66,7 +64,7 @@ def get_callback(auth_token, **kwargs):
 
     # Construct the complete curl command string
     callback_command = (
-        f'curl --location "{CALLBACK_URL}" \\\n'
+        f'curl --location "{callback_url}" \\\n'
         f'    --header "Content-Type: application/json" \\\n'
         f'    --header "Authorization: Bearer {auth_token}" \\\n'
         f'    --data "{{{json_data}}}"\n'
@@ -184,6 +182,7 @@ def submit_calibration_job():
     try:
         # Get callback
         callback = get_callback(
+            f'http://{CONTROLLER_HOSTNAME}:8000/calibration_job_slurm_callback/',
             auth_token,
             calibration_run_id = calibration_run_id,
             job_status = "$job_status"
@@ -247,6 +246,7 @@ def submit_validation_job():
     try:
         # Get callback
         callback = get_callback(
+            f'http://{CONTROLLER_HOSTNAME}:8000/validation_job_slurm_callback/',
             auth_token,
             validation_run_id = validation_run_id,
             job_status = "$job_status"

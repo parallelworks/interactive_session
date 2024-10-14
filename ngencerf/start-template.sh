@@ -148,11 +148,16 @@ cd ${service_ngencerf_docker_dir}
 
 #docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui 
 
+echo "cd ${service_ngencerf_docker_dir}" >> cancel.sh
+echo "docker compose -f production-pw.yaml down" >> cancel.sh
+
 if [[ "${service_build}" == "true" ]]; then
-    docker compose -f production-pw.yaml up --build
+    docker compose -f production-pw.yaml up --build -d
 else
-    docker compose -f production-pw.yaml up
+    docker compose -f production-pw.yaml up -d
 fi
 
+# Tail the logs
+docker compose -f production-pw.yaml logs -f
 
 sleep infinity

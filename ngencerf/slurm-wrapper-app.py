@@ -182,7 +182,7 @@ def submit_calibration_job():
     try:
         # Get callback
         callback = get_callback(
-            f'http://{CONTROLLER_HOSTNAME}:8000/cabibration/calibration_job_slurm_callback/',
+            f'http://{CONTROLLER_HOSTNAME}:8000/calibration/calibration_job_slurm_callback/',
             auth_token,
             calibration_run_id = calibration_run_id,
             job_status = "$job_status"

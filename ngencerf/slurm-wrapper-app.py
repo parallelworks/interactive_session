@@ -204,7 +204,7 @@ def submit_validation_job():
     # Path to the SLURM job log file in the controller node
     auth_token = request.form.get('auth_token')
     # ngen-cal job type: calibration or validation
-    job_type = request.form.get('job_type')
+    validation_type = request.form.get('validation_type')
     # Worker name
     worker_name = request.form.get('worker_name')
     # Iteration
@@ -224,11 +224,11 @@ def submit_validation_job():
         return jsonify({"error": "No auth_token provided"}), 400
     
     # Validate job type and inputs specific to `valid_iteration`
-    if job_type == 'valid_iteration':
+    if validation_type == 'valid_iteration':
         if not worker_name:
-            return jsonify({"error": "No worker_name provided for job_type 'valid_iteration'"}), 400
+            return jsonify({"error": "No worker_name provided for validation_type 'valid_iteration'"}), 400
         if not iteration:
-            return jsonify({"error": "No iteration provided for job_type 'valid_iteration'"}), 400
+            return jsonify({"error": "No iteration provided for validation_type 'valid_iteration'"}), 400
         
         try:
             iteration_int = int(iteration)  # Attempt to convert to an integer
@@ -236,12 +236,12 @@ def submit_validation_job():
             return jsonify({"error": "Invalid iteration provided; must be an integer"}), 400
     
 
-    if job_type in ['valid_control', 'valid_best']:
+    if validation_type in ['valid_control', 'valid_best']:
         singularity_run_cmd = f"{SINGULARITY_RUN_CMD} validation {input_file}"
-    elif job_type == 'valid_iteration':
+    elif validation_type == 'valid_iteration':
         singularity_run_cmd = f"{SINGULARITY_RUN_CMD} validation_iteration {input_file} {worker_name} {iteration}"
     else:
-        return jsonify({"error": "Invalid job_type provided; must be one of 'valid_control', 'valid_best', or 'valid_iteration'"}), 400
+        return jsonify({"error": "Invalid validation_type provided; must be one of 'valid_control', 'valid_best', or 'valid_iteration'"}), 400
 
     try:
         # Get callback

@@ -247,10 +247,11 @@ def submit_job(input_file, output_file, job_id, singularity_run_cmd, callback):
         
 
         # Initialize job
-        configuring_jobs[slurm_job_id] = {}
-        configuring_jobs[slurm_job_id]['ids'] = [slurm_job_id]
-        configuring_jobs[slurm_job_id]['job_script'] = job_script
-        configuring_jobs[slurm_job_id]['partition'] = get_next_partition()
+        if PARTITIONS:
+            configuring_jobs[slurm_job_id] = {}
+            configuring_jobs[slurm_job_id]['ids'] = [slurm_job_id]
+            configuring_jobs[slurm_job_id]['job_script'] = job_script
+            configuring_jobs[slurm_job_id]['partition'] = get_next_partition()
 
 
         return jsonify({"slurm_job_id": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_cal_commit_hash": ngen_cal_commit_hash}), 200

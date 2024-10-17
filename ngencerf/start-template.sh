@@ -103,7 +103,31 @@ sudo -n pip3.8 install gunicorn
 #slurm_wrapper_pid=$!
 #echo "sudo kill ${slurm_wrapper_pid}" >> cancel.sh
 
-export MAX_CONFIGURING_WAIT_TIME=99999
+export PARTITIONS=$(scontrol show partition | awk -F '=' '/^PartitionName=/ {printf "%s,", $2}' | sed 's/,$//')
+PARTITION_COUNT=$(echo "${PARTITIONS}" | tr ',' '\n' | wc -l)
+
+# Write config file
+cat >> update_configuring_jobs.sh <<HERE
+#!/bin/bash
+while true; do
+    sleep 60
+    curl -s -X POST http://0.0.0.0:5000/update-configuring-jobs
+done
+HERE
+chmod +x update_configuring_jobs.sh
+
+
+if [ "${PARTITION_COUNT}" -gt 1 ]; then
+    echo "ACTIVATING JOB RESUBMISSION"
+    export MAX_CONFIGURING_WAIT_TIME="600"
+    ./update_configuring_jobs.sh > update_configuring_jobs.log 2>&1 &
+    echo "kill $!" >> cancel.sh
+else
+    export PARTITIONS=""
+    export MAX_CONFIGURING_WAIT_TIME="9999999999"
+fi
+
+
 #gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app.log 2>&1 &
 python3.8 slurm-wrapper-app.py > slurm-wrapper-app.log 2>&1 &
 

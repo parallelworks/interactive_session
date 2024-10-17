@@ -2,7 +2,6 @@ import subprocess
 import os
 from flask import Flask, request, jsonify
 import socket
-import copy
 
 CONTROLLER_HOSTNAME = socket.gethostname()
 
@@ -22,54 +21,7 @@ SINGULARITY_EXEC_CMD = f"singularity exec -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DI
 # Files with the git hashes within ngen-cal container
 NGEN_CAL_GIT_HASH_FILES = '/ngen-app/ngen/.git/HEAD /ngen-app/ngen-cal/.git/HEAD'
 
-# List of partitions
-PARTITIONS_STR = os.environ.get('PARTITIONS')
-# Convert the string to a list
-if PARTITIONS_STR:
-    PARTITIONS = PARTITIONS_STR.split(',')
-else:
-    PARTITIONS = []
-
-# Max time in seconds the job spends with CF or PD status
-MAX_CONFIGURING_WAIT_TIME = int(os.environ.get('MAX_CONFIGURING_WAIT_TIME'))
-
-# Jobs with CF status
-configuring_jobs = {}
-
 app = Flask(__name__)
-
-def get_next_partition(current_partition=None):
-    """
-    Returns the next partition in the list based on the current partition.
-    
-    If no current partition is provided, it returns the first partition in the list.
-    If the provided current partition is not found in the list, it returns None.
-    
-    Parameters:
-    - current_partition: str or None, the partition currently being used. If None, the first partition is returned.
-    
-    Returns:
-    - str: the next partition in the list, the first partition if current_partition is None, or None if current_partition is not found.
-    """
-
-    # If no current_partition is provided, return the first partition if it exists
-    if current_partition is None:
-        if PARTITIONS:
-            return PARTITIONS[0]
-        return None  # Return None if PARTITIONS is empty
-
-    # If the current_partition is not valid, return None
-    if current_partition not in PARTITIONS:
-        return None
-
-    # Get the index of the current partition
-    current_index = PARTITIONS.index(current_partition)
-
-    # Calculate the next index using modulo to wrap around
-    next_index = (current_index + 1) % len(PARTITIONS)
-
-    # Return the next partition
-    return PARTITIONS[next_index]
 
 def grant_ownership(job_dir):
     try:
@@ -158,65 +110,13 @@ def write_slurm_script(run_id, input_file_local, output_file_local, singularity_
         # sacct_cmd depends on the SLURM version!
         #sacct_cmd = 'sacct -j $SLURM_JOB_ID -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Planned'
         ssh_cmd = f'ssh -i ~/.ssh/pw_id_rsa -o StrictHostKeyChecking=no {CONTROLLER_HOSTNAME}'
-        script.write(f'sbatch --partition=$SLURM_JOB_PARTITION --dependency=afterok:$SLURM_JOB_ID --wrap=\"{ssh_cmd} {sacct_cmd} >> {performance_log}\"\n')
+        script.write(f'sbatch --dependency=afterok:$SLURM_JOB_ID --wrap=\"{ssh_cmd} {sacct_cmd} >> {performance_log}\"\n')
         script.write('echo\n\n')
 
         # Send the status back using the curl command
         script.write(callback)
     
     return job_script
-
-import subprocess
-
-def submit_slurm_job(job_script, partition=None):
-    """Submit a job script to SLURM and return the job ID. Optionally specify a partition."""
-    try:
-        command = ["sbatch"]
-
-        if partition:
-            # If a partition is provided, add it to the command
-            command += ["--partition", partition]
-        elif PARTITIONS:
-            # If a PARTITIONS is provided use first
-            command += ["--partition", PARTITIONS[0]]
-        
-        # Add the job script to the command
-        command.append(job_script)
-
-        # Use subprocess to run sbatch and capture the output
-        result = subprocess.run(command, capture_output=True, text=True)
-
-        if result.returncode != 0:
-            return None, result.stderr.strip()
-
-        # Parse SLURM job ID from sbatch output
-        slurm_job_id = result.stdout.strip().split()[-1]
-        return slurm_job_id, None
-    except Exception as e:
-        return None, str(e)
-
-def squeue_job_status(slurm_job_id):
-    result = subprocess.run(["squeue", "--job", slurm_job_id, "--format=%T", "--noheader"], capture_output=True, text=True)
-    if result.returncode != 0:
-        return None, result.stderr.strip()
-    
-    return result.stdout.strip(), None
-    
-def convert_to_seconds(time_str):
-    return sum(int(x) * 60 ** i for i, x in enumerate(reversed(time_str.split(':'))))
-
-def squeue_job_elapsed_time(slurm_job_id):
-    try:
-        result = subprocess.run(["squeue", "--job", slurm_job_id, "--format=%M", "--noheader"], capture_output=True, text=True)
-        if result.returncode != 0:
-            return None, result.stderr.strip()
-        
-        elapsed_time_str = result.stdout.strip()
-        return convert_to_seconds(elapsed_time_str), None
-
-    except Exception as e:
-        return None, str(e)
-
 
 def submit_job(input_file, output_file, job_id, singularity_run_cmd, callback):
     # Check the file exists on the shared file system
@@ -240,18 +140,14 @@ def submit_job(input_file, output_file, job_id, singularity_run_cmd, callback):
         # Save the script to the job's directory
         job_script = write_slurm_script(job_id, input_file_local, output_file_local, singularity_run_cmd, callback)
 
-        # Submit the job and retrieve SLURM job ID
-        slurm_job_id, error = submit_slurm_job(job_script)
-        if error:
-            return jsonify({"error": error}), 500
-        
+        # Use subprocess to run sbatch and capture the output
+        result = subprocess.run(["sbatch", job_script], capture_output=True, text=True)
 
-        # Initialize job
-        configuring_jobs[slurm_job_id] = {}
-        configuring_jobs[slurm_job_id]['ids'] = [slurm_job_id]
-        configuring_jobs[slurm_job_id]['job_script'] = job_script
-        configuring_jobs[slurm_job_id]['partition'] = get_next_partition()
+        if result.returncode != 0:
+            return jsonify({"error": result.stderr.strip()}), 500
 
+        # Parse SLURM job ID from sbatch output
+        slurm_job_id = result.stdout.strip().split()[-1]
 
         return jsonify({"slurm_job_id": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_cal_commit_hash": ngen_cal_commit_hash}), 200
     except Exception as e:
@@ -361,7 +257,6 @@ def submit_validation_job():
 
     return submit_job(input_file, output_file, validation_run_id, singularity_run_cmd, callback)
 
-
 @app.route('/job-status', methods=['GET'])
 def job_status():
     # Get job ID from request
@@ -369,20 +264,14 @@ def job_status():
     
     if not slurm_job_id:
         return jsonify({"error": "No job ID provided"}), 400
-    
-    # Update slurm_job_id
-    if slurm_job_id in configuring_jobs:
-        last_job_id = configuring_jobs[slurm_job_id]['ids'][-1]
-    else:
-        last_job_id = slurm_job_id
 
     try:
         # First, try to get job status using squeue (for pending or running jobs)
-        job_status, error = squeue_job_status(last_job_id)
-        if error:
-            return jsonify({"error": error}), 500
-        
-        if job_status:
+        result = subprocess.run(["squeue", "--job", slurm_job_id, "--format=%T", "--noheader"], capture_output=True, text=True)
+
+        if result.returncode == 0 and result.stdout.strip():
+            # If the job is found in squeue, return its status
+            job_status = result.stdout.strip()
             return jsonify({"slurm_job_id": slurm_job_id, "status": job_status}), 200
 
         # If squeue doesn't return a status, fall back to sacct for completed/failed jobs
@@ -400,47 +289,6 @@ def job_status():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/update-configuring-jobs', methods=['POST'])
-def update_configuring_jobs():
-    configuring_jobs_copy = copy.deepcopy(configuring_jobs)
-
-    for slurm_job_id, slurm_job_info in configuring_jobs_copy.items():
-        last_job_id = slurm_job_info['ids'][-1]
-        job_status, error = squeue_job_status(last_job_id)
-        if error:
-            return jsonify({"error": error}), 500
-
-        # If the job is not in 'Configuring' or 'Pending' status, remove it
-        if job_status not in ['CF', 'PD', 'CONFIGURING', 'PENDING']:
-            del configuring_jobs[slurm_job_id]
-
-        else:
-            job_elapsed_time, error = squeue_job_elapsed_time(last_job_id)
-            if error:
-                return jsonify({"error": error}), 500
-
-            # Check if the elapsed time exceeds the maximum wait time
-            if job_elapsed_time > MAX_CONFIGURING_WAIT_TIME:
-                # Use subprocess to run 'scancel'
-                result = subprocess.run(["scancel", last_job_id], capture_output=True, text=True)
-
-                if result.returncode != 0:
-                    return jsonify({"error": result.stderr.strip()}), 500
-
-                # Resubmit the job and append the new job ID
-                next_partition = get_next_partition(slurm_job_info['partition'])
-                configuring_jobs[slurm_job_id]['partition'] = next_partition
-                new_slurm_job_id, error = submit_slurm_job(slurm_job_info['job_script'], partition = next_partition)
-                
-                if error:
-                    return jsonify({"error": error}), 500
-
-                configuring_jobs[slurm_job_id]['ids'].append(new_slurm_job_id)
-
-    # Return a success message along with the updated jobs
-    return jsonify({"message": "Configuring jobs updated successfully.", "configuring_jobs": configuring_jobs}), 200
-
-
 @app.route('/cancel-job', methods=['POST'])
 def cancel_job():
     # Get job ID from request
@@ -448,24 +296,12 @@ def cancel_job():
 
     if not slurm_job_id:
         return jsonify({"error": "No job ID provided"}), 400
-    
-    # Update slurm_job_id
-    if slurm_job_id in configuring_jobs:
-        last_job_id = configuring_jobs[slurm_job_id]['ids'][-1]
-        is_configuring_job = True
-    else:
-        is_configuring_job = False
-        last_job_id = slurm_job_id
 
     try:
         # Use subprocess to run scancel
-        result = subprocess.run(["scancel", last_job_id], capture_output=True, text=True)
+        result = subprocess.run(["scancel", slurm_job_id], capture_output=True, text=True)
         
         if result.returncode != 0:
-            
-            if is_configuring_job:
-                del configuring_jobs[slurm_job_id]
-            
             return jsonify({"error": result.stderr.strip()}), 500
         
         
@@ -484,14 +320,8 @@ def run_sacct():
 
     if not slurm_job_id:
         return jsonify({"error": "No SLURM job ID provided"}), 400
-    
     if not performance_file:
         return jsonify({"error": "No performance file path provided"}), 400
-    
-    # Update slurm_job_id
-    if slurm_job_id in configuring_jobs:
-        slurm_job_id = configuring_jobs[slurm_job_id]['ids'][-1]
-
     try:
         # Your existing code for running the sacct command
         # For example:

@@ -43,7 +43,7 @@
         name='ngencerf_ui_dir' 
         label='Directory with ngencerf_ui' 
         type='hidden' 
-        value='/ngencerf-app/nextgen_ui'  
+        value='/ngencerf-app/ngencerf_ui'  
       ></param>
       <param 
         name='ngencerf_docker_dir' 

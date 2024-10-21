@@ -34,6 +34,11 @@ jobs:
             include-workspace: false
             tooltip:
               Resource to host the service
+          nports:
+            type: number
+            label: Number of Ports to Reserve
+            hidden: true
+            default: 1
           jobschedulertype:
             type: dropdown
             label: Select Controller, SLURM Partition or PBS Queue

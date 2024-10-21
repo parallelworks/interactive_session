@@ -7,4 +7,6 @@ else
     eval ${service_load_env}
 fi
 
+${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
+
 eval ${service_mlflow_server_command}

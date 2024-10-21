@@ -49,11 +49,3 @@ echo "export kill_sh=${pw_job_dir}/kill.sh" >> resources/host/inputs.sh
 
 # Path to the session script
 echo "export session_sh=${pw_job_dir}/session.sh"  >> resources/host/inputs.sh
-
-# Extract service port from service_start_command. The command must contain --port <port-number>
-if ! [ -z "${service_start_command}" ]; then
-    service_port=$(echo ${service_start_command} |  grep -oP '(?<=--port )\d+' )
-    if ! [ -z "${service_port}" ]; then
-        echo "export service_port=${service_port}" >> resources/host/inputs.sh
-    fi
-fi

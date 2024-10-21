@@ -2,15 +2,15 @@ jobs:
   main:
     steps:
       - name: Preprocessing
-        run: ./utils/steps/preprocessing.sh 
+        run: ./utils/steps/preprocessing.sh
       - name: Validating Target Resource
         run: ./utils/steps/input_form_resource_wrapper.sh
       - name: Process Inputs
-        run: ./utils/steps/process_inputs_sh.sh 
+        run: ./utils/steps/process_inputs_sh.sh
       - name: Controller Preprocessing
         run: ./utils/steps/controller_preprocessing.sh
       - name: Prepare Service JSON
-        run: ./utils/steps/prepare_service_json.sh 
+        run: ./utils/steps/prepare_service_json.sh
       - name: Initialize Cancel Script
         run: ./utils/steps/initialize_cancel_script.sh
       - name: Create Session Script
@@ -20,7 +20,6 @@ jobs:
         cleanup: ./kill.sh
       - name: Clean and Exit
         run: ./utils/steps/clean_and_exit.sh
-        
 'on':
   execute:
     inputs:
@@ -32,8 +31,7 @@ jobs:
             type: compute-clusters
             label: Service host
             include-workspace: false
-            tooltip:
-              Resource to host the service
+            tooltip: Resource to host the service
           nports:
             type: number
             label: Number of Ports to Reserve
@@ -51,17 +49,14 @@ jobs:
                 label: SLURM Partition
               - value: PBS
                 label: PBS Queue
-            tooltip:
-              Job will be submitted using SSH, sbatch or qsub, respectively
+            tooltip: Job will be submitted using SSH, sbatch or qsub, respectively
           _sch__dd_partition_e_:
             type: slurm-partitions
             label: SLURM partition
             hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
-            tooltip:
-                Partition to submit the interactive job. Leave empty to let SLURM pick
-                the optimal option.
+            tooltip: Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.
             resource: ${{ inputs.pwrl_host.resource }}
           scheduler_directives_slurm:
             type: string
@@ -69,33 +64,27 @@ jobs:
             hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
-            tooltip:
-                e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to
-                separate parameters. Do not include the SBATCH keyword.
+            tooltip: e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.
           _sch__d_q___:
             type: string
             label: PBS queue
             hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
-            tooltip:
-                Queue to submit the interactive job. Must select one! Use [qstat -f
-                -Q] to list all queues on the system
+            tooltip: Queue to submit the interactive job. Must select one! Use [qstat -f -Q] to list all queues on the system
           scheduler_directives_pbs:
             type: string
             label: Scheduler directives
             hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
-            tooltip:
-                e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to
-                separate parameters. Do not include the PBS keyword.
+            tooltip: e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to separate parameters. Do not include the PBS keyword.
         collapsed: false
       service:
         type: group
         label: MLFlow Settings
         items:
-          name: 
+          name:
             type: string
             hidden: true
             default: mlflow
@@ -103,8 +92,7 @@ jobs:
             label: Install MLflow?
             type: boolean
             default: true
-            tooltip:
-              Select Yes to install MLflow and No to load MLflow into the environment
+            tooltip: Select Yes to install MLflow and No to load MLflow into the environment
           mlflow_install_cmd:
             label: Command to Install MLflow
             type: string
@@ -116,9 +104,15 @@ jobs:
             type: string
             hidden: ${{ inputs.service.install_mlflow == true }}
             ignore: ${{ .hidden }}
-          start_command:
-            label: Command to run the MLflow server
+          service_port:
+            label: Port
+            type: number
+            min: 1024
+            max: 65535
+            default: 5000
+            tooltip: Port number to listen on
+          additional_flags:
+            label: Additional Flags
             type: string
-            default: mlflow server --port 8080 --backend-store-uri ~/pw/software
-            tooltip: 
-                https://mlflow.org/docs/latest/cli.html#mlflow-server
+            optional: true
+            tooltip: Additional flags to pass to the mlflow server command. See https://mlflow.org/docs/latest/cli.html#mlflow-server

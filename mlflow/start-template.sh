@@ -1,12 +1,11 @@
-mkdir -p ~/pw/software
 
 # Load or install mlflow
 if [ -z "${service_load_env}" ]; then
-    pip3 install mlflow
+    eval ${service_mlflow_install_cmd}
 else
-    eval ${service_load_env}
+    eval ${service_mlflow_load_cmd}
 fi
 
 ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 
-eval ${service_mlflow_server_command}
+mlflow server --port ${service_port} ${additional_flags}

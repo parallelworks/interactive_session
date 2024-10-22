@@ -104,7 +104,7 @@ jobs:
             type: string
             hidden: ${{ inputs.service.install_mlflow == true }}
             ignore: ${{ .hidden }}
-          service_port:
+          port:
             label: Port
             type: number
             min: 1024

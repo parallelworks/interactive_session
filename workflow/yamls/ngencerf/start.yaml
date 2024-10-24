@@ -1,0 +1,127 @@
+jobs:
+  main:
+    steps:
+      - name: Preprocessing
+        run: ./utils/steps/preprocessing.sh 
+      - name: Validating Target Resource
+        run: ./utils/steps/input_form_resource_wrapper.sh
+      - name: Process Inputs
+        run: ./utils/steps/process_inputs_sh.sh 
+      - name: Controller Preprocessing
+        run: ./utils/steps/controller_preprocessing.sh
+      - name: Prepare Service JSON
+        run: ./utils/steps/prepare_service_json.sh 
+      - name: Initialize Cancel Script
+        run: ./utils/steps/initialize_cancel_script.sh
+      - name: Create Session Script
+        run: ./utils/steps/create_session_script.sh
+      - name: Launch Job and Wait
+        run: ./utils/steps/launch_job_and_wait.sh
+        cleanup: ./kill.sh
+      - name: Clean and Exit
+        run: ./utils/steps/clean_and_exit.sh
+        
+'on':
+  execute:
+    inputs:
+      open_port:
+        label: Service port on the user container
+        type: number
+        default: 50505
+        hidden: true
+      use_screen:
+        label: Use screen to run controller sessions
+        type: boolean
+        default: true
+        hidden: true
+      ngen_cal_singularity_container_path:
+        label: Path to the ngen-cal singularity container
+        type: string
+        default: /ngencerf-app/singularity/ngen-cal.sif
+        hidden: true
+      container_data_dir:
+        label: Path to the data directory within the container
+        type: string
+        default: /ngencerf/data/
+        hidden: true
+      local_data_dir:
+        label: Path to the data directory on the cluster
+        type: string
+        default: /ngencerf-app/data/ngen-cal-data/
+        hidden: true
+      pwrl_host:
+        type: group
+        label: ngenCERF Host
+        collapsed: false
+        items:
+          resource:
+            type: compute-clusters
+            label: Service host
+            include-workspace: false
+            provider:
+              - gclusterv2
+              - pclusterv2
+              - azclusterv2
+              - aws-slurm
+              - google-slurm
+              - azure-slurm
+            tooltip:
+              Resource to host the service
+          jobschedulertype:
+            type: dropdown
+            label: Select Controller, SLURM Partition or PBS Queue
+            default: CONTROLLER
+            options:
+              - value: CONTROLLER
+                label: Controller
+              - value: SLURM
+                label: SLURM Partition
+              - value: PBS
+                label: PBS Queue
+            hidden: true
+            tooltip:
+              Job will be submitted using SSH, sbatch or qsub, respectively
+      service:
+        type: group
+        label: ngenCERF
+        items:
+          name: 
+            type: string
+            hidden: true
+            default: ngencerf
+          build:
+            label: Build Docker Containers?
+            type: boolean
+            default: false
+            tooltip: Select Yes to build the docker container running docker compose up --build
+          ngencerf_ui_dir:
+            label: Directory with ngencerf_ui
+            type: string
+            default: /ngencerf-app/ngencerf_ui
+            hidden: true
+          ngencerf_docker_dir:
+            label: Directory with ngencerf_docker
+            type: string
+            default: /ngencerf-app/ngencerf-docker
+            hidden: true
+          nginx_sif:
+            label: NGINX Singularity container
+            type: string
+            default: /ngencerf-app/singularity/nginx-unprivileged.sif
+            hidden: true
+          slurm_app_workers:
+            label: Workers for SLURM wrapper app
+            type: number
+            default: 2
+            hidden: true
+          existing_port:
+            label: NGENCERF Port
+            type: number
+            default: 3000
+            hidden: true
+          port:
+            label: NGINX Port
+            type: number
+            default: 3010
+            hidden: true
+            tooltip: Needs to be fixed because other sessions need to be able to connect to the running service

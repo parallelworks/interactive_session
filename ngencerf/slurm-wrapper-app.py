@@ -152,7 +152,7 @@ def write_slurm_script(run_id, input_file_local, output_file_local, singularity_
         script.write('echo Job Completed with status $job_status\n')
         script.write('echo\n\n')
 
-        create_performance_files_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/run_sacct_background -d \"slurm_job_id=$SLURM_JOB_ID\" -d \"performance_file={performance_log}\"'
+        create_performance_files_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/run_sacct_background -d \"slurm_job_id=$SLURM_JOB_ID\" -d \"performance_file={performance_log}\"\n'
         script.write(create_performance_files_cmd)
         script.write('echo\n\n')
  

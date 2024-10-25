@@ -526,7 +526,7 @@ def run_sacct_background():
         subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         # Return an immediate response while the command runs in the background
-        return jsonify({"success": True, "message": f"Job status will be written to {performance_file} after {sleep_time} seconds"}), 200
+        return jsonify({"success": True, "message": f"Job status will be written to {performance_file} after 10 seconds"}), 200
 
     except Exception as e:
         # Return an error message if something goes wrong

@@ -128,8 +128,13 @@ else
 fi
 
 
-#gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app.log 2>&1 &
-python3.8 slurm-wrapper-app.py > slurm-wrapper-app.log 2>&1 &
+gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app \
+  --access-logfile slurm-wrapper-app.log \
+  --error-logfile slurm-wrapper-app.log \
+  --capture-output \
+  --enable-stdio-inheritance > slurm-wrapper-app.log 2>&1 &
+  
+#python3.8 slurm-wrapper-app.py > slurm-wrapper-app.log 2>&1 &
 
 slurm_wrapper_pid=$!
 echo "kill ${slurm_wrapper_pid}" >> cancel.sh

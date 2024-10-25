@@ -175,7 +175,7 @@ def write_slurm_script(run_id, input_file_local, output_file_local, singularity_
         script.write('echo Job Completed with status $job_status\n')
         script.write('echo\n\n')
 
-        create_performance_files_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/run-sacct -d \"slurm_job_id=$SLURM_JOB_ID\" -d \"performance_file={performance_log}\"\n'
+        create_performance_files_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/run_sacct_background -d \"slurm_job_id=$SLURM_JOB_ID\" -d \"performance_file={performance_log}\"\n'
         script.write(create_performance_files_cmd)
         script.write('echo\n\n')
  
@@ -537,6 +537,39 @@ def run_sacct():
         subprocess.run(cmd, shell=True, check=True)
         return jsonify({"success": True, "message": f"Job status written to {performance_file}"}), 200
     except subprocess.CalledProcessError as e:
+        return log_and_return_error(str(e), 500)
+
+@app.route('/run_sacct_background', methods=['POST'])
+def run_sacct_background():
+    # Get the SLURM job ID from the request
+    slurm_job_id = request.form.get('slurm_job_id')
+    # Get the output file path where to write the output
+    performance_file = request.form.get('performance_file')
+
+    # Validate inputs
+    if not slurm_job_id:
+        return log_and_return_error("No SLURM job ID provided", 400)
+    
+    if not performance_file:
+        return log_and_return_error("No performance file path provided", 400)
+
+    # Update slurm_job_id if it is part of configuring_jobs
+    if slurm_job_id in configuring_jobs:
+        slurm_job_id = configuring_jobs[slurm_job_id]['ids'][-1]
+
+    # Construct the command to run sleep and sacct
+    cmd = f'sleep 1; sacct -j {slurm_job_id} -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Reserved --parsable --units=K > {performance_file}'
+
+    try:
+        # Run the command in the background using subprocess.Popen
+        logger.info(f"Running: {cmd}")
+        subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        # Return an immediate response while the command runs in the background
+        return jsonify({"success": True, "message": f"Job status will be written to {performance_file} after 10 seconds"}), 200
+
+    except Exception as e:
+        # Return an error message if something goes wrong
         return log_and_return_error(str(e), 500)
 
 

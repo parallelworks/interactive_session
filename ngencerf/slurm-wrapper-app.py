@@ -173,7 +173,7 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         script.write('echo Job Completed with status $job_status\n')
         script.write('echo\n\n') 
 
-        create_performance_files_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess -d \"slurm_job_id=$SLURM_JOB_ID\" -d \"job_type={job_type}\" -d \"run_id={run_id}\"\n'
+        create_performance_files_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess  -d \"job_status=$job_status\" -d \"slurm_job_id=$SLURM_JOB_ID\" -d \"job_type={job_type}\" -d \"run_id={run_id}\"\n'
         script.write(create_performance_files_cmd)
 
     return job_script
@@ -325,7 +325,7 @@ def submit_calibration_job():
             f'http://{CONTROLLER_HOSTNAME}:8000/calibration/calibration_job_slurm_callback/',
             auth_token,
             calibration_run_id = calibration_run_id,
-            job_status = "$job_status"
+            job_status = "__job_status__"
         )
         post_processing_jobs[job_type][calibration_run_id] = {}
         post_processing_jobs[job_type][calibration_run_id]['callback'] = callback
@@ -392,7 +392,7 @@ def submit_validation_job():
             f'http://{CONTROLLER_HOSTNAME}:8000/calibration/validation_job_slurm_callback/',
             auth_token,
             validation_run_id = validation_run_id,
-            job_status = "$job_status"
+            job_status = "__job_status__"
         )
         post_processing_jobs[job_type][validation_run_id] = {}
         post_processing_jobs[job_type][validation_run_id]['callback'] = callback
@@ -551,6 +551,7 @@ def postprocess():
     slurm_job_id = request.form.get('slurm_job_id')
     job_type = request.form.get('job_type')
     run_id = request.form.get('run_id')
+    job_status = request.form.get('job_status')
 
     # Validate inputs
     if not slurm_job_id:
@@ -562,6 +563,9 @@ def postprocess():
     if not run_id:
         return log_and_return_error("No job id provided", 400)
     
+    if not job_status:
+        return log_and_return_error("No job status provided", 400)
+
     logger.info(f"Postprocessing {job_type} job with id {run_id} and SLURM job id {slurm_job_id}")
     
     if job_type not in post_processing_jobs:
@@ -586,7 +590,7 @@ def postprocess():
     
     # Construct the command to run sleep and sacct
     performance_file = post_processing_jobs[job_type][run_id]['performance_file']
-    callback = post_processing_jobs[job_type][run_id]['callback']
+    callback = post_processing_jobs[job_type][run_id]['callback'].replace('__job_status__', job_status)
     sacct_cmd = f'sacct -j {slurm_job_id} -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Reserved --parsable --units=K > {performance_file}'
     cmd = f'sleep 5; {sacct_cmd}; {callback}'
 

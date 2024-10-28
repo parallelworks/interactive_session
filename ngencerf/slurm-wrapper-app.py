@@ -273,6 +273,7 @@ def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd):
         slurm_job_id, error = submit_slurm_job(job_script)
         if error:
             del post_processing_jobs[job_type][run_id]
+            logger.info(f'Removed job {job_type} {run_id} from post-processing jobs')
             return jsonify({"error": error}), 500
         
         # Performance statistics

@@ -47,6 +47,11 @@ MAX_CONFIGURING_WAIT_TIME = int(os.environ.get('MAX_CONFIGURING_WAIT_TIME'))
 # Jobs with CF status
 configuring_jobs = {}
 
+# Jobs pending post-processing
+post_processing_jobs = {}
+post_processing_jobs['calibration'] = {}
+post_processing_jobs['validation'] = {}
+
 app = Flask(__name__)
 
 def log_and_return_error(message, status_code=500):
@@ -131,27 +136,20 @@ def get_callback(callback_url, auth_token, **kwargs):
     data = {key: value for key, value in kwargs.items()}
 
     # Create the JSON string for the --data parameter
-    json_data = ', '.join([f'\\"{key}\\": \\"{value}\\"' for key, value in data.items()])
+    json_data = ', '.join([f'\"{key}\": \"{value}\"' for key, value in data.items()])
 
     # Construct the complete curl command string
-    callback_command = (
-        f'curl --location "{callback_url}" \\\n'
-        f'    --header "Content-Type: application/json" \\\n'
-        f'    --header "Authorization: Bearer {auth_token}" \\\n'
-        f'    --data "{{{json_data}}}"\n'
-    )
+    callback_command = f'curl --location "{callback_url}" --header "Content-Type: application/json" --header "Authorization: Bearer {auth_token}" --data \'{{{json_data}}}\''
 
-    return callback_command    
+    return callback_command     
 
-def write_slurm_script(run_id, input_file_local, output_file_local, singularity_run_cmd, callback):
+def write_slurm_script(run_id, job_type, input_file_local, output_file_local, singularity_run_cmd):
     job_script = input_file_local.replace('.yaml', '.slurm.sh')
-    # Performance statistics
-    performance_log = output_file_local.replace('stdout', 'performance')
 
     # Write the SLURM script
     with open(job_script, 'w') as script:
         script.write('#!/bin/bash\n')
-        script.write(f'#SBATCH --job-name={run_id}\n')
+        script.write(f'#SBATCH --job-name={job_type}-{run_id}\n')
         script.write('#SBATCH --nodes=1\n')
         script.write('#SBATCH --ntasks-per-node=1\n')
         script.write(f'#SBATCH --output={output_file_local}\n')
@@ -174,16 +172,12 @@ def write_slurm_script(run_id, input_file_local, output_file_local, singularity_
         # Print a message indicating the job completion
         script.write('echo Job Completed with status $job_status\n')
         script.write('echo\n\n') 
-        # Send the status back using the curl command
-        script.write(callback)
-        script.write('echo\n\n')
 
-        create_performance_files_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/run_sacct_background -d \"slurm_job_id=$SLURM_JOB_ID\" -d \"performance_file={performance_log}\"\n'
+        create_performance_files_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess -d \"slurm_job_id=$SLURM_JOB_ID\" -d \"job_type={job_type}\" -d \"run_id={run_id}\"\n'
         script.write(create_performance_files_cmd)
 
     return job_script
 
-import subprocess
 
 def submit_slurm_job(job_script, partition=None):
     """Submit a job script to SLURM and return the job ID. Optionally specify a partition."""
@@ -247,7 +241,7 @@ def squeue_job_elapsed_time(slurm_job_id):
         return None, error_msg
 
 
-def submit_job(input_file, output_file, job_id, singularity_run_cmd, callback):
+def submit_job(input_file, output_file, job_id, job_type, singularity_run_cmd):
     logger.info(f"Starting job submission for job ID: {job_id}")
     # Check the file exists on the shared file system
     # Path to the input file on the shared file system
@@ -272,13 +266,17 @@ def submit_job(input_file, output_file, job_id, singularity_run_cmd, callback):
         os.makedirs(os.path.dirname(output_file_local), exist_ok=True)
 
         # Save the script to the job's directory
-        job_script = write_slurm_script(job_id, input_file_local, output_file_local, singularity_run_cmd, callback)
+        job_script = write_slurm_script(job_id, job_type, input_file_local, output_file_local, singularity_run_cmd)
         logger.info(f"Job script written to: {job_script}")
 
         # Submit the job and retrieve SLURM job ID
         slurm_job_id, error = submit_slurm_job(job_script)
         if error:
+            del post_processing_jobs[job_type][job_id]
             return jsonify({"error": error}), 500
+        
+        # Performance statistics
+        post_processing_jobs[job_type][job_id]['performance_file'] = output_file_local.replace('stdout', 'performance')
 
         # Initialize job
         if PARTITIONS:
@@ -296,6 +294,7 @@ def submit_job(input_file, output_file, job_id, singularity_run_cmd, callback):
 
 @app.route('/submit-calibration-job', methods=['POST'])
 def submit_calibration_job():
+    job_type = 'calibrarion'
     # ngen-cal job id
     calibration_run_id = request.form.get('calibration_run_id')
     # Path to the ngen-cal input file within the container
@@ -327,13 +326,16 @@ def submit_calibration_job():
             calibration_run_id = calibration_run_id,
             job_status = "$job_status"
         )
+        post_processing_jobs[job_type][calibration_run_id] = {}
+        post_processing_jobs[job_type][calibration_run_id]['callback'] = callback
     except Exception as e:
         return log_and_return_error(str(e), 500)
 
-    return submit_job(input_file, output_file, calibration_run_id, singularity_run_cmd, callback)
+    return submit_job(input_file, output_file, calibration_run_id, job_type, singularity_run_cmd)
 
 @app.route('/submit-validation-job', methods=['POST'])
 def submit_validation_job():
+    job_type = 'validation'
     # ngen-cal job id
     validation_run_id = request.form.get('validation_run_id')
     # Path to the ngen-cal input file within the container
@@ -389,10 +391,12 @@ def submit_validation_job():
             validation_run_id = validation_run_id,
             job_status = "$job_status"
         )
+        post_processing_jobs[job_type][validation_run_id] = {}
+        post_processing_jobs[job_type][validation_run_id]['callback'] = callback
     except Exception as e:
         return log_and_return_error(str(e), status_code = 500) 
 
-    return submit_job(input_file, output_file, validation_run_id, singularity_run_cmd, callback)
+    return submit_job(input_file, output_file, validation_run_id, job_type, singularity_run_cmd)
 
 
 @app.route('/job-status', methods=['GET'])
@@ -538,26 +542,50 @@ def run_sacct():
     except subprocess.CalledProcessError as e:
         return log_and_return_error(str(e), 500)
 
-@app.route('/run_sacct_background', methods=['POST'])
-def run_sacct_background():
-    # Get the SLURM job ID from the request
+@app.route('/postprocess', methods=['POST'])
+def postprocess():
     slurm_job_id = request.form.get('slurm_job_id')
-    # Get the output file path where to write the output
-    performance_file = request.form.get('performance_file')
+    job_type = request.form.get('job_type')
+    run_id = request.form.get('run_id')
 
     # Validate inputs
     if not slurm_job_id:
         return log_and_return_error("No SLURM job ID provided", 400)
+
+    if not job_type:
+        return log_and_return_error("No job type provided", 400)
     
-    if not performance_file:
-        return log_and_return_error("No performance file path provided", 400)
+    if not run_id:
+        return log_and_return_error("No job id provided", 400)
+    
+    logger.info(f"Postprocessing {job_type} job with id {run_id} and SLURM job id {slurm_job_id}")
+    
+    error_msg = None
+    if job_type not in post_processing_jobs:
+        error_msg = f"Job type {job_type} not found in post_processing_jobs {post_processing_jobs}"
+        
+    
+    if run_id not in post_processing_jobs[job_type]:
+        error_msg = f"Run id {run_id} not found in {job_type} post_processing_jobs {post_processing_jobs[job_type]}"
+    
+    if 'performance_file' not in post_processing_jobs[job_type][run_id]:
+        error_msg = f"No performance_file key found in {job_type} post_processing_jobs {post_processing_jobs[job_type][run_id]}"
 
-    # Update slurm_job_id if it is part of configuring_jobs
-    if slurm_job_id in configuring_jobs:
-        slurm_job_id = configuring_jobs[slurm_job_id]['ids'][-1]
+    if 'performance_file' not in post_processing_jobs[job_type][run_id]:
+        error_msg = f"No performance_file key found in {job_type} post_processing_jobs {post_processing_jobs[job_type][run_id]}"
 
+    if 'callback' not in post_processing_jobs[job_type][run_id]:
+        error_msg = f"No callback key found in {job_type} post_processing_jobs {post_processing_jobs[job_type][run_id]}"
+
+    if error_msg:
+        logger.error(error_msg)
+        log_and_return_error(error_msg, 500)
+    
     # Construct the command to run sleep and sacct
-    cmd = f'sleep 1; sacct -j {slurm_job_id} -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Reserved --parsable --units=K > {performance_file}'
+    performance_file = post_processing_jobs[job_type][run_id]['performance_file']
+    callback = post_processing_jobs[job_type][run_id]['callback']
+    sacct_cmd = f'sacct -j {slurm_job_id} -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Reserved --parsable --units=K > {performance_file}'
+    cmd = f'sleep 5; {sacct_cmd}; {callback}'
 
     try:
         # Run the command in the background using subprocess.Popen

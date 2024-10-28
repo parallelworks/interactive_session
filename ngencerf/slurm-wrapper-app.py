@@ -294,7 +294,7 @@ def submit_job(input_file, output_file, job_id, job_type, singularity_run_cmd):
 
 @app.route('/submit-calibration-job', methods=['POST'])
 def submit_calibration_job():
-    job_type = 'calibrarion'
+    job_type = 'calibration'
     # ngen-cal job id
     calibration_run_id = request.form.get('calibration_run_id')
     # Path to the ngen-cal input file within the container

@@ -594,6 +594,8 @@ def postprocess():
         # Run the command in the background using subprocess.Popen
         logger.info(f"Running: {cmd}")
         subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        del post_processing_jobs[job_type][run_id]
+        logger.info(f'Removed job {job_type} {run_id} from post-processing jobs')
 
         # Return an immediate response while the command runs in the background
         return jsonify({"success": True, "message": f"Job status will be written to {performance_file} after 10 seconds"}), 200

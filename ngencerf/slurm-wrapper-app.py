@@ -241,8 +241,8 @@ def squeue_job_elapsed_time(slurm_job_id):
         return None, error_msg
 
 
-def submit_job(input_file, output_file, job_id, job_type, singularity_run_cmd):
-    logger.info(f"Starting job submission for job ID: {job_id}")
+def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd):
+    logger.info(f"Starting job submission for job run ID: {run_id}")
     # Check the file exists on the shared file system
     # Path to the input file on the shared file system
     input_file_local = input_file.replace(CONTAINER_DATA_DIR, LOCAL_DATA_DIR)
@@ -266,17 +266,17 @@ def submit_job(input_file, output_file, job_id, job_type, singularity_run_cmd):
         os.makedirs(os.path.dirname(output_file_local), exist_ok=True)
 
         # Save the script to the job's directory
-        job_script = write_slurm_script(job_id, job_type, input_file_local, output_file_local, singularity_run_cmd)
+        job_script = write_slurm_script(run_id, job_type, input_file_local, output_file_local, singularity_run_cmd)
         logger.info(f"Job script written to: {job_script}")
 
         # Submit the job and retrieve SLURM job ID
         slurm_job_id, error = submit_slurm_job(job_script)
         if error:
-            del post_processing_jobs[job_type][job_id]
+            del post_processing_jobs[job_type][run_id]
             return jsonify({"error": error}), 500
         
         # Performance statistics
-        post_processing_jobs[job_type][job_id]['performance_file'] = output_file_local.replace('stdout', 'performance')
+        post_processing_jobs[job_type][run_id]['performance_file'] = output_file_local.replace('stdout', 'performance')
 
         # Initialize job
         if PARTITIONS:
@@ -328,6 +328,8 @@ def submit_calibration_job():
         )
         post_processing_jobs[job_type][calibration_run_id] = {}
         post_processing_jobs[job_type][calibration_run_id]['callback'] = callback
+        logger.info(f'Adding job type {job_type} with run ID {calibration_run_id} to post-processing jobs list {post_processing_jobs[job_type][calibration_run_id]}')
+
     except Exception as e:
         return log_and_return_error(str(e), 500)
 
@@ -393,6 +395,7 @@ def submit_validation_job():
         )
         post_processing_jobs[job_type][validation_run_id] = {}
         post_processing_jobs[job_type][validation_run_id]['callback'] = callback
+        logger.info(f'Adding job type {job_type} with run ID {validation_run_id} to post-processing jobs list {post_processing_jobs[job_type][validation_run_id]}')
     except Exception as e:
         return log_and_return_error(str(e), status_code = 500) 
 
@@ -560,26 +563,25 @@ def postprocess():
     
     logger.info(f"Postprocessing {job_type} job with id {run_id} and SLURM job id {slurm_job_id}")
     
-    error_msg = None
     if job_type not in post_processing_jobs:
         error_msg = f"Job type {job_type} not found in post_processing_jobs {post_processing_jobs}"
-        
+        logger.error(error_msg)
+        log_and_return_error(error_msg, 500)        
     
     if run_id not in post_processing_jobs[job_type]:
         error_msg = f"Run id {run_id} not found in {job_type} post_processing_jobs {post_processing_jobs[job_type]}"
+        logger.error(error_msg)
+        log_and_return_error(error_msg, 500)  
+
+    if 'performance_file' not in post_processing_jobs[job_type][run_id]:
+        error_msg = f"No performance_file key found in {job_type} post_processing_jobs {post_processing_jobs[job_type][run_id]}"
+        logger.error(error_msg)
+        log_and_return_error(error_msg, 500)  
     
-    if 'performance_file' not in post_processing_jobs[job_type][run_id]:
-        error_msg = f"No performance_file key found in {job_type} post_processing_jobs {post_processing_jobs[job_type][run_id]}"
-
-    if 'performance_file' not in post_processing_jobs[job_type][run_id]:
-        error_msg = f"No performance_file key found in {job_type} post_processing_jobs {post_processing_jobs[job_type][run_id]}"
-
     if 'callback' not in post_processing_jobs[job_type][run_id]:
         error_msg = f"No callback key found in {job_type} post_processing_jobs {post_processing_jobs[job_type][run_id]}"
-
-    if error_msg:
         logger.error(error_msg)
-        log_and_return_error(error_msg, 500)
+        log_and_return_error(error_msg, 500)  
     
     # Construct the command to run sleep and sacct
     performance_file = post_processing_jobs[job_type][run_id]['performance_file']

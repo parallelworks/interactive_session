@@ -190,6 +190,7 @@ cd ${service_ngencerf_docker_dir}
 
 #docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui 
 
+docker compose -f production-pw.yaml down
 if [[ "${service_build}" == "true" ]]; then
     docker compose -f production-pw.yaml up --build -d
 else

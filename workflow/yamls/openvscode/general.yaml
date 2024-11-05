@@ -1,5 +1,9 @@
 permissions:
   - '*'
+sessions:
+  openvscode:
+    redirect: true
+
 
 jobs:
   preprocessing:
@@ -16,7 +20,6 @@ jobs:
         run: ./utils/steps-v3/preprocessing/controller_preprocessing.sh
       - name: Initialize Cancel Script
         run: ./utils/steps-v3/preprocessing/initialize_cancel_script_v3.sh
-
   controller_job:
     needs:
        - preprocessing
@@ -30,7 +33,6 @@ jobs:
         cleanup: ./kill.sh
       - name: Clean and Exit
         run: ./utils/steps-v3/clean_and_exit.sh
-        
   compute_job:
     needs:
        - preprocessing
@@ -44,6 +46,73 @@ jobs:
         cleanup: ./kill.sh
       - name: Clean and Exit
         run: ./utils/steps-v3/clean_and_exit.sh
+
+
+  create_session:
+    needs:
+       - preprocessing
+    steps:
+      - name: Set Session Name
+        run: |
+          session_name=$(pwd | rev | cut -d'/' -f1-2 | tr '/' '-' | rev)
+          echo "session_name=${session_name}" | tee -a $OUTPUTS
+      - name: Get Controller Hostname
+        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        env:
+          sshcmd: ssh -o StrictHostKeyChecking=no ${{ inputs.pwrl_host.resource.ip }}
+        run: |
+          target_hostname=$(${sshcmd} hostname)
+          echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
+      - name: Get Compute Hostname
+        if: ${{ 'SLURM' === inputs.pwrl_host.jobschedulertype }}
+        env:
+          sshcmd: ssh -o StrictHostKeyChecking=no ${{ inputs.pwrl_host.resource.ip }}
+        run: |
+          while true; do
+            echo "Waiting for target hostname..."
+
+            # Check if the service.port file exists and read its contents
+            target_hostname=$(${sshcmd} "if [ -f ~/${PWD/#$HOME/}/target.hostname ]; then cat ~/${PWD/#$HOME/}/target.hostname; fi")
+
+            # Exit the loop if file was found and read
+            if [ -n "${target_hostname}" ]; then
+              echo "Target's hostname found: ${target_hostname}"
+              break
+            fi
+
+            # Wait before the next check
+            sleep 5
+          done
+          target_hostname=$(${sshcmd} squeue -j "${job_id}" --noheader --format="%N")
+          echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
+
+      - name: Get Remote Port
+        env:
+          sshcmd: ssh -o StrictHostKeyChecking=no ${{ inputs.pwrl_host.resource.ip }}
+        run: |
+          while true; do
+            echo "Waiting for service port file..."
+
+            # Check if the service.port file exists and read its contents
+            remote_port=$(${sshcmd} "if [ -f ~/${PWD/#$HOME/}/service.port ]; then cat ~/${PWD/#$HOME/}/service.port; fi")
+
+            # Exit the loop if remote_port is successfully set (file was found and read)
+            if [ -n "$remote_port" ]; then
+              echo "Service port found: $remote_port"
+              break
+            fi
+
+            # Wait before the next check
+            sleep 5
+          done
+          echo "remote_port=${remote_port}"  | tee -a $OUTPUTS
+      - name: Expose port
+        uses: parallelworks/update-session
+        with:
+          remotePort: "${{ needs.create_session.outputs.remote_port }}"
+          status: running
+          target: ${{ inputs.pwrl_host.resource.id }}
+          name: ${{ sessions.openvscode }}
 
 'on':
   execute:

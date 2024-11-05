@@ -90,7 +90,7 @@ fi
 
 # Make sure permissions are set properly
 #sudo -n chown -R ${USER} ${LOCAL_DATA_DIR}
-sudo -n chmod -R u+rw ${LOCAL_DATA_DIR}
+#sudo -n chmod -R u+rw ${LOCAL_DATA_DIR}
 
 # Install Flask
 sudo -n pip3.8 install Flask

@@ -44,11 +44,6 @@ if [ -z "\${service_port}" ]; then
 fi
 echo \${service_port} > service.port
 
-echo
-echo Starting interactive session - sessionPort: \$service_port tunnelPort: $openPort
-echo Test command to run in user container: telnet localhost $openPort
-echo
-
 echo "Exit code: \$?"
 echo "Starting session..."
 

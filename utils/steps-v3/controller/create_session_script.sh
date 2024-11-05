@@ -46,9 +46,6 @@ else
 fi
 
 echo
-echo Starting interactive session - sessionPort: \$service_port tunnelPort: $openPort
-echo Test command to run in user container: telnet localhost $openPort
-echo
 echo
 echo "STARTING SERVICE"
 echo

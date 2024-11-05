@@ -84,7 +84,7 @@
         name='port' 
         label='NGINX Port' 
         type='hidden' 
-        value='3010'
+        value='3015'
         help='Needs to be fixed because other sessions need to be able to connect to the running service'
       ></param>
     </section>

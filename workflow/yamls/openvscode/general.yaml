@@ -1,9 +1,5 @@
 permissions:
   - '*'
-sessions:
-  openvscode:
-    redirect: true
-
 
 jobs:
   preprocessing:
@@ -20,6 +16,7 @@ jobs:
         run: ./utils/steps-v3/preprocessing/controller_preprocessing.sh
       - name: Initialize Cancel Script
         run: ./utils/steps-v3/preprocessing/initialize_cancel_script_v3.sh
+
   controller_job:
     needs:
        - preprocessing
@@ -33,6 +30,7 @@ jobs:
         cleanup: ./kill.sh
       - name: Clean and Exit
         run: ./utils/steps-v3/clean_and_exit.sh
+        
   compute_job:
     needs:
        - preprocessing

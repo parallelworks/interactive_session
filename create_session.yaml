@@ -1,3 +1,9 @@
+sessions:
+  openvscode:
+    redirect: true
+
+
+
   create_session:
     needs:
        - preprocessing

@@ -4,12 +4,8 @@
 # service_copilot_url="https://marketplace.visualstudio.com/_apis/public/gallery/publishers/GitHub/vsextensions/copilot/latest/vspackage"
 service_copilot_usercontainer_path="${pw_job_dir}/${service_name}/GitHub.copilot-latest.vsix"
 
-sshusercontainer="ssh ${resource_ssh_usercontainer_options_controller} -f ${USER_CONTAINER_HOST}"
-
 displayErrorMessage() {
     echo $(date): $1
-    ${sshusercontainer} "sed -i \"s|.*ERROR_MESSAGE.*|    \\\"ERROR_MESSAGE\\\": \\\"$1\\\"|\" ${pw_job_dir}/service.json"
-    ${sshusercontainer} "sed -i \"s|.*JOB_STATUS.*|    \\\"JOB_STATUS\\\": \\\"FAILED\\\",|\" ${pw_job_dir}/service.json"
 }
 
 
@@ -34,8 +30,6 @@ install_code_server() {
     # Install code server
     wget -P ${service_parent_install_dir} ${service_download_url}
     tar -zxf ${service_tgz_path} -C ${service_parent_install_dir}
-    # Add copilot
-    rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" ${USER_CONTAINER_HOST}:${service_copilot_usercontainer_path} ${service_parent_install_dir}
     #wget -P ${service_parent_install_dir} -O ${service_copilot_vsix_path} ${service_copilot_url}
     ${service_exec} --install-extension ${service_copilot_vsix_path} --extensions-dir ${service_install_dir}
     # Initialize default settings

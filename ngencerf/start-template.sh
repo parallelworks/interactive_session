@@ -1,5 +1,14 @@
 # Initialize cancel script
 set -x
+
+# Define a cleanup function
+cleanup() {
+    ./cancel.sh
+}
+
+# Set the trap to call cleanup on script exit
+trap cleanup EXIT
+
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 

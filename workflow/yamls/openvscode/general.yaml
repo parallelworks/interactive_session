@@ -33,6 +33,7 @@ jobs:
         run: ./utils/steps-v3/controller/launch_and_monitor_job.sh
         cleanup: ./kill.sh
       - name: Clean and Exit
+        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/clean_and_exit.sh
 
   compute_job:
@@ -47,6 +48,7 @@ jobs:
         run: ./utils/steps-v3/compute/launch_and_monitor_job.sh
         cleanup: ./kill.sh
       - name: Clean and Exit
+        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/clean_and_exit.sh
 
 
@@ -112,6 +114,7 @@ jobs:
         uses: parallelworks/update-session
         with:
           remotePort: "${{ needs.create_session.outputs.remote_port }}"
+          remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
           status: running
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.openvscode }}

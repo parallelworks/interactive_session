@@ -8,9 +8,9 @@ set -x
 
 if [ -f "${service_name}/transfer_files.sh" ]; then
     echo; echo; echo "TRASFERRING FILES TO CONTROLLER"
-    echo '#!/bin/bash' > rsync.sh
-    cat resources/host/inputs.sh >> rsync.sh
-    cat ${service_name}/rsync.sh >> rsync.sh
-    chmod +x rsync.sh
-    ./rsync.sh
+    echo '#!/bin/bash' > transfer_files.sh
+    cat resources/host/inputs.sh >> transfer_files.sh
+    cat ${service_name}/transfer_files.sh >> transfer_files.sh
+    chmod +x transfer_files.sh
+    ./transfer_files.sh
 fi

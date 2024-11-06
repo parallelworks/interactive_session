@@ -56,9 +56,6 @@ HERE
 # START SERVICE
 echo ${service_exec} --bind-addr=0.0.0.0:${service_port} ${gh_flag} ${password_flag} ${service_directory}
 
-# Notify platform that service is running
-${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
-
 ${service_exec} \
     --bind-addr=0.0.0.0:${service_port} \
     ${gh_flag} \

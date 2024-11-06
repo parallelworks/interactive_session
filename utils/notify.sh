@@ -25,7 +25,7 @@ fi
 echo "Posting notification"
 curl -s \
     -X POST -H "Content-Type: application/json" \
-    -d "{\"title\": \"Interactive workflow ${workflow_name} job ${job_number} is running\", \"href\": \"${url}\", \"type\": \"workflow\", \"subtype\": \"readyInteractive\"}" \
+    -d "{\"title\": \"Interactive workflow ${workflow_name} job ${job_number} is ${status}\", \"href\": \"${url}\", \"type\": \"workflow\", \"subtype\": \"readyInteractive\"}" \
     https://${PW_PLATFORM_HOST}/api/v2/notifications \
     -H "Authorization: Basic $(echo ${PW_API_KEY}|base64)"
 

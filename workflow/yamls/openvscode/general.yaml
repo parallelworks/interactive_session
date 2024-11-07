@@ -118,6 +118,8 @@ jobs:
           status: running
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.openvscode }}
+      - name: Run forever
+        run: sleep inf
 
 'on':
   execute:

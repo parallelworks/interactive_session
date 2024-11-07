@@ -2,4 +2,8 @@
 # service_copilot_url="https://marketplace.visualstudio.com/_apis/public/gallery/publishers/GitHub/vsextensions/copilot/latest/vspackage"
 service_copilot_usercontainer_path="${pw_job_dir}/${service_name}/GitHub.copilot-latest.vsix"
 
+if [ -z ${service_parent_install_dir} ]; then
+    service_parent_install_dir=${HOME}/pw/software
+fi
+
 rsync -avzq --rsync-path="mkdir -p ${service_parent_install_dir} && rsync" ${service_copilot_usercontainer_path} ${resource_publicIp}:${service_parent_install_dir}

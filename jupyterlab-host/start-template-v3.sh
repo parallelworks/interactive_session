@@ -20,8 +20,6 @@ eval "${service_load_env}"
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 jupyterlab_port=$(findAvailablePort)
-echo "rm /tmp/${jupyterlab_port}.port.used" >> cancel.sh
-
 
 if [[ "${service_conda_install}" == "true" ]]; then
     source ${service_conda_sh}

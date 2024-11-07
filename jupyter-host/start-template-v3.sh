@@ -102,7 +102,6 @@ else
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 jupyterserver_port=$(findAvailablePort)
-echo "rm /tmp/${jupyterserver_port}.port.used" >> cancel.sh
 
 #######################
 # START NGINX WRAPPER #

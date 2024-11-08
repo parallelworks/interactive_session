@@ -124,7 +124,7 @@ jobs:
       - name: Set URL SLUG
         run: |
           source resources/host/inputs.sh
-          echo "slug=?folder=${service_directory}\""  | tee -a $OUTPUTS
+          echo "slug=?folder=${service_directory}"  | tee -a $OUTPUTS
           echo "service_directory=${service_directory}"  | tee -a $OUTPUTS
       - name: Expose Port
         uses: parallelworks/update-session
@@ -133,7 +133,7 @@ jobs:
           localPort: "${{ needs.create_session.outputs.remote_port }}"
           remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
           status: running
-          slug: "?folder=${{ needs.create_session.outputs.service_directory }}\""
+          slug: "?folder=${{ needs.create_session.outputs.service_directory }}"
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.openvscode }}
       - name: Create service.json File

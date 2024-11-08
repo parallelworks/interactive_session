@@ -79,3 +79,5 @@ while true; do
     fi
 done
 
+
+echo "Job status: ${job_status}"

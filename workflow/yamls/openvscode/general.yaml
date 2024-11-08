@@ -123,16 +123,16 @@ jobs:
           status: running
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.openvscode }}
-    - name: Create service.json file
-      run: |
-        cat <<EOF > service.json
-        {
+      - name: Create service.json file
+        run: |
+          cat <<EOF > service.json
+          {
             "URL": "/me",
             "PORT": ""${{ needs.create_session.outputs.remote_port }}",
             "SLUG": "\"",
             "JOB_STATUS": "Running"
-        }
-        EOF
+          }
+          EOF
       - name: Run forever
         run: sleep inf
 

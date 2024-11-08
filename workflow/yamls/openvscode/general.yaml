@@ -142,7 +142,7 @@ jobs:
           {
             "URL": "/me",
             "PORT": "${{ needs.create_session.outputs.remote_port }}",
-            "SLUG": "?folder=${{ inputs.service.directory }}\"",
+            "SLUG": "?folder=${{ needs.create_session.outputs.service_directory }}\"",
             "JOB_STATUS": "Running"
           }
           EOF

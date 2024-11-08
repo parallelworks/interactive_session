@@ -111,13 +111,28 @@ jobs:
           done
           # remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
           echo "remote_port=${remote_port}"  | tee -a $OUTPUTS
+      - name: Select local port
+        run: |
+          local_port=$(pw agent open-port)
+          echo "local_port=${local_port}"  | tee -a $OUTPUTS
       - name: Expose port
         uses: parallelworks/update-session
         with:
           remotePort: "${{ needs.create_session.outputs.remote_port }}"
+          localPort: "${{ needs.create_session.outputs.remote_port }}"
           status: running
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.openvscode }}
+    - name: Create service.json file
+      run: |
+        cat <<EOF > service.json
+        {
+            "URL": "/me",
+            "PORT": ""${{ needs.create_session.outputs.remote_port }}",
+            "SLUG": "\"",
+            "JOB_STATUS": "Running"
+        }
+        EOF
       - name: Run forever
         run: sleep inf
 

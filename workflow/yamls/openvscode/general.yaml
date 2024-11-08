@@ -121,6 +121,10 @@ jobs:
         run: |
           local_port=$(pw agent open-port)
           echo "local_port=${local_port}"  | tee -a $OUTPUTS
+      - name: Set URL SLUG
+        run: |
+          source resources/host/inputs.sh
+          echo "slug=?folder=${service_directory}\""  | tee -a $OUTPUTS
       - name: Expose Port
         uses: parallelworks/update-session
         with:
@@ -128,7 +132,7 @@ jobs:
           localPort: "${{ needs.create_session.outputs.remote_port }}"
           remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
           status: running
-          slug: "?folder=${{ inputs.service.directory }}\""
+          slug: "${{ needs.create_session.outputs.slug }}"
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.openvscode }}
       - name: Create service.json File
@@ -137,7 +141,7 @@ jobs:
           {
             "URL": "/me",
             "PORT": "${{ needs.create_session.outputs.remote_port }}",
-            "SLUG": "?folder=${{ inputs.service.directory }}\"",
+            "SLUG": ""${{ needs.create_session.outputs.slug }}"",
             "JOB_STATUS": "Running"
           }
           EOF

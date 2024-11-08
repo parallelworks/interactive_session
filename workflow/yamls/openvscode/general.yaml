@@ -128,7 +128,7 @@ jobs:
           cat <<EOF > service.json
           {
             "URL": "/me",
-            "PORT": ""${{ needs.create_session.outputs.remote_port }}",
+            "PORT": "${{ needs.create_session.outputs.remote_port }}",
             "SLUG": "\"",
             "JOB_STATUS": "Running"
           }

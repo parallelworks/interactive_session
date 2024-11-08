@@ -133,8 +133,6 @@ jobs:
             "JOB_STATUS": "Running"
           }
           EOF
-      - name: Run forever
-        run: sleep inf
 
 'on':
   execute:

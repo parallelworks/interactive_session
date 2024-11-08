@@ -132,7 +132,7 @@ jobs:
           localPort: "${{ needs.create_session.outputs.remote_port }}"
           remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
           status: running
-          slug: "${{ needs.create_session.outputs.slug }}"
+          slug: ""${{ needs.create_session.outputs.slug }}""
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.openvscode }}
       - name: Create service.json File

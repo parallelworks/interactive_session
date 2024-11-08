@@ -232,7 +232,8 @@ def complete_resource_information(inputs_dict):
     else:
         workdir = inputs_dict['resource'].get('workdir')
         if not workdir or workdir == '${HOME}':
-            inputs_dict['resource']['workdir'] = "~/"
+            command_to_get_home_directory = f"{SSH_CMD} {inputs_dict['resource']['publicIp']} pwd"
+            inputs_dict['resource']['workdir'] = get_command_output(command_to_get_home_directory)
 
         if inputs_dict['jobschedulertype'] == 'SLURM':
             if '_sch__dd_partition_e_' in inputs_dict:

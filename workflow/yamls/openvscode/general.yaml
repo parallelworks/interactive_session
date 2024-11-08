@@ -115,7 +115,6 @@ jobs:
             # Wait before the next check
             sleep 5
           done
-          # remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
           echo "remote_port=${remote_port}"  | tee -a $OUTPUTS
       - name: Select local port
         run: |
@@ -126,6 +125,7 @@ jobs:
         with:
           remotePort: "${{ needs.create_session.outputs.remote_port }}"
           localPort: "${{ needs.create_session.outputs.remote_port }}"
+          remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
           status: running
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.openvscode }}

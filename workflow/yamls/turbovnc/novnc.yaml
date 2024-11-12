@@ -125,7 +125,8 @@ jobs:
         run: |
           source resources/host/inputs.sh
           basepath="/me/${PW_USER}/${workflow_name}_${job_number##*(0)}_session"
-          slug="vnc.html?resize=remote\&autoconnect=true\&show_dot=true\&path=websockify\&password=headless\&host=\"+window.location.host+\"${basepath}\"+\"\/\&dt=\"+(new Date()).getTime()"
+          #slug="vnc.html?resize=remote\&autoconnect=true\&show_dot=true\&path=websockify\&password=headless\&host=\"+window.location.host+\"${basepath}\"+\"\/\&dt=\"+(new Date()).getTime()"
+          slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=headless&host=+window.location.host+${basepath}/"
           echo "slug=${slug}"  | tee -a $OUTPUTS
       - name: Expose Port
         uses: parallelworks/update-session

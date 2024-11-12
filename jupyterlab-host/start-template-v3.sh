@@ -14,6 +14,8 @@ if [ -z "${service_load_env}" ]; then
     service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
 fi
 
+basepath="/me/${PW_USER}/${workflow_name}_${job_number##*(0)}_${workflow_name}"
+
 eval "${service_load_env}"
 
 # Initialize cancel script
@@ -66,7 +68,7 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
  location / {
-     proxy_pass http://127.0.0.1:${jupyterlab_port}/me/${openPort}/;
+     proxy_pass http://127.0.0.1:${jupyterlab_port}${basepath}/;
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";
@@ -116,20 +118,20 @@ fi
 export JUPYTER_CONFIG_DIR=${PWD}
 jupyter-lab --generate-config
 
-sed -i "s|^.*c\.ExtensionApp\.default_url.*|c.ExtensionApp.default_url = '/me/${openPort}'|" jupyter_lab_config.py
-sed -i "s|^.*c\.LabServerApp\.app_url.*|c.LabServerApp.app_url = '/me/${openPort}/lab'|" jupyter_lab_config.py
+sed -i "s|^.*c\.ExtensionApp\.default_url.*|c.ExtensionApp.default_url = '${basepath}'|" jupyter_lab_config.py
+sed -i "s|^.*c\.LabServerApp\.app_url.*|c.LabServerApp.app_url = '${basepath}/lab'|" jupyter_lab_config.py
 sed -i "s|^.*c\.LabApp\.app_url.*|c.LabApp.app_url = '/lab'|" jupyter_lab_config.py
-sed -i "s|^.*c\.LabApp\.default_url.*|c.LabApp.default_url = '/me/${openPort}/lab'|" jupyter_lab_config.py
-sed -i "s|^.*c\.LabApp\.static_url_prefix.*|c.LabApp.static_url_prefix = '/me/${openPort}/static'|" jupyter_lab_config.py
+sed -i "s|^.*c\.LabApp\.default_url.*|c.LabApp.default_url = '${basepath}/lab'|" jupyter_lab_config.py
+sed -i "s|^.*c\.LabApp\.static_url_prefix.*|c.LabApp.static_url_prefix = '${basepath}/static'|" jupyter_lab_config.py
 sed -i "s|^.*c\.ServerApp\.allow_origin.*|c.ServerApp.allow_origin = '*'|" jupyter_lab_config.py
 sed -i "s|^.*c\.ServerApp\.allow_remote_access.*|c.ServerApp.allow_remote_access = True|" jupyter_lab_config.py
-sed -i "s|^.*c\.ServerApp\.base_url.*|c.ServerApp.base_url = '/me/${openPort}'|" jupyter_lab_config.py
-sed -i "s|^.*c\.ServerApp\.default_url.*|c.ServerApp.default_url = '/me/${openPort}/'|" jupyter_lab_config.py
+sed -i "s|^.*c\.ServerApp\.base_url.*|c.ServerApp.base_url = '${basepath}'|" jupyter_lab_config.py
+sed -i "s|^.*c\.ServerApp\.default_url.*|c.ServerApp.default_url = '${basepath}/'|" jupyter_lab_config.py
 sed -i "s|^.*c\.ServerApp\.port.*|c.ServerApp.port = ${jupyterlab_port}|" jupyter_lab_config.py
 sed -i "s|^.*c\.ServerApp\.token.*|c.ServerApp.token = ''|" jupyter_lab_config.py
-sed -i "s|^.*c\.ServerApp\.tornado_settings.*|c.ServerApp.tornado_settings = {\"static_url_prefix\":\"/me/${openPort}/static/\"}|" jupyter_lab_config.py
+sed -i "s|^.*c\.ServerApp\.tornado_settings.*|c.ServerApp.tornado_settings = {\"static_url_prefix\":\"${basepath}/static/\"}|" jupyter_lab_config.py
 sed -i "s|^.*c\.ServerApp\.root_dir.*|c.ServerApp.root_dir = '${service_notebook_dir}'|" jupyter_lab_config.py
 
 jupyter-lab --port=${jupyterlab_port} --no-browser --config=${PWD}/jupyter_lab_config.py
 
-sleep 999999999
+sleep inf

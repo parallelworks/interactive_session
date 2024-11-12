@@ -209,7 +209,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
 
     # Start desktop here too just in case
     if [[ ${service_desktop} == "gnome-session" ]]; then
-        start_gnome_session_with_retries &> /dev/null &
+        start_gnome_session_with_retries &> start_gnome_session_with_retries.out &
         service_desktop_pid=$!
     else
         eval ${service_desktop} &

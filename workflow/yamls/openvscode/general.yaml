@@ -1,7 +1,7 @@
 permissions:
   - '*'
 sessions:
-  openvscode:
+  session:
     useTLS: false
     redirect: true
 

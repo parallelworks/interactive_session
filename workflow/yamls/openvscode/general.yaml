@@ -134,7 +134,7 @@ jobs:
           status: running
           slug: "${{ needs.create_session.outputs.slug }}"
           target: ${{ inputs.pwrl_host.resource.id }}
-          name: ${{ sessions.openvscode }}
+          name: ${{ sessions.session }}
       - name: Create service.json File
         run: |
           cat <<EOF > service.json

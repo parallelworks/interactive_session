@@ -366,7 +366,12 @@ def create_batch_header(inputs_dict, header_sh):
             if schd:
                 schd.replace('___',' ')
                 f.write(f'{directive_prefix} {schd}\n')
-        
+
+def convert_bool_to_string(bool_var):
+    if bool_var:
+        return "true"
+    return "false"
+
 def create_resource_directory(resource_inputs, resource_label):
     dir = os.path.join(RESOURCES_DIR, resource_label)
     inputs_json = os.path.join(dir, 'inputs.json')
@@ -383,6 +388,8 @@ def create_resource_directory(resource_inputs, resource_label):
 
     with open(inputs_sh, 'w') as f:
         for k,v in resource_inputs_flatten.items():
+            if type(v) == bool:
+                v = convert_bool_to_string(v)
             f.write(f"export {k}=\"{v}\"\n")
 
     create_batch_header(resource_inputs, header_sh)

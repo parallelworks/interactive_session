@@ -1,3 +1,5 @@
+basepath="/me/${PW_USER}/${workflow_name}_${job_number##*(0)}_session"
+
 
 # Initialize cancel script
 echo '#!/bin/bash' > cancel.sh
@@ -21,7 +23,7 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
  location / {
-     proxy_pass http://127.0.0.1:${matlab_port}/me/${openPort}/;
+     proxy_pass http://127.0.0.1:${matlab_port}/${basepath}/;
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";
@@ -68,7 +70,7 @@ else
     gpu_flag=""
 fi
 
-MWI_BASE_URL="/me/${openPort}/"
+MWI_BASE_URL="${basepath}/"
 
 # Docker supports mounting directories that do not exist (singularity does not)
 set -x

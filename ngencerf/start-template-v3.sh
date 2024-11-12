@@ -1,5 +1,8 @@
 # Initialize cancel script
 set -x
+
+basepath="/me/${PW_USER}/${workflow_name}_${job_number##*(0)}_session"
+
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
@@ -45,7 +48,7 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 0;  # Remove upload size limit by setting to 0
  location / {
-     proxy_pass http://127.0.0.1:${service_existing_port}/me/${openPort}/;
+     proxy_pass http://127.0.0.1:${service_existing_port}/${basepath}/;
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";
@@ -156,7 +159,7 @@ services:
     environment:
       - NUXT_HOST=0.0.0.0
       - NUXT_PORT=3000
-      - NUXT_APP_BASE_URL=/me/${openPort}/
+      - NUXT_APP_BASE_URL=${basepath}/
 
 HERE
 

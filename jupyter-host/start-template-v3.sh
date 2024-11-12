@@ -17,6 +17,8 @@ fi
 
 eval "${service_load_env}"
 
+basepath="/me/${PW_USER}/${workflow_name}_${job_number##*(0)}_session"
+
 if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
     displayErrorMessage "jupyter-notebook command not found"
 fi
@@ -66,7 +68,7 @@ def load_jupyter_server_extension(nbapp):
     static_path = web_app.settings.get("static_path")
     path_join = url_path_join(base_url, '', 'static', '(.*)')
 
-    web_app.settings['base_url'] = '/me/%s/' % ${openPort}
+    web_app.settings['base_url'] = '${basepath}'
 
     # pp.pprint(web_app.settings)
 
@@ -86,14 +88,14 @@ export PYTHONPATH=${PWD}
 jupyter-notebook \
     --port=${service_port} \
     --ip=0.0.0.0 \
-    --NotebookApp.default_url="/me/${openPort}/tree" \
+    --NotebookApp.default_url="${basepath}/tree" \
     --NotebookApp.iopub_data_rate_limit=10000000000 \
     --NotebookApp.token= \
     --NotebookApp.password=$sha \
     --no-browser \
     --notebook-dir=${service_notebook_dir} \
     --NotebookApp.nbserver_extensions "pw_jupyter_proxy=True" \
-    --NotebookApp.tornado_settings="{\"static_url_prefix\":\"/me/${openPort}/static/\"}" \
+    --NotebookApp.tornado_settings="{\"static_url_prefix\":\"${basepath}/static/\"}" \
     --NotebookApp.allow_origin=*
 
 else
@@ -120,7 +122,7 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
  location / {
-     proxy_pass http://127.0.0.1:${jupyterserver_port}/me/${openPort}/;
+     proxy_pass http://127.0.0.1:${jupyterserver_port}/${basepath}/;
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";
@@ -165,26 +167,26 @@ jupyter notebook --generate-config
 # Do not change anything #
 ##########################
 #  Default: ''
-#sed -i "s|^.*c\.ExtensionApp\.default_url.*|c.ExtensionApp.default_url = '/me/${openPort}'|" jupyter_notebook_config.py
+#sed -i "s|^.*c\.ExtensionApp\.default_url.*|c.ExtensionApp.default_url = '${basepath}'|" jupyter_notebook_config.py
 
 #  Default: '/lab'
-#sed -i "s|^.*c\.JupyterNotebookApp\.app_url.*|c.JupyterNotebookApp.app_url = '/me/${openPort}/tree'|" jupyter_notebook_config.py
+#sed -i "s|^.*c\.JupyterNotebookApp\.app_url.*|c.JupyterNotebookApp.app_url = '${basepath}/tree'|" jupyter_notebook_config.py
 
 #  Default: '/tree'
-#sed -i "s|^.*c\.JupyterNotebookApp\.default_url.*|c.JupyterNotebookApp.default_url = '/me/${openPort}/tree'|" jupyter_notebook_config.py
+#sed -i "s|^.*c\.JupyterNotebookApp\.default_url.*|c.JupyterNotebookApp.default_url = '${basepath}/tree'|" jupyter_notebook_config.py
 
 ## Url where the static assets for the extension are served.
 #  See also: ExtensionApp.static_url_prefix
-#sed -i "s|^.*c\.JupyterNotebookApp\.static_url_prefix.*|c.JupyterNotebookApp.static_url_prefix = '/me/${openPort}/static'|" jupyter_notebook_config.py
+#sed -i "s|^.*c\.JupyterNotebookApp\.static_url_prefix.*|c.JupyterNotebookApp.static_url_prefix = '${basepath}/static'|" jupyter_notebook_config.py
 
 ## The default URL to redirect to from \`/\`
 #  Default: '/'
-#sed -i "s|^.*c\.ServerApp\.default_url.*|c.ServerApp.default_url = '/me/${openPort}/'|" jupyter_notebook_config.py
+#sed -i "s|^.*c\.ServerApp\.default_url.*|c.ServerApp.default_url = '${basepath}/'|" jupyter_notebook_config.py
 
 ## Supply overrides for the tornado.web.Application that the Jupyter server uses.
 #  Default: {}
 #c.ServerApp.tornado_settings = {c_ServerApp_tornado_settings}
-#sed -i "s|^.*c\.ServerApp\.tornado_settings .*|c.ServerApp.tornado_settings  = {\"static_url_prefix\":\"/me/${openPort}/static/\"}|" jupyter_notebook_config.py
+#sed -i "s|^.*c\.ServerApp\.tornado_settings .*|c.ServerApp.tornado_settings  = {\"static_url_prefix\":\"${basepath}/static/\"}|" jupyter_notebook_config.py
 
 ## Whether to trust or not X-Scheme/X-Forwarded-Proto and X-Real-Ip/X-Forwarded-
 #  For headerssent by the upstream reverse proxy. Necessary if the proxy handles
@@ -229,8 +231,8 @@ sed -i "s|^.*c\.ServerApp\.root_dir.*|c.ServerApp.root_dir = '${service_notebook
 #  Default: '/'
 # Breaks in combination with the commented ones above
 # This one is the only one that sets the base_url when you tunnel to laptop
-sed -i "s|^.*c\.ServerApp\.base_url.*|c.ServerApp.base_url = '/me/${openPort}/'|" jupyter_notebook_config.py
-#sed -i "s|^.*c\.ServerApp\.base_url.*|c.ServerApp.base_url = '/me/${openPort}/'|" jupyter_notebook_config.py
+sed -i "s|^.*c\.ServerApp\.base_url.*|c.ServerApp.base_url = '${basepath}/'|" jupyter_notebook_config.py
+#sed -i "s|^.*c\.ServerApp\.base_url.*|c.ServerApp.base_url = '${basepath}/'|" jupyter_notebook_config.py
 
 jupyter-notebook --port=${jupyterserver_port} --no-browser --config=${PWD}/jupyter_notebook_config.py
 

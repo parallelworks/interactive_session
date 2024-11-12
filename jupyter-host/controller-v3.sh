@@ -1,3 +1,5 @@
+cd ${resource_jobdir}
+
 
 if [ -z ${service_parent_install_dir} ]; then
     service_parent_install_dir=${HOME}/pw/software
@@ -92,11 +94,15 @@ if [[ "${service_conda_install}" == "true" ]]; then
     ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Installing"
 
     if [[ "${service_install_instructions}" == "install_command" ]]; then
+        echo "Running install command ${service_install_command}"
         eval ${service_install_command}
     elif [[ "${service_install_instructions}" == "yaml" ]]; then
+        echo "Installing custom conda environment"
         printf "%b" "${service_yaml}" > conda.yaml
+        cat conda.yaml
         f_set_up_conda_from_yaml ${service_parent_install_dir}/${service_conda_install_dir} ${service_conda_env} conda.yaml
     elif [[ "${service_install_instructions}" == "latest" ]]; then
+        echo "Installing latest"
         {
             source ${service_conda_sh}
         } || {
@@ -116,6 +122,7 @@ if [[ "${service_conda_install}" == "true" ]]; then
             conda install conda-forge::jinja2 -y
         fi
     else
+        echo "Installing conda environment ${service_install_instructions}.yaml"
         f_set_up_conda_from_yaml ${service_parent_install_dir}/${service_conda_install_dir} ${service_conda_env} ${service_install_instructions}.yaml
     fi
     service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"

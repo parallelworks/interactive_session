@@ -1,6 +1,8 @@
 # Runs via ssh + sbatch
 set -x
 
+basepath="/me/${PW_USER}/${workflow_name}_${job_number##*(0)}_session"
+
 # Initialize cancel script
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
@@ -66,7 +68,7 @@ def load_jupyter_server_extension(nbapp):
     static_path = web_app.settings.get("static_path")
     path_join = url_path_join(base_url, '', 'static', '(.*)')
 
-    web_app.settings['base_url'] = '/me/%s/' % ${openPort}
+    web_app.settings['base_url'] = '${basepath}'
 
     # pp.pprint(web_app.settings)
 
@@ -91,7 +93,7 @@ sudo -n docker run ${gpu_flag} -i --rm --name ${jupyter_container_name} \
     jupyter-notebook \
         --port=${service_port} \
         --ip=0.0.0.0 \
-        --NotebookApp.default_url="/me/${openPort}/tree" \
+        --NotebookApp.default_url="${basepath}/tree" \
         --NotebookApp.iopub_data_rate_limit=10000000000 \
         --NotebookApp.token= \
         --NotebookApp.password=$sha \
@@ -99,7 +101,7 @@ sudo -n docker run ${gpu_flag} -i --rm --name ${jupyter_container_name} \
         --allow-root \
         --notebook-dir=${service_notebook_dir} \
         --NotebookApp.nbserver_extensions "pw_jupyter_proxy=True" \
-        --NotebookApp.tornado_settings="{\"static_url_prefix\":\"/me/${openPort}/static/\"}" \
+        --NotebookApp.tornado_settings="{\"static_url_prefix\":\"${basepath}/static/\"}" \
         --NotebookApp.allow_origin=*
 
 elif [ "${jupyter_major_version}" -eq 7 ]; then
@@ -126,7 +128,7 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
  location / {
-     proxy_pass http://127.0.0.1:${jupyterserver_port}/me/${openPort}/;
+     proxy_pass http://127.0.0.1:${jupyterserver_port}/${basepath}/;
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";
@@ -168,11 +170,11 @@ sudo -n docker run ${gpu_flag} -i --rm --name ${jupyter_container_name} \
         --ServerApp.allow_origin='*'  \
         --ServerApp.allow_remote_access=True \
         --ServerApp.token=""  \
-        --ServerApp.base_url=/me/${openPort}/ \
+        --ServerApp.base_url=${basepath}/ \
         --ServerApp.root_dir=${service_notebook_dir}
 
 else
     displayErrorMessage "ERROR: Jupyter Notebook version ${jupyter_major_version} is not supported. Use version 6 or 7"
 fi
 
-sleep 999999999
+sleep inf

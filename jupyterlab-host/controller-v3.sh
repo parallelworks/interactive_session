@@ -1,3 +1,4 @@
+cd ${resource_jobdir}
 
 
 if [ -z ${service_parent_install_dir} ]; then

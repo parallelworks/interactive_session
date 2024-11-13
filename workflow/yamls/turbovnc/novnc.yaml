@@ -2,7 +2,7 @@ permissions:
   - '*'
 sessions:
   session:
-    useTLS: ${{ inputs.service.use_tls }}
+    useTLS: false
     redirect: true
 
 

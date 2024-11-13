@@ -124,7 +124,7 @@ jobs:
       - name: Set URL SLUG
         run: |
           source resources/host/inputs.sh
-          basepath="/sessions/${PW_USER}/${workflow_name}_${job_number##*(0)}_session"
+          basepath="/me/${PW_USER}/${workflow_name}_${job_number##*(0)}_session"
           #slug="vnc.html?resize=remote\&autoconnect=true\&show_dot=true\&path=websockify\&password=headless\&host=\"+window.location.host+\"${basepath}\"+\"\/\&dt=\"+(new Date()).getTime()"
           #slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=headless&host=+window.location.host+${basepath}/"
           #slug="vnc.html?resize=remote\&autoconnect=true\&show_dot=true\&path=websockify\&password=headless\&host=${PW_PLATFORM_HOST}${basepath}"

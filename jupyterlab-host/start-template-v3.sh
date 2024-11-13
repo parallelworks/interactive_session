@@ -14,8 +14,7 @@ if [ -z "${service_load_env}" ]; then
     service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
 fi
 
-#basepath="/me/${PW_USER}/${workflow_name}_${job_number##*(0)}_session"
-basepath="/sessions/${PW_USER}/${workflow_name}_${job_number##*(0)}_session"
+basepath="/me/${PW_USER}/${workflow_name}_${job_number##*(0)}_session"
 
 eval "${service_load_env}"
 

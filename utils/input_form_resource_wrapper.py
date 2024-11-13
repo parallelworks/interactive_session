@@ -483,6 +483,7 @@ if __name__ == '__main__':
 
     # Add basic job info to inputs_dict:
     inputs_dict['job_number'] = os.path.basename(os.getcwd())
+    inputs_dict['job_number_int'] = int(inputs_dict['job_number'])
     inputs_dict['workflow_name'] = os.path.basename(os.path.dirname(os.getcwd()))
     inputs_dict['job_name'] = "{}-{}".format(inputs_dict['workflow_name'], inputs_dict['job_number'])
     inputs_dict['pw_job_dir'] = os.getcwd()

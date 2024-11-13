@@ -15,7 +15,7 @@ if [ -z "${service_load_env}" ]; then
 fi
 
 #basepath="/me/${PW_USER}/${workflow_name}_${job_number##*(0)}_session"
-basepath="/me/session/${PW_USER}/${workflow_name}_${job_number##*(0)}_session"
+basepath="/me/session/${PW_USER}/${workflow_name}_${job_number_int}_session"
 
 
 eval "${service_load_env}"

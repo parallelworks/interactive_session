@@ -101,6 +101,8 @@ else
     sudo service docker start
     touch empty
     touch nginx.logs
+    # change ownership to nginx user
+    sudo chown 101:101 nginx.logs  # change ownership to nginx user
     sudo docker run  -d --name ${container_name} \
          -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
          -v $PWD/empty:/etc/nginx/conf.d/default.conf \

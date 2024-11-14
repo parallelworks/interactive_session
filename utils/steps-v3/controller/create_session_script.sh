@@ -35,12 +35,10 @@ findAvailablePort() {
 # Note that job started running
 echo \$$ > ${job_number}.pid
 
-if [ -z "$service_port" ]; then
-    # Find an available service_port
+if [ -z "\${service_port}" ]; then
     service_port=\$(findAvailablePort)
-else
-    echo ${service_port} > service.port
 fi
+echo \${service_port} > service.port
 
 echo
 echo

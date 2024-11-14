@@ -98,9 +98,14 @@ else
     # Start container
     sudo service docker start
     touch empty
+    touch nginx.logs
+    # change ownership to nginx user
+    sudo chown 101:101 /home/alvaro/pw/jobs/jupyterlab/00016/nginx.logs  # change ownership to nginx user
     sudo docker run  -d --name ${container_name} \
          -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
          -v $PWD/empty:/etc/nginx/conf.d/default.conf \
+         -v $PWD/nginx.logs:/var/log/nginx/access.log \
+         -v $PWD/nginx.logs:/var/log/nginx/error.log \
          --network=host nginxinc/nginx-unprivileged:1.25.3
     # Print logs
     sudo docker logs ${container_name}

@@ -28,10 +28,8 @@ findAvailablePort() {
     echo \${availablePort}
     if [ -z "\${availablePort}" ]; then
         availablePort=ERROR
-        echo ERROR > service.port
         displayErrorMessage "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
     fi
-    echo \${availablePort} > service.port 
 }
 
 cd ${resource_jobdir}

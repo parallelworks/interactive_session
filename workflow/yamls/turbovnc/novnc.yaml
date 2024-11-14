@@ -134,7 +134,7 @@ jobs:
         uses: parallelworks/update-session
         with:
           remotePort: "${{ needs.create_session.outputs.remote_port }}"
-          localPort: "${{ needs.create_session.outputs.remote_port }}"
+          localPort: "${{ needs.create_session.outputs.local_port }}"
           remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
           status: running
           slug: "${{ needs.create_session.outputs.slug }}"
@@ -145,7 +145,7 @@ jobs:
           cat <<EOF > service.json
           {
             "URL": "/me",
-            "PORT": "${{ needs.create_session.outputs.remote_port }}",
+            "PORT": "${{ needs.create_session.outputs.local_port }}",
             "SLUG": "${{ needs.create_session.outputs.slug }}\"",
             "JOB_STATUS": "Running"
           }

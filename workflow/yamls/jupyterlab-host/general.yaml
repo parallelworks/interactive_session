@@ -134,16 +134,6 @@ jobs:
           slug: "${{ needs.create_session.outputs.slug }}"
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.session }}
-      - name: Create service.json File
-        run: |
-          cat <<EOF > service.json
-          {
-            "URL": "/me",
-            "PORT": "${{ needs.create_session.outputs.local_port }}",
-            "SLUG": "${{ needs.create_session.outputs.slug }}\"",
-            "JOB_STATUS": "Running"
-          }
-          EOF
         
 'on':
   execute:

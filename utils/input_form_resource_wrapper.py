@@ -482,7 +482,7 @@ if __name__ == '__main__':
     # FIXME: Remove this code when issue https://github.com/parallelworks/core/issues/5826 is resolved!
     if len(sys.argv) == 2:
         public_ip = sys.argv[1]
-        inputs_dict['pwrl_host']['resouource']['publicIp'] = public_ip
+        inputs_dict['pwrl_host']['resource']['publicIp'] = public_ip
     ################################################################################
 
     inputs_dict = clean_inputs(inputs_dict)

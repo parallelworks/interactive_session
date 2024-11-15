@@ -72,7 +72,7 @@ jobs:
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no ${{ inputs.pwrl_host.resource.ip }}
         run: |
-          target_hostname=$(${sshcmd} hostname)
+          target_hostname=localhost
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
       - name: Get Compute Hostname
         if: ${{ 'SLURM' === inputs.pwrl_host.jobschedulertype }}

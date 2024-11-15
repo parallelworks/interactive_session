@@ -141,7 +141,7 @@ if [[ "${resource_type}" == "existing" ]] || [[ "${resource_type}" == "slurmshv2
     mkdir -p ./tmp
     # Need to overwrite default configuration!
     touch empty
-    singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} &
+    singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} >> nginx.logs 2>&1  &
     pid=$!
     echo "kill ${pid}" >> cancel.sh
 else

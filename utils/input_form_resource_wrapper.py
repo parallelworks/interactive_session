@@ -220,6 +220,16 @@ def workers_per_node_to_tasks_per_node(max_workers_per_node, cpus_per_node):
 
 def complete_resource_information(inputs_dict):
 
+    if not inputs_dict['resource']['publicIp']:
+        if not inputs_dict['resource']['privateIp']:
+            msg = f'No public or private IP found'
+            logger.error(msg)
+            print(f'ERROR: {msg}', flush = True)
+            raise(Exception(msg))
+        else:
+            inputs_dict['resource']['publicIp'] = inputs_dict['resource']['privateIp']
+
+
     if 'workdir' in inputs_dict:
         inputs_dict['resource']['workdir'] = inputs_dict['workdir']
 

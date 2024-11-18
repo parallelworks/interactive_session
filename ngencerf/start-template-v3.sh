@@ -16,8 +16,8 @@ if ! [ -f "${service_nginx_sif}" ]; then
    displayErrorMessage "NGINX proxy singularity container was not found ${service_nginx_sif}"
 fi
 
-if ! [ -f "${NGEN_CAL_SINGULARITY_CONTAINER_PATH}" ]; then
-   displayErrorMessage "NGEN-CAL singularity container was not found ${NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
+if ! [ -f "${ngen_cal_singularity_container_path}" ]; then
+   displayErrorMessage "NGEN-CAL singularity container was not found ${ngen_cal_singularity_container_path}"
 fi
 
 #################

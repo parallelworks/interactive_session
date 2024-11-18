@@ -217,7 +217,3 @@ jobs:
             type: number
             default: 2
             hidden: true
-          existing_port:
-            label: NGENCERF Port
-            type: number
-            default: 3000

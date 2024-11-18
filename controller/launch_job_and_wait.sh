@@ -10,8 +10,8 @@ if [[ "${use_screen}" == "true" ]]; then
 
     # Prepare remote directory
     ${sshcmd} mkdir -p ${resource_jobdir}
-    scp stream.sh ${resource_publicIp}:${resource_jobdir}/stream-${job_number}.sh
-    scp ${session_sh} ${resource_publicIp}:${resource_jobdir}/session-${job_number}.sh
+    scp -p stream.sh ${resource_publicIp}:${resource_jobdir}/stream-${job_number}.sh
+    scp -p ${session_sh} ${resource_publicIp}:${resource_jobdir}/session-${job_number}.sh
     
     # Launch job
     screen_session_name="${workflow_name}-${job_number}"

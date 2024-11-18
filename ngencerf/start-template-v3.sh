@@ -1,7 +1,7 @@
 # Initialize cancel script
 set -x
 
-basepath="/me/session/${pw_user}/${workflow_name}_${job_number_int}_session"
+#basepath="/me/session/${pw_user}/${workflow_name}_${job_number_int}_session"
 
 ngencerf_port=3000 #$(findAvailablePort)
 

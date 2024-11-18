@@ -62,6 +62,9 @@ server {
 }
 HERE
 
+# Grant write permissions to all users
+chmod a+w ${service_ngencerf_ui_dir}/production-pw.yaml
+
 echo "Running singularity container ${service_nginx_sif}"
 # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
 # and other users cannot use the node. Was not able to change this in the config.conf.

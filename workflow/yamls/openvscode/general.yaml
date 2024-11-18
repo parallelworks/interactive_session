@@ -105,7 +105,7 @@ jobs:
             echo "Waiting for service port file..."
 
             # Check if the service.port file exists and read its contents
-            remote_port=$(${sshcmd} "if [ -f ~/${PWD/#$HOME/}/service.port ]; then cat ~/${PWD/#$HOME/}/service.port; fi")
+            remote_port=$(${sshcmd} "bash -c \"if [ -f ~/${PWD/#$HOME/}/service.port ]; then cat ~/${PWD/#$HOME/}/service.port; fi\"")
 
             # Exit the loop if remote_port is successfully set (file was found and read)
             if [ -n "$remote_port" ]; then

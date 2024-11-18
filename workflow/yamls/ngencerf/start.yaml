@@ -167,13 +167,6 @@ jobs:
             type: compute-clusters
             label: Service host
             include-workspace: false
-            provider:
-              - gclusterv2
-              - pclusterv2
-              - azclusterv2
-              - aws-slurm
-              - google-slurm
-              - azure-slurm
             tooltip:
               Resource to host the service
           jobschedulertype:

@@ -1,8 +1,6 @@
 # Runs via ssh + sbatch
 set -x
 
-basepath="/me/${pw_user}/${workflow_name}_${job_number##*(0)}_session"
-
 # Initialize cancel script
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh

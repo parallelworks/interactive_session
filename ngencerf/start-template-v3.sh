@@ -145,13 +145,14 @@ services:
     build: 
       context: .
       dockerfile: ./Dockerfile.production-pw
+      args:
+        NGENCERF_BASE_URL: https://${pw_platform_host}${basepath}/api/
     ports:
       - "${ngencerf_port}:3000"
     environment:
       - NUXT_HOST=0.0.0.0
       - NUXT_PORT=3000
       - NUXT_APP_BASE_URL=${basepath}/
-      - NGENCERF_BASE_URL=https://${pw_platform_host}${basepath}/api/
 
 HERE
 

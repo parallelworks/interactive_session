@@ -163,13 +163,15 @@ services:
     build: 
       context: .
       dockerfile: ./Dockerfile.production-pw
+      args:
+        NGENCERF_BASE_URL: https://cloud.nextgenwaterprediction.com/me/50505/api/
+
     ports:
       - "${service_existing_port}:3000"
     environment:
       - NUXT_HOST=0.0.0.0
       - NUXT_PORT=3000
       - NUXT_APP_BASE_URL=/me/${openPort}/
-      - NGENCERF_BASE_URL="https://cloud.nextgenwaterprediction.com/me/50505/api/"
 
 HERE
 

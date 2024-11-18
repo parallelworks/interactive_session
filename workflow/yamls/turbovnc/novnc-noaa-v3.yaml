@@ -124,7 +124,7 @@ jobs:
       - name: Set URL SLUG
         run: |
           source resources/host/inputs.sh
-          basepath="/me/session/${PW_USER}/${workflow_name}_${job_number_int}_session"
+          basepath="/me/session/${pw_user}/${workflow_name}_${job_number_int}_session"
           slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=headless&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
           echo "slug=${slug}"  | tee -a $OUTPUTS
       - name: Expose Port

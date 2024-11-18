@@ -1,13 +1,15 @@
 # Initialize cancel script
 set -x
 
-basepath="/me/session/${PW_USER}/${workflow_name}_${job_number_int}_session"
+basepath="/me/session/${pw_user}/${workflow_name}_${job_number_int}_session"
+
+ngencerf_port=3000 #$(findAvailablePort)
 
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
 if [[ "${service_only_connect}" == "true" ]]; then
-    echo "Connecting to existing ngencerf service listening on port ${service_existing_port}"
+    echo "Connecting to existing ngencerf service listening on port ${ngencerf_port}"
     sleep infinity
 fi
 
@@ -37,7 +39,7 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 0;  # Remove upload size limit by setting to 0
  location / {
-     proxy_pass http://127.0.0.1:${service_existing_port}/${basepath}/;
+     proxy_pass http://127.0.0.1:${ngencerf_port}${basepath}/;
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";
@@ -143,8 +145,10 @@ services:
     build: 
       context: .
       dockerfile: ./Dockerfile.production-pw
+      args:
+        NGENCERF_BASE_URL: https://${pw_platform_host}${basepath}/api/
     ports:
-      - "${service_existing_port}:3000"
+      - "${ngencerf_port}:3000"
     environment:
       - NUXT_HOST=0.0.0.0
       - NUXT_PORT=3000
@@ -152,8 +156,7 @@ services:
 
 HERE
 
-
-sed -i "s|^ENV NGENCERF_BASE_URL=.*|ENV NGENCERF_BASE_URL=https://${PW_PLATFORM_HOST}${basepath}|" ${service_ngencerf_ui_dir}/Dockerfile.production-pw
+#sed -i "s|^ENV NGENCERF_BASE_URL=.*|ENV NGENCERF_BASE_URL=\"https://${pw_platform_host}${basepath}/api/\"|" ${service_ngencerf_ui_dir}/Dockerfile.production-pw
 
 
 # Run ngencerf-app

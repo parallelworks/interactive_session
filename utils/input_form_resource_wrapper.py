@@ -499,8 +499,8 @@ if __name__ == '__main__':
     inputs_dict['workflow_name'] = os.path.basename(os.path.dirname(os.getcwd()))
     inputs_dict['job_name'] = "{}-{}".format(inputs_dict['workflow_name'], inputs_dict['job_number'])
     inputs_dict['pw_job_dir'] = os.getcwd()
-    inputs_dict['PW_USER'] = os.environ.get('PW_USER')
-    inputs_dict['PW_PLATFORM_HOST'] = os.environ.get('PW_PLATFORM_HOST')
+    inputs_dict['pw_user'] = os.environ.get('PW_USER')
+    inputs_dict['pw_platform_host'] = os.environ.get('PW_PLATFORM_HOST')
 
     # Find all resource labels
     resource_labels = [label.replace('pwrl_','') for label in inputs_dict.keys() if label.startswith('pwrl_')]

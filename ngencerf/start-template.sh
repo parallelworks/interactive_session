@@ -163,6 +163,9 @@ services:
     build: 
       context: .
       dockerfile: ./Dockerfile.production-pw
+      args:
+        NGENCERF_BASE_URL: https://cloud.nextgenwaterprediction.com/me/50505/api/
+
     ports:
       - "${service_existing_port}:3000"
     environment:

@@ -219,7 +219,7 @@ def workers_per_node_to_tasks_per_node(max_workers_per_node, cpus_per_node):
         return truncated + 1
 
 def complete_resource_information(inputs_dict):
-
+    
     if not inputs_dict['resource']['publicIp']:
         if not inputs_dict['resource']['privateIp']:
             msg = f'No public or private IP found'
@@ -229,7 +229,8 @@ def complete_resource_information(inputs_dict):
         else:
             inputs_dict['resource']['publicIp'] = inputs_dict['resource']['privateIp']
 
-
+    inputs_dict['resource']['publicIp'] = inputs_dict['resource']['username'] + '@' + inputs_dict['resource']['publicIp']
+    
     if 'workdir' in inputs_dict:
         inputs_dict['resource']['workdir'] = inputs_dict['workdir']
 
@@ -488,6 +489,12 @@ def clean_inputs(inputs_dict):
 if __name__ == '__main__':
     with open('inputs.json') as inputs_json:
         inputs_dict = json.load(inputs_json)
+
+    # FIXME: Remove this code when issue https://github.com/parallelworks/core/issues/5826 is resolved!
+    if len(sys.argv) == 2:
+        public_ip = sys.argv[1]
+        inputs_dict['pwrl_host']['resource']['publicIp'] = public_ip
+    ################################################################################
 
     inputs_dict = clean_inputs(inputs_dict)
 

@@ -3,7 +3,7 @@ set -x
 
 basepath="/me/session/${pw_user}/${workflow_name}_${job_number_int}_session"
 
-ngencerf_port=$(findAvailablePort)
+ngencerf_port=3000 #$(findAvailablePort)
 
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
@@ -39,7 +39,7 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 0;  # Remove upload size limit by setting to 0
  location / {
-     proxy_pass http://127.0.0.1:${ngencerf_port}/${basepath}/;
+     proxy_pass http://127.0.0.1:${ngencerf_port}${basepath}/;
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";

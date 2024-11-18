@@ -11,24 +11,13 @@ if [[ "${service_only_connect}" == "true" ]]; then
     sleep infinity
 fi
 
-# Check if the public key is already in authorized_keys
-if grep -q -f "${HOME}/.ssh/pw_id_rsa.pub" "${HOME}/.ssh/authorized_keys"; then
-    echo "Public key is already in the authorized_keys file."
-else
-    # Append the public key to authorized_keys if it's not already there
-    cat "${HOME}/.ssh/pw_id_rsa.pub" >> "${HOME}/.ssh/authorized_keys"
-    echo "Public key added to authorized_keys."
-fi
-chmod 600 ${HOME}/.ssh/authorized_keys ${HOME}/.ssh/pw_id_rsa ${HOME}/.ssh/pw_id_rsa.pub
-
-
 
 if ! [ -f "${service_nginx_sif}" ]; then
    displayErrorMessage "NGINX proxy singularity container was not found ${service_nginx_sif}"
 fi
 
-if ! [ -f "${NGEN_CAL_SINGULARITY_CONTAINER_PATH}" ]; then
-   displayErrorMessage "NGEN-CAL singularity container was not found ${NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
+if ! [ -f "${ngen_cal_singularity_container_path}" ]; then
+   displayErrorMessage "NGEN-CAL singularity container was not found ${ngen_cal_singularity_container_path}"
 fi
 
 #################
@@ -164,7 +153,7 @@ services:
 HERE
 
 
-sed -i "s|^ENV NGENCERF_BASE_URL=.*|ENV NGENCERF_BASE_URL=${PW_PLATFORM_HOST}${basepath}|" ${service_ngencerf_ui_dir}/Dockerfile.production-pw
+sed -i "s|^ENV NGENCERF_BASE_URL=.*|ENV NGENCERF_BASE_URL=https://${PW_PLATFORM_HOST}${basepath}|" ${service_ngencerf_ui_dir}/Dockerfile.production-pw
 
 
 # Run ngencerf-app

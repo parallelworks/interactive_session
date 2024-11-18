@@ -14,9 +14,6 @@ if [ -z "${service_load_env}" ]; then
     service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
 fi
 
-basepath="/me/session/${pw_user}/${workflow_name}_${job_number_int}_session"
-
-
 eval "${service_load_env}"
 
 # Initialize cancel script

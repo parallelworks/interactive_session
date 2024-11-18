@@ -1,4 +1,3 @@
-basepath="/me/${pw_user}/${workflow_name}_${job_number##*(0)}_session"
 
 
 # Initialize cancel script

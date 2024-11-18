@@ -1,8 +1,6 @@
 # Initialize cancel script
 set -x
 
-basepath="/me/session/${pw_user}/${workflow_name}_${job_number_int}_session"
-
 ngencerf_port=3000 #$(findAvailablePort)
 
 echo '#!/bin/bash' > cancel.sh
@@ -61,6 +59,9 @@ server {
  }
 }
 HERE
+
+# Grant write permissions to all users
+chmod a+w ${service_ngencerf_ui_dir}/production-pw.yaml
 
 echo "Running singularity container ${service_nginx_sif}"
 # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 

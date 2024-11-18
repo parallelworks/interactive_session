@@ -175,6 +175,9 @@ services:
 
 HERE
 
+# Grant write permissions to all users
+chmod a+w ${service_ngencerf_ui_dir}/production-pw.yaml
+
 # Notify platform that service is running
 ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 

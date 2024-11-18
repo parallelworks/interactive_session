@@ -17,7 +17,7 @@ fi
 
 eval "${service_load_env}"
 
-basepath="/me/${PW_USER}/${workflow_name}_${job_number##*(0)}_session"
+basepath="/me/${pw_user}/${workflow_name}_${job_number##*(0)}_session"
 
 if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
     displayErrorMessage "jupyter-notebook command not found"

@@ -4,7 +4,7 @@ source resources/host/inputs.sh
 source lib.sh
 
 if [[ "${use_screen}" == "true" ]]; then
-    scp ${session_sh} ${resource_publicIp}:${resource_jobdir}/session-${job_number}.sh
+    scp -p ${session_sh} ${resource_publicIp}:${resource_jobdir}/session-${job_number}.sh
 
     # START STREAMING
     ${sshcmd} touch ${resource_jobdir}/logs.out

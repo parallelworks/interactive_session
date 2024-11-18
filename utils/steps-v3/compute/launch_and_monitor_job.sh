@@ -4,7 +4,7 @@ source resources/host/inputs.sh
 source lib.sh
 
 # TRANSFER FILES TO REMOTE DIRECTORY
-scp ${session_sh} ${resource_publicIp}:${resource_jobdir}/session-${job_number}.sh
+scp -p ${session_sh} ${resource_publicIp}:${resource_jobdir}/session-${job_number}.sh
 
 echo
 echo "Submitting ${submit_cmd} request (wait for node to become available before connecting)..."

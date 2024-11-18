@@ -151,11 +151,11 @@ services:
       - NUXT_HOST=0.0.0.0
       - NUXT_PORT=3000
       - NUXT_APP_BASE_URL=${basepath}/
+      - NGENCERF_BASE_URL=https://${pw_platform_host}${basepath}/api/
 
 HERE
 
-
-sed -i "s|^ENV NGENCERF_BASE_URL=.*|ENV NGENCERF_BASE_URL=\"https://${pw_platform_host}${basepath}/api/\"|" ${service_ngencerf_ui_dir}/Dockerfile.production-pw
+#sed -i "s|^ENV NGENCERF_BASE_URL=.*|ENV NGENCERF_BASE_URL=\"https://${pw_platform_host}${basepath}/api/\"|" ${service_ngencerf_ui_dir}/Dockerfile.production-pw
 
 
 # Run ngencerf-app

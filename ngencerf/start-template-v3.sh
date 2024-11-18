@@ -153,7 +153,7 @@ services:
 HERE
 
 
-sed -i "s|^ENV NGENCERF_BASE_URL=.*|ENV NGENCERF_BASE_URL=${PW_PLATFORM_HOST}${basepath}|" ${service_ngencerf_ui_dir}/Dockerfile.production-pw
+sed -i "s|^ENV NGENCERF_BASE_URL=.*|ENV NGENCERF_BASE_URL=https://${PW_PLATFORM_HOST}${basepath}|" ${service_ngencerf_ui_dir}/Dockerfile.production-pw
 
 
 # Run ngencerf-app

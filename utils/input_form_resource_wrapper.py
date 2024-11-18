@@ -118,11 +118,6 @@ RESOURCES_DIR: str = 'resources'
 SUPPORTED_RESOURCE_TYPES: list = ['gclusterv2', 'pclusterv2', 'azclusterv2', 'slurmshv2', 'existing', 'aws-slurm', 'google-slurm', 'azure-slurm']
 ONPREM_RESOURCE_TYPES: list = ['slurmshv2', 'existing']
 SSH_CMD: str = 'ssh  -o StrictHostKeyChecking=no'
-PW_PLATFORM_HOST: str = os.environ['PW_PLATFORM_HOST']
-HEADERS = {"Authorization": "Basic {}".format(encode_string_to_base64(os.environ['PW_API_KEY']))}
-MIN_PORT: int = 50000
-MAX_PORT: int = 55500
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def get_logger(log_file, name, level=logging.INFO):
@@ -505,6 +500,7 @@ if __name__ == '__main__':
     inputs_dict['job_name'] = "{}-{}".format(inputs_dict['workflow_name'], inputs_dict['job_number'])
     inputs_dict['pw_job_dir'] = os.getcwd()
     inputs_dict['PW_USER'] = os.environ.get('PW_USER')
+    inputs_dict['PW_USER'] = os.environ.get('PW_PLATFORM_HOST')
 
     # Find all resource labels
     resource_labels = [label.replace('pwrl_','') for label in inputs_dict.keys() if label.startswith('pwrl_')]

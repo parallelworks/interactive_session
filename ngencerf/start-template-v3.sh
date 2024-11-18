@@ -1,7 +1,7 @@
 # Initialize cancel script
 set -x
 
-basepath="/me/${PW_USER}/${workflow_name}_${job_number##*(0)}_session"
+basepath="/me/session/${PW_USER}/${workflow_name}_${job_number_int}_session"
 
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
@@ -162,6 +162,10 @@ services:
       - NUXT_APP_BASE_URL=${basepath}/
 
 HERE
+
+
+sed -i "s|^ENV NGENCERF_BASE_URL=.*|ENV NGENCERF_BASE_URL=${PW_PLATFORM_HOST}${basepath}|" ${service_ngencerf_ui_dir}/Dockerfile.production-pw
+
 
 # Run ngencerf-app
 #container_name="ngencerf-ui-ngencerf-app-${service_port}"

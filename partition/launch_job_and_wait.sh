@@ -10,8 +10,8 @@ ${sshcmd} mkdir -p ${resource_jobdir}
 $sshcmd cp "~/.ssh/id_rsa.pub" ${resource_jobdir}
 
 # TRANSFER FILES TO REMOTE DIRECTORY
-scp ${session_sh} ${resource_publicIp}:${resource_jobdir}/session-${job_number}.sh
-scp stream.sh ${resource_publicIp}:${resource_jobdir}/stream-${job_number}.sh
+scp -p ${session_sh} ${resource_publicIp}:${resource_jobdir}/session-${job_number}.sh
+scp -p stream.sh ${resource_publicIp}:${resource_jobdir}/stream-${job_number}.sh
 
 echo
 echo "Submitting ${submit_cmd} request (wait for node to become available before connecting)..."

@@ -1,152 +1,25 @@
-permissions:
-  - '*'
-sessions:
-  session:
-    useTLS: false
-    redirect: true
-
-
 jobs:
-  preprocessing:
+  main:
     steps:
       - name: Preprocessing
-        run: ./utils/steps-v3/preprocessing/preprocessing.sh 
+        run: ./utils/steps/preprocessing.sh 
       - name: Validating Target Resource
-        run: ./utils/steps-v3/preprocessing/input_form_resource_wrapper.sh ${{ inputs.pwrl_host.resource.ip }}
+        run: ./utils/steps/input_form_resource_wrapper.sh
       - name: Process Inputs
-        run: ./utils/steps-v3/preprocessing/process_inputs_sh.sh 
-      - name: Transfer Files to Controller
-        run: ./utils/steps-v3/preprocessing/transfer_files_to_controller.sh
+        run: ./utils/steps/process_inputs_sh.sh 
       - name: Controller Preprocessing
-        run: ./utils/steps-v3/preprocessing/controller_preprocessing.sh
+        run: ./utils/steps/controller_preprocessing.sh
+      - name: Prepare Service JSON
+        run: ./utils/steps/prepare_service_json.sh 
       - name: Initialize Cancel Script
-        run: ./utils/steps-v3/preprocessing/initialize_cancel_script.sh
-
-  controller_job:
-    needs:
-       - preprocessing
-    steps:
-      - name: Create Controller Session Script
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
-        run: ./utils/steps-v3/controller/create_session_script.sh
-      - name: Launch and Monitor Controller Job
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
-        run: ./utils/steps-v3/controller/launch_and_monitor_job.sh
-        cleanup: |
-          if [[ "${{ inputs.pwrl_host.jobschedulertype }}" == "CONTROLLER" ]]; then
-            ./kill.sh
-          fi
+        run: ./utils/steps/initialize_cancel_script.sh
+      - name: Create Session Script
+        run: ./utils/steps/create_session_script.sh
+      - name: Launch Job and Wait
+        run: ./utils/steps/launch_job_and_wait.sh
+        cleanup: ./kill.sh
       - name: Clean and Exit
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
-        run: ./utils/steps-v3/clean_and_exit.sh
-
-  compute_job:
-    needs:
-       - preprocessing
-    steps:
-      - name: Create Compute Session Script
-        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
-        run: ./utils/steps-v3/compute/create_session_script.sh
-      - name:  Launch and Monitor Compute Job
-        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
-        run: ./utils/steps-v3/compute/launch_and_monitor_job.sh
-        cleanup: |
-          if [[ "${{ inputs.pwrl_host.jobschedulertype }}" != "CONTROLLER" ]]; then
-            ./kill.sh
-          fi
-      - name: Clean and Exit
-        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
-        run: ./utils/steps-v3/clean_and_exit.sh
-
-
-  create_session:
-    needs:
-       - preprocessing
-    steps:
-      - name: Set Session Name
-        run: |
-          session_name=$(pwd | rev | cut -d'/' -f1-2 | tr '/' '-' | rev)
-          echo "session_name=${session_name}" | tee -a $OUTPUTS
-      - name: Get Controller Hostname
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
-        env:
-          sshcmd: ssh -o StrictHostKeyChecking=no ${{ inputs.pwrl_host.resource.ip }}
-        run: |
-          target_hostname=$(${sshcmd} hostname)
-          echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
-      - name: Get Compute Hostname
-        if: ${{ 'SLURM' === inputs.pwrl_host.jobschedulertype }}
-        env:
-          sshcmd: ssh -o StrictHostKeyChecking=no ${{ inputs.pwrl_host.resource.ip }}
-        run: |
-          while true; do
-            echo "Waiting for target hostname..."
-
-            # Check if the service.port file exists and read its contents
-            target_hostname=$(${sshcmd} "if [ -f ~/${PWD/#$HOME/}/target.hostname ]; then cat ~/${PWD/#$HOME/}/target.hostname; fi")
-
-            # Exit the loop if file was found and read
-            if [ -n "${target_hostname}" ]; then
-              echo "Target's hostname found: ${target_hostname}"
-              break
-            fi
-
-            # Wait before the next check
-            sleep 5
-          done
-          target_hostname=$(${sshcmd} squeue -j "${job_id}" --noheader --format="%N")
-          echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
-
-      - name: Get Remote Port
-        env:
-          sshcmd: ssh -o StrictHostKeyChecking=no ${{ inputs.pwrl_host.resource.ip }}
-        run: |
-          while true; do
-            echo "Waiting for service port file..."
-
-            # Check if the service.port file exists and read its contents
-            remote_port=$(${sshcmd} "bash -c \"if [ -f ~/${PWD/#$HOME/}/service.port ]; then cat ~/${PWD/#$HOME/}/service.port; fi\"")
-
-            # Exit the loop if remote_port is successfully set (file was found and read)
-            if [ -n "$remote_port" ]; then
-              echo "Service port found: $remote_port"
-              break
-            fi
-
-            # Wait before the next check
-            sleep 5
-          done
-          echo "remote_port=${remote_port}"  | tee -a $OUTPUTS
-      - name: Select Local Port
-        run: |
-          local_port=$(pw agent open-port)
-          echo "local_port=${local_port}"  | tee -a $OUTPUTS
-      - name: Set URL SLUG
-        run: |
-          source resources/host/inputs.sh
-          basepath="/me/session/${PW_USER}/${workflow_name}_${job_number_int}_session"
-          slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=headless&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
-          echo "slug=${slug}"  | tee -a $OUTPUTS
-      - name: Expose Port
-        uses: parallelworks/update-session
-        with:
-          remotePort: "${{ needs.create_session.outputs.remote_port }}"
-          localPort: "${{ needs.create_session.outputs.local_port }}"
-          remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
-          status: running
-          slug: "${{ needs.create_session.outputs.slug }}"
-          target: ${{ inputs.pwrl_host.resource.id }}
-          name: ${{ sessions.session }}
-      - name: Create service.json File
-        run: |
-          cat <<EOF > service.json
-          {
-            "URL": "/me",
-            "PORT": "${{ needs.create_session.outputs.local_port }}",
-            "SLUG": "${{ needs.create_session.outputs.slug }}\"",
-            "JOB_STATUS": "Running"
-          }
-          EOF
+        run: ./utils/steps/clean_and_exit.sh
 
 'on':
   execute:

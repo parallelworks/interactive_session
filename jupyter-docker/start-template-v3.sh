@@ -126,7 +126,7 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
  location / {
-     proxy_pass http://127.0.0.1:${jupyterserver_port}/${basepath}/;
+     proxy_pass http://127.0.0.1:${jupyterserver_port}${basepath}/;
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";
@@ -143,9 +143,14 @@ container_name="nginx-${service_port}"
 echo "sudo docker stop ${container_name}" >> cancel.sh
 echo "sudo docker rm ${container_name}" >> cancel.sh
 touch empty
+touch nginx.logs
+# change ownership to nginx user
+sudo chown 101:101 nginx.logs  # change ownership to nginx user
 sudo docker run  -d --name ${container_name}  \
     -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
     -v ${PWD}/empty:/etc/nginx/conf.d/default.conf \
+    -v $PWD/nginx.logs:/var/log/nginx/access.log \
+    -v $PWD/nginx.logs:/var/log/nginx/error.log \
     --network=host nginxinc/nginx-unprivileged:1.25.3
 # Print logs
 sudo docker logs ${container_name}

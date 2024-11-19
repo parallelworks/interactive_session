@@ -91,3 +91,4 @@ while true; do
 done
 
 echo hello from launch_job_and_wait.sh
+exit 0

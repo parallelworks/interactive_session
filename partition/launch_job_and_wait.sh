@@ -36,6 +36,8 @@ echo ${cancel_cmd} ${jobid} >> ${kill_ssh}
 echo
 echo "Submitted job: ${jobid}"
 
+set -x
+
 get_slurm_job_status() {
     # Get the header line to determine the column index corresponding to the job status
     if [ -z "${SQUEUE_HEADER}" ]; then

@@ -17,4 +17,4 @@ trap cleanup EXIT
 ./utils/steps/initialize_cancel_script.sh 2>&1 | tee initialize_cancel_script.out || exit 1
 ./utils/steps/create_session_script.sh 2>&1 | tee create_session_script.out || exit 1
 set -x
-./utils/steps/launch_job_and_wait.sh 2>&1 | tee launch_job_and_wait.out || exit 1
+./utils/steps/launch_job_and_wait.sh #2>&1 | tee launch_job_and_wait.out || exit 1

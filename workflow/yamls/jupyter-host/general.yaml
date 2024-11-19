@@ -125,7 +125,7 @@ jobs:
           echo "local_port=${local_port}"  | tee -a $OUTPUTS
       - name: Set URL SLUG
         run: |
-          echo "slug=tree?"  | tee -a $OUTPUTS
+          echo "slug=tree?dt=$(date +%s)"  | tee -a $OUTPUTS
       - name: Expose Port
         uses: parallelworks/update-session
         with:

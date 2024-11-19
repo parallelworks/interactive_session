@@ -5,5 +5,5 @@ source resources/host/inputs.sh
 set -x
 
 bash ${session_wrapper_dir}/launch_job_and_wait.sh 
-
+exit $?
 echo hello from steps

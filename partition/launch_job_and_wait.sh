@@ -90,3 +90,4 @@ while true; do
     fi
 done
 
+echo hello from launch_job_and_wait.sh

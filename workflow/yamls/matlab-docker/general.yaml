@@ -231,7 +231,7 @@ jobs:
           docker_repo:
             label: Docker repository
             type: string
-            default: mathworks/matlab:r2022a
+            default: mathworks/matlab:r2023a
             tooltip: Docker repository to start with docker run
           mount_directories:
             label: Docker mount volumnes

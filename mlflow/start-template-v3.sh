@@ -7,4 +7,4 @@ else
     eval ${service_mlflow_load_cmd}
 fi
 
-mlflow server --port ${service_port} ${additional_flags}
+mlflow server --port ${service_port} --host ${HOSTNAME} ${additional_flags}

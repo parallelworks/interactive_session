@@ -119,7 +119,7 @@ else
     export MAX_CONFIGURING_WAIT_TIME="9999999999"
 fi
 
-
+export MAX_CONFIGURING_WAIT_TIME=10000
 gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app \
   --access-logfile slurm-wrapper-app.log \
   --error-logfile slurm-wrapper-app.log \

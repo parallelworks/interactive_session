@@ -54,10 +54,10 @@ HERE
 
 
 # START SERVICE
-echo ${service_exec} --bind-addr=0.0.0.0:${service_port} ${gh_flag} ${password_flag} ${service_directory}
+echo ${service_exec} --bind-addr=${HOSTNAME}:${service_port} ${gh_flag} ${password_flag} ${service_directory}
 
 ${service_exec} \
-    --bind-addr=0.0.0.0:${service_port} \
+    --bind-addr=${HOSTNAME}:${service_port} \
     ${gh_flag} \
     ${password_flag} \
     ${service_directory}

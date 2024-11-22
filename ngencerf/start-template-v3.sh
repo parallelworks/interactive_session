@@ -77,21 +77,21 @@ echo "kill $!" >> cancel.sh
 # Launch SLURM Wrapper Flask App #
 ##################################
 # Transfer Python script
-if ! [ -f slurm-wrapper-app.py ]; then
-   displayErrorMessage "SLURM wrapper slurm-wrapper-app.py app not found "
+if ! [ -f slurm-wrapper-app-v3.py ]; then
+   displayErrorMessage "SLURM wrapper slurm-wrapper-app-v3.py app not found "
 fi
 
 # Make sure permissions are set properly
-#sudo -n chown -R ${USER} ${LOCAL_DATA_DIR}
-sudo -n chmod -R u+rw ${LOCAL_DATA_DIR}
+#sudo -n chown -R ${USER} ${local_data_dir}
+sudo -n chmod -R u+rw ${local_data_dir}
 
 # Install Flask
 sudo -n pip3.8 install Flask
 sudo -n pip3.8 install gunicorn
 
 # Start Flask app using gunicorn
-#gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app.log 2>&1 &
-#sudo env LOCAL_DATA_DIR=${LOCAL_DATA_DIR} CONTAINER_DATA_DIR=${CONTAINER_DATA_DIR}  NGEN_CAL_SINGULARITY_CONTAINER_PATH=${NGEN_CAL_SINGULARITY_CONTAINER_PATH} python3.8 slurm-wrapper-app.py > slurm-wrapper-app.log 2>&1 &
+#gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app-v3.log 2>&1 &
+#sudo env local_data_dir=${local_data_dir} CONTAINER_DATA_DIR=${CONTAINER_DATA_DIR}  NGEN_CAL_SINGULARITY_CONTAINER_PATH=${NGEN_CAL_SINGULARITY_CONTAINER_PATH} python3.8 slurm-wrapper-app-v3.py > slurm-wrapper-app-v3.log 2>&1 &
 #slurm_wrapper_pid=$!
 #echo "sudo kill ${slurm_wrapper_pid}" >> cancel.sh
 
@@ -119,14 +119,14 @@ else
     export MAX_CONFIGURING_WAIT_TIME="9999999999"
 fi
 
-export MAX_CONFIGURING_WAIT_TIME=10000
-/usr/local/bin/gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app \
-  --access-logfile slurm-wrapper-app.log \
-  --error-logfile slurm-wrapper-app.log \
+
+/usr/local/bin/gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app-v3:app \
+  --access-logfile slurm-wrapper-app-v3.log \
+  --error-logfile slurm-wrapper-app-v3.log \
   --capture-output \
-  --enable-stdio-inheritance > slurm-wrapper-app.log 2>&1 &
+  --enable-stdio-inheritance > slurm-wrapper-app-v3.log 2>&1 &
   
-#python3.8 slurm-wrapper-app.py > slurm-wrapper-app.log 2>&1 &
+#python3.8 slurm-wrapper-app-v3.py > slurm-wrapper-app-v3.log 2>&1 &
 
 slurm_wrapper_pid=$!
 echo "kill ${slurm_wrapper_pid}" >> cancel.sh

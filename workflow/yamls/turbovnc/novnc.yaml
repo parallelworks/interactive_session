@@ -161,6 +161,7 @@ jobs:
             label: Service host
             include-workspace: false
             tooltip: Resource to host the service
+            default: "${{ app.target }}"
           nports:
             type: number
             label: Number of Ports to Reserve

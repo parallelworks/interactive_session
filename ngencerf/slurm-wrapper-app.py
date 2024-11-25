@@ -143,6 +143,15 @@ def get_callback(callback_url, auth_token, **kwargs):
 
     return callback_command     
 
+
+def write_callback(postprocessing_dir, callback_command):
+    os.makedirs(postprocessing_dir, exist_ok=True)
+    callback_file_path = os.path.join(postprocessing_dir, 'callback')
+    with open(callback_file_path, 'w') as file:
+        file.write(callback_command)
+
+    logger.info(f'Writing callback script {callback_file_path}')     
+
 def write_slurm_script(run_id, job_type, input_file_local, output_file_local, singularity_run_cmd):
     job_script = input_file_local.replace('.yaml', '.slurm.sh')
 
@@ -336,12 +345,7 @@ def submit_calibration_job():
             job_status = "__job_status__"
         )
 
-        os.makedirs(postprocessing_dir, exist_ok=True)
-        callback_file_path = os.path.join(postprocessing_dir, 'callback.sh')
-        with open(callback_file_path, 'w') as file:
-            file.write(callback)
-
-        logger.info(f'Writing callback script {callback_file_path}')
+        write_callback(postprocessing_dir, callback)
 
     except Exception as e:
         return log_and_return_error(str(e), 500)
@@ -408,13 +412,8 @@ def submit_validation_job():
             validation_run_id = validation_run_id,
             job_status = "__job_status__"
         )
-
-        os.makedirs(postprocessing_dir, exist_ok=True)
-        callback_file_path = os.path.join(postprocessing_dir, 'callback.sh')
-        with open(callback_file_path, 'w') as file:
-            file.write(callback)
-
-        logger.info(f'Writing callback script {callback_file_path}')
+        
+        write_callback(postprocessing_dir, callback)
 
     except Exception as e:
         return log_and_return_error(str(e), status_code = 500) 
@@ -588,7 +587,7 @@ def postprocess():
     logger.info(f"Postprocessing {job_type} job with id {run_id} and SLURM job id {slurm_job_id}")
     
     postprocessing_dir = os.path.join('postprocess', job_type, run_id)
-    callback_script = os.path.join(postprocessing_dir, 'callback.sh')
+    callback_script = os.path.join(postprocessing_dir, 'callback')
     performance_file_path = os.path.join(postprocessing_dir, 'performance_file')
 
     if not os.path.exists(callback_script):

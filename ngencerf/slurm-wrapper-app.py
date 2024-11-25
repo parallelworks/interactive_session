@@ -278,6 +278,7 @@ def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd):
         
         # Performance statistics
         post_processing_jobs[job_type][run_id]['performance_file'] = output_file_local.replace('stdout', 'performance')
+        logger.info(f"Added performance file to job type {job_type} with run ID {run_id} {post_processing_jobs[job_type][run_id]['performance_file']}")
 
         # Initialize job
         if PARTITIONS:

@@ -459,7 +459,7 @@ def update_configuring_jobs():
 
         # If the job is not in 'Configuring' or 'Pending' status, remove it
         if job_status not in ['CF', 'PD', 'CONFIGURING', 'PENDING']:
-            logger.info(f"Removing job {slurm_job_id} -> {last_job_id} with status: {job_status}")
+            logger.info(f"Removing job {slurm_job_id} -> {last_job_id} with status {job_status} from configuring jobs")
             del configuring_jobs[slurm_job_id]
 
         else:

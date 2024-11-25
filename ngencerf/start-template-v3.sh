@@ -1,6 +1,16 @@
 # Initialize cancel script
 set -x
 
+
+# Test if the user can execute a passwordless sudo command
+if sudo -n true 2>/dev/null; then
+  echo "You can execute passwordless sudo."
+else
+  echo
+  echo "ERROR: You do not have passwordless sudo access. Exiting."
+  exit 1
+fi
+
 ngencerf_port=3000 #$(findAvailablePort)
 
 echo '#!/bin/bash' > cancel.sh
@@ -59,9 +69,6 @@ server {
  }
 }
 HERE
-
-# Grant write permissions to all users
-chmod a+w ${service_ngencerf_ui_dir}/production-pw.yaml
 
 echo "Running singularity container ${service_nginx_sif}"
 # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
@@ -157,6 +164,9 @@ services:
 
 HERE
 
+# Grant write permissions to all users
+chmod a+w ${service_ngencerf_ui_dir}/production-pw.yaml
+
 #sed -i "s|^ENV NGENCERF_BASE_URL=.*|ENV NGENCERF_BASE_URL=\"https://${pw_platform_host}${basepath}/api/\"|" ${service_ngencerf_ui_dir}/Dockerfile.production-pw
 
 
@@ -164,7 +174,7 @@ HERE
 #container_name="ngencerf-ui-ngencerf-app-${service_port}"
 #echo "sudo docker stop ${container_name}" >> cancel.sh
 echo "cd ${service_ngencerf_docker_dir}" >> cancel.sh
-echo "docker compose -f production-pw.yaml down" >> cancel.sh
+echo "docker compose -f production-pw.yaml down --remove-orphans" >> cancel.sh
 
 cd ${service_ngencerf_docker_dir}
 

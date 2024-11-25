@@ -5,6 +5,7 @@ import socket
 import copy
 import logging
 from logging.handlers import RotatingFileHandler
+import threading
 
 log_file_path = os.environ.get("LOG_FILE_PATH", "app.log")
 file_handler = RotatingFileHandler(log_file_path, maxBytes=10*1024*1024, backupCount=100)  # 10MB per file
@@ -45,9 +46,12 @@ else:
 MAX_CONFIGURING_WAIT_TIME = int(os.environ.get('MAX_CONFIGURING_WAIT_TIME'))
 
 # Jobs with CF status
+configuring_jobs = threading.Lock()
 configuring_jobs = {}
 
 # Jobs pending post-processing
+# Initialize a lock for thread-safe access to post_processing_jobs
+post_processing_lock = threading.Lock()
 post_processing_jobs = {}
 post_processing_jobs['calibration'] = {}
 post_processing_jobs['validation'] = {}

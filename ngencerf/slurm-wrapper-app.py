@@ -1,11 +1,10 @@
 import subprocess
-import os
+import os, shutil
 from flask import Flask, request, jsonify
 import socket
 import copy
 import logging
 from logging.handlers import RotatingFileHandler
-import threading
 
 log_file_path = os.environ.get("LOG_FILE_PATH", "app.log")
 file_handler = RotatingFileHandler(log_file_path, maxBytes=10*1024*1024, backupCount=100)  # 10MB per file
@@ -46,15 +45,12 @@ else:
 MAX_CONFIGURING_WAIT_TIME = int(os.environ.get('MAX_CONFIGURING_WAIT_TIME'))
 
 # Jobs with CF status
-configuring_jobs = threading.Lock()
 configuring_jobs = {}
 
-# Jobs pending post-processing
-# Initialize a lock for thread-safe access to post_processing_jobs
-post_processing_lock = threading.Lock()
-post_processing_jobs = {}
-post_processing_jobs['calibration'] = {}
-post_processing_jobs['validation'] = {}
+# Pending postprocessing
+os.makedirs('postprocess', exist_ok=True)
+os.makedirs('postprocess/calibration', exist_ok=True)
+os.makedirs('postprocess/validation', exist_ok=True)
 
 app = Flask(__name__)
 
@@ -251,6 +247,7 @@ def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd):
     # Path to the input file on the shared file system
     input_file_local = input_file.replace(CONTAINER_DATA_DIR, LOCAL_DATA_DIR)
     output_file_local = output_file.replace(CONTAINER_DATA_DIR, LOCAL_DATA_DIR)
+    postprocessing_dir = os.path.join("postprocess", job_type, run_id)
     if not os.path.exists(input_file_local):
         error_msg = f"File path '{input_file_local}' does not exist on the shared filesystem under {LOCAL_DATA_DIR}."
         return log_and_return_error(error_msg, status_code = 400)
@@ -276,13 +273,17 @@ def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd):
         # Submit the job and retrieve SLURM job ID
         slurm_job_id, error = submit_slurm_job(job_script)
         if error:
-            del post_processing_jobs[job_type][run_id]
-            logger.info(f'Removed job {job_type} {run_id} from post-processing jobs')
+            shutil.rmtree(postprocessing_dir)
+            logger.info(f'Removed {postprocessing_dir}')
             return jsonify({"error": error}), 500
         
         # Performance statistics
-        post_processing_jobs[job_type][run_id]['performance_file'] = output_file_local.replace('stdout', 'performance')
-        logger.info(f"Added performance file to job type {job_type} with run ID {run_id} {post_processing_jobs[job_type][run_id]['performance_file']}")
+        os.makedirs(postprocessing_dir, exist_ok=True)
+        performance_file_path = os.path.join(postprocessing_dir, 'performance_file')
+        with open(performance_file_path, 'w') as file:
+            file.write(output_file_local.replace('stdout', 'performance'))
+
+        logger.info(f"Added performance file to {performance_file_path}")
 
         # Initialize job
         if PARTITIONS:
@@ -324,6 +325,8 @@ def submit_calibration_job():
     
     singularity_run_cmd = f"{SINGULARITY_RUN_CMD} calibration {input_file}"
     
+    postprocessing_dir = os.path.join("postprocess", job_type, calibration_run_id)
+
     try:
         # Get callback
         callback = get_callback(
@@ -332,9 +335,13 @@ def submit_calibration_job():
             calibration_run_id = calibration_run_id,
             job_status = "__job_status__"
         )
-        post_processing_jobs[job_type][calibration_run_id] = {}
-        post_processing_jobs[job_type][calibration_run_id]['callback'] = callback
-        logger.info(f'Adding job type {job_type} with run ID {calibration_run_id} to post-processing jobs list {post_processing_jobs[job_type][calibration_run_id]}')
+
+        os.makedirs(postprocessing_dir, exist_ok=True)
+        callback_file_path = os.path.join(postprocessing_dir, 'callback.sh')
+        with open(callback_file_path, 'w') as file:
+            file.write(callback)
+
+        logger.info(f'Writing callback script {callback_file_path}')
 
     except Exception as e:
         return log_and_return_error(str(e), 500)
@@ -390,6 +397,8 @@ def submit_validation_job():
         singularity_run_cmd = f"{SINGULARITY_RUN_CMD} validation_iteration {input_file} {worker_name} {iteration}"
     else:
         return log_and_return_error("Invalid validation_type provided; must be one of 'valid_control', 'valid_best', or 'valid_iteration'", status_code = 400) 
+    
+    postprocessing_dir = os.path.join("postprocess", job_type, validation_run_id)
 
     try:
         # Get callback
@@ -399,9 +408,14 @@ def submit_validation_job():
             validation_run_id = validation_run_id,
             job_status = "__job_status__"
         )
-        post_processing_jobs[job_type][validation_run_id] = {}
-        post_processing_jobs[job_type][validation_run_id]['callback'] = callback
-        logger.info(f'Adding job type {job_type} with run ID {validation_run_id} to post-processing jobs list {post_processing_jobs[job_type][validation_run_id]}')
+
+        os.makedirs(postprocessing_dir, exist_ok=True)
+        callback_file_path = os.path.join(postprocessing_dir, 'callback.sh')
+        with open(callback_file_path, 'w') as file:
+            file.write(callback)
+
+        logger.info(f'Writing callback script {callback_file_path}')
+
     except Exception as e:
         return log_and_return_error(str(e), status_code = 500) 
 
@@ -454,7 +468,6 @@ def job_status():
 def update_configuring_jobs():
     logger.info("Updating configuring jobs")
     configuring_jobs_copy = copy.deepcopy(configuring_jobs)
-    logger.info(f"Post processing jobs {post_processing_jobs}")
 
     for slurm_job_id, slurm_job_info in configuring_jobs_copy.items():
         logger.info(f"Processing SLURM job {slurm_job_id} - {slurm_job_info}")
@@ -574,29 +587,29 @@ def postprocess():
 
     logger.info(f"Postprocessing {job_type} job with id {run_id} and SLURM job id {slurm_job_id}")
     
-    if job_type not in post_processing_jobs:
-        error_msg = f"Job type {job_type} not found in post_processing_jobs {post_processing_jobs}"
-        logger.error(error_msg)
-        log_and_return_error(error_msg, 500)        
-    
-    if run_id not in post_processing_jobs[job_type]:
-        error_msg = f"Run id {run_id} not found in {job_type} post_processing_jobs {post_processing_jobs[job_type]}"
+    postprocessing_dir = os.path.join('postprocess', job_type, run_id)
+    callback_script = os.path.join(postprocessing_dir, 'callback.sh')
+    performance_file_path = os.path.join(postprocessing_dir, 'performance_file')
+
+    if not os.path.exists(callback_script):
+        error_msg = f"Callback script ${callback_script} does not exist"
         logger.error(error_msg)
         log_and_return_error(error_msg, 500)  
 
-    if 'performance_file' not in post_processing_jobs[job_type][run_id]:
-        error_msg = f"No performance_file key found in {job_type} post_processing_jobs {post_processing_jobs[job_type][run_id]}"
+    if not os.path.exists(performance_file_path):
+        error_msg = f"Performance file ${performance_file_path} does not exist"
         logger.error(error_msg)
-        log_and_return_error(error_msg, 500)  
+        log_and_return_error(error_msg, 500)    
     
-    if 'callback' not in post_processing_jobs[job_type][run_id]:
-        error_msg = f"No callback key found in {job_type} post_processing_jobs {post_processing_jobs[job_type][run_id]}"
-        logger.error(error_msg)
-        log_and_return_error(error_msg, 500)  
     
     # Construct the command to run sleep and sacct
-    performance_file = post_processing_jobs[job_type][run_id]['performance_file']
-    callback = post_processing_jobs[job_type][run_id]['callback'].replace('__job_status__', job_status)
+    with open(performance_file_path, 'r') as f:
+        performance_file = f.read()
+
+    # Construct the command to run sleep and sacct
+    with open(callback_script, 'r') as f:
+        callback = f.read().replace('__job_status__', job_status)
+
     sacct_cmd = f'sacct -j {slurm_job_id} -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Reserved --parsable --units=K > {performance_file}'
     cmd = f'sleep 5; {sacct_cmd}; {callback}'
 
@@ -604,8 +617,6 @@ def postprocess():
         # Run the command in the background using subprocess.Popen
         logger.info(f"Running: {cmd}")
         subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        del post_processing_jobs[job_type][run_id]
-        logger.info(f'Removed job {job_type} {run_id} from post-processing jobs')
 
         # Return an immediate response while the command runs in the background
         return jsonify({"success": True, "message": f"Job status will be written to {performance_file} after 10 seconds"}), 200

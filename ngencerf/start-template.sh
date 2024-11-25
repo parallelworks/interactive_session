@@ -185,7 +185,7 @@ ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Running"
 #container_name="ngencerf-ui-ngencerf-app-${service_port}"
 #echo "sudo docker stop ${container_name}" >> cancel.sh
 echo "cd ${service_ngencerf_docker_dir}" >> cancel.sh
-echo "docker compose -f production-pw.yaml down" >> cancel.sh
+echo "docker compose -f production-pw.yaml down --remove-orphans" >> cancel.sh
 
 cd ${service_ngencerf_docker_dir}
 

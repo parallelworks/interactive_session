@@ -1,6 +1,16 @@
 # Initialize cancel script
 set -x
 
+
+# Test if the user can execute a passwordless sudo command
+if sudo -n true 2>/dev/null; then
+  echo "You can execute passwordless sudo."
+else
+  echo
+  echo "ERROR: You do not have passwordless sudo access. Exiting."
+  exit 1
+fi
+
 ngencerf_port=3000 #$(findAvailablePort)
 
 echo '#!/bin/bash' > cancel.sh

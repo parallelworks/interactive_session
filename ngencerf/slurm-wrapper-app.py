@@ -449,6 +449,7 @@ def job_status():
 def update_configuring_jobs():
     logger.info("Updating configuring jobs")
     configuring_jobs_copy = copy.deepcopy(configuring_jobs)
+    logger.info(f"Post processing jobs {post_processing_jobs}")
 
     for slurm_job_id, slurm_job_info in configuring_jobs_copy.items():
         logger.info(f"Processing SLURM job {slurm_job_id} - {slurm_job_info}")

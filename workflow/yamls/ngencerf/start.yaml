@@ -131,7 +131,7 @@ jobs:
           remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
           status: running
           target: ${{ inputs.pwrl_host.resource.id }}
-          name: "${{ inputs.pwrl_host.resource.namespace }}-${{ inputs.pwrl_host.resource.name }}"
+          name: "${{ inputs.pwrl_host.resource.namespace }}.${{ inputs.pwrl_host.resource.name }}"
         
 'on':
   execute:

@@ -16,7 +16,7 @@ jobs:
       - name: Process Inputs
         run: | 
           ./utils/steps-v3/preprocessing/process_inputs_sh.sh 
-          echo "export basepath=/me/session/${PW_USER}/${{ inputs.pwrl_host.resource.namespace }}.${{ inputs.pwrl_host.resource.name }}"  >> resources/host/inputs.sh
+          echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
       - name: Transfer Files to Controller
         run: ./utils/steps-v3/preprocessing/transfer_files_to_controller.sh
       - name: Controller Preprocessing
@@ -131,7 +131,7 @@ jobs:
           remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
           status: running
           target: ${{ inputs.pwrl_host.resource.id }}
-          name: "${{ inputs.pwrl_host.resource.namespace }}.${{ inputs.pwrl_host.resource.name }}"
+          name: ${{ sessions.session }}
         
 'on':
   execute:

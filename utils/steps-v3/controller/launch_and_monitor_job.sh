@@ -9,6 +9,7 @@ if [[ "${use_screen}" == "true" ]]; then
     # START STREAMING
     ${sshcmd} touch ${resource_jobdir}/logs.out
     ${sshcmd} tail -f ${resource_jobdir}/logs.out &
+    echo "kill \$(ps -x | grep tail | grep ${resource_jobdir}/logs.out | awk '{print \$1}')" >> ${kill_ssh}
     echo "kill $! # kill streaming" >> ${kill_sh}
 
     # Launch job

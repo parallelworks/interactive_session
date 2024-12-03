@@ -85,7 +85,7 @@ HERE
 export PYTHONPATH=${PWD}
 jupyter-notebook \
     --port=${service_port} \
-    --ip=0.0.0.0 \
+    --ip=${HOSTNAME} \
     --NotebookApp.default_url="${basepath}/tree" \
     --NotebookApp.iopub_data_rate_limit=10000000000 \
     --NotebookApp.token= \

@@ -347,6 +347,6 @@ jobs:
           install_command:
             label: Command to install Jupyter
             type: string
-            default: module load intelpython; pip install notebook==6.5.7 --no-warn-script-location
+            default: module load intelpython; pip install notebook --no-warn-script-location
             hidden:  ${{ inputs.service.conda_install == false || 'existing' !== inputs.pwrl_host.resource.provider  ||  inputs.service.use_conda == true  }}
             ignore: ${{ .hidden }}

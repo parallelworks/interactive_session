@@ -420,6 +420,108 @@ def submit_validation_job():
 
     return submit_job(input_file, output_file, validation_run_id, job_type, singularity_run_cmd)
 
+@app.route('/submit-forecast-job', methods=['POST'])
+def submit_forecast_job():
+    job_type = 'forecast'
+    # ngen-cal job id
+    forecast_run_id = request.form.get('forecast_run_id')
+    # Path to the ngen-cal input file within the container
+    input_file = request.form.get('input_file')
+    # Path to the SLURM job log file in the controller node
+    output_file = request.form.get('output_file')
+    # Path to the SLURM job log file in the controller node
+    auth_token = request.form.get('auth_token')
+
+    if not forecast_run_id:
+        return log_and_return_error("No forecast job ID provided", status_code = 400)
+
+    if not input_file:
+        return log_and_return_error("No ngen-cal input file provided", status_code = 400)
+
+    if not output_file:
+        return log_and_return_error("No output_file provided", status_code = 400)
+
+    if not auth_token:
+        return log_and_return_error("No auth_token provided", status_code = 400)
+    
+    singularity_run_cmd = f"{SINGULARITY_RUN_CMD} forecast {input_file}"
+
+    postprocessing_dir = os.path.join("postprocess", job_type, forecast_run_id)
+
+    try:
+        # Get callback
+        callback = get_callback(
+            f'http://{CONTROLLER_HOSTNAME}:8000/calibration/forecast_job_slurm_callback/',
+            auth_token,
+            forecast_run_id = forecast_run_id,
+            job_status = "__job_status__"
+        )
+        
+        write_callback(postprocessing_dir, callback)
+
+    except Exception as e:
+        return log_and_return_error(str(e), status_code = 500) 
+    
+
+    # FIXME: REMOVE THIS
+    postprocess_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess -d "job_status=DONE" -d "slurm_job_id=0" -d "job_type={job_type}" -d "run_id={forecast_run_id}"'
+    subprocess.run(postprocess_cmd, shell=True, check=True)
+    #####################
+    
+    #return submit_job(input_file, output_file, forecast_run_id, job_type, singularity_run_cmd)
+    return jsonify({"slurm_job_id": 0, "ngen_commit_hash": "NA", "ngen_cal_commit_hash": "NA"}), 200
+
+
+@app.route('/submit-forecast-forcing-download-job', methods=['POST'])
+def forecast_forcing_download_job_slurm_callback():
+    job_type = 'forecast_forcing_download'
+    # ngen-cal job id
+    forecast_run_id = request.form.get('forecast_run_id')
+    # Path to the ngen-cal input file within the container
+    input_file = request.form.get('input_file')
+    # Path to the SLURM job log file in the controller node
+    output_file = request.form.get('output_file')
+    # Path to the SLURM job log file in the controller node
+    auth_token = request.form.get('auth_token')
+
+    if not forecast_run_id:
+        return log_and_return_error("No forecast job ID provided", status_code = 400)
+
+    if not input_file:
+        return log_and_return_error("No ngen-cal input file provided", status_code = 400)
+
+    if not output_file:
+        return log_and_return_error("No output_file provided", status_code = 400)
+
+    if not auth_token:
+        return log_and_return_error("No auth_token provided", status_code = 400)
+    
+    singularity_run_cmd = f"{SINGULARITY_RUN_CMD} forecast {input_file}"
+
+    postprocessing_dir = os.path.join("postprocess", job_type, forecast_run_id)
+
+    try:
+        # Get callback
+        callback = get_callback(
+            f'http://{CONTROLLER_HOSTNAME}:8000/calibration/forecast_forcing_download_job_slurm_callback/',
+            auth_token,
+            forecast_run_id = forecast_run_id,
+            job_status = "__job_status__"
+        )
+        
+        write_callback(postprocessing_dir, callback)
+
+    except Exception as e:
+        return log_and_return_error(str(e), status_code = 500) 
+    
+
+    # FIXME: REMOVE THIS
+    postprocess_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess -d "job_status=DONE" -d "slurm_job_id=0" -d "job_type={job_type}" -d "run_id={forecast_run_id}"'
+    subprocess.run(postprocess_cmd, shell=True, check=True)
+    #####################
+    
+    #return submit_job(input_file, output_file, forecast_run_id, job_type, singularity_run_cmd)
+    return jsonify({"slurm_job_id": 0, "ngen_commit_hash": "NA", "ngen_cal_commit_hash": "NA"}), 200
 
 @app.route('/job-status', methods=['GET'])
 def job_status():

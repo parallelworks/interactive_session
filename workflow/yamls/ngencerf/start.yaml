@@ -5,7 +5,7 @@ sessions:
     useTLS: false
     redirect: true
     prompt-for-name:
-      default: "${{ inputs.pwrl_host.resource.namespace }}.${{ inputs.pwrl_host.resource.name }}"
+      default: "ngencerf"
 
 jobs:
   preprocessing:

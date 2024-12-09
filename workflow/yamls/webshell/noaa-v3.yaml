@@ -123,11 +123,6 @@ jobs:
         run: |
           local_port=$(pw agent open-port)
           echo "local_port=${local_port}"  | tee -a $OUTPUTS
-      - name: Set URL SLUG
-        run: |
-          source resources/host/inputs.sh
-          slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=headless&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
-          echo "slug=${slug}"  | tee -a $OUTPUTS
       - name: Expose Port
         uses: parallelworks/update-session
         with:
@@ -135,7 +130,6 @@ jobs:
           localPort: "${{ needs.create_session.outputs.local_port }}"
           remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
           status: running
-          slug: "${{ needs.create_session.outputs.slug }}"
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.session }}
       - name: Create service.json File
@@ -144,7 +138,7 @@ jobs:
           {
             "URL": "/me",
             "PORT": "${{ needs.create_session.outputs.local_port }}",
-            "SLUG": "${{ needs.create_session.outputs.slug }}\"",
+            "SLUG": "\"",
             "JOB_STATUS": "Running"
           }
           EOF

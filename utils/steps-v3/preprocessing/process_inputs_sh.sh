@@ -34,3 +34,7 @@ echo "export kill_sh=${pw_job_dir}/kill.sh" >> resources/host/inputs.sh
 
 # Path to the session script
 echo "export session_sh=${pw_job_dir}/session.sh"  >> resources/host/inputs.sh
+
+# Obtain path to pw command
+pw_cmd_path=$(${sshcmd} which pw)
+echo "export pw_cmd_path=${pw_cmd_path}" >> resources/host/inputs.sh 

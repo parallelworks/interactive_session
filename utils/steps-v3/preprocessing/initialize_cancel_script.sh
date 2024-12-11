@@ -17,10 +17,18 @@ if [ -f "${service_name}/kill-template.sh" ]; then
 fi
 cat utils/kill_session.sh >> ${kill_ssh}
 
+
 # KILL_SH: File that runs on the user space
+job_number_to_clean=$((job_number_int-10))
+job_to_clean="/pw/jobs/${workflow_name}/*${job_number_to_clean}"
+
 echo "#!/bin/bash" > ${kill_sh}
 echo "mv ${kill_sh} ${kill_sh}.completed" >> ${kill_sh}
 cat resources/host/inputs.sh >> ${kill_sh}
+if [ "${job_number_to_clean}" -gt 0 ]; then
+    echo "trap \"rm -rf ${job_to_clean}\" EXIT" >> ${kill_sh}
+fi
+
 echo "echo Running ${kill_sh}" >> ${kill_sh}
 # Add kill_ssh
 cat >> ${kill_sh} <<HERE

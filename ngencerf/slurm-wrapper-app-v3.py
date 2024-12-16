@@ -168,7 +168,6 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         
         # Execute the singularity command
         script.write(f'{singularity_run_cmd}\n') 
-        script.write('echo\n\n')
 
         # Check if the command was successful and set the job status accordingly
         script.write('if [ $? -eq 0 ]; then\n')

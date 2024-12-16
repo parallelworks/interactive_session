@@ -24,7 +24,7 @@ displayErrorMessage() {
 }
 
 findAvailablePort() {
-    availablePort=\$(pw agent open-port)
+    availablePort=\$(${pw_cmd_path} agent open-port)
     echo \${availablePort}
     if [ -z "\${availablePort}" ]; then
         availablePort=ERROR

@@ -270,7 +270,7 @@ jobs:
             type: dropdown
             hidden: ${{ inputs.service.conda_install == false }}
             ignore: ${{ .hidden }}
-            default: latest
+            default: jupyterlab4.1.5-python3.11.5
             options:
               - value: jupyterlab4.1.5-python3.11.5
                 label: Jupyter Lab 4.1.5 with Python 3.11.5

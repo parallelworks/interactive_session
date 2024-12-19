@@ -309,7 +309,7 @@ jobs:
             type: dropdown
             hidden: ${{ inputs.service.conda_install == false || ('existing' === inputs.pwrl_host.resource.provider  &&  inputs.service.use_conda == false) }}
             ignore: ${{ .hidden }}
-            default: latest
+            default: notebook7.2.2-python3.12.2
             options:
               - value: latest
                 label: Latest default versions of Jupyter Notebook and Python (not thoroughly tested)

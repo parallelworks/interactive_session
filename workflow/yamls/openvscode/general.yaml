@@ -4,8 +4,6 @@ sessions:
   session:
     useTLS: false
     redirect: true
-    prompt-for-name:
-      default: "ngencerf"
 
 jobs:
   preprocessing:

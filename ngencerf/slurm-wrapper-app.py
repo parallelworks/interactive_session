@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 CONTROLLER_HOSTNAME = socket.gethostname()
 
 # Path to the data directory in the shared filesystem
-LOCAL_DATA_DIR = os.environ.get('local_data_dir') #"/ngencerf-app/data/ngen-cal-data/"
+LOCAL_DATA_DIR = os.environ.get('LOCAL_DATA_DIR') #"/ngencerf-app/data/ngen-cal-data/"
 # Path to the data directory within the container
-CONTAINER_DATA_DIR = os.environ.get('container_data_dir') #"/ngencerf/data/"
+CONTAINER_DATA_DIR = os.environ.get('CONTAINER_DATA_DIR') #"/ngencerf/data/"
 # Path to the singularity container with ngen-cal
 NGEN_CAL_SINGULARITY_CONTAINER_PATH = os.environ.get('NGEN_CAL_SINGULARITY_CONTAINER_PATH')
 # Path to the singularity container with ngen-forcing

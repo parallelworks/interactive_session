@@ -147,6 +147,11 @@ jobs:
         type: string
         default: /ngencerf-app/singularity/ngen-cal.sif
         hidden: true
+      ngen_forcing_singularity_container_path:
+        label: Path to the ngen-forcing singularity container
+        type: string
+        default: /ngencerf-app/singularity/ngen-forcing.sif
+        hidden: true
       container_data_dir:
         label: Path to the data directory within the container
         type: string

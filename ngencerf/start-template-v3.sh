@@ -30,6 +30,10 @@ if ! [ -f "${ngen_cal_singularity_container_path}" ]; then
    displayErrorMessage "NGEN-CAL singularity container was not found ${ngen_cal_singularity_container_path}"
 fi
 
+if ! [ -f "${ngen_forcing_singularity_container_path}" ]; then
+   displayErrorMessage "NGEN-FORCING singularity container was not found ${ngen_forcing_singularity_container_path}"
+fi
+
 #################
 # NGINX WRAPPER #
 #################
@@ -98,7 +102,7 @@ sudo -n pip3.8 install gunicorn
 
 # Start Flask app using gunicorn
 #gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app:app > slurm-wrapper-app-v3.log 2>&1 &
-#sudo env local_data_dir=${local_data_dir} CONTAINER_DATA_DIR=${CONTAINER_DATA_DIR}  NGEN_CAL_SINGULARITY_CONTAINER_PATH=${NGEN_CAL_SINGULARITY_CONTAINER_PATH} python3.8 slurm-wrapper-app-v3.py > slurm-wrapper-app-v3.log 2>&1 &
+#sudo env local_data_dir=${local_data_dir} CONTAINER_DATA_DIR=${CONTAINER_DATA_DIR}  ngen_cal_singularity_container_path=${ngen_cal_singularity_container_path} python3.8 slurm-wrapper-app-v3.py > slurm-wrapper-app-v3.log 2>&1 &
 #slurm_wrapper_pid=$!
 #echo "sudo kill ${slurm_wrapper_pid}" >> cancel.sh
 

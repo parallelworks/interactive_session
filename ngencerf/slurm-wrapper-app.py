@@ -23,6 +23,8 @@ LOCAL_DATA_DIR = os.environ.get('LOCAL_DATA_DIR') #"/ngencerf-app/data/ngen-cal-
 CONTAINER_DATA_DIR = os.environ.get('CONTAINER_DATA_DIR') #"/ngencerf/data/"
 # Path to the singularity container with ngen-cal
 NGEN_CAL_SINGULARITY_CONTAINER_PATH = os.environ.get('NGEN_CAL_SINGULARITY_CONTAINER_PATH')
+# Path to the singularity container with ngen-forcing
+NGEN_FORCING_SINGULARITY_CONTAINER_PATH = os.environ.get('NGEN_FORCING_SINGULARITY_CONTAINER_PATH')
 # URL to callback from ngencal to the other services
 NGENCERF_URL=f"http://{CONTROLLER_HOSTNAME}:8000"
 # Command to launch singularity
@@ -480,26 +482,25 @@ def submit_forecast_job():
     return jsonify({"slurm_job_id": 0, "ngen_commit_hash": "NA", "ngen_cal_commit_hash": "NA"}), 200
 
 
-@app.route('/submit-forecast-forcing-download-job', methods=['POST'])
-def forecast_forcing_download_job_slurm_callback():
+@app.route('/submit-forecast-forcing-download-endpoint', methods=['POST'])
+def submit_forecast_forcing_download_endpoint():
     job_type = 'forecast_forcing_download'
     # ngen-cal job id
     forecast_forcing_download_id = request.form.get('forecast_forcing_download_id')
-    # Path to the ngen-cal input file within the container
-    input_file = request.form.get('input_file')
     # Path to the SLURM job log file in the controller node
-    output_file = request.form.get('output_file')
+    output_file = request.form.get('stdout_file')
     cycle_name = request.form.get('cycle_name')
     gpkg_file = request.form.get('gpkg_file')
     forcing_file = request.form.get('forcing_file')  
+    config_file = request.form.get('config_file')  
     # Path to the SLURM job log file in the controller node
     auth_token = request.form.get('auth_token')
 
     if not forecast_forcing_download_id:
         return log_and_return_error("No forecast job ID provided", status_code = 400)
 
-    if not input_file:
-        return log_and_return_error("No ngen-cal input file provided", status_code = 400)
+    if not config_file:
+        return log_and_return_error("No ngen-forecast config file provided", status_code = 400)
 
     if not output_file:
         return log_and_return_error("No output_file provided", status_code = 400)

@@ -30,9 +30,10 @@ if ! [ -f "${ngen_cal_singularity_container_path}" ]; then
    displayErrorMessage "NGEN-CAL singularity container was not found ${ngen_cal_singularity_container_path}"
 fi
 
-if ! [ -f "${ngen_forcing_singularity_container_path}" ]; then
-   displayErrorMessage "NGEN-FORCING singularity container was not found ${ngen_forcing_singularity_container_path}"
-fi
+# FIXME: Uncomment
+#if ! [ -f "${ngen_forcing_singularity_container_path}" ]; then
+#   displayErrorMessage "NGEN-FORCING singularity container was not found ${ngen_forcing_singularity_container_path}"
+#fi
 
 #################
 # NGINX WRAPPER #

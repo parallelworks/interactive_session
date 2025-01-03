@@ -515,8 +515,8 @@ def submit_forecast_job():
 
 
 
-@app.route('/submit-forecast-forcing-download-endpoint', methods=['POST'])
-def submit_forecast_forcing_download_endpoint():
+@app.route('/submit-forecast-forcing-download', methods=['POST'])
+def submit_forecast_forcing_download():
     job_type = 'forecast_forcing_download'
     # ngen-cal job id
     forecast_forcing_download_id = request.form.get('forecast_forcing_download_id')

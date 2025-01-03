@@ -529,7 +529,7 @@ def submit_forecast_job():
 def submit_forecast_forcing_download_job():
     job_type = 'forecast_forcing_download'
     # ngen-cal job id
-    forecast_forcing_download_id = request.form.get('forecast_forcing_download_id')
+    forecast_forcing_download_run_id = request.form.get('forecast_forcing_download_run_id')
     # Path to the SLURM job log file in the controller node
     stdout_file = request.form.get('stdout_file')
     cycle_name = request.form.get('cycle_name')
@@ -540,7 +540,7 @@ def submit_forecast_forcing_download_job():
     # Path to the SLURM job log file in the controller node
     auth_token = request.form.get('auth_token')
 
-    if not forecast_forcing_download_id:
+    if not forecast_forcing_download_run_id:
         return log_and_return_error("No forecast job ID provided", status_code = 400)
 
     if not config_file:
@@ -573,14 +573,14 @@ def submit_forecast_forcing_download_job():
 
     singularity_run_cmd = f"{SINGULARITY_RUN_NGEN_FORCING_CMD} {cycle_name} {gpkg_file} {config_file} {forcing_file}"
 
-    postprocessing_dir = os.path.join("postprocess", job_type, forecast_forcing_download_id)
+    postprocessing_dir = os.path.join("postprocess", job_type, forecast_forcing_download_run_id)
 
     try:
         # Get callback
         callback = get_callback(
             f'http://{CONTROLLER_HOSTNAME}:8000/calibration/forecast_forcing_download_job_slurm_callback/',
             auth_token,
-            forecast_forcing_download_id = forecast_forcing_download_id,
+            forecast_forcing_download_run_id = forecast_forcing_download_run_id,
             job_status = "__job_status__"
         )
         
@@ -591,12 +591,12 @@ def submit_forecast_forcing_download_job():
     
 
     # FIXME: REMOVE THIS
-    postprocess_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess -d "job_status=DONE" -d "slurm_job_id=0" -d "job_type={job_type}" -d "run_id={forecast_forcing_download_id}"'
+    postprocess_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess -d "job_status=DONE" -d "slurm_job_id=0" -d "job_type={job_type}" -d "run_id={forecast_forcing_download_run_id}"'
     subprocess.run(postprocess_cmd, shell=True, check=True)
     #####################
     
     # FIXME: Uncomment
-    #slurm_job_id, exit_code = submit_job(config_file, stdout_file, forecast_forcing_download_id, job_type, singularity_run_cmd)
+    #slurm_job_id, exit_code = submit_job(config_file, stdout_file, forecast_forcing_download_run_id, job_type, singularity_run_cmd)
     #return jsonify({"slurm_job_id": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_forcing_commit_hash": ngen_forcing_commit_hash}), exit_code
     return jsonify({"slurm_job_id": 0, "ngen_commit_hash": "NA", "ngen_forcing_commit_hash": "NA"}), 200
 

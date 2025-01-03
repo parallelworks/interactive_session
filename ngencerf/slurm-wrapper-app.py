@@ -591,7 +591,7 @@ def submit_forecast_forcing_download():
     
 
     # FIXME: REMOVE THIS
-    postprocess_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess -d "job_status=DONE" -d "slurm_job_id=0" -d "job_type={job_type}" -d "run_id={forecast_run_id}"'
+    postprocess_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess -d "job_status=DONE" -d "slurm_job_id=0" -d "job_type={job_type}" -d "run_id={forecast_forcing_download_id}"'
     subprocess.run(postprocess_cmd, shell=True, check=True)
     #####################
     

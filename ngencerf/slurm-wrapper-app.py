@@ -113,6 +113,7 @@ def grant_ownership(job_dir):
     
 def get_git_hashes(command):
     """Retrieve git commit hashes from the ngen container."""
+    logger.info(f"Command to obtain git hashes: {command}")
     try:
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
         if result.returncode != 0:

@@ -27,6 +27,12 @@
         value='/ngencerf-app/singularity/ngen-forcing.sif'  
     ></param>
     <param 
+        name='NGEN_FCST_SINGULARITY_CONTAINER_PATH' 
+        label='Path to the ngen-fcst singularity container' 
+        type='hidden' 
+        value='/ngencerf-app/singularity/ngen-fcst.sif'  
+    ></param>
+    <param 
         name='CONTAINER_DATA_DIR' 
         label='Path to the data directory within the container' 
         type='hidden' 

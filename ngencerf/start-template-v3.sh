@@ -35,6 +35,11 @@ fi
 #   displayErrorMessage "NGEN-FORCING singularity container was not found ${ngen_forcing_singularity_container_path}"
 #fi
 
+#if ! [ -f "${ngen_fcst_singularity_container_path}" ]; then
+#   displayErrorMessage "NGEN-FCST singularity container was not found ${ngen_fcst_singularity_container_path}"
+#fi
+
+
 #################
 # NGINX WRAPPER #
 #################

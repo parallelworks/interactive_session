@@ -522,9 +522,9 @@ def submit_forecast_job():
     stdout, stderr = process.communicate()
     # Log the outputs
     if stdout:
-        logger.info(f"Subprocess output: {stdout.decode().strip()}")
+        logger.info(f"Callback output: {stdout.decode().strip()}")
     if stderr:
-        logger.error(f"Subprocess error: {stderr.decode().strip()}")
+        logger.error(f"Callback error: {stderr.decode().strip()}")
     #####################
     
     # FIXME: Uncomment
@@ -607,9 +607,9 @@ def submit_forecast_forcing_download():
     stdout, stderr = process.communicate()
     # Log the outputs
     if stdout:
-        logger.info(f"Subprocess output: {stdout.decode().strip()}")
+        logger.info(f"Callback output: {stdout.decode().strip()}")
     if stderr:
-        logger.error(f"Subprocess error: {stderr.decode().strip()}")
+        logger.error(f"Callback error: {stderr.decode().strip()}")
     #####################
     
     # FIXME: Uncomment

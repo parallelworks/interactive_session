@@ -517,7 +517,15 @@ def submit_forecast_job():
     # FIXME: REMOVE THIS
     #postprocess_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess -d "job_status=DONE" -d "slurm_job_id=0" -d "job_type={job_type}" -d "run_id={forecast_run_id}"'
     callback = callback.replace('__job_status__', 'DONE')
-    subprocess.run(callback, shell=True, check=True)
+    logger.info(f'Running {callback}')
+    process = subprocess.Popen(callback, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # Capture the output and errors
+    stdout, stderr = process.communicate()
+    # Log the outputs
+    if stdout:
+        logger.info(f"Subprocess output: {stdout.decode().strip()}")
+    if stderr:
+        logger.error(f"Subprocess error: {stderr.decode().strip()}")
     #####################
     
     # FIXME: Uncomment
@@ -594,7 +602,16 @@ def submit_forecast_forcing_download_job():
     # FIXME: REMOVE THIS
     #postprocess_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess -d "job_status=DONE" -d "slurm_job_id=0" -d "job_type={job_type}" -d "run_id={forecast_forcing_download_run_id}"'
     callback = callback.replace('__job_status__', 'DONE')
-    subprocess.run(callback, shell=True, check=True)
+    logger.info(f'Running {callback}')
+    process = subprocess.Popen(callback, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # Capture the output and errors
+    stdout, stderr = process.communicate()
+    # Log the outputs
+    if stdout:
+        logger.info(f"Subprocess output: {stdout.decode().strip()}")
+    if stderr:
+        logger.error(f"Subprocess error: {stderr.decode().strip()}")
+
     #####################
     
     # FIXME: Uncomment

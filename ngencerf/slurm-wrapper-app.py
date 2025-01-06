@@ -524,7 +524,7 @@ def submit_forecast_job():
     # FIXME: Uncomment
     #slurm_job_id, exit_code = submit_job(input_file, stdout_file, forecast_run_id, job_type, singularity_run_cmd)
     #return jsonify({"slurm_job_id": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_forcing_commit_hash": ngen_forcing_commit_hash}), exit_code
-    return jsonify({"slurm_job_id": 0, "ngen_cal_commit_hash": "NA", "ngen_forecast_commit_hash": "NA"}), 200
+    return jsonify({"slurm_job_id": 0, "ngen_commit_hash": "NA", "ngen_forecast_commit_hash": "NA"}), 200
 
 
 @app.route('/submit-forecast-forcing-download-job', methods=['POST'])

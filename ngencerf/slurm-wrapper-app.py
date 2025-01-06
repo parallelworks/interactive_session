@@ -515,14 +515,15 @@ def submit_forecast_job():
     
 
     # FIXME: REMOVE THIS
-    postprocess_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess -d "job_status=DONE" -d "slurm_job_id=0" -d "job_type={job_type}" -d "run_id={forecast_run_id}"'
-    subprocess.run(postprocess_cmd, shell=True, check=True)
+    #postprocess_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess -d "job_status=DONE" -d "slurm_job_id=0" -d "job_type={job_type}" -d "run_id={forecast_run_id}"'
+    callback = callback.replace('__job_status__', 'DONE')
+    subprocess.run(callback, shell=True, check=True)
     #####################
     
     # FIXME: Uncomment
     #slurm_job_id, exit_code = submit_job(input_file, stdout_file, forecast_run_id, job_type, singularity_run_cmd)
     #return jsonify({"slurm_job_id": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_forcing_commit_hash": ngen_forcing_commit_hash}), exit_code
-    return jsonify({"slurm_job_id": 0, "ngen_commit_hash": "NA", "ngen_forcing_commit_hash": "NA"}), 200
+    return jsonify({"slurm_job_id": 0, "ngen_cal_commit_hash": "NA", "ngen_forecast_commit_hash": "NA"}), 200
 
 
 @app.route('/submit-forecast-forcing-download-job', methods=['POST'])
@@ -591,14 +592,15 @@ def submit_forecast_forcing_download_job():
     
 
     # FIXME: REMOVE THIS
-    postprocess_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess -d "job_status=DONE" -d "slurm_job_id=0" -d "job_type={job_type}" -d "run_id={forecast_forcing_download_run_id}"'
-    subprocess.run(postprocess_cmd, shell=True, check=True)
+    #postprocess_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess -d "job_status=DONE" -d "slurm_job_id=0" -d "job_type={job_type}" -d "run_id={forecast_forcing_download_run_id}"'
+    callback = callback.replace('__job_status__', 'DONE')
+    subprocess.run(callback, shell=True, check=True)
     #####################
     
     # FIXME: Uncomment
     #slurm_job_id, exit_code = submit_job(config_file, stdout_file, forecast_forcing_download_run_id, job_type, singularity_run_cmd)
     #return jsonify({"slurm_job_id": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_forcing_commit_hash": ngen_forcing_commit_hash}), exit_code
-    return jsonify({"slurm_job_id": 0, "ngen_commit_hash": "NA", "ngen_forcing_commit_hash": "NA"}), 200
+    return jsonify({"slurm_job_id": 0, "ngen_forcing_commit_hash": "NA"}), 200
 
 
 @app.route('/job-status', methods=['GET'])

@@ -517,14 +517,8 @@ def submit_forecast_job():
     # FIXME: REMOVE THIS
     callback = callback.replace('__job_status__', 'DONE')
     logger.info(f'Running {callback}')
-    process = subprocess.Popen(callback, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    # Capture the output and errors
-    stdout, stderr = process.communicate()
-    # Log the outputs
-    if stdout:
-        logger.info(f"Callback output: {stdout.decode().strip()}")
-    if stderr:
-        logger.error(f"Callback error: {stderr.decode().strip()}")
+    process = subprocess.Popen(f"sleep 3; {callback} > {postprocessing_dir}/callback.out 2>&1 ", shell=True)
+
     #####################
     
     # FIXME: Uncomment
@@ -602,14 +596,8 @@ def submit_forecast_forcing_download():
     #postprocess_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess -d "job_status=DONE" -d "slurm_job_id=0" -d "job_type={job_type}" -d "run_id={forecast_run_id}"'
     callback = callback.replace('__job_status__', 'DONE')
     logger.info(f'Running {callback}')
-    process = subprocess.Popen(callback, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    # Capture the output and errors
-    stdout, stderr = process.communicate()
-    # Log the outputs
-    if stdout:
-        logger.info(f"Callback output: {stdout.decode().strip()}")
-    if stderr:
-        logger.error(f"Callback error: {stderr.decode().strip()}")
+    process = subprocess.Popen(f"sleep 3; {callback} > {postprocessing_dir}/callback.out 2>&1 ", shell=True)
+
     #####################
     
     # FIXME: Uncomment

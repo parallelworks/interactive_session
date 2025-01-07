@@ -296,13 +296,15 @@ jobs:
             hidden:  ${{ inputs.service.conda_install == true || ('existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}
+            tooltip: Use a bash command
           load_env_tag_existing:
-            label: Command to load Jupyter Notebook
+            label: Command to load Jupyter Notebook to the PATH
             type: string
             default: module load intelpython; export PATH=$PATH:/home/${USER}/.local/bin
             hidden:  ${{ 'existing' !== inputs.pwrl_host.resource.provider ||  inputs.service.use_conda == true }}
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}
+            tooltip: Use a bash command
           install_instructions_tag_cloud:
             label: Select Jupyter Lab Installation
             type: dropdown

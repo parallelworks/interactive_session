@@ -58,6 +58,7 @@ else
             portFile=/tmp/${port}.port.used
             if ! [ -f "${portFile}" ]; then
                 touch ${portFile}
+                echo "rm ${portFile}" >> ${resource_jobdir}/service-kill-${job_number}.sh
                 export displayPort=${port}
                 export DISPLAY=:${displayNumber#0}
                 break

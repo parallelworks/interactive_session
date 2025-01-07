@@ -6,6 +6,8 @@ The environment variables are defined in the XML or YAML definition file of the 
 - `LOCAL_DATA_DIR`: Path to the data directory on the shared filesystem (e.g., `/ngencerf-app/data/ngen-cal-data/`).
 - `CONTAINER_DATA_DIR`: Path to the data directory within the container (e.g., `/ngencerf/data/`).
 - `NGEN_CAL_SINGULARITY_CONTAINER_PATH`: Path to the Singularity container that includes `ngen-cal`.
+- `NGEN_FORCING_SINGULARITY_CONTAINER_PATH`: Path to the Singularity container that includes `ngen-forcing`.
+
 
 ## API Endpoints
 ### 1. Submit a Calibration Job

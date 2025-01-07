@@ -39,6 +39,15 @@ if ! [ -f "${NGEN_CAL_SINGULARITY_CONTAINER_PATH}" ]; then
    displayErrorMessage "NGEN-CAL singularity container was not found ${NGEN_CAL_SINGULARITY_CONTAINER_PATH}"
 fi
 
+# FIXME: Uncomment
+#if ! [ -f "${NGEN_FORCING_SINGULARITY_CONTAINER_PATH}" ]; then
+#   displayErrorMessage "NGEN-FORCING singularity container was not found ${NGEN_FORCING_SINGULARITY_CONTAINER_PATH}"
+#fi
+
+#if ! [ -f "${NGEN_FCST_SINGULARITY_CONTAINER_PATH}" ]; then
+#   displayErrorMessage "NGEN-FCST singularity container was not found ${NGEN_FCST_SINGULARITY_CONTAINER_PATH}"
+#fi
+
 #################
 # NGINX WRAPPER #
 #################

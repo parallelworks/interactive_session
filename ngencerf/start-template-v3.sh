@@ -65,6 +65,11 @@ server {
        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
        proxy_set_header Host \$http_host;
        proxy_set_header X-NginX-Proxy true;
+
+       proxy_connect_timeout 3600s;  # Time to establish connection with backend
+       proxy_send_timeout 3600s;     # Time to send request to backend
+       proxy_read_timeout 3600s;     # Time to wait for a response from the backend
+       send_timeout 3600s;           # Time to wait for the client to receive the response
  }
 
  location /api/ {
@@ -76,6 +81,11 @@ server {
        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
        proxy_set_header Host \$http_host;
        proxy_set_header X-NginX-Proxy true;
+
+       proxy_connect_timeout 3600s;  # Time to establish connection with backend
+       proxy_send_timeout 3600s;     # Time to send request to backend
+       proxy_read_timeout 3600s;     # Time to wait for a response from the backend
+       send_timeout 3600s;           # Time to wait for the client to receive the response
  }
 }
 HERE

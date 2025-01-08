@@ -56,6 +56,20 @@ server {
  add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 0;  # Remove upload size limit by setting to 0
+
+ # Timeout settings
+ proxy_connect_timeout 3600s;   # Time to establish connection with backend
+ proxy_send_timeout 3600s;      # Time to send request to backend
+ proxy_read_timeout 86400s;     # Time to wait for a response from the backend (increased to 1 day)
+ send_timeout 3600s;            # Time to wait for the client to receive the response
+
+ # Buffers for large responses
+ proxy_buffers 16 16k;
+ proxy_buffer_size 32k;
+
+ # Keep-alive settings
+ keepalive_timeout 65;          # Timeout for keeping the connection open with the backend
+
  location / {
      proxy_pass http://127.0.0.1:${ngencerf_port}${basepath}/;
      proxy_http_version 1.1;
@@ -65,11 +79,6 @@ server {
        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
        proxy_set_header Host \$http_host;
        proxy_set_header X-NginX-Proxy true;
-
-       proxy_connect_timeout 3600s;  # Time to establish connection with backend
-       proxy_send_timeout 3600s;     # Time to send request to backend
-       proxy_read_timeout 3600s;     # Time to wait for a response from the backend
-       send_timeout 3600s;           # Time to wait for the client to receive the response
  }
 
  location /api/ {
@@ -82,10 +91,6 @@ server {
        proxy_set_header Host \$http_host;
        proxy_set_header X-NginX-Proxy true;
 
-       proxy_connect_timeout 3600s;  # Time to establish connection with backend
-       proxy_send_timeout 3600s;     # Time to send request to backend
-       proxy_read_timeout 3600s;     # Time to wait for a response from the backend
-       send_timeout 3600s;           # Time to wait for the client to receive the response
  }
 }
 HERE

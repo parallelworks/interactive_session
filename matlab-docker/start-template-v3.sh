@@ -34,6 +34,45 @@ server {
 }
 HERE
 
+cat >> nginx.conf <<HERE
+worker_processes  2;
+
+error_log  /var/log/nginx/error.log notice;
+pid        /tmp/nginx.pid;
+
+
+events {
+    worker_connections  1024;
+}
+
+
+http {
+    proxy_temp_path /tmp/proxy_temp;
+    client_body_temp_path /tmp/client_temp;
+    fastcgi_temp_path /tmp/fastcgi_temp;
+    uwsgi_temp_path /tmp/uwsgi_temp;
+    scgi_temp_path /tmp/scgi_temp;
+
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  '\$remote_addr - \$remote_user [\$time_local] "\$request" '
+                      '\$status \$body_bytes_sent "\$http_referer" '
+                      '"\$http_user_agent" "\$http_x_forwarded_for"';
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    keepalive_timeout  65;
+
+    #gzip  on;
+
+    include /etc/nginx/conf.d/*.conf;
+}
+HERE
+
 echo "Running docker container nginx"
 container_name="nginx-${service_port}"
 # Remove container when job is canceled
@@ -45,6 +84,7 @@ touch empty
 sudo docker run  -d --name ${container_name} \
     -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
     -v ${PWD}/empty:/etc/nginx/conf.d/default.conf \
+    -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
     --network=host nginxinc/nginx-unprivileged:1.25.3
 # Print logs
 sudo docker logs ${container_name}

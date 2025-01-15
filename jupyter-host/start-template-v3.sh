@@ -139,7 +139,7 @@ echo "Running singularity container ${service_nginx_sif}"
 mkdir -p ./tmp
 # Need to overwrite default configuration!
 touch empty
-singularity run --env NGINX_WORKER_PROCESSES=2 -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} >> nginx.logs 2>&1  &
+singularity run --cpus 2 -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} >> nginx.logs 2>&1  &
 pid=$!
 echo "kill ${pid}" >> cancel.sh
 

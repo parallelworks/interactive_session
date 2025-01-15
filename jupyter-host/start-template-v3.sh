@@ -111,6 +111,8 @@ echo "Starting nginx wrapper on service port ${service_port}"
 
 # Write config file
 cat >> config.conf <<HERE
+worker_processes 2;
+
 server {
  listen ${service_port};
  server_name ${service_port};

@@ -111,38 +111,24 @@ echo "Starting nginx wrapper on service port ${service_port}"
 
 # Write config file
 cat >> config.conf <<HERE
-
-worker_processes 2;
-
-events {
-    worker_connections 1024;
-}
-
-http {
-    include       /etc/nginx/mime.types;
-    default_type  application/octet-stream;
-
-    include /etc/nginx/conf.d/*.conf;
-
-    server {
-        listen ${service_port};
-        server_name ${service_port};
-        index index.html index.htm index.php;
-        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
-        add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
-        add_header X-Frame-Options "ALLOWALL";
-        client_max_body_size 1000M;
-        location / {
-            proxy_pass http://127.0.0.1:${jupyterserver_port}${basepath}/;
-            proxy_http_version 1.1;
-                    proxy_set_header Upgrade \$http_upgrade;
-            proxy_set_header Connection "upgrade";
-            proxy_set_header X-Real-IP \$remote_addr;
-            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-            proxy_set_header Host \$http_host;
-            proxy_set_header X-NginX-Proxy true;
-        }
-    }
+server {
+ listen ${service_port};
+ server_name ${service_port};
+ index index.html index.htm index.php;
+ add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+ add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
+ add_header X-Frame-Options "ALLOWALL";
+ client_max_body_size 1000M;
+ location / {
+     proxy_pass http://127.0.0.1:${jupyterserver_port}${basepath}/;
+     proxy_http_version 1.1;
+       proxy_set_header Upgrade \$http_upgrade;
+       proxy_set_header Connection "upgrade";
+       proxy_set_header X-Real-IP \$remote_addr;
+       proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+       proxy_set_header Host \$http_host;
+       proxy_set_header X-NginX-Proxy true;
+ }
 }
 HERE
 
@@ -153,7 +139,7 @@ echo "Running singularity container ${service_nginx_sif}"
 mkdir -p ./tmp
 # Need to overwrite default configuration!
 touch empty
-singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} >> nginx.logs 2>&1  &
+singularity run --env NGINX_WORKER_PROCESSES=2 -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} >> nginx.logs 2>&1  &
 pid=$!
 echo "kill ${pid}" >> cancel.sh
 

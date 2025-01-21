@@ -175,7 +175,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     ${service_vnc_exec} -kill ${DISPLAY}
 
     # To prevent the process from being killed at startime    
-    if [ -f "~/.vnc/xstartup" ]; then
+    if [ -f "${HOME}/.vnc/xstartup" ]; then
         sed -i '/vncserver -kill $DISPLAY/ s/^#*/#/' ~/.vnc/xstartup
     else
         echo '#!/bin/sh' > ~/.vnc/xstartup

@@ -13,7 +13,7 @@ if [ -z "${openPort}" ]; then
 fi
 
 echo "export openPort=${openPort}" >> resources/host/inputs.sh
-export sshcmd="ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no ${resource_publicIp}"
+export sshcmd="ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${resource_publicIp}"
 echo "export sshcmd=\"${sshcmd}\"" >> resources/host/inputs.sh
 source resources/host/inputs.sh
 

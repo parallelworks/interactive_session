@@ -117,7 +117,7 @@ def encode_string_to_base64(text):
 RESOURCES_DIR: str = 'resources'
 SUPPORTED_RESOURCE_TYPES: list = ['gclusterv2', 'pclusterv2', 'azclusterv2', 'slurmshv2', 'existing', 'aws-slurm', 'google-slurm', 'azure-slurm']
 ONPREM_RESOURCE_TYPES: list = ['slurmshv2', 'existing']
-SSH_CMD: str = 'ssh  -o StrictHostKeyChecking=no'
+SSH_CMD: str = 'ssh  -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
 
 
 def get_logger(log_file, name, level=logging.INFO):

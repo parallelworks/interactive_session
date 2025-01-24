@@ -109,7 +109,7 @@ def write_slurm_script(run_id, input_file_local, output_file_local, singularity_
         sacct_cmd = 'sacct -j $SLURM_JOB_ID -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Reserved --parsable --units=K'
         # sacct_cmd depends on the SLURM version!
         #sacct_cmd = 'sacct -j $SLURM_JOB_ID -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Planned'
-        ssh_cmd = f'ssh -i ~/.ssh/pw_id_rsa -o StrictHostKeyChecking=no {CONTROLLER_HOSTNAME}'
+        ssh_cmd = f'ssh -i ~/.ssh/pw_id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {CONTROLLER_HOSTNAME}'
         script.write(f'sbatch --dependency=afterok:$SLURM_JOB_ID --wrap=\"{ssh_cmd} {sacct_cmd} >> {performance_log}\"\n')
         script.write('echo\n\n')
 

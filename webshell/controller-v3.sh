@@ -6,7 +6,7 @@ fi
 
 download_and_install() {
     # 1. Clone the repository with --no-checkout
-    export GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no'
+    export GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
     # Needed for emed
     git config --global --unset http.sslbackend
     git clone --no-checkout https://github.com/parallelworks/interactive_session.git

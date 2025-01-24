@@ -73,14 +73,14 @@ jobs:
       - name: Get Controller Hostname
         if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
         env:
-          sshcmd: ssh -o StrictHostKeyChecking=no ${{ inputs.pwrl_host.resource.ip }}
+          sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
           target_hostname=$(${sshcmd} hostname)
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
       - name: Get Compute Hostname
         if: ${{ 'SLURM' === inputs.pwrl_host.jobschedulertype }}
         env:
-          sshcmd: ssh -o StrictHostKeyChecking=no ${{ inputs.pwrl_host.resource.ip }}
+          sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
           while true; do
             echo "Waiting for target hostname..."
@@ -102,7 +102,7 @@ jobs:
 
       - name: Get Remote Port
         env:
-          sshcmd: ssh -o StrictHostKeyChecking=no ${{ inputs.pwrl_host.resource.ip }}
+          sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
           while true; do
             echo "Waiting for service port file..."

@@ -6,4 +6,4 @@ if [ -z ${service_parent_install_dir} ]; then
     service_parent_install_dir=${resource_workdir}/pw/software
 fi
 
-rsync -avzq --rsync-path="mkdir -p ${service_parent_install_dir} && rsync" ${service_copilot_usercontainer_path} ${resource_publicIp}:${service_parent_install_dir}
+rsync  -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -avzq --rsync-path="mkdir -p ${service_parent_install_dir} && rsync" ${service_copilot_usercontainer_path} ${resource_publicIp}:${service_parent_install_dir}

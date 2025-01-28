@@ -254,4 +254,4 @@ jobs:
             label: Launch command
             type: string
             default: qgis
-            tooltip: Command to start RStudio
+            tooltip: Command to start QGIS

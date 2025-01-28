@@ -245,15 +245,18 @@ jobs:
             tooltip: Make sure the display protocol is installed in the host!
             default: turbovnc
           load_env:
-            label: Command to load or install libreoffice
+            label: Command to load or install Panoply
             type: string
-            default: sudo yum install libreoffice-calc.x86_64 -y
-            hidden: true
             optional: true
-            tooltip: To load the environment, enter the appropriate command, for example, module load module-name or source path/to/env.sh.
+            default: /contrib/software/Panoply/set_panoply.sh
+            tooltip: Make sure you have access to the files!
           bin:
-            label: Launch command
+            label: Command to launch Panoply
             type: string
+            default: /contrib/software/Panoply/PanoplyJ/panoply.sh
+            tooltip: Make sure you have access to the files!
+          desktop:
+            label: Desktop Session
+            type: string
+            default: mate-session
             hidden: true
-            default: libreoffice --calc
-            tooltip: Command to start LibreOffice

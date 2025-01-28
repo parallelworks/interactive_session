@@ -42,7 +42,8 @@ SINGULARITY_EXEC_NGEN_FCST_CMD = f"singularity exec -B {LOCAL_DATA_DIR}:{CONTAIN
 # Files with the git hashes within ngen-cal container
 NGEN_CAL_GIT_HASH_FILES = '/ngen-app/ngen/.git/HEAD /ngen-app/ngen-cal/.git/HEAD'
 # Files with the git hashes within ngen-forcing container
-NGEN_FORCING_GIT_HASH_FILES = '/ngen-app/ngen/.git/HEAD /ngen-app/ngen-forcing/.git/HEAD'
+# - FIXME: The function that obtains the commit hash expects two files
+NGEN_FORCING_GIT_HASH_FILES = '/ngen-app/ngen-forcing/.git/HEAD /ngen-app/ngen-forcing/.git/HEAD'
 # Files with the git hashes within ngen-forcing container
 NGEN_FCST_GIT_HASH_FILES = '/ngen-app/ngen/.git/HEAD /ngen-app/ngen-fcst/.git/HEAD'
 
@@ -485,17 +486,16 @@ def submit_forecast_job():
     if not auth_token:
         return log_and_return_error("No auth_token provided", status_code = 400)
     
-    # FIXME: Uncomment
     # Get commit hashes before job submission
-    #hashes_command = f'{SINGULARITY_EXEC_NGEN_FCST_CMD} cat {NGEN_FCST_GIT_HASH_FILES}'
-    #ngen_commit_hash, ngen_forcing_commit_hash = get_git_hashes(hashes_command)
-    #if ngen_commit_hash is None:  # Check for error during hash retrieval
-    #    error_msg = f"Failed to retrieve commit hashes: {ngen_forcing_commit_hash}"
-    #    return log_and_return_error(error_msg, status_code = 500)
+    hashes_command = f'{SINGULARITY_EXEC_NGEN_FCST_CMD} cat {NGEN_FCST_GIT_HASH_FILES}'
+    ngen_commit_hash, ngen_forcing_commit_hash = get_git_hashes(hashes_command)
+    if ngen_commit_hash is None:  # Check for error during hash retrieval
+        error_msg = f"Failed to retrieve commit hashes: {ngen_forcing_commit_hash}"
+        return log_and_return_error(error_msg, status_code = 500)
 
-    #logger.info(f"Commit hashes retrieved - NGEN: {ngen_commit_hash}, NGEN_FORCING: {ngen_forcing_commit_hash}")
+    logger.info(f"Commit hashes retrieved - NGEN: {ngen_commit_hash}, NGEN_FORCING: {ngen_forcing_commit_hash}")
 
-    singularity_run_cmd = f"{SINGULARITY_RUN_NGEN_FCST_CMD} {forcing_file} {input_file} {forecast_dir}"
+    singularity_run_cmd = f"{SINGULARITY_RUN_NGEN_FCST_CMD} {forcing_file} {input_file} {forecast_dir} {stdout_file}"
 
     postprocessing_dir = os.path.join("postprocess", job_type, forecast_run_id)
 
@@ -514,17 +514,8 @@ def submit_forecast_job():
         return log_and_return_error(str(e), status_code = 500) 
     
 
-    # FIXME: REMOVE THIS
-    callback = callback.replace('__job_status__', 'DONE')
-    logger.info(f'Running {callback}')
-    process = subprocess.Popen(f"sleep 3; {callback} > {postprocessing_dir}/callback.out 2>&1 ", shell=True)
-
-    #####################
-    
-    # FIXME: Uncomment
-    #slurm_job_id, exit_code = submit_job(input_file, stdout_file, forecast_run_id, job_type, singularity_run_cmd)
-    #return jsonify({"slurm_job_id": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_forcing_commit_hash": ngen_forcing_commit_hash}), exit_code
-    return jsonify({"slurm_job_id": 0, "ngen_commit_hash": "NA", "ngen_forecast_commit_hash": "NA"}), 200
+    slurm_job_id, exit_code = submit_job(input_file, stdout_file, forecast_run_id, job_type, singularity_run_cmd)
+    return jsonify({"slurm_job_id": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_forcing_commit_hash": ngen_forcing_commit_hash}), exit_code
 
 
 @app.route('/submit-forecast-forcing-download', methods=['POST'])
@@ -563,17 +554,16 @@ def submit_forecast_forcing_download():
     if not auth_token:
         return log_and_return_error("No auth_token provided", status_code = 400)
     
-    # FIXME: Uncomment 
     # Get commit hashes before job submission
-    #hashes_command = f'{SINGULARITY_EXEC_NGEN_FORCING_CMD} cat {NGEN_FORCING_GIT_HASH_FILES}'
-    #ngen_commit_hash, ngen_forcing_commit_hash = get_git_hashes(hashes_command)
-    #if ngen_commit_hash is None:  # Check for error during hash retrieval
-    #    error_msg = f"Failed to retrieve commit hashes: {ngen_forcing_commit_hash}"
-    #    return log_and_return_error(error_msg, status_code = 500)
+    hashes_command = f'{SINGULARITY_EXEC_NGEN_FORCING_CMD} cat {NGEN_FORCING_GIT_HASH_FILES}'
+    ngen_forcing_commit_hash, _ = get_git_hashes(hashes_command)
+    if ngen_forcing_commit_hash is None:  # Check for error during hash retrieval
+        error_msg = f"Failed to retrieve commit hashes: {ngen_forcing_commit_hash}"
+        return log_and_return_error(error_msg, status_code = 500)
 
-    #logger.info(f"Commit hashes retrieved - NGEN: {ngen_commit_hash}, NGEN_FORCING: {ngen_forcing_commit_hash}")
+    logger.info(f"Commit hashes retrieved - NGEN_FORCING: {ngen_forcing_commit_hash}")
 
-    singularity_run_cmd = f"{SINGULARITY_RUN_NGEN_FORCING_CMD} {cycle_name} {gpkg_file} {config_file} {forcing_file}"
+    singularity_run_cmd = f"{SINGULARITY_RUN_NGEN_FORCING_CMD} {cycle_name} {gpkg_file} {config_file} {forcing_file} {stdout_file}"
 
     postprocessing_dir = os.path.join("postprocess", job_type, forecast_forcing_download_id)
 
@@ -591,19 +581,8 @@ def submit_forecast_forcing_download():
     except Exception as e:
         return log_and_return_error(str(e), status_code = 500) 
     
-
-    # FIXME: REMOVE THIS
-    #postprocess_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess -d "job_status=DONE" -d "slurm_job_id=0" -d "job_type={job_type}" -d "run_id={forecast_run_id}"'
-    callback = callback.replace('__job_status__', 'DONE')
-    logger.info(f'Running {callback}')
-    process = subprocess.Popen(f"sleep 3; {callback} > {postprocessing_dir}/callback.out 2>&1 ", shell=True)
-
-    #####################
-    
-    # FIXME: Uncomment
-    #slurm_job_id, exit_code = submit_job(config_file, stdout_file, forecast_forcing_download_id, job_type, singularity_run_cmd)
-    #return jsonify({"slurm_job_id": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_forcing_commit_hash": ngen_forcing_commit_hash}), exit_code
-    return jsonify({"slurm_job_id": 0, "ngen_forcing_commit_hash": "NA"}), 200
+    slurm_job_id, exit_code = submit_job(config_file, stdout_file, forecast_forcing_download_id, job_type, singularity_run_cmd)
+    return jsonify({"slurm_job_id": slurm_job_id, "ngen_forcing_commit_hash": ngen_forcing_commit_hash}), exit_code
 
 
 @app.route('/job-status', methods=['GET'])

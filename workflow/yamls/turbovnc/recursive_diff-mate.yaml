@@ -244,16 +244,13 @@ jobs:
                 value: scw
             tooltip: Make sure the display protocol is installed in the host!
             default: turbovnc
-          load_env:
-            label: Command to load or install libreoffice
-            type: string
-            default: sudo yum install libreoffice-calc.x86_64 -y
-            hidden: true
-            optional: true
-            tooltip: To load the environment, enter the appropriate command, for example, module load module-name or source path/to/env.sh.
           bin:
-            label: Launch command
+            label: Command to launch terminal with ncdiff
             type: string
+            default: "gnome-terminal -- bash -c \"source /contrib/software/miniconda/miniconda/etc/profile.d/conda.sh; conda activate recursive_diff_latest
+; ncdiff --help; exec bash\""
+          desktop:
+            label: Desktop Session
+            type: string
+            default: mate-session
             hidden: true
-            default: libreoffice --calc
-            tooltip: Command to start LibreOffice

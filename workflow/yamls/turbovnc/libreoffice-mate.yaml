@@ -257,3 +257,8 @@ jobs:
             hidden: true
             default: libreoffice --calc
             tooltip: Command to start LibreOffice
+          desktop:
+            label: Desktop Session
+            type: string
+            default: mate-session
+            hidden: true

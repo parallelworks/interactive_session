@@ -149,6 +149,7 @@ jobs:
           }
           EOF
 
+
 'on':
   execute:
     inputs:
@@ -245,15 +246,18 @@ jobs:
             tooltip: Make sure the display protocol is installed in the host!
             default: turbovnc
           load_env:
-            label: Command to load or install libreoffice
+            label: Command to load RStudio to the PATH
             type: string
-            default: sudo yum install libreoffice-calc.x86_64 -y
-            hidden: true
+            default: sudo yum install -y octave; sudo yum install -y qt5-qttools-libs-help
             optional: true
             tooltip: To load the environment, enter the appropriate command, for example, module load module-name or source path/to/env.sh.
           bin:
             label: Launch command
             type: string
+            default: octave --force-gui
+            tooltip: Command to start RStudio
+          desktop:
+            label: Desktop Session
+            type: string
+            default: mate-session
             hidden: true
-            default: libreoffice --calc
-            tooltip: Command to start LibreOffice

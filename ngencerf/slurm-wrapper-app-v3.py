@@ -531,7 +531,7 @@ def submit_forecast_job():
 def submit_forecast_forcing_download():
     job_type = 'forecast_forcing_download'
     # ngen-cal job id
-    forecast_forcing_download_id = request.form.get('forecast_forcing_download_id')
+    forecast_forcing_download_run_id = request.form.get('forecast_forcing_download_run_id')
     # Path to the SLURM job log file in the controller node
     stdout_file = request.form.get('stdout_file')
     cycle_name = request.form.get('cycle_name')
@@ -542,8 +542,8 @@ def submit_forecast_forcing_download():
     # Path to the SLURM job log file in the controller node
     auth_token = request.form.get('auth_token')
 
-    if not forecast_forcing_download_id:
-        return log_and_return_error("No forecast job ID provided", status_code = 400)
+    if not forecast_forcing_download_run_id:
+        return log_and_return_error("No forecast job ID <forecast_forcing_download_run_id> provided", status_code = 400)
 
     if not config_file:
         return log_and_return_error("No ngen-forecast config file provided", status_code = 400)
@@ -574,14 +574,14 @@ def submit_forecast_forcing_download():
 
     singularity_run_cmd = f"{SINGULARITY_RUN_NGEN_FORCING_CMD} {cycle_name} {gpkg_file} {config_file} {forcing_file} {stdout_file}"
 
-    postprocessing_dir = os.path.join("postprocess", job_type, forecast_forcing_download_id)
+    postprocessing_dir = os.path.join("postprocess", job_type, forecast_forcing_download_run_id)
 
     try:
         # Get callback
         callback = get_callback(
             f'http://{CONTROLLER_HOSTNAME}:8000/calibration/forecast_forcing_download_job_slurm_callback/',
             auth_token,
-            forecast_forcing_download_id = forecast_forcing_download_id,
+            forecast_forcing_download_run_id = forecast_forcing_download_run_id,
             job_status = "__job_status__"
         )
         
@@ -590,7 +590,7 @@ def submit_forecast_forcing_download():
     except Exception as e:
         return log_and_return_error(str(e), status_code = 500) 
     
-    slurm_job_id, exit_code = submit_job(config_file, stdout_file, forecast_forcing_download_id, job_type, singularity_run_cmd)
+    slurm_job_id, exit_code = submit_job(config_file, stdout_file, forecast_forcing_download_run_id, job_type, singularity_run_cmd)
     if exit_code == 500:
         return jsonify({"error": slurm_job_id, "ngen_forcing_commit_hash": ngen_forcing_commit_hash}), exit_code
 

@@ -274,7 +274,8 @@ def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd):
     postprocessing_dir = os.path.join("postprocess", job_type, run_id)
     if not os.path.exists(input_file_local):
         error_msg = f"File path '{input_file_local}' does not exist on the shared filesystem under {LOCAL_DATA_DIR}."
-        return log_and_return_error(error_msg, status_code = 400)
+        logger.exception(error_msg)
+        return error_msg, 500
 
     try:
         # FIXME: Remove

@@ -501,7 +501,7 @@ def submit_forecast_job():
 
     logger.info(f"Commit hashes retrieved - NGEN: {ngen_commit_hash}, NGEN_FORCING: {ngen_forcing_commit_hash}")
 
-    singularity_run_cmd = f"{SINGULARITY_RUN_NGEN_FCST_CMD} {forcing_file} {input_file} {forecast_dir} {stdout_file}"
+    singularity_run_cmd = f"{SINGULARITY_RUN_NGEN_FCST_CMD} forecast {forcing_file} {input_file} {forecast_dir} {stdout_file}"
 
     postprocessing_dir = os.path.join("postprocess", job_type, forecast_run_id)
 
@@ -572,7 +572,7 @@ def submit_forecast_forcing_download():
 
     logger.info(f"Commit hashes retrieved - NGEN_FORCING: {ngen_forcing_commit_hash}")
 
-    singularity_run_cmd = f"{SINGULARITY_RUN_NGEN_FORCING_CMD} {cycle_name} {gpkg_file} {config_file} {forcing_file} {stdout_file}"
+    singularity_run_cmd = f"{SINGULARITY_RUN_NGEN_FORCING_CMD} forecast_forcing {cycle_name} {gpkg_file} {config_file} {forcing_file} {stdout_file}"
 
     postprocessing_dir = os.path.join("postprocess", job_type, forecast_forcing_download_run_id)
 

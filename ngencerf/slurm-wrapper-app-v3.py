@@ -329,7 +329,7 @@ def submit_calibration_job():
     auth_token = request.form.get('auth_token')
 
     if not calibration_run_id:
-        return log_and_return_error("No calibration job ID provided", status_code = 400)
+        return log_and_return_error("No calibration_run_id provided", status_code = 400)
 
     if not input_file:
         return log_and_return_error("No ngen-cal input file provided", status_code = 400)
@@ -396,7 +396,7 @@ def submit_validation_job():
 
 
     if not validation_run_id:
-        return log_and_return_error("No validation job ID provided", status_code = 400)
+        return log_and_return_error("No validation_run_id provided", status_code = 400)
 
     if not input_file:
         return log_and_return_error("No ngen-cal input file provided", status_code = 400)
@@ -475,7 +475,7 @@ def submit_forecast_job():
     auth_token = request.form.get('auth_token')
 
     if not forecast_run_id:
-        return log_and_return_error("No forecast job ID provided", status_code = 400)
+        return log_and_return_error("No forecast_run_id provided", status_code = 400)
 
     if not input_file:
         return log_and_return_error("No ngen-cal input file provided", status_code = 400)
@@ -543,7 +543,7 @@ def submit_forecast_forcing_download():
     auth_token = request.form.get('auth_token')
 
     if not forecast_forcing_download_run_id:
-        return log_and_return_error("No forecast job ID <forecast_forcing_download_run_id> provided", status_code = 400)
+        return log_and_return_error("No forecast_forcing_download_run_id provided", status_code = 400)
 
     if not config_file:
         return log_and_return_error("No ngen-forecast config file provided", status_code = 400)

@@ -370,6 +370,9 @@ def submit_calibration_job():
     
     
     slurm_job_id, exit_code = submit_job(input_file, output_file, calibration_run_id, job_type, singularity_run_cmd)
+    if exit_code == 500:
+        return jsonify({"error": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_cal_commit_hash": ngen_cal_commit_hash}), exit_code
+
     return jsonify({"slurm_job_id": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_cal_commit_hash": ngen_cal_commit_hash}), exit_code
 
 
@@ -450,6 +453,8 @@ def submit_validation_job():
         return log_and_return_error(str(e), status_code = 500) 
 
     slurm_job_id, exit_code = submit_job(input_file, output_file, validation_run_id, job_type, singularity_run_cmd)
+    if exit_code == 500:
+        return jsonify({"error": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_cal_commit_hash": ngen_cal_commit_hash}), exit_code    
     return jsonify({"slurm_job_id": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_cal_commit_hash": ngen_cal_commit_hash}), exit_code
 
 
@@ -516,6 +521,9 @@ def submit_forecast_job():
     
 
     slurm_job_id, exit_code = submit_job(input_file, stdout_file, forecast_run_id, job_type, singularity_run_cmd)
+    if exit_code == 500:
+        return jsonify({"error": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_forcing_commit_hash": ngen_forcing_commit_hash}), exit_code
+        
     return jsonify({"slurm_job_id": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_forcing_commit_hash": ngen_forcing_commit_hash}), exit_code
 
 
@@ -583,6 +591,9 @@ def submit_forecast_forcing_download():
         return log_and_return_error(str(e), status_code = 500) 
     
     slurm_job_id, exit_code = submit_job(config_file, stdout_file, forecast_forcing_download_id, job_type, singularity_run_cmd)
+    if exit_code == 500:
+        return jsonify({"error": slurm_job_id, "ngen_forcing_commit_hash": ngen_forcing_commit_hash}), exit_code
+
     return jsonify({"slurm_job_id": slurm_job_id, "ngen_forcing_commit_hash": ngen_forcing_commit_hash}), exit_code
 
 

@@ -527,7 +527,7 @@ def submit_forecast_job():
     return jsonify({"slurm_job_id": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_forcing_commit_hash": ngen_forcing_commit_hash}), exit_code
 
 
-@app.route('/submit-forecast-forcing-download', methods=['POST'])
+@app.route('/submit-forecast-forcing-download-job', methods=['POST'])
 def submit_forecast_forcing_download():
     job_type = 'forecast_forcing_download'
     # ngen-cal job id

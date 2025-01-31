@@ -154,9 +154,10 @@ fi
 # Make sure permissions are set properly
 #sudo -n chown -R ${USER} ${local_data_dir}
 sudo -n chmod -R u+rw ${local_data_dir}
-mkdir -p ${local_data_dir}/esmf_mesh
-mkdir -p ${local_data_dir}/raw_input/HRRR
-mkdir -p ${local_data_dir}/raw_input/RAP
+mkdir -p ${local_data_dir}/forecast_forcing_work/esmf_mesh
+mkdir -p ${local_data_dir}/forecast_forcing_work/raw_input/HRRR
+mkdir -p ${local_data_dir}/forecast_forcing_work/raw_input/RAP
+date > ${local_data_dir}/forecast_forcing_work/date.txt
 
 # Install Flask
 sudo -n pip3.8 install Flask

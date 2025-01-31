@@ -650,7 +650,7 @@ def update_configuring_jobs():
 
         else:
             job_elapsed_time = time.time() - slurm_job_info['start_time']
-            logger.info(f"Processing SLURM job {slurm_job_id} -> Status {job_status}, Elapsed time: {slurm_job_info}")
+            logger.info(f"Processing SLURM job {slurm_job_id} -> Status {job_status}, Elapsed time: {job_elapsed_time}")
 
             # Check if the elapsed time exceeds the maximum wait time
             if job_elapsed_time > MAX_CONFIGURING_WAIT_TIME:

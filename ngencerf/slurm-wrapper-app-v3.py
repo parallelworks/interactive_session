@@ -494,12 +494,12 @@ def submit_forecast_job():
     
     # Get commit hashes before job submission
     hashes_command = f'{SINGULARITY_EXEC_NGEN_FCST_CMD} cat {NGEN_FCST_GIT_HASH_FILES}'
-    ngen_commit_hash, ngen_forcing_commit_hash = get_git_hashes(hashes_command)
+    ngen_commit_hash, ngen_forecast_commit_hash = get_git_hashes(hashes_command)
     if ngen_commit_hash is None:  # Check for error during hash retrieval
-        error_msg = f"Failed to retrieve commit hashes: {ngen_forcing_commit_hash}"
+        error_msg = f"Failed to retrieve commit hashes: {ngen_forecast_commit_hash}"
         return log_and_return_error(error_msg, status_code = 500)
 
-    logger.info(f"Commit hashes retrieved - NGEN: {ngen_commit_hash}, NGEN_FORCING: {ngen_forcing_commit_hash}")
+    logger.info(f"Commit hashes retrieved - NGEN: {ngen_commit_hash}, NGEN_FORECAST: {ngen_forecast_commit_hash}")
 
     singularity_run_cmd = f"{SINGULARITY_RUN_NGEN_FCST_CMD} forecast {forcing_file} {input_file} {forecast_dir} {stdout_file}"
 
@@ -522,9 +522,9 @@ def submit_forecast_job():
 
     slurm_job_id, exit_code = submit_job(input_file, stdout_file, forecast_run_id, job_type, singularity_run_cmd)
     if exit_code == 500:
-        return jsonify({"error": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_forcing_commit_hash": ngen_forcing_commit_hash}), exit_code
+        return jsonify({"error": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_forecast_commit_hash": ngen_forecast_commit_hash}), exit_code
         
-    return jsonify({"slurm_job_id": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_forcing_commit_hash": ngen_forcing_commit_hash}), exit_code
+    return jsonify({"slurm_job_id": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_forecast_commit_hash": ngen_forecast_commit_hash}), exit_code
 
 
 @app.route('/submit-forecast-forcing-download-job', methods=['POST'])

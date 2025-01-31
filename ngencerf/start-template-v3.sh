@@ -157,6 +157,7 @@ sudo -n chmod -R u+rw ${local_data_dir}
 mkdir -p ${local_data_dir}/forecast_forcing_work/esmf_mesh
 mkdir -p ${local_data_dir}/forecast_forcing_work/raw_input/HRRR
 mkdir -p ${local_data_dir}/forecast_forcing_work/raw_input/RAP
+sudo chmod -R a+rwX /ngencerf-app/data/ngen-cal-data/forecast_forcing_work/
 date > ${local_data_dir}/forecast_forcing_work/date.txt
 cat ${local_data_dir}/forecast_forcing_work/date.txt
 

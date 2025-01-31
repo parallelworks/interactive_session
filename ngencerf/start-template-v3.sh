@@ -158,6 +158,8 @@ mkdir -p ${local_data_dir}/forecast_forcing_work/esmf_mesh
 mkdir -p ${local_data_dir}/forecast_forcing_work/raw_input/HRRR
 mkdir -p ${local_data_dir}/forecast_forcing_work/raw_input/RAP
 date > ${local_data_dir}/forecast_forcing_work/date.txt
+cat ${local_data_dir}/forecast_forcing_work/date.txt
+
 
 # Install Flask
 sudo -n pip3.8 install Flask

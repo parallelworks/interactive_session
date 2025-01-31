@@ -660,8 +660,9 @@ def update_configuring_jobs():
         if error:
             return log_and_return_error(error, 500)
 
-        # If the job is not in 'Configuring' or 'Pending' status, remove it
-        if job_status not in ['CF', 'PD', 'CONFIGURING', 'PENDING']:
+        # If the job is not in 'Configuring', 'Pending' or 'Completing' status, remove it
+        # We remove it if completing due to a strange SLURM bug that holds it in that state
+        if job_status not in ['CF', 'PD', 'CG','CONFIGURING', 'PENDING', 'COMPLETING']:
             logger.info(f"Removing job {slurm_job_id} -> {last_job_id} with status {job_status} from configuring jobs")
             del configuring_jobs[slurm_job_id]
 

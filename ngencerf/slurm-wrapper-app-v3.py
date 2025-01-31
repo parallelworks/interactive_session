@@ -664,6 +664,7 @@ def update_configuring_jobs():
                 # Resubmit the job and append the new job ID
                 next_partition = get_next_partition(slurm_job_info['partition'])
                 configuring_jobs[slurm_job_id]['partition'] = next_partition
+                configuring_jobs[slurm_job_id]['start_time'] = time.time()
                 new_slurm_job_id, error = submit_slurm_job(slurm_job_info['job_script'], partition = next_partition)
                 
                 if error:

@@ -245,15 +245,13 @@ jobs:
             tooltip: Make sure the display protocol is installed in the host!
             default: turbovnc
           load_env:
-            label: Command to load or install libreoffice
+            label: Command to load GTISE Environment
             type: string
-            default: sudo yum install libreoffice-calc.x86_64 -y
-            hidden: true
+            default: source /var/opt/gtsuite/load-env.sh
             optional: true
-            tooltip: To load the environment, enter the appropriate command, for example, module load module-name or source path/to/env.sh.
+            tooltip: Ensure you launch the scheduler workflow before!
           bin:
             label: Launch command
             type: string
-            hidden: true
-            default: libreoffice --calc
-            tooltip: Command to start LibreOffice
+            default: gtise
+            tooltip: Ensure you launch the scheduler workflow before!

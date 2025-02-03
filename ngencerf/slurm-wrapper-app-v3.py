@@ -5,6 +5,7 @@ import socket
 import copy
 import logging
 from logging.handlers import RotatingFileHandler
+import time
 
 log_file_path = os.environ.get("LOG_FILE_PATH", "app.log")
 file_handler = RotatingFileHandler(log_file_path, maxBytes=10*1024*1024, backupCount=100)  # 10MB per file
@@ -244,26 +245,6 @@ def squeue_job_status(slurm_job_id):
     
     return result.stdout.strip(), None
     
-def convert_to_seconds(time_str):
-    return sum(int(x) * 60 ** i for i, x in enumerate(reversed(time_str.split(':'))))
-
-def squeue_job_elapsed_time(slurm_job_id):
-    try:
-        cmd = ["squeue", "--job", slurm_job_id, "--format=%M", "--noheader"]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode != 0:
-            error_msg = f"Failed to run command {cmd}: {result.stderr.strip()}"
-            logger.error(error_msg)
-            return None, error_msg
-        
-        elapsed_time_str = result.stdout.strip()
-        return convert_to_seconds(elapsed_time_str), None
-
-    except Exception as e:
-        error_msg = f"Failed to obtain elapsed time: {str(e)}"
-        logger.exception(error_msg)
-        return None, error_msg
-
 
 def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd):
     logger.info(f"Starting job submission for job run ID: {run_id}")
@@ -308,6 +289,7 @@ def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd):
             configuring_jobs[slurm_job_id]['ids'] = [slurm_job_id]
             configuring_jobs[slurm_job_id]['job_script'] = job_script
             configuring_jobs[slurm_job_id]['partition'] = get_next_partition()
+            configuring_jobs[slurm_job_id]['start_time'] = time.time()
             logger.info(f"Adding job {slurm_job_id} - {job_script} to configuring jobs")
 
         return slurm_job_id, 200
@@ -651,15 +633,15 @@ def update_configuring_jobs():
         if error:
             return log_and_return_error(error, 500)
 
-        # If the job is not in 'Configuring' or 'Pending' status, remove it
-        if job_status not in ['CF', 'PD', 'CONFIGURING', 'PENDING']:
+        # If the job is not in 'Configuring', 'Pending' or 'Completing' status, remove it
+        # We remove it if completing due to a strange SLURM bug that holds it in that state
+        if job_status not in ['CF', 'PD', 'CG','CONFIGURING', 'PENDING', 'COMPLETING']:
             logger.info(f"Removing job {slurm_job_id} -> {last_job_id} with status {job_status} from configuring jobs")
             del configuring_jobs[slurm_job_id]
 
         else:
-            job_elapsed_time, error = squeue_job_elapsed_time(last_job_id)
-            if error:
-                return log_and_return_error(error, 500)
+            job_elapsed_time = time.time() - slurm_job_info['start_time']
+            logger.info(f"Processing SLURM job {slurm_job_id} -> Status {job_status}, Elapsed time: {job_elapsed_time}")
 
             # Check if the elapsed time exceeds the maximum wait time
             if job_elapsed_time > MAX_CONFIGURING_WAIT_TIME:
@@ -673,6 +655,7 @@ def update_configuring_jobs():
                 # Resubmit the job and append the new job ID
                 next_partition = get_next_partition(slurm_job_info['partition'])
                 configuring_jobs[slurm_job_id]['partition'] = next_partition
+                configuring_jobs[slurm_job_id]['start_time'] = time.time()
                 new_slurm_job_id, error = submit_slurm_job(slurm_job_info['job_script'], partition = next_partition)
                 
                 if error:

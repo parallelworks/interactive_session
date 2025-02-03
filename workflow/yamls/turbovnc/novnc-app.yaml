@@ -160,6 +160,7 @@ jobs:
             type: compute-clusters
             label: Service host
             include-workspace: false
+            default: ${{ app.target }} 
             tooltip: Resource to host the service
           nports:
             type: number
@@ -220,7 +221,6 @@ jobs:
       service:
         type: group
         label: Service
-        collapsed: true
         items:
           novnc_parent_install_dir:
             label: noVNC installation directory
@@ -244,16 +244,8 @@ jobs:
                 value: scw
             tooltip: Make sure the display protocol is installed in the host!
             default: turbovnc
-          load_env:
-            label: Command to load or install libreoffice
-            type: string
-            default: sudo yum install libreoffice-calc.x86_64 -y
+          use_tls:
+            label: Use TLS
+            type: boolean
             hidden: true
-            optional: true
-            tooltip: To load the environment, enter the appropriate command, for example, module load module-name or source path/to/env.sh.
-          bin:
-            label: Launch command
-            type: string
-            hidden: true
-            default: libreoffice --calc
-            tooltip: Command to start LibreOffice
+            default: ${{ inputs.service.name === nicedcv && true || false }}

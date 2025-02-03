@@ -2,7 +2,6 @@
 # https://github.com/parallelworks/issues/issues/1081
 
 
-
 start_gnome_session_with_retries() {
     k=1
     while true; do
@@ -84,6 +83,28 @@ else
     echo "ssh ${hname} 'bash -s' < ${resource_jobdir}/service-kill-${job_number}-main.sh" >> ${resource_jobdir}/service-kill-${job_number}.sh
 fi
 
+if [[ "${HOSTNAME}" == "gaea57.ncrc.gov" ]]; then
+cat >> ${resource_jobdir}/service-kill-${job_number}-main.sh <<HERE
+service_pid=\$(cat ${resource_jobdir}/service.pid)
+if [ -z \${service_pid} ]; then
+    echo "ERROR: No service pid was found!"
+else
+    echo "$(hostname) - Killing process: \${service_pid}"
+    for spid in \${service_pid}; do
+        pkill -P \${spid}
+    done
+    kill \${service_pid}
+fi
+echo "${resource_jobdir}/vncserver.pid:"
+cat ${resource_jobdir}/vncserver.pid
+echo "${resource_jobdir}/vncserver.log:"
+cat ${resource_jobdir}/vncserver.log
+vnc_pid=\$(${resource_jobdir}/vncserver.pid)
+pkill -P \${vnc_pid}
+kill \${vnc_pid}
+HERE
+
+else
 cat >> ${resource_jobdir}/service-kill-${job_number}-main.sh <<HERE
 service_pid=\$(cat ${resource_jobdir}/service.pid)
 if [ -z \${service_pid} ]; then
@@ -104,8 +125,7 @@ pkill -P \${vnc_pid}
 kill \${vnc_pid}
 rm ~/.vnc/\${HOSTNAME}${DISPLAY}.*
 HERE
-echo
-
+fi
 
 if ! [[ $kernel_version == *microsoft* ]]; then
     echo; echo "DESKTOP ENVIRONMENT"
@@ -187,7 +207,11 @@ if ! [[ $kernel_version == *microsoft* ]]; then
 
     # service_vnc_type needs to be an input to the workflow in the XML
     # if vncserver is not tigervnc
-    if [[ ${service_vnc_type} == "turbovnc" ]]; then
+    if [[ "${HOSTNAME}" == "gaea57.ncrc.gov" ]]; then
+        # FIXME: Change ~/.vnc/config
+        /usr/lib/vncserver ${DISPLAY} &> ${resource_jobdir}/vncserver.log &
+        echo $! > ${resource_jobdir}/vncserver.pid
+    elif [[ ${service_vnc_type} == "turbovnc" ]]; then
         ${service_vnc_exec} ${DISPLAY} -SecurityTypes None
     else
         # tigervnc

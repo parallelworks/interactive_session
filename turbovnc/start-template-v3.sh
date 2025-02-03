@@ -210,7 +210,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     if [[ "${HOSTNAME}" == "gaea57.ncrc.gov" ]]; then
         # FIXME: Change ~/.vnc/config
         /usr/lib/vncserver ${DISPLAY} &> ${resource_jobdir}/vncserver.log &
-        echo $! > ${resource_jobdir}/service.pid
+        echo $! > ${resource_jobdir}/vncserver.pid
     elif [[ ${service_vnc_type} == "turbovnc" ]]; then
         ${service_vnc_exec} ${DISPLAY} -SecurityTypes None
     else

@@ -83,7 +83,7 @@ else
     echo "ssh ${hname} 'bash -s' < ${resource_jobdir}/service-kill-${job_number}-main.sh" >> ${resource_jobdir}/service-kill-${job_number}.sh
 fi
 
-if [[ "${HOSTNAME}" == "gaea57" ]]; then
+if [[ "${HOSTNAME}" == "gaea57.ncrc.gov" ]]; then
 cat >> ${resource_jobdir}/service-kill-${job_number}-main.sh <<HERE
 service_pid=\$(cat ${resource_jobdir}/service.pid)
 if [ -z \${service_pid} ]; then
@@ -207,7 +207,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
 
     # service_vnc_type needs to be an input to the workflow in the XML
     # if vncserver is not tigervnc
-    if [[ "${HOSTNAME}" == "gaea57" ]]; then
+    if [[ "${HOSTNAME}" == "gaea57.ncrc.gov" ]]; then
         # FIXME: Change ~/.vnc/config
         /usr/lib/vncserver ${DISPLAY} &> ${resource_jobdir}/vncserver.log &
         echo $! > ${resource_jobdir}/service.pid

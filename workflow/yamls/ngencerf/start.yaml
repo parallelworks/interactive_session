@@ -150,7 +150,7 @@ jobs:
       ngen_forcing_singularity_container_path:
         label: Path to the ngen-forcing singularity container
         type: string
-        default: /ngencerf-app/singularity/ngen-forcing.sif
+        default: /ngencerf-app/singularity/ngen-bmi-forcing.sif
         hidden: true
       ngen_fcst_singularity_container_path:
         label: Path to the ngen-fcst singularity container

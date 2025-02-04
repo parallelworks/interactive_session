@@ -30,14 +30,13 @@ if ! [ -f "${ngen_cal_singularity_container_path}" ]; then
    displayErrorMessage "NGEN-CAL singularity container was not found ${ngen_cal_singularity_container_path}"
 fi
 
-# FIXME: Uncomment
-#if ! [ -f "${ngen_forcing_singularity_container_path}" ]; then
-#   displayErrorMessage "NGEN-FORCING singularity container was not found ${ngen_forcing_singularity_container_path}"
-#fi
+if ! [ -f "${ngen_forcing_singularity_container_path}" ]; then
+   displayErrorMessage "NGEN-FORCING singularity container was not found ${ngen_forcing_singularity_container_path}"
+fi
 
-#if ! [ -f "${ngen_fcst_singularity_container_path}" ]; then
-#   displayErrorMessage "NGEN-FCST singularity container was not found ${ngen_fcst_singularity_container_path}"
-#fi
+if ! [ -f "${ngen_fcst_singularity_container_path}" ]; then
+   displayErrorMessage "NGEN-FCST singularity container was not found ${ngen_fcst_singularity_container_path}"
+fi
 
 
 #################
@@ -155,6 +154,11 @@ fi
 # Make sure permissions are set properly
 #sudo -n chown -R ${USER} ${local_data_dir}
 sudo -n chmod -R u+rw ${local_data_dir}
+#mkdir -p ${local_data_dir}/forecast_forcing_work/esmf_mesh
+#mkdir -p ${local_data_dir}/forecast_forcing_work/raw_input/HRRR
+#mkdir -p ${local_data_dir}/forecast_forcing_work/raw_input/RAP
+#sudo chmod -R a+rwX ${local_data_dir}/forecast_forcing_work/
+#date > ${local_data_dir}/forecast_forcing_work/date.txt
 
 # Install Flask
 sudo -n pip3.8 install Flask

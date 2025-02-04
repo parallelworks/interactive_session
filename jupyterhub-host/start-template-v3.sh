@@ -114,7 +114,7 @@ echo "kill ${pid} # singularity" >> cancel.sh
 ####################
 # START JUPYTERHUB #
 ####################
-jupyterhub_hubport=$(findAvailablePort)
+#jupyterhub_hubport=$(findAvailablePort)
 
 
 export JUPYTER_CONFIG_DIR=${PWD}
@@ -124,7 +124,7 @@ sed -i "s|^.*c\.Authenticator\.whitelist.*|c.Authenticator.whitelist = set()|" j
 sed -i "s|^.*c\.Authenticator\.allowed_users.*|c.Authenticator.allowed_users = set()|" jupyterhub_config.py
 sed -i "s|^.*c\.JupyterHub\.authenticator_class.*|c.JupyterHub.authenticator_class = 'jupyterhub.auth.PAMAuthenticator'|" jupyterhub_config.py
 sed -i "s|^.*c\.JupyterHub\.port.*|c.JupyterHub.port = ${jupyterhub_port}|" jupyterhub_config.py
-sed -i "s|^.*c\.JupyterHub\.hub_port.*|c.JupyterHub.hub_port = ${jupyterhub_hubport}|" jupyterhub_config.py
+#sed -i "s|^.*c\.JupyterHub\.hub_port.*|c.JupyterHub.hub_port = ${jupyterhub_hubport}|" jupyterhub_config.py
 sed -i "s|^.*c\.JupyterHub\.base_url.*|c.JupyterHub.base_url = \'${basepath}/\'|" jupyterhub_config.py
 
 jupyterhub -f ${PWD}/jupyterhub_config.py #  --debug 

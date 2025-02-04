@@ -48,6 +48,9 @@ NGEN_FORCING_GIT_HASH_FILES = '/ngen-app/ngen-forcing/.git/HEAD /ngen-app/ngen-f
 # Files with the git hashes within ngen-forcing container
 NGEN_FCST_GIT_HASH_FILES = '/ngen-app/ngen/.git/HEAD /ngen-app/ngen-fcst/.git/HEAD'
 
+# Slurm job metrics for sacct command
+SLURM_JOB_METRICS = os.environ.get('SLURM_JOB_METRICS')
+
 # List of partitions
 PARTITIONS_STR = os.environ.get('PARTITIONS')
 # Convert the string to a list
@@ -768,7 +771,7 @@ def postprocess():
     with open(callback_script, 'r') as f:
         callback = f.read().replace('__job_status__', job_status)
 
-    sacct_cmd = f'sacct -j {slurm_job_id} -o JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Reserved --parsable --units=K > {performance_file}'
+    sacct_cmd = f'sacct -j {slurm_job_id} -o {SLURM_JOB_METRICS} --parsable --units=K > {performance_file}'
     cmd = f'sleep 5; {sacct_cmd}; {callback}'
 
     try:

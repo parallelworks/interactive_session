@@ -11,6 +11,17 @@ else
   exit 1
 fi
 
+# Get the SLURM version
+slurm_version=$(scontrol version | awk '{print $2}' | cut -d'.' -f1)
+# Check the SLURM version
+if [[ "$slurm_version" == 22* ]]; then
+    export SLURM_JOB_METRICS="JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Reserved"
+elif [[ "$slurm_version" == 23* ]]; then
+    export SLURM_JOB_METRICS="JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Planned"
+else
+    export SLURM_JOB_METRICS="JobID,Elapsed,NCPUS,CPUTime,MaxRSS,MaxDiskRead,MaxDiskWrite,Planned"
+fi
+
 ngencerf_port=3000 #$(findAvailablePort)
 
 echo '#!/bin/bash' > cancel.sh

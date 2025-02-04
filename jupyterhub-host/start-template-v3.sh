@@ -28,8 +28,8 @@ else
     eval "${service_load_env}"
 fi
 
-if [ -z $(which jupyter-hub 2> /dev/null) ]; then
-    displayErrorMessage "jupyter-hub command not found"
+if [ -z $(which jupyterhub 2> /dev/null) ]; then
+    displayErrorMessage "jupyterhub command not found"
 fi
 
 #######################

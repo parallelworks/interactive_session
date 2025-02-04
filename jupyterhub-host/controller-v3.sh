@@ -118,7 +118,7 @@ if [[ "${service_conda_install}" == "true" ]]; then
             conda create -n ${service_conda_env} jupyter -y
             eval "conda activate ${service_conda_env}"
         }
-        if [ -z $(which jupyter-lab 2> /dev/null) ]; then
+        if [ -z $(which jupyterhub 2> /dev/null) ]; then
             conda install -c conda-forge jupyterhub notebook
             conda install -c conda-forge jupyterhub-systemd-spawner
         fi
@@ -132,8 +132,8 @@ if [[ "${service_conda_install}" == "true" ]]; then
 fi
 eval "${service_load_env}"
 
-if [ -z $(which jupyter-lab 2> /dev/null) ]; then
-    displayErrorMessage "jupyter-lab command not found"
+if [ -z $(which jupyterhub 2> /dev/null) ]; then
+    displayErrorMessage "jupyterhub command not found"
 fi
 
 if [[ "${service_conda_install}" != "true" ]]; then

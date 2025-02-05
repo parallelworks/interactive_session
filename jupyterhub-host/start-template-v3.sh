@@ -121,8 +121,9 @@ export JUPYTER_CONFIG_DIR=${PWD}
 jupyterhub --generate-config
 
 sed -i "s|^.*c\.Authenticator\.whitelist.*|c.Authenticator.whitelist = set()|" jupyterhub_config.py
-sed -i "s|^.*c\.Authenticator\.allowed_users.*|c.Authenticator.allowed_users = set()|" jupyterhub_config.py
-sed -i "s|^.*c\.JupyterHub\.authenticator_class.*|c.JupyterHub.authenticator_class = 'jupyterhub.auth.PAMAuthenticator'|" jupyterhub_config.py
+sed -i "s|^.*c\.Authenticator\.allow_all.*|c.Authenticator.allow_all = True|" jupyterhub_config.py
+#sed -i "s|^.*c\.Authenticator\.allowed_users.*|c.Authenticator.allowed_users = set()|" jupyterhub_config.py
+#sed -i "s|^.*c\.JupyterHub\.authenticator_class.*|c.JupyterHub.authenticator_class = 'jupyterhub.auth.PAMAuthenticator'|" jupyterhub_config.py
 sed -i "s|^.*c\.JupyterHub\.port.*|c.JupyterHub.port = ${jupyterhub_port}|" jupyterhub_config.py
 #sed -i "s|^.*c\.JupyterHub\.hub_port.*|c.JupyterHub.hub_port = ${jupyterhub_hubport}|" jupyterhub_config.py
 sed -i "s|^.*c\.JupyterHub\.base_url.*|c.JupyterHub.base_url = \'${basepath}/\'|" jupyterhub_config.py

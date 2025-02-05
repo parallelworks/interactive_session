@@ -122,8 +122,9 @@ jupyterhub --generate-config
 
 sed -i "s|^.*c\.Authenticator\.whitelist.*|c.Authenticator.whitelist = set()|" jupyterhub_config.py
 sed -i "s|^.*c\.Authenticator\.allow_all.*|c.Authenticator.allow_all = True|" jupyterhub_config.py
+sed -i "s|^.*c\.Authenticator\.admin_users.*|c.Authenticator.admin_users = {'${USER}'}|" jupyterhub_config.py
 #sed -i "s|^.*c\.Authenticator\.allowed_users.*|c.Authenticator.allowed_users = set()|" jupyterhub_config.py
-#sed -i "s|^.*c\.JupyterHub\.authenticator_class.*|c.JupyterHub.authenticator_class = 'jupyterhub.auth.PAMAuthenticator'|" jupyterhub_config.py
+sed -i "s|^.*c\.JupyterHub\.authenticator_class.*|c.JupyterHub.authenticator_class = 'native'|" jupyterhub_config.py
 sed -i "s|^.*c\.JupyterHub\.port.*|c.JupyterHub.port = ${jupyterhub_port}|" jupyterhub_config.py
 sed -i "s|^.*c\.JupyterHub\.hub_port.*|c.JupyterHub.hub_port = ${jupyterhub_hubport}|" jupyterhub_config.py
 sed -i "s|^.*c\.JupyterHub\.base_url.*|c.JupyterHub.base_url = \'${basepath}/\'|" jupyterhub_config.py
@@ -132,7 +133,6 @@ sed -i "s|^.*c\.JupyterHub\.base_url.*|c.JupyterHub.base_url = \'${basepath}/\'|
 #sed -i "s|^.*c\.JupyterHub\.tornado_settings.*|c.JupyterHub.tornado_settings = {\"static_url_prefix\":\"${basepath}/static/\"}|" jupyterhub_config.py
 
 
-
-jupyterhub -f ${PWD}/jupyterhub_config.py #  --debug 
+sudo bash -c "source ${service_parent_install_dir}/${service_conda_install_dir}/etc/profile.d/conda.sh; conda activate ${service_conda_env}; jupyterhub -f jupyterhub_config.py"
 
 sleep inf

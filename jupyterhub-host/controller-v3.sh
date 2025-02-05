@@ -119,8 +119,9 @@ if [[ "${service_conda_install}" == "true" ]]; then
             eval "conda activate ${service_conda_env}"
         }
         if [ -z $(which jupyterhub 2> /dev/null) ]; then
-            conda install -c conda-forge jupyterhub notebook
-            conda install -c conda-forge jupyterhub-systemd-spawner
+            conda install -c conda-forge jupyterhub notebook -y
+            conda install -c conda-forge jupyterhub-systemd-spawner -y
+            pip install jupyterhub-nativeauthenticator
         fi
     else
         echo "Installing conda environment ${service_install_instructions}.yaml"

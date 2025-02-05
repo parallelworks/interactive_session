@@ -2,25 +2,6 @@
 This workflow starts a JupyterLab server [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README.md).
 
 
-### Requirements
-This workflow is designed to seamlessly function on PW cloud clusters or clusters where the user possesses root or docker access. 
-
-If you intend to deploy this workflow on alternative resources, like an on-prem cluster, you need to create and share an nginx singularity containerby following the instructions outlined below:
-
-
-```
-Bootstrap: docker
-From: nginxinc/nginx-unprivileged
-```
-
-Afterwards, execute the command:
-
-```
-singularity build nginx-unprivileged.simg nginx_unprivileged.def
-```
-
-Ensure that the workflow has access to the specified path for the resultant nginx-unprivileged.simg.
-
 ### Dask Integration on Parallel Works
 Refer to the included Jupyter notebook at `jupyterlab-host/dask-extension-jupyterlab-demo.ipynb` for a practical guide illustrating:
 

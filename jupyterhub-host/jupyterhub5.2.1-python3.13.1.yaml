@@ -8,7 +8,7 @@ dependencies:
   - _libgcc_mutex=0.1=conda_forge
   - _openmp_mutex=4.5=2_gnu
   - alembic=1.14.1=pyhd8ed1ab_0
-  - anaconda-anon-usage=0.4.4=py312hfc0e8ea_100
+  - anaconda-anon-usage=0.5.0=py312hfc0e8ea_100
   - annotated-types=0.7.0=pyhd8ed1ab_1
   - anyio=4.8.0=pyhd8ed1ab_0
   - archspec=0.2.3=pyhd3eb1b0_0
@@ -20,7 +20,7 @@ dependencies:
   - async_generator=1.10=pyhd8ed1ab_2
   - attrs=25.1.0=pyh71513ae_0
   - babel=2.17.0=pyhd8ed1ab_0
-  - beautifulsoup4=4.13.1=pyha770c72_0
+  - beautifulsoup4=4.13.3=pyha770c72_0
   - bleach=6.2.0=pyh29332c3_4
   - bleach-with-css=6.2.0=h82add2a_4
   - blinker=1.9.0=pyhff2d567_0
@@ -37,19 +37,20 @@ dependencies:
   - charset-normalizer=3.3.2=pyhd3eb1b0_0
   - comm=0.2.2=pyhd8ed1ab_1
   - conda=25.1.1=py312h7900ff3_0
+  - conda-anaconda-telemetry=0.1.1=py312h06a4308_0
   - conda-content-trust=0.2.0=py312h06a4308_1
   - conda-libmamba-solver=24.9.0=pyhd3eb1b0_0
-  - conda-package-handling=2.3.0=py312h06a4308_0
-  - conda-package-streaming=0.10.0=py312h06a4308_0
+  - conda-package-handling=2.4.0=py312h06a4308_0
+  - conda-package-streaming=0.11.0=py312h06a4308_0
   - configurable-http-proxy=4.6.2=h92b4e83_1
-  - cryptography=43.0.0=py312hdda0065_0
+  - cryptography=43.0.3=py312h7825ff9_1
   - debugpy=1.8.12=py312h2ec8cdc_0
   - decorator=5.1.1=pyhd8ed1ab_1
   - defusedxml=0.7.1=pyhd8ed1ab_0
   - distro=1.9.0=py312h06a4308_0
   - exceptiongroup=1.2.2=pyhd8ed1ab_1
   - executing=2.1.0=pyhd8ed1ab_1
-  - expat=2.6.3=h6a678d5_0
+  - expat=2.6.4=h6a678d5_0
   - fmt=9.1.0=hdb19cb5_1
   - fqdn=1.5.1=pyhd8ed1ab_1
   - frozendict=2.4.2=py312h06a4308_0
@@ -78,7 +79,7 @@ dependencies:
   - jupyter-lsp=2.2.5=pyhd8ed1ab_1
   - jupyter_client=8.6.3=pyhd8ed1ab_1
   - jupyter_core=5.7.2=pyh31011fe_1
-  - jupyter_events=0.11.0=pyhd8ed1ab_0
+  - jupyter_events=0.12.0=pyh29332c3_0
   - jupyter_server=2.15.0=pyhd8ed1ab_0
   - jupyter_server_terminals=0.5.3=pyhd8ed1ab_1
   - jupyterhub=5.2.1=pyh31011fe_0
@@ -92,31 +93,31 @@ dependencies:
   - libcurl=8.9.1=h251f7ec_0
   - libedit=3.1.20230828=h5eee18b_0
   - libev=4.33=h7f8727e_1
-  - libexpat=2.6.3=h5888daf_0
+  - libexpat=2.6.4=h5888daf_0
   - libffi=3.4.4=h6a678d5_1
   - libgcc=14.2.0=h77fa898_1
   - libgcc-ng=14.2.0=h69a702a_1
   - libgomp=14.2.0=h77fa898_1
-  - libmamba=1.5.8=hfe524e5_3
-  - libmambapy=1.5.8=py312h2dafd23_3
+  - libmamba=1.5.11=hfe524e5_0
+  - libmambapy=1.5.11=py312haf1ee3a_0
   - libnghttp2=1.57.0=h2d74bed_0
   - libnsl=2.0.1=hd590300_0
   - libsodium=1.0.18=h36c2ea0_1
   - libsolv=0.7.24=he621ea3_1
   - libsqlite=3.46.0=hde9e2c9_0
-  - libssh2=1.11.0=h251f7ec_0
+  - libssh2=1.11.1=h251f7ec_0
   - libstdcxx=14.2.0=hc0a3c3a_1
   - libstdcxx-ng=11.2.0=h1234567_1
   - libuuid=2.38.1=h0b41bf4_0
   - libuv=1.48.0=hd590300_0
   - libxcrypt=4.4.36=hd590300_1
-  - libxml2=2.13.1=hfdd30dd_2
+  - libxml2=2.13.5=hfdd30dd_0
   - libzlib=1.2.13=h4ab18f5_6
   - lz4-c=1.9.4=h6a678d5_1
-  - mako=1.3.8=pyhd8ed1ab_0
+  - mako=1.3.9=pyhd8ed1ab_0
   - markupsafe=3.0.2=py312h178313f_1
   - matplotlib-inline=0.1.7=pyhd8ed1ab_1
-  - menuinst=2.1.2=py312h06a4308_0
+  - menuinst=2.2.0=py312h06a4308_0
   - mistune=3.1.1=pyhd8ed1ab_0
   - nbclient=0.10.2=pyhd8ed1ab_0
   - nbconvert-core=7.16.6=pyh29332c3_0
@@ -139,7 +140,7 @@ dependencies:
   - pip=24.2=py312h06a4308_0
   - pkgutil-resolve-name=1.3.10=pyhd8ed1ab_2
   - platformdirs=3.10.0=py312h06a4308_0
-  - pluggy=1.0.0=py312h06a4308_1
+  - pluggy=1.5.0=py312h06a4308_0
   - prometheus_client=0.21.1=pyhd8ed1ab_0
   - prompt-toolkit=3.0.50=pyha770c72_0
   - psutil=6.1.1=py312h66e93f0_0
@@ -166,7 +167,7 @@ dependencies:
   - referencing=0.36.2=pyh29332c3_0
   - reproc=14.2.4=h6a678d5_2
   - reproc-cpp=14.2.4=h6a678d5_2
-  - requests=2.32.3=py312h06a4308_0
+  - requests=2.32.3=py312h06a4308_1
   - rfc3339-validator=0.1.4=pyhd8ed1ab_1
   - rfc3986-validator=0.1.1=pyh9f0ad1d_0
   - rpds-py=0.22.3=py312h12e396e_0
@@ -206,5 +207,9 @@ dependencies:
   - zeromq=4.3.5=h6a678d5_0
   - zipp=3.21.0=pyhd8ed1ab_1
   - zlib=1.2.13=h4ab18f5_6
-  - zstandard=0.23.0=py312h2c38b39_0
+  - zstandard=0.23.0=py312h2c38b39_1
   - zstd=1.5.6=hc292b87_0
+  - pip:
+      - bcrypt==4.2.1
+      - jupyterhub-nativeauthenticator==1.3.0
+      - onetimepass==1.0.1

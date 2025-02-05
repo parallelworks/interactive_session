@@ -127,6 +127,9 @@ sed -i "s|^.*c\.Authenticator\.allow_all.*|c.Authenticator.allow_all = True|" ju
 sed -i "s|^.*c\.JupyterHub\.port.*|c.JupyterHub.port = ${jupyterhub_port}|" jupyterhub_config.py
 #sed -i "s|^.*c\.JupyterHub\.hub_port.*|c.JupyterHub.hub_port = ${jupyterhub_hubport}|" jupyterhub_config.py
 sed -i "s|^.*c\.JupyterHub\.base_url.*|c.JupyterHub.base_url = \'${basepath}/\'|" jupyterhub_config.py
+sed -i "s|^.*c\.JupyterHub\.tornado_settings.*|c.JupyterHub.tornado_settings = {\"static_url_prefix\":\"${basepath}/static/\"}|" jupyterhub_config.py
+
+
 
 jupyterhub -f ${PWD}/jupyterhub_config.py #  --debug 
 

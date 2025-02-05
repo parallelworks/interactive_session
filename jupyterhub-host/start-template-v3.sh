@@ -114,7 +114,7 @@ echo "kill ${pid} # singularity" >> cancel.sh
 ####################
 # START JUPYTERHUB #
 ####################
-#jupyterhub_hubport=$(findAvailablePort)
+jupyterhub_hubport=$(findAvailablePort)
 
 
 export JUPYTER_CONFIG_DIR=${PWD}
@@ -125,9 +125,11 @@ sed -i "s|^.*c\.Authenticator\.allow_all.*|c.Authenticator.allow_all = True|" ju
 #sed -i "s|^.*c\.Authenticator\.allowed_users.*|c.Authenticator.allowed_users = set()|" jupyterhub_config.py
 #sed -i "s|^.*c\.JupyterHub\.authenticator_class.*|c.JupyterHub.authenticator_class = 'jupyterhub.auth.PAMAuthenticator'|" jupyterhub_config.py
 sed -i "s|^.*c\.JupyterHub\.port.*|c.JupyterHub.port = ${jupyterhub_port}|" jupyterhub_config.py
-#sed -i "s|^.*c\.JupyterHub\.hub_port.*|c.JupyterHub.hub_port = ${jupyterhub_hubport}|" jupyterhub_config.py
+sed -i "s|^.*c\.JupyterHub\.hub_port.*|c.JupyterHub.hub_port = ${jupyterhub_hubport}|" jupyterhub_config.py
 sed -i "s|^.*c\.JupyterHub\.base_url.*|c.JupyterHub.base_url = \'${basepath}/\'|" jupyterhub_config.py
-sed -i "s|^.*c\.JupyterHub\.tornado_settings.*|c.JupyterHub.tornado_settings = {\"static_url_prefix\":\"${basepath}/static/\"}|" jupyterhub_config.py
+# This link only partially works to embed JupyterHub in an Iframe
+# https://discourse.jupyter.org/t/open-jupyterhub-application-in-iframe/10430
+#sed -i "s|^.*c\.JupyterHub\.tornado_settings.*|c.JupyterHub.tornado_settings = {\"static_url_prefix\":\"${basepath}/static/\"}|" jupyterhub_config.py
 
 
 

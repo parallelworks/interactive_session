@@ -83,10 +83,10 @@ jobs:
           while true; do
             echo "Waiting for target hostname...abc"
             echo ${{ inputs.pwrl_host.resource.ip }}
-            cmdToRun="${sshcmd} \"if [ -f ~/${PWD/#$HOME/}/target.hostname ]; then cat ~/${PWD/#$HOME/}/target.hostname; fi\""
+            cmdToRun="${sshcmd} \"if [ -f ${PWD}/target.hostname ]; then cat ${PWD}/target.hostname; fi\""
             echo $cmdToRun
             # Check if the service.port file exists and read its contents
-            target_hostname=$(${sshcmd} "if [ -f ~/${PWD/#$HOME/}/target.hostname ]; then cat ~/${PWD/#$HOME/}/target.hostname; fi")
+            target_hostname=$(${sshcmd} "if [ -f ${PWD}/target.hostname ]; then cat ${PWD}/target.hostname; fi")
 
             # Exit the loop if file was found and read
             if [ -n "${target_hostname}" ]; then
@@ -107,10 +107,10 @@ jobs:
           while true; do
             echo "Waiting for service port file..."
             echo ${{ inputs.pwrl_host.resource.ip }}
-            echo "if [ -f ~/${PWD/#$HOME/}/service.port ]; then cat ~/${PWD/#$HOME/}/service.port; fi\"
+            echo "if [ -f ${PWD}/service.port ]; then cat ${PWD}/service.port; fi\"
 
             # Check if the service.port file exists and read its contents
-            remote_port=$(${sshcmd} "bash -c \"if [ -f ~/${PWD/#$HOME/}/service.port ]; then cat ~/${PWD/#$HOME/}/service.port; fi\"")
+            remote_port=$(${sshcmd} "bash -c \"if [ -f ${PWD}/service.port ]; then cat ${PWD}/service.port; fi\"")
 
             # Exit the loop if remote_port is successfully set (file was found and read)
             if [ -n "$remote_port" ]; then

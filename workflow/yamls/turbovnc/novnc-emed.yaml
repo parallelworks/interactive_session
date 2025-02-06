@@ -81,8 +81,10 @@ jobs:
         run: |
           set -x
           while true; do
-            echo "Waiting for target hostname..."
+            echo "Waiting for target hostname...abc"
             echo ${{ inputs.pwrl_host.resource.ip }}
+            cmdToRun="${sshcmd} \"if [ -f ~/${PWD/#$HOME/}/target.hostname ]; then cat ~/${PWD/#$HOME/}/target.hostname; fi\""
+            echo $cmdToRun
             # Check if the service.port file exists and read its contents
             target_hostname=$(${sshcmd} "if [ -f ~/${PWD/#$HOME/}/target.hostname ]; then cat ~/${PWD/#$HOME/}/target.hostname; fi")
 

@@ -142,7 +142,7 @@ jobs:
     inputs:
       pwrl_host:
         type: group
-        label: Jupyter Server Host
+        label: Jupyter Lab Host
         items:
           resource:
             type: compute-clusters

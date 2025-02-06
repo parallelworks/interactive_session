@@ -247,11 +247,11 @@ jobs:
             tooltip:
               Enter password or leave blank for no password
           notebook_dir:
-            label: Directory to start Jupyter Lab GUI
+            label: Directory to start Jupyter Notebook GUI
             type: string
             default: __WORKDIR__
             tooltip: 
-              This is the directory that you start with when the JupyterHub graphical user interface starts. The default value here is your home directory.
+              This is the directory that you start with when the Jupyter graphical user interface starts. The default value here is your home directory.
           conda_install:
             label: Install Jupyter-Notebook If Not There?
             type: boolean

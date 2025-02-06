@@ -209,7 +209,7 @@ jobs:
         collapsed: false
       service:
         type: group
-        label: Jupyter Notebook Settings
+        label: Jupyter Lab Settings
         items:
           name: 
             type: string
@@ -220,7 +220,7 @@ jobs:
             type: string
             default: __WORKDIR__
             tooltip: 
-              This is the directory that you start with when the JupyterHub graphical user interface starts. The default value here is your home directory.
+              This is the directory that you start with when the Jupyter graphical user interface starts. The default value here is your home directory.
           conda_install:
             label: Install miniconda environment if not there?
             type: boolean

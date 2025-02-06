@@ -231,14 +231,14 @@ jobs:
         collapsed: false
       service:
         type: group
-        label: Jupyter Notebook Settings
+        label: Jupyter Lab Settings
         items:
           name: 
             type: string
             hidden: true
             default: jupyterlab-host
           password:
-            label: Password for notebook session
+            label: Password for Jupyter Lab session
             type: string
             optional: true
             hidden: true
@@ -250,9 +250,9 @@ jobs:
             type: string
             default: __WORKDIR__
             tooltip: 
-              This is the directory that you start with when the JupyterHub graphical user interface starts. The default value here is your home directory.
+              This is the directory that you start with when the Jupyter graphical user interface starts. The default value here is your home directory.
           conda_install:
-            label: Install Jupyter-Notebook If Not There?
+            label: Install Jupyter-Lab If Not There?
             type: boolean
             default: true
             tooltip:
@@ -290,7 +290,7 @@ jobs:
             tooltip:
               Environment to active. The base environment enables changing kernel to other environments!
           load_env_tag_cloud:
-            label: Command to load Jupyter Notebook to the PATH
+            label: Command to load Jupyter Lab to the PATH
             type: string
             default: source __WORKDIR__/pw/software/.miniconda3c/etc/profile.d/conda.sh; conda activate base
             hidden:  ${{ inputs.service.conda_install == true || ('existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
@@ -298,7 +298,7 @@ jobs:
             ignore: ${{ .hidden }}
             tooltip: Use a bash command
           load_env_tag_existing:
-            label: Command to load Jupyter Notebook to the PATH
+            label: Command to load Jupyter Lab to the PATH
             type: string
             default: module load intelpython; export PATH=$PATH:/home/${USER}/.local/bin
             hidden:  ${{ 'existing' !== inputs.pwrl_host.resource.provider ||  inputs.service.use_conda == true }}

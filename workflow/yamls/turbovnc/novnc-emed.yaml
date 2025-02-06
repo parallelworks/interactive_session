@@ -81,7 +81,7 @@ jobs:
         run: |
           set -x
           while true; do
-            echo "Waiting for target hostname...abc"
+            echo "Waiting for target hostname...abc123"
             echo ${{ inputs.pwrl_host.resource.ip }}
             cmdToRun="${sshcmd} \"if [ -f ${PWD}/target.hostname ]; then cat ${PWD}/target.hostname; fi\""
             echo $cmdToRun
@@ -105,7 +105,7 @@ jobs:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
           while true; do
-            echo "Waiting for service port file..."
+            echo "Waiting for service port file...123
             echo ${{ inputs.pwrl_host.resource.ip }}
             echo "if [ -f ${PWD}/service.port ]; then cat ${PWD}/service.port; fi\"
 

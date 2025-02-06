@@ -79,6 +79,7 @@ jobs:
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
+          set -x
           while true; do
             echo "Waiting for target hostname..."
             echo ${{ inputs.pwrl_host.resource.ip }}
@@ -101,10 +102,10 @@ jobs:
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
-          set -x
           while true; do
             echo "Waiting for service port file..."
             echo ${{ inputs.pwrl_host.resource.ip }}
+            echo "if [ -f ~/${PWD/#$HOME/}/service.port ]; then cat ~/${PWD/#$HOME/}/service.port; fi\"
 
             # Check if the service.port file exists and read its contents
             remote_port=$(${sshcmd} "bash -c \"if [ -f ~/${PWD/#$HOME/}/service.port ]; then cat ~/${PWD/#$HOME/}/service.port; fi\"")

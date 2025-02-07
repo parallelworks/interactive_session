@@ -80,11 +80,12 @@ jobs:
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
+          source resources/host/inputs.sh
           while true; do
             echo "Waiting for target hostname..."
 
             # Check if the service.port file exists and read its contents
-            target_hostname=$(${sshcmd} "if [ -f ~/${PWD/#$HOME/}/target.hostname ]; then cat ~/${PWD/#$HOME/}/target.hostname; fi")
+            target_hostname=$(${sshcmd} "if [ -f ${resource_jobdir}/target.hostname ]; then cat ${resource_jobdir}/target.hostname; fi")
 
             # Exit the loop if file was found and read
             if [ -n "${target_hostname}" ]; then
@@ -102,11 +103,12 @@ jobs:
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
+          source resources/host/inputs.sh
           while true; do
             echo "Waiting for service port file..."
 
             # Check if the service.port file exists and read its contents
-            remote_port=$(${sshcmd} "bash -c \"if [ -f ~/${PWD/#$HOME/}/service.port ]; then cat ~/${PWD/#$HOME/}/service.port; fi\"")
+            remote_port=$(${sshcmd} "bash -c \"if [ -f ${resource_jobdir}/service.port ]; then cat ${resource_jobdir}/service.port; fi\"")
 
             # Exit the loop if remote_port is successfully set (file was found and read)
             if [ -n "$remote_port" ]; then

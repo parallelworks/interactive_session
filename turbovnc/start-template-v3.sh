@@ -42,6 +42,10 @@ if [[ $kernel_version == *microsoft* ]]; then
     service_vnc_exec=NA
 fi
 
+if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
+    export service_vnc_exec=/usr/lib/vncserver 
+fi
+
 # Find an available display port
 if [[ $kernel_version == *microsoft* ]]; then
     # In windows only this port works
@@ -209,7 +213,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     # if vncserver is not tigervnc
     if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
         # FIXME: Change ~/.vnc/config
-        /usr/lib/vncserver ${DISPLAY} &> ${resource_jobdir}/vncserver.log &
+        ${service_vnc_exec} ${DISPLAY} &> ${resource_jobdir}/vncserver.log &
         echo $! > ${resource_jobdir}/vncserver.pid
     elif [[ ${service_vnc_type} == "turbovnc" ]]; then
         ${service_vnc_exec} ${DISPLAY} -SecurityTypes None

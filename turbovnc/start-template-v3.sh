@@ -43,7 +43,15 @@ if [[ $kernel_version == *microsoft* ]]; then
 fi
 
 if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
-    export service_vnc_exec=/usr/lib/vncserver 
+    export service_vnc_exec=/usr/lib/vncserver
+    if [ ! -f "${HOME}/.vnc/config" ]; then
+    echo "securitytypes=None" > "${HOME}/.vnc/config"
+    else
+        # Check if the line is already in the file
+        if ! grep -Fxq "securitytypes=None" "${HOME}/.vnc/config"; then
+            echo "securitytypes=None" >> "${HOME}/.vnc/config"
+        fi
+    fi
 fi
 
 # Find an available display port

@@ -1,7 +1,6 @@
 #!/bin/bash
 source utils/load-env.sh
 source resources/host/inputs.sh
-source lib.sh
 
 if [[ "${use_screen}" == "true" ]]; then
     scp -p ${session_sh} ${resource_publicIp}:${resource_jobdir}/session-${job_number}.sh

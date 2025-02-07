@@ -44,6 +44,7 @@ fi
 
 if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
     export service_vnc_exec=/usr/lib/vncserver
+    mkdir -p ${HOME}/.vnc/
     if [ ! -f "${HOME}/.vnc/config" ]; then
     echo "securitytypes=None" > "${HOME}/.vnc/config"
     else

@@ -102,6 +102,7 @@ vnc_pid=\$(cat ~/.vnc/\${HOSTNAME}${DISPLAY}.pid)
 pkill -P \${vnc_pid}
 kill \${vnc_pid}
 rm ~/.vnc/\${HOSTNAME}${DISPLAY}.*
+rm /tmp/.X11-unix/X${XdisplayNumber}
 HERE
 echo
 

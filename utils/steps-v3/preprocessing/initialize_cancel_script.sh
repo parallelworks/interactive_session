@@ -22,11 +22,13 @@ cat utils/kill_session.sh >> ${kill_ssh}
 job_number_to_clean=$((job_number_int-10))
 formatted_job_number_to_clean=$(printf "%05d\n" "${job_number_to_clean}")
 job_to_clean="/pw/jobs/${workflow_name}/${formatted_job_number_to_clean}"
+# Use this file to verify if the job to clean is completed or not
+completed_kill_sh=${job_to_clean}/kill.sh.completed
 
 echo "#!/bin/bash" > ${kill_sh}
 echo "mv ${kill_sh} ${kill_sh}.completed" >> ${kill_sh}
 cat resources/host/inputs.sh >> ${kill_sh}
-if [ "${job_number_to_clean}" -gt 0 ] && [ -f "${kill_sh}.completed" ]; then
+if [ "${job_number_to_clean}" -gt 0 ] && [ -f "${completed_kill_sh}" ]; then
     echo "trap \"rm -rf ${job_to_clean}\" EXIT" >> ${kill_sh}
 fi
 

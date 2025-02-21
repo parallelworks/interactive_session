@@ -39,9 +39,18 @@ jobs:
               spec:
                 containers:
                   - name: ${{ needs.k8s_deployment.outputs.app_name }}
-                    image: ${{ inputs.image }}
+                    image: ${{ inputs.image }} 
                     ports:
-                      - containerPort: ${{ inputs.k8sPort }}
+                      - containerPort: ${{ inputs.k8sPort }}  # VNC port
+                    env:
+                      - name: VNC_PW
+                        value: ${{ inputs.password }} 
+                    resources:
+                      limits:
+                        memory: ${{ inputs.memory_limit }}  # Set shared memory to 512MB (shm-size equivalent)
+                    securityContext:
+                      capabilities:
+                        add: ["NET_ADMIN"]  # Might be required depending on kasmvnc container usage
           ---
           apiVersion: v1
           kind: Service
@@ -54,9 +63,10 @@ jobs:
             ports:
               - protocol: TCP
                 port: ${{ inputs.k8sPort }}
-                targetPort: ${{ inputs.k8sPort }}
+                targetPort: ${{ inputs.k8sPort }} # Map to the VNC port
             type: LoadBalancer
           EOF
+
 
       - name: Dry Run Deployment
         run: |
@@ -120,25 +130,15 @@ jobs:
         run: |
           source OUTPUTS
           k8s_port="${{ inputs.k8sPort }}"
-          JUPYTER_URL=""
-          while [[ -z "$JUPYTER_URL" || "$JUPYTER_URL" == "<none>" ]]; do
-            JUPYTER_URL=$(kubectl logs -n ${{ inputs.namespace }} $jupyter_pod 2>&1 | grep -oE "http://[0-9a-zA-Z.:]+:${k8s_port}/.*" | tail -n1  )
-            if [[ -z "$JUPYTER_URL" || "$JUPYTER_URL" == "<none>" ]]; then
-              echo "Still waiting for Jupyter URL..."
-              sleep 5
-            fi
-          done
-          echo ${JUPYTER_URL} 
-          SLUG=$(echo ${JUPYTER_URL} | sed "s#http://[0-9a-zA-Z.:]\+:${k8s_port}##")
-          JUPYTER_URL="http://${ext_ip}:${k8s_port}${SLUG}"
-          echo "JUPYTER_URL=${JUPYTER_URL}" | tee -a $OUTPUTS
+          URL="https://${ext_ip}:${k8s_port}"
+          echo "URL=${URL}" | tee -a $OUTPUTS
       - name: Expose port
         uses: parallelworks/update-session
         with:
           name: ${{ sessions.expose }}
           status: running
           type: link
-          url: ${{ needs.create_session.outputs.JUPYTER_URL }}
+          url: ${{ needs.create_session.outputs.URL }}
 
 
 'on':
@@ -154,8 +154,17 @@ jobs:
       image:
         label: Job image
         type: string
-        default: jupyter/datascience-notebook
+        default: kasmweb/desktop:1.16.0
       k8sPort:
         label: Job port
         type: number
-        default: 8888
+        default: 6901
+      password:
+        label: Password
+        type: string
+        default: Password123!
+        tooltip: This is the password for user kasm_user
+      memory_limit:
+        label: Memory Limit
+        type: string
+        default: 512Mi

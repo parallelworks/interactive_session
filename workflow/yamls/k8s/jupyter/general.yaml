@@ -9,7 +9,7 @@ jobs:
     steps:
       - name: Authenticate kubectl
         run: pw kube auth ${{ inputs.cluster }}
-  main:
+  k8s_deployment:
     needs:
       - auth
     steps:
@@ -25,20 +25,20 @@ jobs:
           apiVersion: apps/v1
           kind: Deployment
           metadata:
-            name: ${{ needs.main.outputs.app_name }}
+            name: ${{ needs.k8s_deployment.outputs.app_name }}
             namespace: ${{ inputs.namespace }}
           spec:
             replicas: 1
             selector:
               matchLabels:
-                app: ${{ needs.main.outputs.app_name }}
+                app: ${{ needs.k8s_deployment.outputs.app_name }}
             template:
               metadata:
                 labels:
-                  app: ${{ needs.main.outputs.app_name }}
+                  app: ${{ needs.k8s_deployment.outputs.app_name }}
               spec:
                 containers:
-                  - name: ${{ needs.main.outputs.app_name }}
+                  - name: ${{ needs.k8s_deployment.outputs.app_name }}
                     image: ${{ inputs.image }}
                     ports:
                       - containerPort: ${{ inputs.k8sPort }}
@@ -46,56 +46,81 @@ jobs:
           apiVersion: v1
           kind: Service
           metadata:
-            name: ${{ needs.main.outputs.app_name }}-lb
+            name: ${{ needs.k8s_deployment.outputs.app_name }}-lb
             namespace: ${{ inputs.namespace }}
           spec:
             selector:
-              app: ${{ needs.main.outputs.app_name }}
+              app: ${{ needs.k8s_deployment.outputs.app_name }}
             ports:
               - protocol: TCP
                 port: ${{ inputs.k8sPort }}
                 targetPort: ${{ inputs.k8sPort }}
             type: LoadBalancer
           EOF
+
+      - name: Dry Run Deployment
+        run: |
+          echo "Performing dry run..."
+          kubectl apply -f app.yaml --dry-run=client
+        cleanup: |
+          touch cleanup.completed
+
       - name: Apply Deployment and Service
         run: kubectl apply -f app.yaml
         cleanup: |
           {
-            kubectl delete deployment ${{ needs.main.outputs.app_name }} -n ${{ inputs.namespace }} --wait=true --timeout=60s
+            kubectl delete deployment ${{ needs.k8s_deployment.outputs.app_name }} -n ${{ inputs.namespace }} --wait=true --timeout=60s
           } || {
-            kubectl delete deployment ${{ needs.main.outputs.app_name }} -n ${{ inputs.namespace }} --force
+            kubectl delete deployment ${{ needs.k8s_deployment.outputs.app_name }} -n ${{ inputs.namespace }} --force
           }
-          kubectl delete svc ${{ needs.main.outputs.app_name }}-lb -n ${{ inputs.namespace }}
+          kubectl delete svc ${{ needs.k8s_deployment.outputs.app_name }}-lb -n ${{ inputs.namespace }}
+          touch cleanup.completed
       - name: Wait for Deployment to be Ready
-        run: kubectl rollout status deployment/${{ needs.main.outputs.app_name }} -n ${{ inputs.namespace }}
+        run: kubectl rollout status deployment/${{ needs.k8s_deployment.outputs.app_name }} -n ${{ inputs.namespace }}
       - name: Wait for Pod to be Ready
         run: |
           echo "Waiting for pod to be ready..."
-          kubectl wait --for=condition=Ready pod -l app=${{ needs.main.outputs.app_name }} -n ${{ inputs.namespace }} --timeout=300s
-          jupyter_pod=$(kubectl get pods -n ${{ inputs.namespace }} -l app=${{ needs.main.outputs.app_name }} --field-selector=status.phase=Running -o jsonpath="{.items[0].metadata.name}")
-          echo "jupyter_pod=$jupyter_pod" | tee -a $OUTPUTS
+          kubectl wait --for=condition=Ready pod -l app=${{ needs.k8s_deployment.outputs.app_name }} -n ${{ inputs.namespace }} --timeout=300s
+          jupyter_pod=$(kubectl get pods -n ${{ inputs.namespace }} -l app=${{ needs.k8s_deployment.outputs.app_name }} --field-selector=status.phase=Running -o jsonpath="{.items[0].metadata.name}")
+          echo "jupyter_pod=$jupyter_pod" | tee -a $OUTPUTS | tee -a OUTPUTS
       - name: Wait for LoadBalancer Service to Get External IP
         run: |
           echo "Waiting for external IP..."
           while true; do
-            ext_ip=$(kubectl get svc -n ${{ inputs.namespace }} ${{ needs.main.outputs.app_name }}-lb -o jsonpath="{.status.loadBalancer.ingress[0].ip}" 2>/dev/null)
+            ext_ip=$(kubectl get svc -n ${{ inputs.namespace }} ${{ needs.k8s_deployment.outputs.app_name }}-lb -o jsonpath="{.status.loadBalancer.ingress[0].ip}" 2>/dev/null)
             if [[ -n "$ext_ip" && "$ext_ip" != "<none>" ]]; then
               echo "External IP found: $ext_ip"
               break
             fi
             sleep 5
           done
-          echo "ext_ip=$ext_ip" | tee -a $OUTPUTS
-      - name: Get Jupyter URL
-        env:
-          ext_ip: ${{ needs.main.outputs.ext_ip }}
-          jupyter_pod: ${{ needs.main.outputs.jupyter_pod }}
+          echo "ext_ip=$ext_ip" | tee -a $OUTPUTS | tee -a OUTPUTS
+      - name: Stream Logs
         run: |
+          touch ready_to_create_session
+          kubectl logs -f deployment/${{ needs.k8s_deployment.outputs.app_name }} -n ${{ inputs.namespace }}
+
+  create_session:
+    needs:
+      - auth
+    steps:
+      - name: Get Jupyter URL
+        run: |
+          # Wait for k8s_deployment job to reach the last step
+          while true; do
+            if [ -f "cleanup.completed" ]; then
+              echo "File cleanup.completed was detected. Exiting..."
+              exit 0
+            elif [ -f "ready_to_create_session" ]; then
+              echo "Deployment is ready"
+              break
+            fi
+            sleep 2  # Check every second
+          done
+          source OUTPUTS
           k8s_port="${{ inputs.k8sPort }}"
           JUPYTER_URL=""
           while [[ -z "$JUPYTER_URL" || "$JUPYTER_URL" == "<none>" ]]; do
-            echo "Waiting for Jupyter URL..."
-            sleep 5
             JUPYTER_URL=$(kubectl logs -n ${{ inputs.namespace }} $jupyter_pod 2>&1 | grep -oE "http://[0-9a-zA-Z.:]+:${k8s_port}/.*" | tail -n1  )
             if [[ -z "$JUPYTER_URL" || "$JUPYTER_URL" == "<none>" ]]; then
               echo "Still waiting for Jupyter URL..."
@@ -112,9 +137,9 @@ jobs:
           name: ${{ sessions.expose }}
           status: running
           type: link
-          url: ${{ needs.main.outputs.JUPYTER_URL }}
-      - name: Stream Logs
-        run: kubectl logs -f deployment/${{ needs.main.outputs.app_name }} -n ${{ inputs.namespace }}
+          url: ${{ needs.create_session.outputs.JUPYTER_URL }}
+
+
 'on':
   execute:
     inputs:

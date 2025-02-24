@@ -1,12 +1,6 @@
-## Interactive Session - Docker Tensorflow GPU
-This workflow starts a Jupyter session in a TensorFlow docker container with GPU support. **You must select a partition with GPU support in the input form!**
+## Juice Server Session
+This workflow starts a Jupyter Notebook [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README.md) using the specified docker repository.
 
-
-
-#### Instructions
-
-* Enter form parameters and click _Execute_ to launch a PW job. The job status can be monitored under COMPUTE > Workflow Monitor. The job files and logs are under the newly created `/pw/jobs/<workflow-name>/<job-name>/` directory.
-* Wait for node to be provisioned from slurm.
-* Once provisioned, open the session.html file (double click) in the job directory.
-* To close a session kill the PW job by clicking on COMPUTE > Workflow Monitor > Cancel Job (red icon).
-
+### Examples
+1. [TensorFlow](https://www.tensorflow.org/install/docker): `tensorflow/tensorflow:2.7.0-gpu-jupyter`. The latest version of TensorFlow may be incompatible with the cuda version. The older versions may contain incompatible jupyter notebook versions. 
+2. [PyTorch](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch): `nvcr.io/nvidia/pytorch:22.01-py3`

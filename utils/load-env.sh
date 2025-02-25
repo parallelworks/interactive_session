@@ -22,5 +22,3 @@ if [ -d /pw/kerberos ];then
   source /pw/kerberos/source.env
   which ssh kinit
 fi
-
-source lib.sh

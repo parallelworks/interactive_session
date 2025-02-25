@@ -25,10 +25,10 @@ if [[ "${use_screen}" == "true" ]]; then
     while true; do
         # Check if the screen session exists on the remote host
         if ssh "${resource_publicIp}" screen -list | grep ${screen_session_name} > /dev/null 2>&1; then
-            echo "$(date) ${screen_session_name} session is running on ${resource_publicIp}" >> screen-session.log 2>&1
+            echo "$(date) ${screen_session_name} screen session is running on ${resource_publicIp}" >> screen-session.log 2>&1
             retry_count=0
         else
-            echo "$(date) ${screen_session_name} session is not running on ${resource_publicIp}" 2>&1 | tee -a screen-session.log
+            echo "$(date) ${screen_session_name} screen session was not found on ${resource_publicIp}" 2>&1 | tee -a screen-session.log
             retry_count=$((retry_count + 1))
         fi
 

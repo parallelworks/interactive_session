@@ -1,5 +1,5 @@
 ## Start ngenCERF
-This workflow starts and connects the ngenCERF service as a PW [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README.md).
+This workflow starts and connects the ngenCERF service as a PW [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README-v3.md).
 
 
 The ngencerf_start workflow runs on the controller node of a shared SLURM cluster and performs the following actions:

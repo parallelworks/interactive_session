@@ -1,5 +1,5 @@
 ## Docker Service
-This workflow connects a service hosted in a Docker container to the Parallel Works platform using the [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README.md) workflow framework.  It accepts a Docker command to start the server, which can utilize the following special placeholders replaced by the workflow:
+This workflow connects a service hosted in a Docker container to the Parallel Works platform using the [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README-v3.md) workflow framework.  It accepts a Docker command to start the server, which can utilize the following special placeholders replaced by the workflow:
 1. `__docker_port__`: This placeholder represents an available port that is selected by the workflow.
 2. `__base_url__`: This placeholder signifies the base URL from which the server is served on the platform.
 3. `__container_name__`: This placeholder represents a name that is assigned by the workflow, primarily to facilitate cleanup procedures once the job is cancelled.

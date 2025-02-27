@@ -1,10 +1,4 @@
 ## ecFlow Interactive Session
-This workflow starts an interactive session for ecFlow in a desktop environment running in the compute or controller nodes. The services are started in the selected slurm partition using an sbatch command.
+This workflow starts a remote desktop [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README.md) and starts ecFlow.
 
-#### Instructions
-
-* Enter form parameters and click _Execute_ to launch a PW job. The job status can be monitored under COMPUTE > Workflow Monitor. The job files and logs are under the newly created `/pw/jobs/<workflow-name>/<job-name>/` directory.
-* Wait for node to be provisioned from slurm.
-* Once provisioned, open the session.html file (double click) in the job directory.
-* To close a session kill the PW job by clicking on COMPUTE > Workflow Monitor > Cancel Job (red icon).
-
+**ecFlow must be installed, and the appropriate command (e.g., `module load ecflow`) must be entered in the workflow's input form.**

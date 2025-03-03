@@ -225,7 +225,7 @@ jobs:
         collapsed: false
       service:
         type: group
-        label: H2O-3 Settings
+        label: H2O Flow Settings
         items:
           name: 
             type: string

@@ -9,4 +9,4 @@ fi
 service_rel_install_dir="$(basename ${service_download_url} .zip)"
 service_bin="${service_parent_install_dir}/${service_rel_install_dir}/h2o.jar"
 
-java -jar ${service_bin}
+java -jar ${service_bin} -port ${service_port}

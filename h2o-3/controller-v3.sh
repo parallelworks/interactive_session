@@ -25,6 +25,6 @@ rm -rf ${service_rel_install_dir}
 wget ${service_download_url}
 unzip $(basename ${service_download_url})
 
-if [ -f "${service_bin}" ]; then
+if ! [ -f "${service_bin}" ]; then
     displayErrorMessage "Failed to install ${service_download_url}"
 fi

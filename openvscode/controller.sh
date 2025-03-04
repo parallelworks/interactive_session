@@ -37,7 +37,7 @@ install_code_server() {
     # Add copilot
     rsync -avzq -e "ssh ${resource_ssh_usercontainer_options}" ${USER_CONTAINER_HOST}:${service_copilot_usercontainer_path} ${service_parent_install_dir}
     #wget -P ${service_parent_install_dir} -O ${service_copilot_vsix_path} ${service_copilot_url}
-    ${service_exec} --install-extension ${service_copilot_vsix_path} --extensions-dir ${service_install_dir}
+    ${service_exec} --install-extension ${service_copilot_vsix_path} --extensions-dir ${HOME}/.local/share/code-server/extensions
     # Initialize default settings
     init_code_server_settings
     # Clean tgz

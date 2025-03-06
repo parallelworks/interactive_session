@@ -37,7 +37,7 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
  location ${basepath}/ {
-    proxy_pass http://localhost:${airflow_port};
+    proxy_pass http://${HOSTNAME}:${airflow_port};
     proxy_set_header Host \$http_host;
     proxy_redirect off;
     proxy_http_version 1.1;
@@ -100,7 +100,7 @@ echo "kill ${pid}" >> cancel.sh
 #################
 # START AIRFLOW #
 #################
-base_url="http://localhost/${basepath}"
+base_url="http://${HOSTNAME}${basepath}"
 sed -i "s|^base_url .*|base_url = ${base_url}|" ${AIRFLOW_HOME}/airflow.cfg
 sed -i "s|^enable_proxy_fix .*|enable_proxy_fix = True|" ${AIRFLOW_HOME}/airflow.cfg
 

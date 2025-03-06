@@ -112,7 +112,7 @@ sed -i "s|^enable_proxy_fix .*|enable_proxy_fix = True|" ${AIRFLOW_HOME}/airflow
 
 create_user() {
     sleep 15 
-    airflow users create -u ${service_username} -f ${service_firstname} -l ${service_lastname} -p ${service_password} -r  ${service_role}
+    airflow users create -u ${service_username} -f ${service_firstname} -l ${service_lastname} -p ${service_password} -r  ${service_role} -e ${service_email}
 }
 
 create_user &

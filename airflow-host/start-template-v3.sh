@@ -18,7 +18,7 @@ source ${service_conda_install_dir}/bin/activate
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
-airflow_port=$(findAvailablePort)
+airflow_port=8080 #$(findAvailablePort)
 
 #######################
 # START NGINX WRAPPER #

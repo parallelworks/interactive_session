@@ -130,12 +130,16 @@ jobs:
         run: |
           local_port=$(pw agent open-port)
           echo "local_port=${local_port}"  | tee -a $OUTPUTS
+      - name: Set URL SLUG
+        run: |
+          echo "slug=login"  | tee -a $OUTPUTS
       - name: Expose Port
         uses: parallelworks/update-session
         with:
           remotePort: "${{ needs.create_session.outputs.remote_port }}"
           localPort: "${{ needs.create_session.outputs.local_port }}"
           remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
+          slug: "${{ needs.create_session.outputs.slug }}"
           status: running
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.session }}

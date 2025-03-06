@@ -102,8 +102,8 @@ echo "kill ${pid}" >> cancel.sh
 #################
 # START AIRFLOW #
 #################
-base_url=http://localhost/${basepath}
-sed -i "s|^base_url .*|base_url = ${BASE_URL}|" ${AIRFLOW_HOME}/airflow.cfg
+base_url="http://localhost/${basepath}"
+sed -i "s|^base_url .*|base_url = ${base_url}|" ${AIRFLOW_HOME}/airflow.cfg
 sed -i "s|^enable_proxy_fix .*|enable_proxy_fix = True|" ${AIRFLOW_HOME}/airflow.cfg
 
 airflow standalone

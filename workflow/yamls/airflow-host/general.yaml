@@ -238,3 +238,44 @@ jobs:
             type: string
             default:  __WORKDIR__/pw/airflow
             tooltip: Airflow is installed if the home directory is missing
+          username:
+            label: User Name
+            type: string
+            default:  admin
+            tooltip: Username of the user
+          firstname:
+            label: First Name
+            type: string
+            default:  FIRSTNAME
+            tooltip: First name of the user
+          lastname:
+            label: Last Name
+            type: string
+            default:  LASTNAME
+            tooltip: Last name of the user
+          role:
+            label: User Role
+            type:  dropdown
+            default:  Admin
+            tooltip: Role of the user
+            options:
+              - value: Admin
+                label: Admin
+              - value: User
+                label: User
+              - value: Op
+                label: Op
+              - value: Viewer
+                label: Viewer
+              - value: Public
+                label: Public
+          email:
+            label: Email
+            type: string
+            default:  user@domain.com
+            tooltip: Email of the user
+          password:
+            label: Password
+            type: string
+            default: password
+            tooltip: Password of the user

@@ -106,9 +106,16 @@ echo "kill ${pid}" >> cancel.sh
 # START AIRFLOW #
 #################
 base_url="https://activate.parallel.works${basepath}"
-sed -i "s|^base_url .*|base_url = ${base_url}|" ${AIRFLOW_HOME}/airflow.cfg
+#sed -i "s|^base_url .*|base_url = ${base_url}|" ${AIRFLOW_HOME}/airflow.cfg
 sed -i "s|^enable_proxy_fix .*|enable_proxy_fix = True|" ${AIRFLOW_HOME}/airflow.cfg
 
+
+create_user() {
+    sleep 15 
+    airflow users create -u ${service_username} -f ${service_firstname} -l ${service_lastname} -p ${service_password} -r  ${service_role}
+}
+
+create_user &
 airflow standalone
 
 

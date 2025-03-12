@@ -110,13 +110,25 @@ echo "kill ${pid}" >> cancel.sh
 #sed -i "s|^enable_proxy_fix .*|enable_proxy_fix = True|" ${AIRFLOW_HOME}/airflow.cfg
 
 
-#create_user() {
-#    sleep 15 
-#    airflow users create -u ${service_username} -f ${service_firstname} -l ${service_lastname} -p ${service_password} -r  ${service_role} -e ${service_email}
-#}
+# Do now use "airflow standalone"! It does not allow adding new users
+airflow db init
+# Run "airflow db reset" in cancel.sh?
+ 
+airflow users create \
+    --username ${service_username} \
+    --firstname ${service_firstname} \
+    --lastname ${service_lastname} \
+    --role ${service_role} \
+    --email ${service_email} \
+    --password ${service_password}
 
-#create_user &
-#airflow standalone
 
+airflow scheduler 2>&1 | tee scheduler.log &
+airflow_scheduler_pid=$!
+echo "kill ${airflow_scheduler_pid} # airflow scheduler" >> cancel.sh
+
+airflow webserver --port 8080 2>&1 | tee webserver.log &
+airflow_webserver_pid=$!
+echo "kill ${airflow_webserver_pid} # airflow webserver" >> cancel.sh
 
 sleep inf

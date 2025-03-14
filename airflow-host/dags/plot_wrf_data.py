@@ -9,9 +9,10 @@ import sys
 wrf_output_dir = sys.argv[1]
 save_plot_dir = os.path.dirname(wrf_output_dir)
 
-# Open one of the WRF output files to get dataset information
-ds = xr.open_dataset(os.path.join(wrf_output_dir, "wrfout_d01_2019-11-26_12:00:00.nc"))
+# Get the first .nc file in the wrf_output_dir
+nc_file = glob.glob(os.path.join(wrf_output_dir, "*.nc"))[0]
 
+ds = xr.open_dataset(nc_file)
 # Print dataset information
 print(ds)
 

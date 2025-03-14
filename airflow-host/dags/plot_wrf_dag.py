@@ -2,6 +2,8 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
 from airflow.sensors.filesystem import FileSensor
+from airflow.utils.trigger_rule import TriggerRule
+
 from datetime import datetime
 import time
 import os
@@ -71,6 +73,7 @@ def write_slurm_script(data_dir, **kwargs):
 #SBATCH --output={data_dir}/plot_wrf.%j.out
 #SBATCH --time=00:30:00
 #SBATCH --ntasks=1
+#SBATCH --chdir={data_dir}
 source {CONDA_PREFIX}/etc/profile.d/conda.sh 
 conda activate {WRF_CONDA_ENVIRONMENT}
 python {AIRFLOW_HOME}/dags/plot_wrf_data.py {data_dir}/wrf-output
@@ -82,15 +85,15 @@ python {AIRFLOW_HOME}/dags/plot_wrf_data.py {data_dir}/wrf-output
     kwargs['ti'].xcom_push(key='slurm_script_path', value=slurm_script_path)
 
 with DAG(
-    dag_id='submit_slurm_python_script',
+    dag_id='plot-wrf',
     default_args={
         'owner': 'airflow',
         'start_date': datetime(2024, 3, 13),
         'retries': 1,
     },
-    schedule_interval=None,
+    schedule_interval='@daily',
     catchup=False,
-    tags=['slurm', 'sbatch', 'python-script']
+    tags=['slurm', 'sbatch', 'python-script', 'wrf', 'plot']
 ) as dag:
 
     # Get current date

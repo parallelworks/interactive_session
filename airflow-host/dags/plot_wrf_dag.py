@@ -13,7 +13,7 @@ AIRFLOW_HOME = os.environ.get('AIRFLOW_HOME')
 # Retrieves the installation path of the Conda environment where Airflow is currently running
 # Only works if airflow is installed in the base environment!  
 CONDA_PREFIX = os.environ.get('CONDA_PREFIX')
-WRF_CONDA_ENVIRONMENT="wrf-33"
+WRF_CONDA_ENVIRONMENT="wrf"
 DATA_PARENT_DIRECTORY = os.path.join(
     os.path.expanduser("~"),
     'wrf_data'

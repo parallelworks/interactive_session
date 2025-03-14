@@ -109,13 +109,6 @@ echo "kill ${pid}" >> cancel.sh
 #sed -i "s|^base_url .*|base_url = ${base_url}|" ${AIRFLOW_HOME}/airflow.cfg
 #sed -i "s|^enable_proxy_fix .*|enable_proxy_fix = True|" ${AIRFLOW_HOME}/airflow.cfg
 
-# Transfer dags to dags folder
-if [ -d "dags" ]; then
-    dags_folder=$(cat ${AIRFLOW_HOME}/airflow.cfg | grep dags_folder | cut -d'=' -f2)
-    mkdir -p ${dags_folder}
-    cp -r dags/* ${dags_folder}
-fi
-
 
 # Do now use "airflow standalone"! It does not allow adding new users
 airflow db init
@@ -137,5 +130,14 @@ echo "kill ${airflow_scheduler_pid} # airflow scheduler" >> cancel.sh
 airflow webserver --port 8080 2>&1 | tee webserver.log &
 airflow_webserver_pid=$!
 echo "kill ${airflow_webserver_pid} # airflow webserver" >> cancel.sh
+
+# Transfer dags to dags folder
+if [ -d "dags" ]; then
+    dags_folder=$(cat ${AIRFLOW_HOME}/airflow.cfg | grep dags_folder | cut -d'=' -f2)
+    if ! [ -z "${dags_folder}" ]; then
+        mkdir -p ${dags_folder}
+        cp -r dags/* ${dags_folder}
+    fi
+fi
 
 sleep inf

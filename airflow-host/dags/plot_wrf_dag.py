@@ -88,7 +88,7 @@ with DAG(
     dag_id='plot-wrf',
     default_args={
         'owner': 'airflow',
-        'start_date': datetime(2024, 3, 13),
+        'start_date': datetime.now(),
         'retries': 1,
     },
     schedule_interval='@daily',

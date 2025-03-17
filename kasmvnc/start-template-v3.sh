@@ -3,6 +3,11 @@ if [ -z ${service_novnc_parent_install_dir} ]; then
     service_novnc_parent_install_dir=${HOME}/pw/software
 fi
 
+if [ -z "${service_port}" ]; then
+    displayErrorMessage "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
+fi
+
+
 if ! [ -f /etc/pki/tls/private/kasmvnc.pem ]; then
     # FIXME: Only run if kasmvnc is not installed!
     wget https://github.com/kasmtech/KasmVNC/releases/download/v1.3.2/kasmvncserver_oracle_8_1.3.2_x86_64.rpm
@@ -16,8 +21,27 @@ fi
 
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
 # Find an available display port
-if [[ $kernel_version != *microsoft* ]]; then
-    echo "rm /tmp/${service_port}.port.used" >> ${resource_jobdir}/service-kill-${job_number}.sh
+if [[ $kernel_version == *microsoft* ]]; then
+    # In windows only this port works
+    displayPort=5900
+else
+    minPort=5901
+    maxPort=5999
+    for port in $(seq ${minPort} ${maxPort} | shuf); do
+        out=$(netstat -aln | grep LISTEN | grep ${port})
+        displayNumber=${port: -2}
+        XdisplayNumber=$(echo ${displayNumber} | sed 's/^0*//')
+        if [ -z "${out}" ] && ! [ -e /tmp/.X11-unix/X${XdisplayNumber} ]; then
+            # To prevent multiple users from using the same available port --> Write file to reserve it
+            portFile=/tmp/${port}.port.used
+            if ! [ -f "${portFile}" ]; then
+                touch ${portFile}
+                export displayPort=${port}
+                export DISPLAY=:${displayNumber#0}
+                break
+            fi
+        fi
+    done
 fi
 
 
@@ -39,7 +63,7 @@ sudo usermod -a -G kasmvnc-cert $USER
 
 vncserver -kill ${DISPLAY}
 echo "vncserver -kill ${DISPLAY}" >> ${resource_jobdir}/service-kill-${job_number}-main.sh
-vncserver ${DISPLAY} -disableBasicAuth -select-de gnome
+vncserver ${DISPLAY} -disableBasicAuth -select-de gnome -fg -websocketPort ${service_port} -rfbport ${displayPort}
 rm -rf ${portFile}
 
 

@@ -14,13 +14,9 @@ jobs:
       - name: Validating Target Resource
         run: ./utils/steps-v3/preprocessing/input_form_resource_wrapper.sh ${{ inputs.pwrl_host.resource.ip }}
       - name: Process Inputs
-        env:
-          sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: | 
           ./utils/steps-v3/preprocessing/process_inputs_sh.sh 
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
-          ${sshcmd} 'bash -s' < ./utils/steps-v3/preprocessing/select_display.sh >> resources/host/inputs.sh
-
       - name: Transfer Files to Controller
         run: ./utils/steps-v3/preprocessing/transfer_files_to_controller.sh
       - name: Controller Preprocessing

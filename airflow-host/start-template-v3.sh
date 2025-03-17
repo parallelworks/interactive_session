@@ -23,8 +23,8 @@ airflow_port=8080 #$(findAvailablePort)
 #################
 # START AIRFLOW #
 #################
-base_url="https://alvaro-airflow.activate.pw/"
-sed -i "s|^base_url .*|base_url = ${base_url}|" ${AIRFLOW_HOME}/airflow.cfg
+#base_url="https://alvaro-airfloww.activate.pw/"
+#sed -i "s|^base_url .*|base_url = ${base_url}|" ${AIRFLOW_HOME}/airflow.cfg
 sed -i "s|^enable_proxy_fix .*|enable_proxy_fix = True|" ${AIRFLOW_HOME}/airflow.cfg
 
 

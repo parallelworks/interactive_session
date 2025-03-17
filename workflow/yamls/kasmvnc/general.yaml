@@ -14,13 +14,9 @@ jobs:
       - name: Validating Target Resource
         run: ./utils/steps-v3/preprocessing/input_form_resource_wrapper.sh ${{ inputs.pwrl_host.resource.ip }}
       - name: Process Inputs
-        env:
-          sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: | 
           ./utils/steps-v3/preprocessing/process_inputs_sh.sh 
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
-          ${sshcmd} 'bash -s' < ./utils/steps-v3/preprocessing/select_display.sh >> resources/host/inputs.sh
-
       - name: Transfer Files to Controller
         run: ./utils/steps-v3/preprocessing/transfer_files_to_controller.sh
       - name: Controller Preprocessing
@@ -153,14 +149,20 @@ jobs:
     inputs:
       pwrl_host:
         type: group
-        label: Jupyter Server Host
+        label: Service Host
         items:
           resource:
             type: compute-clusters
             label: Service host
             include-workspace: false
-            tooltip:
-              Resource to host the service
+            provider:
+              - gclusterv2
+              - pclusterv2
+              - azclusterv2
+              - aws-slurm
+              - google-slurm
+              - azure-slurm
+            tooltip: Resource to host the service. Only supported in cloud clusters.
           nports:
             type: number
             label: Number of Ports to Reserve
@@ -178,17 +180,16 @@ jobs:
                 label: SLURM Partition
               - value: PBS
                 label: PBS Queue
-            tooltip:
-              Job will be submitted using SSH, sbatch or qsub, respectively
+            tooltip: Job will be submitted using SSH, sbatch or qsub, respectively
           _sch__dd_partition_e_:
             type: slurm-partitions
             label: SLURM partition
             hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
-            tooltip:
-                Partition to submit the interactive job. Leave empty to let SLURM pick
-                the optimal option.
+            tooltip: >-
+              Partition to submit the interactive job. Leave empty to let SLURM
+              pick the optimal option.
             resource: ${{ inputs.pwrl_host.resource }}
           scheduler_directives_slurm:
             type: string
@@ -196,90 +197,45 @@ jobs:
             hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
-            tooltip:
-                e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to
-                separate parameters. Do not include the SBATCH keyword.
+            tooltip: >-
+              e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ;
+              to separate parameters. Do not include the SBATCH keyword.
           _sch__d_q___:
             type: string
             label: PBS queue
             hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
-            tooltip:
-                Queue to submit the interactive job. Must select one! Use [qstat -f
-                -Q] to list all queues on the system
+            tooltip: >-
+              Queue to submit the interactive job. Must select one! Use [qstat
+              -f -Q] to list all queues on the system
           scheduler_directives_pbs:
             type: string
             label: Scheduler directives
             hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
-            tooltip:
-                e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to
-                separate parameters. Do not include the PBS keyword.
+            tooltip: >-
+              e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ;
+              to separate parameters. Do not include the PBS keyword.
         collapsed: false
       service:
         type: group
-        label: Airflow Settings
+        label: Service
+        hidden: true
         items:
-          name: 
+          novnc_parent_install_dir:
+            label: noVNC installation directory
             type: string
             hidden: true
-            default: airflow-host
-          parent_install_dir:
-            label: Parent Install Directory  
+            default: __WORKDIR__/pw/software
+          novnc_tgz_basename:
+            label: Basename of the novnc tgz file
             type: string
-            default:  __WORKDIR__/pw/software
-            hidden: ${{ inputs.service.conda_install == false }}
-            ignore: ${{ .hidden }}
-            tooltip: Software dependencies are installed in this directory. Ensure the directory has sufficient space!
-          airflow_version:
-            label: Airflow Version
+            hidden: true
+            default: noVNC-1.5.0.tgz
+          name:
             type: string
-            default: "2.10.5"
-          airflow_home:
-            label: Airflow Home Directory  
-            type: string
-            default:  __WORKDIR__/pw/airflow
-            tooltip: Airflow is installed if the home directory is missing
-          username:
-            label: User Name
-            type: string
-            default:  admin
-            tooltip: Username of the user
-          firstname:
-            label: First Name
-            type: string
-            default:  FIRSTNAME
-            tooltip: First name of the user
-          lastname:
-            label: Last Name
-            type: string
-            default:  LASTNAME
-            tooltip: Last name of the user
-          role:
-            label: User Role
-            type:  dropdown
-            default:  Admin
-            tooltip: Role of the user
-            options:
-              - value: Admin
-                label: Admin
-              - value: User
-                label: User
-              - value: Op
-                label: Op
-              - value: Viewer
-                label: Viewer
-              - value: Public
-                label: Public
-          email:
-            label: Email
-            type: string
-            default:  user@domain.com
-            tooltip: Email of the user
-          password:
-            label: Password
-            type: string
-            default: password
-            tooltip: Password of the user
+            label: Select remote display protocol
+            hidden: true
+            default: kasmvnc

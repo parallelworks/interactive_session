@@ -63,8 +63,13 @@ sudo usermod -a -G kasmvnc-cert $USER
 
 vncserver -kill ${DISPLAY}
 echo "vncserver -kill ${DISPLAY}" >> ${resource_jobdir}/service-kill-${job_number}-main.sh
-vncserver ${DISPLAY} -disableBasicAuth -select-de gnome -fg -websocketPort ${service_port} -rfbport ${displayPort}
+vncserver ${DISPLAY} -disableBasicAuth -select-de gnome -websocketPort ${service_port} -rfbport ${displayPort}
 rm -rf ${portFile}
+
+vncserver_pid=$(cat "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid")
+echo "kill ${vncserver_pid}" >> ${resource_jobdir}/service-kill-${job_number}-main.sh
+cat "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.log"
+echo "rm \"${HOME}/.vnc/${HOSTNAME}${DISPLAY}*\"" >> ${resource_jobdir}/service-kill-${job_number}-main.sh
 
 
 # Reload env in case it was deactivated in the step above (e.g.: conda activate)

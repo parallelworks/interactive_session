@@ -28,7 +28,7 @@ if [ "${kasmvnc_was_installed}" = true ]; then
     #sudo chown $USER /etc/pki/tls/private/kasmvnc.pem
     # Disable ssl
     sudo sed -i 's/require_ssl: true/require_ssl: false/g' /usr/share/kasmvnc/kasmvnc_defaults.yaml
-done
+fi
 
 
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')

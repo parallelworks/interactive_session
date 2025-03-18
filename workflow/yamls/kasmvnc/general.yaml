@@ -222,20 +222,20 @@ jobs:
       service:
         type: group
         label: Service
-        hidden: true
         items:
           novnc_parent_install_dir:
             label: noVNC installation directory
             type: string
             hidden: true
             default: __WORKDIR__/pw/software
-          novnc_tgz_basename:
-            label: Basename of the novnc tgz file
-            type: string
-            hidden: true
-            default: noVNC-1.5.0.tgz
           name:
             type: string
             label: Select remote display protocol
             hidden: true
             default: kasmvnc
+          download_url:
+            label: Download URL
+            type: string
+            default: https://github.com/kasmtech/KasmVNC/releases/download/v1.3.2/kasmvncserver_oracle_8_1.3.2_x86_64.rpm
+            tooltip: 
+              Installs the KasmVNC version specified in the URL

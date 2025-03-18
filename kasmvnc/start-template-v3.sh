@@ -12,9 +12,9 @@ if ! [ -f /etc/pki/tls/private/kasmvnc.pem ]; then
     wget https://github.com/kasmtech/KasmVNC/releases/download/v1.3.2/kasmvncserver_oracle_8_1.3.2_x86_64.rpm
     sudo dnf localinstall ./kasmvncserver_*.rpm --allowerasing -y 
     rm ./kasmvncserver_*.rpm
-    expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "password\r"; expect "Verify:"; send "password\r"; expect eof'
-    sudo usermod -a -G kasmvnc-cert $USER
-    sudo chown $USER /etc/pki/tls/private/kasmvnc.pem
+    #expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "password\r"; expect "Verify:"; send "password\r"; expect eof'
+    #sudo usermod -a -G kasmvnc-cert $USER
+    #sudo chown $USER /etc/pki/tls/private/kasmvnc.pem
     # Disable ssl
     sudo sed -i 's/require_ssl: true/require_ssl: false/g' /usr/share/kasmvnc/kasmvnc_defaults.yaml
 fi
@@ -57,6 +57,10 @@ else
     hname=$(hostname | sed "s/.cluster.local//g")
     echo "ssh ${hname} 'bash -s' < ${resource_jobdir}/service-kill-${job_number}-main.sh" > ${resource_jobdir}/service-kill-${job_number}.sh
 fi
+
+expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "password\r"; expect "Verify:"; send "password\r"; expect eof'
+#sudo usermod -a -G kasmvnc-cert $USER
+
 
 vncserver -kill ${DISPLAY}
 echo "vncserver -kill ${DISPLAY}" >> ${resource_jobdir}/service-kill-${job_number}-main.sh

@@ -58,10 +58,6 @@ else
     echo "ssh ${hname} 'bash -s' < ${resource_jobdir}/service-kill-${job_number}-main.sh" > ${resource_jobdir}/service-kill-${job_number}.sh
 fi
 
-expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "password\r"; expect "Verify:"; send "password\r"; expect eof'
-sudo usermod -a -G kasmvnc-cert $USER
-
-
 vncserver -kill ${DISPLAY}
 echo "vncserver -kill ${DISPLAY}" >> ${resource_jobdir}/service-kill-${job_number}-main.sh
 vncserver ${DISPLAY} -disableBasicAuth -select-de gnome -websocketPort ${service_port} -rfbport ${displayPort}

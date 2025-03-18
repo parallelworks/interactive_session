@@ -8,16 +8,27 @@ if [ -z "${service_port}" ]; then
 fi
 
 
-if ! [ -f /etc/pki/tls/private/kasmvnc.pem ]; then
+MAX_RETRIES=5
+RETRY_INTERVAL=5
+attempt=0
+while ! [ -f /etc/pki/tls/private/kasmvnc.pem ] && [ $attempt -lt $MAX_RETRIES ]; do
+    kasmvnc_was_installed=true
+    echo "Attempt $((attempt+1)) to install kasmvnc..."
     wget ${service_download_url}
-    sudo dnf localinstall ./kasmvncserver_*.rpm --allowerasing -y 
-    rm ./kasmvncserver_*.rpm
-    #expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "password\r"; expect "Verify:"; send "password\r"; expect eof'
+    sleep $RETRY_INTERVAL
+    attempt=$((attempt+1))
+done
+
+if ! [ -f /etc/pki/tls/private/kasmvnc.pem ]; then
+    displayErrorMessage "ERROR: KasmVNC installation failed."
+fi
+
+if [ "${kasmvnc_was_installed}" = true ]; then
     sudo usermod -a -G kasmvnc-cert $USER
     #sudo chown $USER /etc/pki/tls/private/kasmvnc.pem
     # Disable ssl
     sudo sed -i 's/require_ssl: true/require_ssl: false/g' /usr/share/kasmvnc/kasmvnc_defaults.yaml
-fi
+done
 
 
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')

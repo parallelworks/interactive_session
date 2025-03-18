@@ -239,3 +239,17 @@ jobs:
             default: https://github.com/kasmtech/KasmVNC/releases/download/v1.3.2/kasmvncserver_oracle_8_1.3.2_x86_64.rpm
             tooltip: 
               Installs the KasmVNC version specified in the URL
+          set_password:
+            label: Set Password
+            type: boolean
+            default: false
+            tooltip: |
+              Select 'Yes' to enable password authentication for KasmVNC, requiring users to enter a password to access the session.
+              Select 'No' to disable password authentication, allowing users to access the session without a password.
+          password:
+            label: Password
+            type: string
+            default:  TypeYourPassword
+            hidden: ${{ inputs.service.set_password == false }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}

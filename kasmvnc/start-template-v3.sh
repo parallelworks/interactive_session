@@ -69,7 +69,12 @@ else
     echo "ssh ${hname} 'bash -s' < ${resource_jobdir}/service-kill-${job_number}-main.sh" > ${resource_jobdir}/service-kill-${job_number}.sh
 fi
 
-expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "password\r"; expect "Verify:"; send "password\r"; expect eof'
+# YOU NEED TO SET A PASSWORD!
+# The password can be ignoted later using vncserver ${DISPLAY} -disableBasicAuth
+if [ -z "${service_password}" ]; then
+    service_password=password
+else
+expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "'"${service_password}"'\r"; expect "Verify:"; send "'"${service_password}"'\r"; expect eof'
 
 
 vncserver -kill ${DISPLAY}

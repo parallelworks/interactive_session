@@ -1,4 +1,10 @@
 
+check_sudo_access() {
+    if ! sudo -n true 2>/dev/null; then
+        echo "$(date): ERROR: Cannot $1 without root access"
+        exit 1
+    fi
+}
 
 set -x
 
@@ -14,7 +20,8 @@ fi
 MAX_RETRIES=5
 RETRY_INTERVAL=5
 attempt=0
-while ! [ -f /etc/pki/tls/private/kasmvnc.pem ] && [ $attempt -lt $MAX_RETRIES ]; do
+while ! rpm -q kasmvnc-server >/dev/null 2>&1 && [ $attempt -lt $MAX_RETRIES ]; do
+    check_sudo_access "Install kasmvnc-server"
     echo "Attempt $((attempt+1)) to install kasmvnc..."
     wget ${service_download_url}
     sudo dnf localinstall ./kasmvncserver_*.rpm --allowerasing -y 
@@ -25,12 +32,13 @@ while ! [ -f /etc/pki/tls/private/kasmvnc.pem ] && [ $attempt -lt $MAX_RETRIES ]
     sudo sed -i 's/require_ssl: true/require_ssl: false/g' /usr/share/kasmvnc/kasmvnc_defaults.yaml
 done
 
-if ! [ -f /etc/pki/tls/private/kasmvnc.pem ]; then
+if ! rpm -q kasmvnc-server >/dev/null 2>&1; then
     displayErrorMessage "ERROR: KasmVNC installation failed."
 fi
 
 # Check if user is already in the group
 if ! groups $USER | grep -q "\bkasmvnc-cert\b"; then
+    check_sudo_access "Add user to kasmvnc-cert group"
     echo "User is not in kasmvnc-cert group. Adding..."
     sudo usermod -a -G kasmvnc-cert $USER
     echo "Running newgrp to apply group changes..."
@@ -41,6 +49,11 @@ if ! groups $USER | grep -q "\bkasmvnc-cert\b"; then
 else
     echo "User is already in kasmvnc-cert group."
     needs_newgrp=false
+fi
+
+if ! groups | grep -q "\bkasmvnc-cert\b"; then
+    echo $(date): "ERROR: User is not in kasmvnc-cert group."
+    exit
 fi
 
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')

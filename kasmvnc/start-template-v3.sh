@@ -84,20 +84,27 @@ fi
 expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "'"${service_password}"'\r"; expect "Verify:"; send "'"${service_password}"'\r"; expect eof'
 
 
-
-while ! [ -f "${HOME}/.Xauthority" ] && [ $attempt -lt $MAX_RETRIES ]; do
-    echo "Waiting for ${HOME}/.Xauthority file. Attempt $((attempt+1))."
-    sleep $RETRY_INTERVAL
-    attempt=$((attempt+1))
-done
-
-if ! [ -f "${HOME}/.Xauthority" ]; then
-    displayErrorMessage "ERROR: Missing ${HOME}/.Xauthority file."
-fi
-
 vncserver -kill ${DISPLAY}
 echo "vncserver -kill ${DISPLAY}" >> ${resource_jobdir}/service-kill-${job_number}-main.sh
-vncserver ${DISPLAY} ${disableBasicAuth} -select-de gnome -websocketPort ${service_port} -rfbport ${displayPort}
+
+MAX_RETRIES=5
+RETRY_DELAY=5
+RETRY_COUNT=0
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    vncserver ${DISPLAY} ${disableBasicAuth} -select-de gnome -websocketPort ${service_port} -rfbport ${displayPort}
+    
+    if [ $? -eq 0 ]; then
+        echo "KasmVNC server started successfully."
+        break
+    else
+        echo "KasmVNC server failed to start. Retrying in $RETRY_DELAY seconds..."
+        sleep $RETRY_DELAY
+    fi
+    
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+done
+
 rm -rf ${portFile}
 
 vncserver_pid=$(cat "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid")

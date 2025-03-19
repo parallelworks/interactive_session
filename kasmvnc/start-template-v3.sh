@@ -85,6 +85,12 @@ expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "'"${s
 
 
 
+while ! [ -f "${HOME}/.Xauthority" ] && [ $attempt -lt $MAX_RETRIES ]; do
+    echo "Waiting for ${HOME}/.Xauthority file. Attempt $((attempt+1))."
+    sleep $RETRY_INTERVAL
+    attempt=$((attempt+1))
+done
+
 vncserver -kill ${DISPLAY}
 echo "vncserver -kill ${DISPLAY}" >> ${resource_jobdir}/service-kill-${job_number}-main.sh
 vncserver ${DISPLAY} ${disableBasicAuth} -select-de gnome -websocketPort ${service_port} -rfbport ${displayPort}

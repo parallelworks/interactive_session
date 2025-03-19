@@ -15,6 +15,8 @@ while ! [ -f /etc/pki/tls/private/kasmvnc.pem ] && [ $attempt -lt $MAX_RETRIES ]
     kasmvnc_was_installed=true
     echo "Attempt $((attempt+1)) to install kasmvnc..."
     wget ${service_download_url}
+    sudo dnf localinstall ./kasmvncserver_*.rpm --allowerasing -y 
+    rm ./kasmvncserver_*.rpm
     sleep $RETRY_INTERVAL
     attempt=$((attempt+1))
 done

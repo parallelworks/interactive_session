@@ -136,7 +136,6 @@ jobs:
         uses: parallelworks/update-session
         with:
           name: ${{ sessions.expose }}
-          status: running
           type: link
           url: ${{ needs.create_session.outputs.JUPYTER_URL }}
 

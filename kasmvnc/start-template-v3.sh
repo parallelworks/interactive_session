@@ -71,15 +71,18 @@ fi
 
 # YOU NEED TO SET A PASSWORD!
 # The password can be ignoted later using vncserver ${DISPLAY} -disableBasicAuth
-if [ -z "${service_password}" ]; then
+
+if [ "${service_set_password}" != true ]; then
     service_password=password
-else
+    disableBasicAuth="-disableBasicAuth"
+fi
 expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "'"${service_password}"'\r"; expect "Verify:"; send "'"${service_password}"'\r"; expect eof'
+
 
 
 vncserver -kill ${DISPLAY}
 echo "vncserver -kill ${DISPLAY}" >> ${resource_jobdir}/service-kill-${job_number}-main.sh
-vncserver ${DISPLAY} -disableBasicAuth -select-de gnome -websocketPort ${service_port} -rfbport ${displayPort}
+vncserver ${DISPLAY} ${disableBasicAuth} -select-de gnome -websocketPort ${service_port} -rfbport ${displayPort}
 rm -rf ${portFile}
 
 vncserver_pid=$(cat "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid")

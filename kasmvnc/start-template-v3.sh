@@ -116,7 +116,8 @@ done
 rm -rf ${portFile}
 
 if ! [ -f "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid" ]; then
-    displayErrorMessage "KasmVNC server failed to start. Exiting workflow."
+    echo $(date): "KasmVNC server failed to start. Exiting workflow."
+    exit 1
 fi
 
 vncserver_pid=$(cat "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid")

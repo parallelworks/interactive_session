@@ -91,6 +91,10 @@ while ! [ -f "${HOME}/.Xauthority" ] && [ $attempt -lt $MAX_RETRIES ]; do
     attempt=$((attempt+1))
 done
 
+if ! [ -f "${HOME}/.Xauthority" ]; then
+    displayErrorMessage "ERROR: Missing ${HOME}/.Xauthority file."
+fi
+
 vncserver -kill ${DISPLAY}
 echo "vncserver -kill ${DISPLAY}" >> ${resource_jobdir}/service-kill-${job_number}-main.sh
 vncserver ${DISPLAY} ${disableBasicAuth} -select-de gnome -websocketPort ${service_port} -rfbport ${displayPort}

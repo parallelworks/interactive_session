@@ -249,7 +249,7 @@ jobs:
           password:
             label: Password
             type: string
-            default:  TypeYourPassword
             hidden: ${{ inputs.service.set_password == false }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
+            tooltip: The password applies to all sessions on the same target. Changing it affects active sessions, requiring the new password.

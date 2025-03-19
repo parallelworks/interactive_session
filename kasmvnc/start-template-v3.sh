@@ -92,9 +92,11 @@ MAX_RETRIES=5
 RETRY_DELAY=5
 RETRY_COUNT=0
 
+vncserver_cmd="vncserver ${DISPLAY} ${disableBasicAuth} -select-de gnome -websocketPort ${service_port} -rfbport ${displayPort}"
+echo Running:
+echo ${vncserver_cmd}
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    vncserver ${DISPLAY} ${disableBasicAuth} -select-de gnome -websocketPort ${service_port} -rfbport ${displayPort}
-    
+    ${vncserver_cmd}
     if [ $? -eq 0 ]; then
         echo "KasmVNC server started successfully."
         break

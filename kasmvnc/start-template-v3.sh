@@ -15,29 +15,48 @@ MAX_RETRIES=5
 RETRY_INTERVAL=5
 attempt=0
 while ! [ -f /etc/pki/tls/private/kasmvnc.pem ] && [ $attempt -lt $MAX_RETRIES ]; do
-    kasmvnc_was_installed=true
     echo "Attempt $((attempt+1)) to install kasmvnc..."
     wget ${service_download_url}
     sudo dnf localinstall ./kasmvncserver_*.rpm --allowerasing -y 
     rm ./kasmvncserver_*.rpm
     sleep $RETRY_INTERVAL
     attempt=$((attempt+1))
+    # Disable ssl
+    sudo sed -i 's/require_ssl: true/require_ssl: false/g' /usr/share/kasmvnc/kasmvnc_defaults.yaml
 done
 
 if ! [ -f /etc/pki/tls/private/kasmvnc.pem ]; then
     displayErrorMessage "ERROR: KasmVNC installation failed."
 fi
 
-if [ "${kasmvnc_was_installed}" = true ]; then
+# Check if user is already in the group
+if ! groups $USER | grep -q "\bkasmvnc-cert\b"; then
+    echo "User is not in kasmvnc-cert group. Adding..."
     sudo usermod -a -G kasmvnc-cert $USER
-    # Need to run "newgrp kasmvnc-cert" for the usermod command to take effect.
-    # Running "newgrp kasmvnc-cert" resets the environment
+    needs_newgrp=true
+else
+    echo "User is already in kasmvnc-cert group."
+    needs_newgrp=false
+fi
+
+# Check if user already has access to the file
+if [ -r /etc/pki/tls/private/kasmvnc.pem ]; then
+    echo "User already has access to /etc/pki/tls/private/kasmvnc.pem."
+    needs_newgrp=false
+else
+    echo "User does not have access to /etc/pki/tls/private/kasmvnc.pem."
+    needs_newgrp=true
+fi
+
+# Only run newgrp if necessary
+if [ "$needs_newgrp" = true ]; then
+    echo "Running newgrp to apply group changes..."
+    export service_port=${service_port}
     env > env.sh
     newgrp kasmvnc-cert
     source env.sh
-    #sudo chown $USER /etc/pki/tls/private/kasmvnc.pem
-    # Disable ssl
-    sudo sed -i 's/require_ssl: true/require_ssl: false/g' /usr/share/kasmvnc/kasmvnc_defaults.yaml
+else
+    echo "Skipping newgrp; permissions are already correct."
 fi
 
 

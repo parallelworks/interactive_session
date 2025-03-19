@@ -33,32 +33,15 @@ fi
 if ! groups $USER | grep -q "\bkasmvnc-cert\b"; then
     echo "User is not in kasmvnc-cert group. Adding..."
     sudo usermod -a -G kasmvnc-cert $USER
-    needs_newgrp=true
-else
-    echo "User is already in kasmvnc-cert group."
-    needs_newgrp=false
-fi
-
-# Check if user already has access to the file
-if [ -r /etc/pki/tls/private/kasmvnc.pem ]; then
-    echo "User already has access to /etc/pki/tls/private/kasmvnc.pem."
-    needs_newgrp=false
-else
-    echo "User does not have access to /etc/pki/tls/private/kasmvnc.pem."
-    needs_newgrp=true
-fi
-
-# Only run newgrp if necessary
-if [ "$needs_newgrp" = true ]; then
     echo "Running newgrp to apply group changes..."
     export service_port=${service_port}
     env > env.sh
     newgrp kasmvnc-cert
     source env.sh
 else
-    echo "Skipping newgrp; permissions are already correct."
+    echo "User is already in kasmvnc-cert group."
+    needs_newgrp=false
 fi
-
 
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
 # Find an available display port

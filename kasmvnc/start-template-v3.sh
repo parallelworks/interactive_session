@@ -53,7 +53,7 @@ fi
 
 if ! groups | grep -q "\bkasmvnc-cert\b"; then
     echo $(date): "ERROR: User is not in kasmvnc-cert group."
-    exit
+    exit 1
 fi
 
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')

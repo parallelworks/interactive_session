@@ -140,7 +140,6 @@ jobs:
           localPort: "${{ needs.create_session.outputs.local_port }}"
           remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
           slug: "${{ needs.create_session.outputs.slug }}"
-          status: running
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.session }}
         

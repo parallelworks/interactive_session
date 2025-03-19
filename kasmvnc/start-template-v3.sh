@@ -6,6 +6,11 @@ check_sudo_access() {
     fi
 }
 
+# Check if kasmvnc-server is installed (using rpm -qa and grep)
+is_kasmvnc_installed() {
+    rpm -qa | grep -q kasmvncserver
+}
+
 set -x
 
 if [ -z ${service_novnc_parent_install_dir} ]; then
@@ -20,7 +25,7 @@ fi
 MAX_RETRIES=5
 RETRY_INTERVAL=5
 attempt=0
-while ! rpm -q kasmvnc-server >/dev/null 2>&1 && [ $attempt -lt $MAX_RETRIES ]; do
+while ! is_kasmvnc_installed && [ $attempt -lt $MAX_RETRIES ]; do
     check_sudo_access "Install kasmvnc-server"
     echo "Attempt $((attempt+1)) to install kasmvnc..."
     wget ${service_download_url}
@@ -32,7 +37,7 @@ while ! rpm -q kasmvnc-server >/dev/null 2>&1 && [ $attempt -lt $MAX_RETRIES ]; 
     sudo sed -i 's/require_ssl: true/require_ssl: false/g' /usr/share/kasmvnc/kasmvnc_defaults.yaml
 done
 
-if ! rpm -q kasmvnc-server >/dev/null 2>&1; then
+if ! is_kasmvnc_installed; then
     displayErrorMessage "ERROR: KasmVNC installation failed."
 fi
 

@@ -30,7 +30,11 @@ fi
 
 if [ "${kasmvnc_was_installed}" = true ]; then
     sudo usermod -a -G kasmvnc-cert $USER
+    # Need to run "newgrp kasmvnc-cert" for the usermod command to take effect.
+    # Running "newgrp kasmvnc-cert" resets the environment
+    env > env.sh
     newgrp kasmvnc-cert
+    source env.sh
     #sudo chown $USER /etc/pki/tls/private/kasmvnc.pem
     # Disable ssl
     sudo sed -i 's/require_ssl: true/require_ssl: false/g' /usr/share/kasmvnc/kasmvnc_defaults.yaml

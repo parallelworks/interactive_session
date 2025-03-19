@@ -109,7 +109,7 @@ done
 
 rm -rf ${portFile}
 
-if ! [ "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid" ]; then
+if ! [ -f "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid" ]; then
     displayErrorMessage "KasmVNC server failed to start. Exiting workflow."
 fi
 

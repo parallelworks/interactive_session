@@ -99,6 +99,7 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
         break
     else
         echo "KasmVNC server failed to start. Retrying in $RETRY_DELAY seconds..."
+        ls -l /etc/pki/tls/private/kasmvnc.pem
         sleep $RETRY_DELAY
     fi
     
@@ -106,6 +107,10 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
 done
 
 rm -rf ${portFile}
+
+if ! [ "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid" ]; then
+    displayErrorMessage "KasmVNC server failed to start. Exiting workflow."
+fi
 
 vncserver_pid=$(cat "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid")
 echo "kill ${vncserver_pid}" >> ${resource_jobdir}/service-kill-${job_number}-main.sh

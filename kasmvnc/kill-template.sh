@@ -1,3 +1,3 @@
 # Runs in the controller node:
-bash ${resource_jobdir}/service-kill-${job_number}.sh
+bash ${resource_jobdir}/cancel.sh
 

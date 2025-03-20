@@ -4,6 +4,7 @@ cd ${resource_jobdir}
 if [ -z ${service_parent_install_dir} ]; then
     service_parent_install_dir=${HOME}/pw/software
 fi
+mkdir -p ${service_parent_install_dir}
 
 service_conda_sh=${service_parent_install_dir}/${service_conda_install_dir}/etc/profile.d/conda.sh
 if [ -z "${service_nginx_sif}" ]; then

@@ -245,7 +245,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
     
     mkdir -p /run/user/$(id -u)/dconf
     chmod og+rx /run/user/$(id -u)
-    chmod 755 /run/user/$(id -u)/dconf
+    chmod 0700 /run/user/$(id -u)/dconf
 
     # Start desktop here too just in case
     if [[ ${service_desktop} == "gnome-session" ]]; then

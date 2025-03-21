@@ -11,6 +11,10 @@ is_kasmvnc_installed() {
     rpm -qa | grep -q kasmvncserver
 }
 
+# Initialize cancel script
+echo '#!/bin/bash' > cancel.sh
+chmod +x cancel.sh
+
 set -x
 
 if [ -z ${service_novnc_parent_install_dir} ]; then
@@ -87,18 +91,6 @@ else
 fi
 
 
-# Prepare kill service script
-# - Needs to be here because we need the hostname of the compute node.
-# - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
-echo "Creating file ${resource_jobdir}/service-kill-${job_number}-main.sh from directory ${PWD}"
-if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
-    echo "bash ${resource_jobdir}/service-kill-${job_number}-main.sh" > ${resource_jobdir}/service-kill-${job_number}.sh
-else
-    # Remove .cluster.local for einteinmed!
-    hname=$(hostname | sed "s/.cluster.local//g")
-    echo "ssh ${hname} 'bash -s' < ${resource_jobdir}/service-kill-${job_number}-main.sh" > ${resource_jobdir}/service-kill-${job_number}.sh
-fi
-
 # YOU NEED TO SET A PASSWORD!
 # The password can be ignoted later using vncserver ${DISPLAY} -disableBasicAuth
 
@@ -110,7 +102,7 @@ expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "'"${s
 
 
 vncserver -kill ${DISPLAY}
-echo "vncserver -kill ${DISPLAY}" >> ${resource_jobdir}/service-kill-${job_number}-main.sh
+echo "vncserver -kill ${DISPLAY}" >> cancel.sh
 
 MAX_RETRIES=5
 RETRY_DELAY=5
@@ -141,9 +133,9 @@ if ! [ -f "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid" ]; then
 fi
 
 vncserver_pid=$(cat "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid")
-echo "kill ${vncserver_pid}" >> ${resource_jobdir}/service-kill-${job_number}-main.sh
+echo "kill ${vncserver_pid}" >> cancel.sh
 cat "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.log"
-echo "rm \"${HOME}/.vnc/${HOSTNAME}${DISPLAY}*\"" >> ${resource_jobdir}/service-kill-${job_number}-main.sh
+echo "rm \"${HOME}/.vnc/${HOSTNAME}${DISPLAY}*\"" >> cancel.sh
 
 
 # Reload env in case it was deactivated in the step above (e.g.: conda activate)

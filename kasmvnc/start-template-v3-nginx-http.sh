@@ -52,7 +52,7 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
  location / {
-     proxy_pass http://127.0.0.1:${kasmvnc_websocket_port}/;
+     proxy_pass http://0.0.0.0:${kasmvnc_websocket_port}/;
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";
@@ -60,6 +60,8 @@ server {
        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
        proxy_set_header Host \$http_host;
        proxy_set_header X-NginX-Proxy true;
+       proxy_cache_bypass \$http_upgrade;
+       proxy_read_timeout 86400;
  }
 }
 HERE

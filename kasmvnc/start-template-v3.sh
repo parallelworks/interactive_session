@@ -60,6 +60,8 @@ server {
        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
        proxy_set_header Host \$http_host;
        proxy_set_header X-NginX-Proxy true;
+       proxy_cache_bypass \$http_upgrade;
+       proxy_read_timeout 86400;
  }
 }
 HERE

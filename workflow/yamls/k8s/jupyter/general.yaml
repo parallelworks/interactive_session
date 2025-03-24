@@ -3,7 +3,11 @@ permissions:
 sessions:
   expose:
     redirect: true
-    prompt-for-name: 
+
+
+app:
+  target: inputs.pwrl_host.resource
+
 jobs:
   auth:
     steps:

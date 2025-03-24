@@ -7,6 +7,9 @@ sessions:
     prompt-for-name:
       default: "ngencerf"
 
+app:
+  target: inputs.pwrl_host.resource
+
 jobs:
   preprocessing:
     steps:

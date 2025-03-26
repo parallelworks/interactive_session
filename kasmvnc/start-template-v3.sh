@@ -43,7 +43,7 @@ while ! is_kasmvnc_installed && [ $attempt -lt $MAX_RETRIES ]; do
     sleep $RETRY_INTERVAL
     attempt=$((attempt+1))
     # Disable ssl
-    sudo sed -i 's/require_ssl: true/require_ssl: false/g' /usr/share/kasmvnc/kasmvnc_defaults.yaml
+    #sudo sed -i 's/require_ssl: true/require_ssl: false/g' /usr/share/kasmvnc/kasmvnc_defaults.yaml
 done
 
 if ! is_kasmvnc_installed; then

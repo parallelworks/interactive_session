@@ -29,6 +29,8 @@ if [ -z "${service_port}" ]; then
     displayErrorMessage "ERROR: No service port found in the range \${minPort}-\${maxPort} -- exiting session"
 fi
 
+export service_port=${service_port}
+
 
 
 MAX_RETRIES=5

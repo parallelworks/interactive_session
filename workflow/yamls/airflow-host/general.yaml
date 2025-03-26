@@ -3,6 +3,7 @@ permissions:
 sessions:
   session:
     useTLS: false
+    useCustomDomain: true
     redirect: true
 
 

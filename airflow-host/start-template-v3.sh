@@ -18,7 +18,7 @@ source ${service_conda_install_dir}/bin/activate
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
-airflow_port=8080 #$(findAvailablePort)
+airflow_port=${service_port}
 
 #################
 # START AIRFLOW #

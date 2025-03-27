@@ -18,15 +18,12 @@ source ${service_conda_install_dir}/bin/activate
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
-airflow_port=8080 #$(findAvailablePort)
-
 #################
 # START AIRFLOW #
 #################
 #base_url="https://alvaro-airfloww.activate.pw/"
 #sed -i "s|^base_url .*|base_url = ${base_url}|" ${AIRFLOW_HOME}/airflow.cfg
 sed -i "s|^enable_proxy_fix .*|enable_proxy_fix = True|" ${AIRFLOW_HOME}/airflow.cfg
-
 
 # Do now use "airflow standalone"! It does not allow adding new users
 airflow db init
@@ -45,7 +42,7 @@ airflow scheduler 2>&1 | tee scheduler.log &
 airflow_scheduler_pid=$!
 echo "kill ${airflow_scheduler_pid} # airflow scheduler" >> cancel.sh
 
-airflow webserver --port 8080 2>&1 | tee webserver.log &
+airflow webserver --port ${service_port} 2>&1 | tee webserver.log &
 airflow_webserver_pid=$!
 echo "kill ${airflow_webserver_pid} # airflow webserver" >> cancel.sh
 

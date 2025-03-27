@@ -18,14 +18,13 @@ source ${service_conda_install_dir}/bin/activate
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
-airflow_port=${service_port}
-
 #################
 # START AIRFLOW #
 #################
 #base_url="https://alvaro-airfloww.activate.pw/"
 #sed -i "s|^base_url .*|base_url = ${base_url}|" ${AIRFLOW_HOME}/airflow.cfg
 sed -i "s|^enable_proxy_fix .*|enable_proxy_fix = True|" ${AIRFLOW_HOME}/airflow.cfg
+sed -i "s|^web_server_port .*|web_server_port = ${service_port}|" ${AIRFLOW_HOME}/airflow.cfg
 
 
 # Do now use "airflow standalone"! It does not allow adding new users

@@ -238,7 +238,7 @@ jobs:
           set_password:
             label: Set Password
             type: boolean
-            default: true
+            default: false
             tooltip: |
               Select 'Yes' to enable password authentication for KasmVNC, requiring users to enter a password to access the session.
               Select 'No' to disable password authentication, allowing users to access the session without a password.

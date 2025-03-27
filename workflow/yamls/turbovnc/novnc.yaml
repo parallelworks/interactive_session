@@ -240,19 +240,7 @@ jobs:
             hidden: true
             default: noVNC-1.5.0.tgz
           name:
-            type: dropdown
+            type: string
             label: Select remote display protocol
-            options:
-              - label: VNC Server
-                value: turbovnc
-              - label: Nice DCV
-                value: nicedcv
-              - label: Scyld Cloud Workstation
-                value: scw
-            tooltip: Make sure the display protocol is installed in the host!
-            default: turbovnc
-          use_tls:
-            label: Use TLS
-            type: boolean
             hidden: true
-            default: ${{ inputs.service.name === nicedcv && true || false }}
+            default: turbovnc

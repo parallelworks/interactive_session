@@ -265,7 +265,7 @@ cd ${service_ngencerf_docker_dir}
 #docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui 
 
 if [[ "${service_build}" == "true" ]]; then
-    docker compose -f production-pw.yaml up --build -d
+    docker compose -f production-pw.yaml up --build -d --build-arg CACHE_BUST=$(date +%s)
 else
     docker compose -f production-pw.yaml up -d
 fi

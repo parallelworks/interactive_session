@@ -455,7 +455,7 @@ def submit_forecast_job():
     # Directory of where the output will be stored
     forecast_dir = request.form.get('forecast_dir')
     # The complete path of the forcing file (written by the forecast-download-job)
-    forcing_file = request.form.get('forcing_file')
+    forcing_dir = request.form.get('forcing_dir')
     # Path to the SLURM job log file in the controller node
     auth_token = request.form.get('auth_token')
 
@@ -468,8 +468,8 @@ def submit_forecast_job():
     if not stdout_file:
         return log_and_return_error("No stdout_file provided", status_code = 400)
 
-    if not forcing_file:
-        return log_and_return_error("No forcing_file provided", status_code = 400)
+    if not forcing_dir:
+        return log_and_return_error("No forcing_dir provided", status_code = 400)
     
     if not forecast_dir:
         return log_and_return_error("No forecast_dir provided", status_code = 400)
@@ -486,7 +486,7 @@ def submit_forecast_job():
 
     logger.info(f"Commit hashes retrieved - NGEN: {ngen_commit_hash}, NGEN_FORECAST: {ngen_forecast_commit_hash}")
 
-    singularity_run_cmd = f"{SINGULARITY_RUN_NGEN_FCST_CMD} forecast {forcing_file} {input_file} {forecast_dir}"
+    singularity_run_cmd = f"{SINGULARITY_RUN_NGEN_FCST_CMD} forecast {forcing_dir} {input_file} {forecast_dir}"
 
     postprocessing_dir = os.path.join("postprocess", job_type, forecast_run_id)
 
@@ -521,7 +521,7 @@ def submit_forecast_forcing_download():
     stdout_file = request.form.get('stdout_file')
     cycle_name = request.form.get('cycle_name')
     gpkg_file = request.form.get('gpkg_file')
-    forcing_file = request.form.get('forcing_file')
+    forcing_dir = request.form.get('forcing_dir')
     # The code verifies the presence of input_file and replace the .yaml with .slurm.sh to write the SLURM script  
     config_file = request.form.get('config_file') 
     # Path to the SLURM job log file in the controller node
@@ -542,8 +542,8 @@ def submit_forecast_forcing_download():
     if not gpkg_file:
         return log_and_return_error("No gpkg_file provided", status_code = 400)
     
-    if not forcing_file:
-        return log_and_return_error("No forcing_file provided", status_code = 400)
+    if not forcing_dir:
+        return log_and_return_error("No forcing_dir provided", status_code = 400)
 
     if not auth_token:
         return log_and_return_error("No auth_token provided", status_code = 400)
@@ -557,7 +557,7 @@ def submit_forecast_forcing_download():
 
     logger.info(f"Commit hashes retrieved - NGEN_FORCING: {ngen_forcing_commit_hash}")
 
-    singularity_run_cmd = f"{SINGULARITY_RUN_NGEN_FORCING_CMD} forecast_forcing {cycle_name} {gpkg_file} {config_file} {forcing_file}"
+    singularity_run_cmd = f"{SINGULARITY_RUN_NGEN_FORCING_CMD} forecast_forcing {cycle_name} {gpkg_file} {config_file} {forcing_dir}"
 
     postprocessing_dir = os.path.join("postprocess", job_type, forecast_forcing_download_run_id)
 

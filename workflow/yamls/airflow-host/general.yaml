@@ -278,5 +278,5 @@ jobs:
             tooltip: Email of the user
           password:
             label: Password
-            type: string
+            type: password
             tooltip: Password of the user

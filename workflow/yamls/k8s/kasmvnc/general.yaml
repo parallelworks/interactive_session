@@ -163,7 +163,7 @@ jobs:
         default: 6901
       password:
         label: Password
-        type: string
+        type: password
         default: Password123!
         tooltip: This is the password for user kasm_user
       memory_limit:

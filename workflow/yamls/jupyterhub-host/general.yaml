@@ -269,7 +269,7 @@ jobs:
             tooltip: Use a bash command
           password:
             label: Password for Jupyter Hub
-            type: string
+            type: password
             optional: true
             hidden: true
             ignore: true

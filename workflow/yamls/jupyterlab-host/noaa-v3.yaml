@@ -247,7 +247,7 @@ jobs:
             default: jupyterlab-host
           password:
             label: Password for Jupyter Lab session
-            type: string
+            type: password
             optional: true
             hidden: true
             ignore: true

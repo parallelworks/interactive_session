@@ -136,7 +136,7 @@ jobs:
               Downloads or uses the code-server server version specified in the URL
           password:
             label: Password for IDE session
-            type: string
+            type: password
             optional: true
             tooltip: 
               Enter password or leave blank for no password

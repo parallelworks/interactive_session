@@ -213,7 +213,7 @@ jobs:
             default: /public/apps/pw/nginx-unprivileged.sif
           password:
             label: Password for notebook session
-            type: string
+            type: password
             optional: true
             hidden: true
             ignore: true

@@ -247,7 +247,7 @@ jobs:
               Select 'No' to disable password authentication, allowing users to access the session without a password.
           password:
             label: Password
-            type: string
+            type: password
             hidden: ${{ inputs.service.set_password == false }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}

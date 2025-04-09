@@ -7,9 +7,6 @@ fi
 export AIRFLOW_HOME=${service_airflow_home}
 service_conda_install_dir=${service_parent_install_dir}/miniconda3-$(basename ${service_airflow_home})
 
-if [ -z "${service_nginx_sif}" ]; then
-    service_nginx_sif=${service_parent_install_dir}/nginx-unprivileged.sif
-fi
 
 
 displayErrorMessage() {
@@ -17,35 +14,6 @@ displayErrorMessage() {
     exit 1
 }
 
-
-download_singularity_container() {
-    # 1. Clone the repository with --no-checkout
-    export GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
-    # Needed for emed
-    git config --global --unset http.sslbackend
-    git clone --no-checkout https://github.com/parallelworks/interactive_session.git
-
-    # 2. Navigate into the repository directory
-    cd interactive_session
-    #git checkout download-dependencies
-
-    # 3. Initialize sparse-checkout
-    git sparse-checkout init
-
-    # 4. Configure sparse-checkout to include only the desired file
-    echo downloads/jupyter/nginx-unprivileged.sif > .git/info/sparse-checkout
-
-    # 5. Perform the checkout
-    git checkout
-
-    # 6. Extract tgz
-    cp downloads/jupyter/nginx-unprivileged.sif ${service_nginx_sif}
-
-    # 7. Clean
-    cd ../
-    rm -rf interactive_session
-    
-}
 
 
 
@@ -94,13 +62,6 @@ if [[ "${service_conda_install}" == "true" ]]; then
     fi
 fi
 eval "${service_load_env}"
-
-
-# Download singularity container if required
-if ! [ -f "${service_nginx_sif}" ]; then
-    echo; echo "Downloading nginx singularity from Github"
-    download_singularity_container
-fi
 
 
 if [ -d "${AIRFLOW_HOME}" ]; then

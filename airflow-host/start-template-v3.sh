@@ -5,10 +5,6 @@ if [ -z ${service_parent_install_dir} ]; then
     service_parent_install_dir=${HOME}/pw/software
 fi
 
-if [ -z "${service_nginx_sif}" ]; then
-    service_nginx_sif=${service_parent_install_dir}/nginx-unprivileged.sif
-fi
-
 echo "Activating Airflow environment"
 export AIRFLOW_HOME=${service_airflow_home}
 service_conda_install_dir=${service_parent_install_dir}/miniconda3-$(basename ${service_airflow_home})

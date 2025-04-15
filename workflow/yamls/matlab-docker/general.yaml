@@ -12,8 +12,6 @@ app:
 jobs:
   preprocessing:
     steps:
-      - name: Preprocessing
-        run: ./utils/steps-v3/preprocessing/preprocessing.sh 
       - name: Validating Target Resource
         run: ./utils/steps-v3/preprocessing/input_form_resource_wrapper.sh ${{ inputs.pwrl_host.resource.ip }}
       - name: Process Inputs
@@ -141,16 +139,6 @@ jobs:
           remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.session }}
-      - name: Create service.json File
-        run: |
-          cat <<EOF > service.json
-          {
-            "URL": "/me",
-            "PORT": "${{ needs.create_session.outputs.local_port }}",
-            "SLUG": "\"",
-            "JOB_STATUS": "Running"
-          }
-          EOF
         
 'on':
   execute:

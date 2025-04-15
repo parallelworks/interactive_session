@@ -1,5 +1,6 @@
 #!/bin/bash
 source utils/load-env.sh
+sed -i 's|\\\\|\\|g' inputs.sh
 source inputs.sh
 
 set -x

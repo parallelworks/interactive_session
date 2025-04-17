@@ -12,7 +12,16 @@ echod() {
 
 displayErrorMessage() {
     echo $(date): $1
+    # Jobs use this file to determine if another job has failed
+    touch ERROR
     exit 1
+}
+
+failIfError(){
+  if [ -f ERROR ]; then
+    echo "One of the jobs failed. Exiting workflow..."
+    exit 1
+  fi
 }
 
 

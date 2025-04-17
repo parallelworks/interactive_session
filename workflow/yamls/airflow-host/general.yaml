@@ -82,8 +82,10 @@ jobs:
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
+          source utils/load-env.sh
           source resources/host/inputs.sh
           while true; do
+            failIfError
             echo "Waiting for target hostname..."
 
             # Check if the service.port file exists and read its contents

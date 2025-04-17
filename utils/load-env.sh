@@ -5,6 +5,26 @@ source /etc/profile.d/parallelworks-env.sh
 source /pw/.miniconda3/etc/profile.d/conda.sh
 conda activate
 
+echod() {
+    echo $(date): $@
+}
+
+
+displayErrorMessage() {
+    echo $(date): $1
+    # Jobs use this file to determine if another job has failed
+    touch ERROR
+    exit 1
+}
+
+failIfError(){
+  if [ -f ERROR ]; then
+    echo "One of the jobs failed. Exiting workflow..."
+    exit 1
+  fi
+}
+
+
 if ! [ -f "${CONDA_PYTHON_EXE}" ]; then
     echo "WARNING: Environment variable CONDA_PYTHON_EXE is pointing to a missing file ${CONDA_PYTHON_EXE}!"
     echo "         Modifying its value: export CONDA_PYTHON_EXE=$(which python3)"

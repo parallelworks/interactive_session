@@ -1,19 +1,16 @@
 permissions:
   - '*'
-
 sessions:
   session:
     redirect: true
-
 app:
-  target: inputs.cluster
-
+  target: inputs.k8s.cluster
 jobs:
   auth:
     steps:
       - name: Authenticate kubectl
-        run: pw kube auth ${{ inputs.cluster }}
-  k8s_deployment:
+        run: pw kube auth ${{ inputs.k8s.cluster }}
+  prepare_k8s_deployment:
     needs:
       - auth
     steps:
@@ -25,13 +22,27 @@ jobs:
           echo "app_name=${app_name}" | tee -a $OUTPUTS | tee -a OUTPUTS
       - name: Creating Deployment and Service YAML
         run: |
+          if [[ "${{ inputs.k8s.resources.limits.select_gpu }}" == "nvidia_gpu" ]]; then
+            gpu_limits="nvidia.com/gpu: ${{ inputs.k8s.resources.limits.nvidia_gpu }}"
+            # Check if RuntimeClass 'nvidia' exists
+            if kubectl get runtimeclass nvidia &>/dev/null; then
+              echo "nvidia RuntimeClass is available"
+              runtimeClassName="runtimeClassName: nvidia"
+            fi
+          elif [[ "${{ inputs.k8s.resources.limits.select_gpu }}" == "amd_gpu" ]]; then
+            gpu_limits="amd.com/gpu: ${{ inputs.k8s.resources.limits.amd_gpu }}"
+          elif [[ "${{ inputs.k8s.resources.limits.select_gpu }}" == "gcp_tpu" ]]; then
+            gpu_limits="cloud-tpus.google.com/v3: ${{ inputs.k8s.resources.limits.gcp_tpu }}"
+          fi
+          token=$(openssl rand -hex 16)
+          token=""
+          echo "token=${token}" | tee -a $OUTPUTS | tee -a OUTPUTS
           cat <<EOF > app.yaml
-
           apiVersion: v1
           kind: ConfigMap
           metadata:
-            name: ${{ needs.k8s_deployment.outputs.app_name }}-cm
-            namespace: ${{ inputs.namespace }}
+            name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-cm
+            namespace: ${{ inputs.k8s.namespace }}
           data:
             config.conf: |
               server {
@@ -43,7 +54,7 @@ jobs:
                 add_header X-Frame-Options "ALLOWALL";
                 client_max_body_size 1000M;
                 location / {
-                    proxy_pass http://127.0.0.1:${{ inputs.k8sPort }}/me/session/${PW_USER}/${{ sessions.session }}/;
+                    proxy_pass http://127.0.0.1:${{ inputs.service_k8s.image_port }}/me/session/${PW_USER}/${{ sessions.session }}/;
                     proxy_http_version 1.1;
                     proxy_set_header Upgrade \$http_upgrade;
                     proxy_set_header Connection "upgrade";
@@ -59,50 +70,74 @@ jobs:
           apiVersion: apps/v1
           kind: Deployment
           metadata:
-            name: ${{ needs.k8s_deployment.outputs.app_name }}
-            namespace: ${{ inputs.namespace }}
+            name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
+            namespace: ${{ inputs.k8s.namespace }}
           spec:
             replicas: 1
             selector:
               matchLabels:
-                app: ${{ needs.k8s_deployment.outputs.app_name }}
+                app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
             template:
               metadata:
                 labels:
-                  app: ${{ needs.k8s_deployment.outputs.app_name }}
+                  app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
               spec:
+                ${runtimeClassName}
                 containers:
-                  - name: ${{ needs.k8s_deployment.outputs.app_name }}
-                    image: ${{ inputs.image }}
+                  - name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
+                    image: ${{ inputs.service_k8s.image }}
                     ports:
-                      - containerPort: ${{ inputs.k8sPort }}
+                      - containerPort: ${{ inputs.service_k8s.image_port }}
 
-                    command: ["start-notebook.sh"]
+                    command: ["jupyter", "lab"]
                     args:
+                      - "--allow-root"
+                      - "--no-browser"
+                      - "--ip=0.0.0.0"
+                      - "--NotebookApp.default_url='/lab'"
                       - "--ServerApp.trust_xheaders=True"
                       - "--ServerApp.allow_origin='*'"
                       - "--ServerApp.allow_remote_access=True"
                       - "--ServerApp.base_url='/me/session/${PW_USER}/${{ sessions.session }}/'"
+                      - "--IdentityProvider.token='${token}'"
+                      - "--ServerApp.password=''"
+                      
+                    resources:
+                      requests:
+                        memory: "${{ inputs.k8s.resources.requests.memory }}"
+                        cpu: "${{ inputs.k8s.resources.requests.cpu }}"
+                      limits:
+                        memory: "${{ inputs.k8s.resources.limits.memory }}"
+                        cpu: "${{ inputs.k8s.resources.limits.cpu }}"
+                        ${gpu_limits}
+
                   - name: nginx
                     image: nginxinc/nginx-unprivileged:1.25.3
                     ports:
                       - containerPort: 8889
                     volumeMounts:
-                      - name: ${{ needs.k8s_deployment.outputs.app_name }}-cm-volume
+                      - name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-cm-volume
                         mountPath: /etc/nginx/conf.d
+                    resources:
+                      requests:
+                        memory: "128Mi"
+                        cpu: "100m"
+                      limits:
+                        memory: "256Mi"
+                        cpu: "200m"
                 volumes:
-                  - name: ${{ needs.k8s_deployment.outputs.app_name }}-cm-volume
+                  - name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-cm-volume
                     configMap:
-                      name: ${{ needs.k8s_deployment.outputs.app_name }}-cm
+                      name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-cm
           ---
           apiVersion: v1
           kind: Service
           metadata:
-            name: ${{ needs.k8s_deployment.outputs.app_name }}-lb
-            namespace: ${{ inputs.namespace }}
+            name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-lb
+            namespace: ${{ inputs.k8s.namespace }}
           spec:
             selector:
-              app: ${{ needs.k8s_deployment.outputs.app_name }}
+              app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
             ports:
               - protocol: TCP
                 port: 8889
@@ -112,41 +147,79 @@ jobs:
         run: |
           echo "Performing dry run..."
           kubectl apply -f app.yaml --dry-run=client
+  apply_k8s_deployment:
+    needs:
+      - prepare_k8s_deployment
+    steps:
+      - name: Load outputs
+        run: cat OUTPUTS >> $OUTPUTS
       - name: Apply Deployment and Service
         run: kubectl apply -f app.yaml
         cleanup: |
           kubectl delete -f app.yaml
-          touch cleanup.completed
+          touch app.deleted
       - name: Wait for Deployment to be Ready
-        env: 
-          app_name: ${{ needs.k8s_deployment.outputs.app_name }}
-          namespace: ${{ inputs.namespace }}
-        run: kubectl wait --for=condition=available --timeout=120s deployment/${app_name} -n ${namespace} 
+        env:
+          app_name: ${{ needs.apply_k8s_deployment.outputs.app_name }}
+          namespace: ${{ inputs.k8s.namespace }}
+        run: |
+
+          log() {
+            while true; do
+              echo
+              echo; echo "[INFO] $(date) - Checking deployment status for ${app_name} in namespace ${namespace}..."
+              kubectl get deployment "${app_name}" -n "${namespace}" -o wide || echo "[WARN] Unable to get deployment"
+              
+              echo; echo "[INFO] $(date) - Pods status:"
+              kubectl get pods -l app="${app_name}" -n "${namespace}" -o wide || echo "[WARN] Unable to get pods"
+
+              pod_name=$(kubectl get pods -l app="${app_name}" -n "${namespace}" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+              if [[ -n "$pod_name" ]]; then
+                echo; echo "[INFO] $(date) - Describing pod ${pod_name}..."
+                kubectl describe pod "${pod_name}" -n "${namespace}" | grep -A20 "Events"
+              fi
+              
+              echo "---------------------------------------------"
+              sleep 10
+            done
+          }
+
+          log &
+          log_pid=$!
+          trap "kill ${log_pid}" EXIT
+          set -x
+          kubectl wait --for=condition=available --timeout=600s deployment/${app_name} -n ${namespace}
+          exit_code=$?
+          kubectl get deployment ${app_name} -n ${namespace} -o wide
+          kubectl describe deployment ${app_name} -n ${namespace}
+          exit ${exit_code}
       - name: Wait for Pod to be Ready
+        env:
+          app_name: ${{ needs.apply_k8s_deployment.outputs.app_name }}
+          namespace: ${{ inputs.k8s.namespace }}
         run: |
           echo "Waiting for pod to be ready..."
-          kubectl wait --for=condition=Ready pod -l app=${{ needs.k8s_deployment.outputs.app_name }} -n ${{ inputs.namespace }} --timeout=300s
-          jupyter_pod=$(kubectl get pods -n ${{ inputs.namespace }} -l app=${{ needs.k8s_deployment.outputs.app_name }} --field-selector=status.phase=Running -o jsonpath="{.items[0].metadata.name}")
+          kubectl wait --for=condition=Ready pod -l app=${app_name} -n ${namespace} --timeout=600s
+          jupyter_pod=$(kubectl get pods -n ${namespace} -l app=${app_name} --field-selector=status.phase=Running -o jsonpath="{.items[0].metadata.name}")
           echo "jupyter_pod=$jupyter_pod" | tee -a $OUTPUTS | tee -a OUTPUTS
+          touch pod.running
       - name: Stream Logs
-        run: |
-          touch ready_to_create_session
-          kubectl logs -f deployment/${{ needs.k8s_deployment.outputs.app_name }} -n ${{ inputs.namespace }}
+        run: kubectl logs -f deployment/${{ needs.apply_k8s_deployment.outputs.app_name }} -n ${{ inputs.k8s.namespace }}
   create_session:
     needs:
-      - auth
+      - prepare_k8s_deployment
     steps:
       - name: Wait until the Kubernetes deployment reaches its final stage
         run: |
           while true; do
-            if [ -f "cleanup.completed" ]; then
-              echo "File cleanup.completed was detected. Exiting..."
+            if [ -f "app.deleted" ]; then
+              echo "File app.deleted was detected. Exiting..."
               exit 0
-            elif [ -f "ready_to_create_session" ]; then
-              echo "Deployment is ready"
+            elif [ -f "pod.running" ]; then
+              echo "Pod is ready"
               break
             fi
-            sleep 2  # Check every second
+            sleep 2 
           done
       - name: Get Service Name
         run: |
@@ -155,17 +228,11 @@ jobs:
       - name: Get SLUG
         run: |
           source OUTPUTS
-          k8s_port="${{ inputs.k8sPort }}"
-          JUPYTER_URL=""
-          while [[ -z "$JUPYTER_URL" || "$JUPYTER_URL" == "<none>" ]]; do
-            JUPYTER_URL=$(kubectl logs -n ${{ inputs.namespace }} $jupyter_pod 2>&1 | grep -oE "http://[0-9a-zA-Z.:]+:${k8s_port}/.*" | tail -n1  )
-            if [[ -z "$JUPYTER_URL" || "$JUPYTER_URL" == "<none>" ]]; then
-              echo "Still waiting for Jupyter URL..."
-              sleep 5
-            fi
-          done
-          echo ${JUPYTER_URL} 
-          slug=$(echo ${JUPYTER_URL} | sed "s#http://[0-9a-zA-Z.:]\+:${k8s_port}##" | sed "s|/me/session/${PW_USER}/${{ sessions.session }}/||g")
+          if [ -z "${token}" ]; then
+            slug="lab"
+          else
+            slug="lab?token=${token}"
+          fi
           echo "slug=${slug}" | tee -a $OUTPUTS
       - name: Expose port
         uses: parallelworks/update-session
@@ -174,27 +241,104 @@ jobs:
           name: ${{ sessions.session }}
           slug: ${{ needs.create_session.outputs.slug }}
           targetInfo:
-            name: ${{ inputs.cluster }}
-            namespace: ${{ inputs.namespace }}
+            name: ${{ inputs.k8s.cluster }}
+            namespace: ${{ inputs.k8s.namespace }}
             resourceType: services
             resourceName: ${{ needs.create_session.outputs.service_name }}
-
-
 'on':
   execute:
     inputs:
-      cluster:
-        label: Kubernetes cluster
-        type: kubernetes-clusters
-      namespace:
-        label: Namespace
-        type: kubernetes-namespaces
-        clusterName: ${{ inputs.cluster }}
-      image:
-        label: Job image
-        type: string
-        default: jupyter/datascience-notebook
-      k8sPort:
-        label: Job port
-        type: number
-        default: 8888
+      k8s:
+        type: group
+        label: Kubernetes Settings
+        items:
+          cluster:
+            label: Kubernetes cluster
+            type: kubernetes-clusters
+          namespace:
+            label: Namespace
+            type: kubernetes-namespaces
+            clusterName: ${{ inputs.k8s.cluster }}
+          pvc:
+            label: Persistent Volume Claim
+            type: dropdown
+            default: None
+            options:
+              - value: None
+                label: None
+          resources:
+            type: group
+            label: Resources
+            items:
+              requests:
+                type: group
+                label: Requests
+                items:
+                  memory:
+                    label: Memory
+                    type: string
+                    default: 512Mi
+                  cpu:
+                    label: CPU
+                    type: string
+                    default: '1'
+              limits:
+                type: group
+                label: Limits
+                items:
+                  memory:
+                    label: Memory
+                    type: string
+                    default: 1Gi
+                  cpu:
+                    label: CPU
+                    type: string
+                    default: '2'
+                  select_gpu:
+                    label: Select GPU Device
+                    type: dropdown
+                    options:
+                      - value: None
+                        label: None
+                      - value: nvidia_gpu
+                        label: Nvidia GPU
+                      - value: amd_gpu
+                        label: AMD GPU
+                      - value: gcp_gpu
+                        label: Google TPU
+                  nvidia_gpu:
+                    label: Nvidia GPU
+                    type: number
+                    step: 1
+                    default: 1
+                    min: 1
+                    hidden: ${{ inputs.k8s.resources.limits.select_gpu !== nvidia_gpu }}
+                    ignore: ${{ .hidden }}
+                  amd_gpu:
+                    label: AMD GPU
+                    type: number
+                    step: 1
+                    default: 1
+                    min: 1
+                    hidden: ${{ inputs.k8s.resources.limits.select_gpu !== amd_gpu }}
+                    ignore: ${{ .hidden }}
+                  gcp_tpu:
+                    label: Google TPU
+                    type: number
+                    step: 1
+                    default: 1
+                    min: 1
+                    hidden: ${{ inputs.k8s.resources.limits.select_gpu !== gcp_tpu }}
+                    ignore: ${{ .hidden }}
+      service_k8s:
+        type: group
+        label: Service Settings
+        items:
+          image:
+            label: Jupyter Lab Image
+            type: string
+            default: jupyter/datascience-notebook
+          image_port:
+            label: Jupyter Lab Port
+            type: number
+            default: 8888

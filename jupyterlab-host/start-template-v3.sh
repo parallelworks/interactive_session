@@ -159,7 +159,8 @@ if [ -z ${service_notebook_dir} ]; then
 fi
 
 export JUPYTER_CONFIG_DIR=${PWD}
-jupyter-lab --generate-config --y
+rm -f jupyter_lab_config.py
+jupyter-lab --generate-config
 
 sed -i "s|^.*c\.ExtensionApp\.default_url.*|c.ExtensionApp.default_url = '${basepath}'|" jupyter_lab_config.py
 sed -i "s|^.*c\.LabServerApp\.app_url.*|c.LabServerApp.app_url = '${basepath}/lab'|" jupyter_lab_config.py

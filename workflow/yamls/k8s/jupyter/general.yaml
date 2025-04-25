@@ -22,17 +22,15 @@ jobs:
           echo "app_name=${app_name}" | tee -a $OUTPUTS | tee -a OUTPUTS
       - name: Creating Deployment and Service YAML
         run: |
-          if [[ "${{ inputs.k8s.resources.limits.select_gpu }}" == "nvidia_gpu" ]]; then
-            gpu_limits="nvidia.com/gpu: ${{ inputs.k8s.resources.limits.nvidia_gpu }}"
-            # Check if RuntimeClass 'nvidia' exists
-            if kubectl get runtimeclass nvidia &>/dev/null; then
-              echo "nvidia RuntimeClass is available"
-              runtimeClassName="runtimeClassName: nvidia"
-            fi
-          elif [[ "${{ inputs.k8s.resources.limits.select_gpu }}" == "amd_gpu" ]]; then
-            gpu_limits="amd.com/gpu: ${{ inputs.k8s.resources.limits.amd_gpu }}"
-          elif [[ "${{ inputs.k8s.resources.limits.select_gpu }}" == "gcp_tpu" ]]; then
-            gpu_limits="cloud-tpus.google.com/v3: ${{ inputs.k8s.resources.limits.gcp_tpu }}"
+          if [[ "${{ inputs.k8s.resources.limits.select_gpu }}" == "Custom" ]]; then
+            gpu_limits="${{ inputs.k8s.resources.limits.gpu_resource_key }}: ${{ inputs.k8s.resources.limits.number_of_gpus }}"
+          elif [[ "${{ inputs.k8s.resources.limits.select_gpu }}" != "None" ]]; then
+            gpu_limits="${{ inputs.k8s.resources.limits.select_gpu }}: ${{ inputs.k8s.resources.limits.number_of_gpus }}"
+          fi
+          # Attach RuntimeClass if it's available and using NVIDIA
+          if kubectl get runtimeclass nvidia &>/dev/null; then
+            echo "nvidia RuntimeClass is available"
+            runtimeClassName="runtimeClassName: nvidia"
           fi
           token=$(openssl rand -hex 16)
           token=""
@@ -278,10 +276,12 @@ jobs:
                     label: Memory
                     type: string
                     default: 512Mi
+                    tooltip: Specify the minimum memory required for the pod (e.g., 512Mi, 1Gi).
                   cpu:
                     label: CPU
                     type: string
                     default: '1'
+                    tooltip: Specify the minimum CPU required for the pod (e.g., 0.5, 1, 100m). Use decimal values for partial CPUs or "m" for millicores (e.g., 100m = 0.1 CPU).
               limits:
                 type: group
                 label: Limits
@@ -290,45 +290,48 @@ jobs:
                     label: Memory
                     type: string
                     default: 1Gi
+                    tooltip: Set the maximum memory the pod can use (e.g., 1Gi, 2Gi).
                   cpu:
                     label: CPU
                     type: string
                     default: '2'
+                    tooltip: Set the maximum CPU the pod can use (e.g., 1, 2, 500m).
                   select_gpu:
                     label: Select GPU Device
                     type: dropdown
+                    tooltip: Choose the type of GPU device for the deployment, if needed. Select "None" for CPU-only workloads or "Custom" to specify a custom GPU resource key.
                     options:
                       - value: None
                         label: None
-                      - value: nvidia_gpu
+                      - value: nvidia.com/gpu
                         label: Nvidia GPU
-                      - value: amd_gpu
+                      - value: amd.com/gpu
                         label: AMD GPU
-                      - value: gcp_gpu
+                      - value: cloud-tpus.google.com/v3
                         label: Google TPU
-                  nvidia_gpu:
-                    label: Nvidia GPU
-                    type: number
-                    step: 1
-                    default: 1
-                    min: 1
-                    hidden: ${{ inputs.k8s.resources.limits.select_gpu !== nvidia_gpu }}
+                      - value: Custom
+                        label: Custom GPU Resource Key
+                  gpu_resource_key:
+                    label: Custom GPU Resource Key
+                    type: string
+                    hidden: ${{ inputs.k8s.resources.limits.select_gpu !== Custom }}
                     ignore: ${{ .hidden }}
-                  amd_gpu:
-                    label: AMD GPU
+                    tooltip: |
+                      Specify a custom GPU resource key for Kubernetes, such as:
+                        - nvidia.com/gpu
+                        - amd.com/gpu
+                        - cloud-tpus.google.com/v3
+                        - nvidia.com/mig-1g.5gb
+                        - nvidia.com/mig-2g.10gb
+                        - nvidia.com/mig-3g.20gb
+                  number_of_gpus:
+                    label: Number of GPUs
                     type: number
                     step: 1
                     default: 1
                     min: 1
-                    hidden: ${{ inputs.k8s.resources.limits.select_gpu !== amd_gpu }}
-                    ignore: ${{ .hidden }}
-                  gcp_tpu:
-                    label: Google TPU
-                    type: number
-                    step: 1
-                    default: 1
-                    min: 1
-                    hidden: ${{ inputs.k8s.resources.limits.select_gpu !== gcp_tpu }}
+                    tooltip: Specify the number of GPUs to allocate for the deployment.
+                    hidden: ${{ inputs.k8s.resources.limits.select_gpu === None }}
                     ignore: ${{ .hidden }}
       service_k8s:
         type: group
@@ -338,7 +341,12 @@ jobs:
             label: Jupyter Lab Image
             type: string
             default: jupyter/datascience-notebook
+            tooltip: |
+              Sample containers from https://catalog.ngc.nvidia.com/containers:
+                - TensorFlow: nvcr.io/nvidia/tensorflow:25.02-tf2-py3
+                - Pytorch: nvcr.io/nvidia/pytorch:24.09-py3
           image_port:
             label: Jupyter Lab Port
             type: number
             default: 8888
+            tooltip: Define the port on which the Jupyter Lab server runs inside the container. Default is 8888, which is standard for Jupyter Lab.

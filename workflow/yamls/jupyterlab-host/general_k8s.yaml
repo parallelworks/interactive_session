@@ -382,6 +382,7 @@ jobs:
             type: compute-clusters
             label: Service host
             include-workspace: false
+            optional: ${{ inputs.targetType !== 'compute-cluster' }}
             tooltip:
               Resource to host the service
           nports:
@@ -544,10 +545,12 @@ jobs:
           cluster:
             label: Kubernetes cluster
             type: kubernetes-clusters
+            optional: ${{ inputs.targetType !== 'kubernetes-cluster' }}
           namespace:
             label: Namespace
             type: kubernetes-namespaces
             clusterName: ${{ inputs.k8s.cluster }}
+            optional: ${{ inputs.targetType !== 'kubernetes-cluster' }}
           pvc:
             label: Persistent Volume Claim
             type: dropdown

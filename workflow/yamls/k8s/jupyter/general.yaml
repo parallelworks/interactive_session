@@ -3,16 +3,19 @@ permissions:
 sessions:
   session:
     redirect: true
+    useCustomDomain: true
+
 app:
   target: inputs.k8s.cluster
+
 jobs:
-  auth:
+  auth_k8s:
     steps:
       - name: Authenticate kubectl
         run: pw kube auth ${{ inputs.k8s.cluster }}
   prepare_k8s_deployment:
     needs:
-      - auth
+      - auth_k8s
     steps:
       - name: Defining App Name
         run: |
@@ -36,34 +39,6 @@ jobs:
           token=""
           echo "token=${token}" | tee -a $OUTPUTS | tee -a OUTPUTS
           cat <<EOF > app.yaml
-          apiVersion: v1
-          kind: ConfigMap
-          metadata:
-            name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-cm
-            namespace: ${{ inputs.k8s.namespace }}
-          data:
-            config.conf: |
-              server {
-                listen 8889;
-                server_name _;
-                index index.html index.htm index.php;
-                add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
-                add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
-                add_header X-Frame-Options "ALLOWALL";
-                client_max_body_size 1000M;
-                location / {
-                    proxy_pass http://127.0.0.1:${{ inputs.service_k8s.image_port }}/me/session/${PW_USER}/${{ sessions.session }}/;
-                    proxy_http_version 1.1;
-                    proxy_set_header Upgrade \$http_upgrade;
-                    proxy_set_header Connection "upgrade";
-                    proxy_set_header X-Real-IP \$remote_addr;
-                    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-                    proxy_set_header Host \$http_host;
-                    proxy_set_header X-NginX-Proxy true;
-                }
-              }
-
-          ---
 
           apiVersion: apps/v1
           kind: Deployment
@@ -109,24 +84,6 @@ jobs:
                         cpu: "${{ inputs.k8s.resources.limits.cpu }}"
                         ${gpu_limits}
 
-                  - name: nginx
-                    image: nginxinc/nginx-unprivileged:1.25.3
-                    ports:
-                      - containerPort: 8889
-                    volumeMounts:
-                      - name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-cm-volume
-                        mountPath: /etc/nginx/conf.d
-                    resources:
-                      requests:
-                        memory: "128Mi"
-                        cpu: "100m"
-                      limits:
-                        memory: "256Mi"
-                        cpu: "200m"
-                volumes:
-                  - name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-cm-volume
-                    configMap:
-                      name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-cm
           ---
           apiVersion: v1
           kind: Service
@@ -138,8 +95,8 @@ jobs:
               app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
             ports:
               - protocol: TCP
-                port: 8889
-                targetPort: 8889
+                port: ${{ inputs.service_k8s.image_port }}
+                targetPort: ${{ inputs.service_k8s.image_port }}
           EOF
       - name: Dry Run Deployment
         run: |
@@ -235,7 +192,7 @@ jobs:
       - name: Expose port
         uses: parallelworks/update-session
         with:
-          remotePort: '8889'
+          remotePort: '${{ inputs.service_k8s.image_port }}'
           name: ${{ sessions.session }}
           slug: ${{ needs.create_session.outputs.slug }}
           targetInfo:

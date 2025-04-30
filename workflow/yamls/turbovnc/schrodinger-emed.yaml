@@ -233,4 +233,4 @@ jobs:
             label: Service Binary
             type: string
             hidden: true
-            default: rstudio
+            default: maestro

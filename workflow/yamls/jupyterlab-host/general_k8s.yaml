@@ -293,7 +293,7 @@ jobs:
 
           log &
           log_pid=$!
-          trap "kill ${log_pid}" EXIT
+          trap "kill ${log_pid}" EXIT SIGINT SIGTERM
           set -x
           kubectl wait --for=condition=available --timeout=600s deployment/${app_name} -n ${namespace}
           exit_code=$?

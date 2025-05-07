@@ -9,7 +9,9 @@ This workflow launches a JupyterLab server on a Kubernetes cluster using a user-
 - **Run the Workflow:** Deploy JupyterLab and access it via a web interface.
 
 ### Using Nvidia GPUs
-For GPU-accelerated workloads, use images from the [Nvidia NGC Catalog](https://catalog.ngc.nvidia.com/containers). Examples:
+For GPU-accelerated workloads, use images from the [Nvidia NGC Catalog](https://catalog.ngc.nvidia.com/containers). **Ensure that the driver version on the node meets the minimum driver requirement for that image.**
+
+Examples:
 - **PyTorch:**  `nvcr.io/nvidia/pytorch:24.09-py3`
 - **TensorFlow:** `nvcr.io/nvidia/tensorflow:25.02-tf2-py3`
 
@@ -41,7 +43,7 @@ else:
 ```
 
 ##### Nvidia MIG Instances
-To use Multi-Instance GPUs (MIG) set the `CUDA_VISIBLE_DEVICES` environment variable.
+To use more than one Multi-Instance GPUs (MIG) set the `CUDA_VISIBLE_DEVICES` environment variable.
 ```
 !nvidia-smi -L | grep MIG | grep -o 'MIG-[a-f0-9-]\+'
 import os

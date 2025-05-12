@@ -2,6 +2,7 @@ permissions:
   - '*'
 sessions:
   session:
+    useTLS: false
     redirect: true
     useCustomDomain: true
 
@@ -31,14 +32,11 @@ jobs:
             gpu_limits="${{ inputs.k8s.resources.limits.select_gpu }}: ${{ inputs.k8s.resources.limits.number_of_gpus }}"
           fi
           # Attach RuntimeClass if it's available and using NVIDIA
-          if ! [ -z "${gpu_limits}" ]; then
-            if kubectl get runtimeclass nvidia &>/dev/null; then
-              echo "nvidia RuntimeClass is available"
-              runtimeClassName="runtimeClassName: nvidia"
-            fi
+          if kubectl get runtimeclass nvidia &>/dev/null; then
+            echo "nvidia RuntimeClass is available"
+            runtimeClassName="runtimeClassName: nvidia"
           fi
           token=$(openssl rand -hex 16)
-          token=""
           echo "token=${token}" | tee -a $OUTPUTS | tee -a OUTPUTS
           cat <<EOF > app.yaml
 
@@ -73,7 +71,6 @@ jobs:
                       - "--ServerApp.trust_xheaders=True"
                       - "--ServerApp.allow_origin='*'"
                       - "--ServerApp.allow_remote_access=True"
-                      - "--ServerApp.base_url='/me/session/${PW_USER}/${{ sessions.session }}/'"
                       - "--IdentityProvider.token='${token}'"
                       - "--ServerApp.password=''"
                       
@@ -143,7 +140,7 @@ jobs:
 
           log &
           log_pid=$!
-          trap "kill ${log_pid}" EXIT SIGINT SIGTERM
+          trap "kill ${log_pid}" EXIT
           set -x
           kubectl wait --for=condition=available --timeout=600s deployment/${app_name} -n ${namespace}
           exit_code=$?
@@ -162,7 +159,7 @@ jobs:
           touch pod.running
       - name: Stream Logs
         run: kubectl logs -f deployment/${{ needs.apply_k8s_deployment.outputs.app_name }} -n ${{ inputs.k8s.namespace }}
-  create_session:
+  create_k8s_session:
     needs:
       - prepare_k8s_deployment
     steps:
@@ -194,14 +191,14 @@ jobs:
       - name: Expose port
         uses: parallelworks/update-session
         with:
-          remotePort: '${{ inputs.service_k8s.image_port }}'
+          remotePort: ${{ inputs.service_k8s.image_port }}
           name: ${{ sessions.session }}
-          slug: ${{ needs.create_session.outputs.slug }}
+          slug: ${{ needs.create_k8s_session.outputs.slug }}
           targetInfo:
             name: ${{ inputs.k8s.cluster }}
             namespace: ${{ inputs.k8s.namespace }}
             resourceType: services
-            resourceName: ${{ needs.create_session.outputs.service_name }}
+            resourceName: ${{ needs.create_k8s_session.outputs.service_name }}
 'on':
   execute:
     inputs:

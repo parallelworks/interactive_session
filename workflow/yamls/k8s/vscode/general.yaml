@@ -177,7 +177,6 @@ jobs:
         with:
           remotePort: ${{ inputs.service_k8s.image_port }}
           name: ${{ sessions.session }}
-          slug: '?folder=${service_directory}'
           targetInfo:
             name: ${{ inputs.k8s.cluster }}
             namespace: ${{ inputs.k8s.namespace }}

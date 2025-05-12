@@ -61,6 +61,8 @@ jobs:
                     env:
                       - name: PASSWORD
                         value: ${{ inputs.service_k8s.password }}
+                      - name: GITHUB_TOKEN
+                        value: ${{ inputs.service_k8s.github_token }}
                     args:
                       - --auth
                       - password
@@ -290,3 +292,7 @@ jobs:
             label: Password
             type: password
             tooltip: Type in a password
+          github_token:
+            label: GitHub Authentication Token
+            type: password
+            optional: true

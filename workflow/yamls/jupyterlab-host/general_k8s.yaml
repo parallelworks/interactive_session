@@ -179,9 +179,11 @@ jobs:
             gpu_limits="${{ inputs.k8s.resources.limits.select_gpu }}: ${{ inputs.k8s.resources.limits.number_of_gpus }}"
           fi
           # Attach RuntimeClass if it's available and using NVIDIA
-          if kubectl get runtimeclass nvidia &>/dev/null; then
-            echo "nvidia RuntimeClass is available"
-            runtimeClassName="runtimeClassName: nvidia"
+          if ! [ -z "${gpu_limits}" ]; then
+            if kubectl get runtimeclass nvidia &>/dev/null; then
+              echo "nvidia RuntimeClass is available"
+              runtimeClassName="runtimeClassName: nvidia"
+            fi
           fi
           token=$(openssl rand -hex 16)
           token=""

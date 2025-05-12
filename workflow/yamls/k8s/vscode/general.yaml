@@ -4,10 +4,8 @@ sessions:
   session:
     redirect: true
     useCustomDomain: true
-
 app:
   target: inputs.k8s.cluster
-
 jobs:
   auth_k8s:
     steps:
@@ -37,9 +35,6 @@ jobs:
               runtimeClassName="runtimeClassName: nvidia"
             fi
           fi
-          token=$(openssl rand -hex 16)
-          token=""
-          echo "token=${token}" | tee -a $OUTPUTS | tee -a OUTPUTS
           cat <<EOF > app.yaml
 
           apiVersion: apps/v1
@@ -63,20 +58,15 @@ jobs:
                     image: ${{ inputs.service_k8s.image }}
                     ports:
                       - containerPort: ${{ inputs.service_k8s.image_port }}
-
-                    command: ["jupyter", "lab"]
+                    env:
+                      - name: PASSWORD
+                        value: ${{ inputs.service_k8s.password }}
                     args:
-                      - "--allow-root"
-                      - "--no-browser"
-                      - "--ip=0.0.0.0"
-                      - "--NotebookApp.default_url='/lab'"
-                      - "--ServerApp.trust_xheaders=True"
-                      - "--ServerApp.allow_origin='*'"
-                      - "--ServerApp.allow_remote_access=True"
-                      - "--ServerApp.base_url='/me/session/${PW_USER}/${{ sessions.session }}/'"
-                      - "--IdentityProvider.token='${token}'"
-                      - "--ServerApp.password=''"
-                      
+                      - --auth
+                      - password
+                      - --bind-addr
+                      - 0.0.0.0:8080
+                      - --disable-telemetry
                     resources:
                       requests:
                         memory: "${{ inputs.k8s.resources.requests.memory }}"
@@ -182,21 +172,11 @@ jobs:
         run: |
           source OUTPUTS
           echo "service_name=${app_name}-lb" | tee -a $OUTPUTS
-      - name: Get SLUG
-        run: |
-          source OUTPUTS
-          if [ -z "${token}" ]; then
-            slug="lab"
-          else
-            slug="lab?token=${token}"
-          fi
-          echo "slug=${slug}" | tee -a $OUTPUTS
       - name: Expose port
         uses: parallelworks/update-session
         with:
-          remotePort: '${{ inputs.service_k8s.image_port }}'
+          remotePort: ${{ inputs.service_k8s.image_port }}
           name: ${{ sessions.session }}
-          slug: ${{ needs.create_session.outputs.slug }}
           targetInfo:
             name: ${{ inputs.k8s.cluster }}
             namespace: ${{ inputs.k8s.namespace }}
@@ -299,13 +279,14 @@ jobs:
           image:
             label: Jupyter Lab Image
             type: string
-            default: jupyter/datascience-notebook
-            tooltip: |
-              Sample containers from https://catalog.ngc.nvidia.com/containers:
-                - TensorFlow: nvcr.io/nvidia/tensorflow:25.02-tf2-py3
-                - Pytorch: nvcr.io/nvidia/pytorch:24.09-py3
+            default: codercom/code-server:latest
+            tooltip: Sample container from https://hub.docker.com/r/codercom/code-server
           image_port:
-            label: Jupyter Lab Port
+            label: Code Server Port
             type: number
-            default: 8888
-            tooltip: Define the port on which the Jupyter Lab server runs inside the container. Default is 8888, which is standard for Jupyter Lab.
+            default: 8080
+            tooltip: Define the port on which the Code Server runs inside the container. Default is 8080.
+          password:
+            label: Password
+            type: password
+            tooltip: Type in a password

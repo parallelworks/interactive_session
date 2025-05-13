@@ -1,7 +1,7 @@
 # JupyterLab Interactive Session
 This workflow starts a JupyterLab server [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README-v3.md), on either a **Compute Cluster** (SLURM or PBS) or a **Kubernetes Cluster**.
 
-Use the Target Type input to select your environment.
+Use the `Target Type` input to select your environment.
 
 
 ## Compute Cluster

@@ -215,7 +215,14 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         echo '#!/bin/sh' > ~/.vnc/xstartup
         echo 'unset SESSION_MANAGER' >> ~/.vnc/xstartup
         echo 'unset DBUS_SESSION_BUS_ADDRESS' >> ~/.vnc/xstartup
-        echo '/etc/X11/xinit/xinitrc' >> ~/.vnc/xstartup
+        if grep -q 'ID="rocky"' /etc/os-release && grep -q 'VERSION_ID="9\.' /etc/os-release; then
+            # Rocky Linux 9. Prevent "Something has gone wrong" message
+            echo 'export XDG_SESSION_TYPE=x11' >> ~/.vnc/xstartup
+            echo 'export GDK_BACKEND=x11' >> ~/.vnc/xstartup
+            echo 'export LIBGL_ALWAYS_SOFTWARE=1' >> ~/.vnc/xstartup
+        else
+            echo '/etc/X11/xinit/xinitrc' >> ~/.vnc/xstartup
+        fi
         chmod +x ~/.vnc/xstartup
     fi
 

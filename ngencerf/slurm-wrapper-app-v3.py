@@ -172,7 +172,7 @@ def write_callback(postprocessing_dir, callback_command):
 
     logger.info(f'Writing callback script {callback_file_path}')     
 
-def write_slurm_script(run_id, job_type, input_file_local, output_file_local, singularity_run_cmd):
+def write_slurm_script(run_id, job_type, input_file_local, output_file_local, singularity_run_cmd, nprocs = 1):
     job_script = input_file_local.replace('.yaml', '.slurm.sh')
 
     # Write the SLURM script
@@ -180,7 +180,7 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         script.write('#!/bin/bash\n')
         script.write(f'#SBATCH --job-name={job_type}-{run_id}\n')
         script.write('#SBATCH --nodes=1\n')
-        script.write('#SBATCH --ntasks-per-node=1\n')
+        script.write(f'#SBATCH --ntasks-per-node={nprocs}\n')
         script.write(f'#SBATCH --output={output_file_local}\n')
         script.write('\n')
         
@@ -249,7 +249,7 @@ def squeue_job_status(slurm_job_id):
     return result.stdout.strip(), None
     
 
-def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd):
+def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd, nprocs = 1):
     logger.info(f"Starting job submission for job run ID: {run_id}")
     # Check the file exists on the shared file system
     # Path to the input file on the shared file system
@@ -268,7 +268,7 @@ def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd):
         os.makedirs(os.path.dirname(output_file_local), exist_ok=True)
 
         # Save the script to the job's directory
-        job_script = write_slurm_script(run_id, job_type, input_file_local, output_file_local, singularity_run_cmd)
+        job_script = write_slurm_script(run_id, job_type, input_file_local, output_file_local, singularity_run_cmd, nprocs = nprocs)
         logger.info(f"Job script written to: {job_script}")
 
         # Submit the job and retrieve SLURM job ID
@@ -312,6 +312,8 @@ def submit_calibration_job():
     output_file = request.form.get('output_file')
     # Path to the SLURM job log file in the controller node
     auth_token = request.form.get('auth_token')
+    # Number of MPI proc
+    nprocs = request.form.get('nprocs')
 
     if not calibration_run_id:
         return log_and_return_error("No calibration_run_id provided", status_code = 400)
@@ -324,6 +326,9 @@ def submit_calibration_job():
     
     if not auth_token:
         return log_and_return_error("No auth_token provided", status_code = 400)
+
+    if not nprocs:
+        nprocs = 1
 
     # Get commit hashes before job submission
     hashes_command = f'{SINGULARITY_EXEC_NGEN_CAL_CMD} cat {NGEN_CAL_GIT_HASH_FILES}'

@@ -82,8 +82,10 @@ jobs:
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
+          source utils/load-env.sh
           source resources/host/inputs.sh
           while true; do
+            failIfError
             echo "Waiting for target hostname..."
 
             # Check if the service.port file exists and read its contents
@@ -135,7 +137,8 @@ jobs:
       - name: Set URL SLUG
         if: ${{ inputs.targetType === 'compute-cluster' }}
         run: |
-          echo "slug=lab"  | tee -a $OUTPUTS
+          source resources/host/inputs.sh
+          echo "slug=?folder=${service_directory}"  | tee -a $OUTPUTS
       - name: Expose Port
         if: ${{ inputs.targetType === 'compute-cluster' }}
         uses: parallelworks/update-session
@@ -171,12 +174,12 @@ jobs:
             gpu_limits="${{ inputs.k8s.resources.limits.select_gpu }}: ${{ inputs.k8s.resources.limits.number_of_gpus }}"
           fi
           # Attach RuntimeClass if it's available and using NVIDIA
-          if kubectl get runtimeclass nvidia &>/dev/null; then
-            echo "nvidia RuntimeClass is available"
-            runtimeClassName="runtimeClassName: nvidia"
+          if ! [ -z "${gpu_limits}" ]; then
+            if kubectl get runtimeclass nvidia &>/dev/null; then
+              echo "nvidia RuntimeClass is available"
+              runtimeClassName="runtimeClassName: nvidia"
+            fi
           fi
-          token=$(openssl rand -hex 16)
-          echo "token=${token}" | tee -a $OUTPUTS | tee -a OUTPUTS
           cat <<EOF > app.yaml
 
           apiVersion: apps/v1
@@ -200,19 +203,17 @@ jobs:
                     image: ${{ inputs.service_k8s.image }}
                     ports:
                       - containerPort: ${{ inputs.service_k8s.image_port }}
-
-                    command: ["jupyter", "lab"]
+                    env:
+                      - name: PASSWORD
+                        value: ${{ inputs.service_k8s.password }}
+                      - name: GITHUB_TOKEN
+                        value: ${{ inputs.service_k8s.github_token }}
                     args:
-                      - "--allow-root"
-                      - "--no-browser"
-                      - "--ip=0.0.0.0"
-                      - "--NotebookApp.default_url='/lab'"
-                      - "--ServerApp.trust_xheaders=True"
-                      - "--ServerApp.allow_origin='*'"
-                      - "--ServerApp.allow_remote_access=True"
-                      - "--IdentityProvider.token='${token}'"
-                      - "--ServerApp.password=''"
-                      
+                      - --auth
+                      - password
+                      - --bind-addr
+                      - 0.0.0.0:8080
+                      - --disable-telemetry
                     resources:
                       requests:
                         memory: "${{ inputs.k8s.resources.requests.memory }}"
@@ -249,8 +250,8 @@ jobs:
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         run: cat OUTPUTS >> $OUTPUTS
       - name: Apply Deployment and Service
-        run: kubectl apply -f app.yaml
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
+        run: kubectl apply -f app.yaml
         cleanup: |
           kubectl delete -f app.yaml
           touch app.deleted
@@ -283,7 +284,7 @@ jobs:
 
           log &
           log_pid=$!
-          trap "kill ${log_pid}" EXIT
+          trap "kill ${log_pid}" EXIT SIGINT SIGTERM
           set -x
           kubectl wait --for=condition=available --timeout=600s deployment/${app_name} -n ${namespace}
           exit_code=$?
@@ -326,23 +327,12 @@ jobs:
         run: |
           source OUTPUTS
           echo "service_name=${app_name}-lb" | tee -a $OUTPUTS
-      - name: Get SLUG
-        if: ${{ inputs.targetType === 'kubernetes-cluster' }}
-        run: |
-          source OUTPUTS
-          if [ -z "${token}" ]; then
-            slug="lab"
-          else
-            slug="lab?token=${token}"
-          fi
-          echo "slug=${slug}" | tee -a $OUTPUTS
       - name: Expose port
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         uses: parallelworks/update-session
         with:
           remotePort: ${{ inputs.service_k8s.image_port }}
           name: ${{ sessions.session }}
-          slug: ${{ needs.create_k8s_session.outputs.slug }}
           targetInfo:
             name: ${{ inputs.k8s.cluster }}
             namespace: ${{ inputs.k8s.namespace }}
@@ -367,9 +357,9 @@ jobs:
         items:
           resource:
             type: compute-clusters
+            optional: ${{ inputs.targetType !== 'compute-cluster' }}
             label: Service host
             include-workspace: false
-            optional: ${{ inputs.targetType !== 'compute-cluster' }}
             tooltip: Resource to host the service
           nports:
             type: number
@@ -421,93 +411,32 @@ jobs:
         collapsed: false
       service:
         type: group
-        label: Jupyter Lab Settings
+        label: VS Code Settings
         hidden: ${{ inputs.targetType !== 'compute-cluster' }}
         items:
           name:
             type: string
             hidden: true
-            default: jupyterlab-host
-          notebook_dir:
-            label: Directory to start Jupyter Lab GUI
+            default: openvscode
+          download_url:
+            label: Download URL
             type: string
-            default: __WORKDIR__
-            tooltip: This is the directory that you start with when the Jupyter graphical user interface starts. The default value here is your home directory.
-          conda_install:
-            label: Install miniconda environment if not there?
-            type: boolean
-            default: true
-            tooltip: Select Yes to install Jupyter in miniconda environment and No to load an existing python environment
-          parent_install_dir:
-            label: Parent Install Directory
-            type: string
-            default: __WORKDIR__/pw/software
-            hidden: ${{ inputs.service.conda_install == false }}
-            ignore: ${{ .hidden }}
-            tooltip: Software dependencies are installed in this directory. Ensure the directory has sufficient space!
-          conda_install_dir:
-            label: Name of the Conda Installation Directory
-            type: string
-            default: .miniconda3c
-            hidden: ${{ inputs.service.conda_install == false }}
-            ignore: ${{ .hidden }}
-            tooltip: Ensure the directory has sufficient space for Conda and its packages.
-          conda_env:
-            label: Conda environment
-            type: string
-            default: base
-            hidden: ${{ inputs.service.conda_install == false }}
-            optional: ${{ .hidden }}
-            ignore: ${{ .hidden }}
-            tooltip: Environment to active. The base environment enables changing kernel to other environments!
-          load_env:
-            label: Command to load Jupyter Notebook to the PATH
-            type: string
-            default: source __WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base
-            hidden: ${{ inputs.service.conda_install == true }}
-            optional: ${{ .hidden }}
-            ignore: ${{ .hidden }}
-            tooltip: Use a bash command
+            default: https://github.com/coder/code-server/releases/download/v4.92.2/code-server-4.92.2-linux-amd64.tar.gz
+            tooltip: Downloads or uses the code-server server version specified in the URL
           password:
-            label: Password for notebook session
+            label: Password for IDE session
             type: password
             optional: true
-            hidden: true
-            ignore: true
             tooltip: Enter password or leave blank for no password
-          install_instructions:
-            label: Select Jupyter Lab Installation
-            type: dropdown
-            hidden: ${{ inputs.service.conda_install == false }}
-            ignore: ${{ .hidden }}
-            default: jupyterlab4.1.5-python3.11.5
-            options:
-              - value: jupyterlab4.1.5-python3.11.5
-                label: Jupyter Lab 4.1.5 with Python 3.11.5
-              - value: latest
-                label: Latest versions of Jupyter Lab and Python (not thoroughly tested)
-              - value: dask-extension-jupyterlab
-                label: Dask dependencies for PW
-              - value: yaml
-                label: Provide custom Conda environment YAML file
-          yaml:
-            label: Paste Conda Environment Defition YAML
-            type: editor
-            hidden: ${{ inputs.service.install_instructions !== yaml ||  inputs.service.conda_install == false }}
-            optional: ${{ .hidden }}
-            ignore: ${{ .hidden }}
-            tooltip: Copy and paste a custom Conda environment definition YAML file
-          install_kernels:
-            label: Select additional kernels to install
-            type: multi-dropdown
+          directory:
+            label: Directory to open in VS Code
+            type: string
+            default: __WORKDIR__
+            tooltip: Directory to open in VS code
+          github_token:
+            label: GitHub authentication token
+            type: string
             optional: true
-            hidden: ${{ inputs.service.conda_install == false }}
-            ignore: ${{ .hidden }}
-            options:
-              - value: julia-kernel
-                label: Julia Kernel
-              - value: R-kernel
-                label: R Kernel
       k8s:
         type: group
         label: Kubernetes Settings
@@ -606,13 +535,19 @@ jobs:
           image:
             label: Jupyter Lab Image
             type: string
-            default: jupyter/datascience-notebook
-            tooltip: |
-              Sample containers from https://catalog.ngc.nvidia.com/containers:
-                - TensorFlow: nvcr.io/nvidia/tensorflow:25.02-tf2-py3
-                - Pytorch: nvcr.io/nvidia/pytorch:24.09-py3
+            default: codercom/code-server:latest
+            tooltip: Sample container from https://hub.docker.com/r/codercom/code-server
           image_port:
-            label: Jupyter Lab Port
+            label: Code Server Port
             type: number
-            default: 8888
-            tooltip: Define the port on which the Jupyter Lab server runs inside the container. Default is 8888, which is standard for Jupyter Lab.
+            default: 8080
+            tooltip: Define the port on which the Code Server runs inside the container. Default is 8080.
+          password:
+            label: Password
+            optional: ${{ inputs.targetType !== 'kubernetes-cluster' }}
+            type: password
+            tooltip: Type in a password
+          github_token:
+            label: GitHub Authentication Token
+            type: password
+            optional: true

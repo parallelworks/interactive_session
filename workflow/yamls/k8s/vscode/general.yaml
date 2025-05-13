@@ -154,7 +154,7 @@ jobs:
           touch pod.running
       - name: Stream Logs
         run: kubectl logs -f deployment/${{ needs.apply_k8s_deployment.outputs.app_name }} -n ${{ inputs.k8s.namespace }}
-  create_session:
+  create_k8s_session:
     needs:
       - prepare_k8s_deployment
     steps:
@@ -183,7 +183,7 @@ jobs:
             name: ${{ inputs.k8s.cluster }}
             namespace: ${{ inputs.k8s.namespace }}
             resourceType: services
-            resourceName: ${{ needs.create_session.outputs.service_name }}
+            resourceName: ${{ needs.create_k8s_session.outputs.service_name }}
 'on':
   execute:
     inputs:

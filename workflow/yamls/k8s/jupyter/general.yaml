@@ -37,6 +37,7 @@ jobs:
             runtimeClassName="runtimeClassName: nvidia"
           fi
           token=$(openssl rand -hex 16)
+          token=""
           echo "token=${token}" | tee -a $OUTPUTS | tee -a OUTPUTS
           cat <<EOF > app.yaml
 

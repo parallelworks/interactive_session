@@ -149,8 +149,8 @@ jobs:
         run: |
           echo "Waiting for pod to be ready..."
           kubectl wait --for=condition=Ready pod -l app=${app_name} -n ${namespace} --timeout=600s
-          jupyter_pod=$(kubectl get pods -n ${namespace} -l app=${app_name} --field-selector=status.phase=Running -o jsonpath="{.items[0].metadata.name}")
-          echo "jupyter_pod=$jupyter_pod" | tee -a $OUTPUTS | tee -a OUTPUTS
+          pod=$(kubectl get pods -n ${namespace} -l app=${app_name} --field-selector=status.phase=Running -o jsonpath="{.items[0].metadata.name}")
+          echo "pod=$pod" | tee -a $OUTPUTS | tee -a OUTPUTS
           touch pod.running
       - name: Stream Logs
         run: kubectl logs -f deployment/${{ needs.apply_k8s_deployment.outputs.app_name }} -n ${{ inputs.k8s.namespace }}
@@ -279,7 +279,7 @@ jobs:
         label: Service Settings
         items:
           image:
-            label: Jupyter Lab Image
+            label: Code Server Image
             type: string
             default: codercom/code-server:latest
             tooltip: Sample container from https://hub.docker.com/r/codercom/code-server

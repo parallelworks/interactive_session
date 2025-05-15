@@ -1,172 +1,290 @@
 permissions:
   - '*'
 sessions:
-  expose:
+  session:
     redirect: true
-
+    useCustomDomain: true
+    useTLS: true
 app:
-  target: inputs.pwrl_host.resource
-
+  target: inputs.k8s.cluster
 jobs:
-  auth:
+  auth_k8s:
     steps:
       - name: Authenticate kubectl
-        run: pw kube auth ${{ inputs.cluster }}
-  k8s_deployment:
+        run: pw kube auth ${{ inputs.k8s.cluster }}
+  prepare_k8s_deployment:
     needs:
-      - auth
+      - auth_k8s
     steps:
       - name: Defining App Name
         run: |
           job_number=$(pwd | rev | cut -d "/" -f1 | rev)
           workflow_name=$(pwd | rev | cut -d "/" -f2 | rev)
-          app_name="${PW_USER}-${workflow_name}-${job_number}-$(date +%s)"
-          echo "app_name=${app_name}" | tee -a $OUTPUTS
+          app_name="${PW_USER}-${workflow_name}-${job_number}"
+          echo "app_name=${app_name}" | tee -a $OUTPUTS | tee -a OUTPUTS
       - name: Creating Deployment and Service YAML
         run: |
+          if [[ "${{ inputs.k8s.resources.limits.select_gpu }}" == "Custom" ]]; then
+            gpu_limits="${{ inputs.k8s.resources.limits.gpu_resource_key }}: ${{ inputs.k8s.resources.limits.number_of_gpus }}"
+          elif [[ "${{ inputs.k8s.resources.limits.select_gpu }}" != "None" ]]; then
+            gpu_limits="${{ inputs.k8s.resources.limits.select_gpu }}: ${{ inputs.k8s.resources.limits.number_of_gpus }}"
+          fi
+          # Attach RuntimeClass if it's available and using NVIDIA
+          if ! [ -z "${gpu_limits}" ]; then
+            if kubectl get runtimeclass nvidia &>/dev/null; then
+              echo "nvidia RuntimeClass is available"
+              runtimeClassName="runtimeClassName: nvidia"
+            fi
+          fi
           cat <<EOF > app.yaml
+
           apiVersion: apps/v1
           kind: Deployment
           metadata:
-            name: ${{ needs.k8s_deployment.outputs.app_name }}
-            namespace: ${{ inputs.namespace }}
+            name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
+            namespace: ${{ inputs.k8s.namespace }}
           spec:
             replicas: 1
             selector:
               matchLabels:
-                app: ${{ needs.k8s_deployment.outputs.app_name }}
+                app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
             template:
               metadata:
                 labels:
-                  app: ${{ needs.k8s_deployment.outputs.app_name }}
+                  app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
               spec:
+                ${runtimeClassName}
                 containers:
-                  - name: ${{ needs.k8s_deployment.outputs.app_name }}
-                    image: ${{ inputs.image }} 
+                  - name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
+                    image: ${{ inputs.service_k8s.image }}
                     ports:
-                      - containerPort: ${{ inputs.k8sPort }}  # VNC port
+                      - containerPort: ${{ inputs.service_k8s.image_port }}
                     env:
                       - name: VNC_PW
-                        value: ${{ inputs.password }} 
-                    resources:
-                      limits:
-                        memory: ${{ inputs.memory_limit }}  # Set shared memory to 512MB (shm-size equivalent)
+                        value: ${{ inputs.service_k8s.password }}
                     securityContext:
                       capabilities:
                         add: ["NET_ADMIN"]  # Might be required depending on kasmvnc container usage
+                    resources:
+                      requests:
+                        memory: "${{ inputs.k8s.resources.requests.memory }}"
+                        cpu: "${{ inputs.k8s.resources.requests.cpu }}"
+                      limits:
+                        memory: "${{ inputs.k8s.resources.limits.memory }}"
+                        cpu: "${{ inputs.k8s.resources.limits.cpu }}"
+                        ${gpu_limits}
+
           ---
           apiVersion: v1
           kind: Service
           metadata:
-            name: ${{ needs.k8s_deployment.outputs.app_name }}-lb
-            namespace: ${{ inputs.namespace }}
+            name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-lb
+            namespace: ${{ inputs.k8s.namespace }}
           spec:
             selector:
-              app: ${{ needs.k8s_deployment.outputs.app_name }}
+              app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
             ports:
               - protocol: TCP
-                port: ${{ inputs.k8sPort }}
-                targetPort: ${{ inputs.k8sPort }} # Map to the VNC port
-            type: LoadBalancer
+                port: ${{ inputs.service_k8s.image_port }}
+                targetPort: ${{ inputs.service_k8s.image_port }}
           EOF
-
-
       - name: Dry Run Deployment
         run: |
           echo "Performing dry run..."
           kubectl apply -f app.yaml --dry-run=client
-        cleanup: |
-          touch cleanup.completed
-
+  apply_k8s_deployment:
+    needs:
+      - prepare_k8s_deployment
+    steps:
+      - name: Load outputs
+        run: cat OUTPUTS >> $OUTPUTS
       - name: Apply Deployment and Service
         run: kubectl apply -f app.yaml
         cleanup: |
-          {
-            kubectl delete deployment ${{ needs.k8s_deployment.outputs.app_name }} -n ${{ inputs.namespace }} --wait=true --timeout=60s
-          } || {
-            kubectl delete deployment ${{ needs.k8s_deployment.outputs.app_name }} -n ${{ inputs.namespace }} --force
-          }
-          kubectl delete svc ${{ needs.k8s_deployment.outputs.app_name }}-lb -n ${{ inputs.namespace }}
-          touch cleanup.completed
+          kubectl delete -f app.yaml
+          touch app.deleted
       - name: Wait for Deployment to be Ready
-        run: kubectl rollout status deployment/${{ needs.k8s_deployment.outputs.app_name }} -n ${{ inputs.namespace }}
+        env:
+          app_name: ${{ needs.apply_k8s_deployment.outputs.app_name }}
+          namespace: ${{ inputs.k8s.namespace }}
+        run: |
+
+          log() {
+            while true; do
+              echo
+              echo; echo "[INFO] $(date) - Checking deployment status for ${app_name} in namespace ${namespace}..."
+              kubectl get deployment "${app_name}" -n "${namespace}" -o wide || echo "[WARN] Unable to get deployment"
+              
+              echo; echo "[INFO] $(date) - Pods status:"
+              kubectl get pods -l app="${app_name}" -n "${namespace}" -o wide || echo "[WARN] Unable to get pods"
+
+              pod_name=$(kubectl get pods -l app="${app_name}" -n "${namespace}" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+              if [[ -n "$pod_name" ]]; then
+                echo; echo "[INFO] $(date) - Describing pod ${pod_name}..."
+                kubectl describe pod "${pod_name}" -n "${namespace}" | grep -A20 "Events"
+              fi
+              
+              echo "---------------------------------------------"
+              sleep 10
+            done
+          }
+
+          log &
+          log_pid=$!
+          trap "kill ${log_pid}" EXIT SIGINT SIGTERM
+          set -x
+          kubectl wait --for=condition=available --timeout=600s deployment/${app_name} -n ${namespace}
+          exit_code=$?
+          kubectl get deployment ${app_name} -n ${namespace} -o wide
+          kubectl describe deployment ${app_name} -n ${namespace}
+          exit ${exit_code}
       - name: Wait for Pod to be Ready
+        env:
+          app_name: ${{ needs.apply_k8s_deployment.outputs.app_name }}
+          namespace: ${{ inputs.k8s.namespace }}
         run: |
           echo "Waiting for pod to be ready..."
-          kubectl wait --for=condition=Ready pod -l app=${{ needs.k8s_deployment.outputs.app_name }} -n ${{ inputs.namespace }} --timeout=300s
-          jupyter_pod=$(kubectl get pods -n ${{ inputs.namespace }} -l app=${{ needs.k8s_deployment.outputs.app_name }} --field-selector=status.phase=Running -o jsonpath="{.items[0].metadata.name}")
-          echo "jupyter_pod=$jupyter_pod" | tee -a $OUTPUTS | tee -a OUTPUTS
-      - name: Wait for LoadBalancer Service to Get External IP
-        run: |
-          echo "Waiting for external IP..."
-          while true; do
-            ext_ip=$(kubectl get svc -n ${{ inputs.namespace }} ${{ needs.k8s_deployment.outputs.app_name }}-lb -o jsonpath="{.status.loadBalancer.ingress[0].ip}" 2>/dev/null)
-            if [[ -n "$ext_ip" && "$ext_ip" != "<none>" ]]; then
-              echo "External IP found: $ext_ip"
-              break
-            fi
-            sleep 5
-          done
-          echo "ext_ip=$ext_ip" | tee -a $OUTPUTS | tee -a OUTPUTS
+          kubectl wait --for=condition=Ready pod -l app=${app_name} -n ${namespace} --timeout=600s
+          pod=$(kubectl get pods -n ${namespace} -l app=${app_name} --field-selector=status.phase=Running -o jsonpath="{.items[0].metadata.name}")
+          echo "pod=$pod" | tee -a $OUTPUTS | tee -a OUTPUTS
+          touch pod.running
       - name: Stream Logs
-        run: |
-          touch ready_to_create_session
-          kubectl logs -f deployment/${{ needs.k8s_deployment.outputs.app_name }} -n ${{ inputs.namespace }}
-
-  create_session:
+        run: kubectl logs -f deployment/${{ needs.apply_k8s_deployment.outputs.app_name }} -n ${{ inputs.k8s.namespace }}
+  create_k8s_session:
     needs:
-      - auth
+      - prepare_k8s_deployment
     steps:
       - name: Wait until the Kubernetes deployment reaches its final stage
         run: |
           while true; do
-            if [ -f "cleanup.completed" ]; then
-              echo "File cleanup.completed was detected. Exiting..."
+            if [ -f "app.deleted" ]; then
+              echo "File app.deleted was detected. Exiting..."
               exit 0
-            elif [ -f "ready_to_create_session" ]; then
-              echo "Deployment is ready"
+            elif [ -f "pod.running" ]; then
+              echo "Pod is ready"
               break
             fi
-            sleep 2  # Check every second
+            sleep 2 
           done
-      - name: Get URL
+      - name: Get Service Name
         run: |
           source OUTPUTS
-          k8s_port="${{ inputs.k8sPort }}"
-          URL="https://${ext_ip}:${k8s_port}"
-          echo "URL=${URL}" | tee -a $OUTPUTS
+          echo "service_name=${app_name}-lb" | tee -a $OUTPUTS
       - name: Expose port
         uses: parallelworks/update-session
         with:
-          name: ${{ sessions.expose }}
-          type: link
-          url: ${{ needs.create_session.outputs.URL }}
-
-
+          remotePort: ${{ inputs.service_k8s.image_port }}
+          name: ${{ sessions.session }}
+          targetInfo:
+            name: ${{ inputs.k8s.cluster }}
+            namespace: ${{ inputs.k8s.namespace }}
+            resourceType: services
+            resourceName: ${{ needs.create_k8s_session.outputs.service_name }}
 'on':
   execute:
     inputs:
-      cluster:
-        label: Kubernetes cluster
-        type: string
-        default: devinfra1
-      namespace:
-        type: string
-        default: pw-qa-test
-      image:
-        label: Job image
-        type: string
-        default: kasmweb/desktop:1.16.0
-      k8sPort:
-        label: Job port
-        type: number
-        default: 6901
-      password:
-        label: Password
-        type: password
-        default: Password123!
-        tooltip: This is the password for user kasm_user
-      memory_limit:
-        label: Memory Limit
-        type: string
-        default: 512Mi
+      k8s:
+        type: group
+        label: Kubernetes Settings
+        items:
+          cluster:
+            label: Kubernetes cluster
+            type: kubernetes-clusters
+          namespace:
+            label: Namespace
+            type: kubernetes-namespaces
+            clusterName: ${{ inputs.k8s.cluster }}
+          pvc:
+            label: Persistent Volume Claim
+            type: dropdown
+            default: None
+            options:
+              - value: None
+                label: None
+          resources:
+            type: group
+            label: Resources
+            items:
+              requests:
+                type: group
+                label: Requests
+                items:
+                  memory:
+                    label: Memory
+                    type: string
+                    default: 2Gi
+                    tooltip: Specify the minimum memory required for the pod (e.g., 512Mi, 1Gi).
+                  cpu:
+                    label: CPU
+                    type: string
+                    default: '2'
+                    tooltip: Specify the minimum CPU required for the pod (e.g., 0.5, 1, 100m). Use decimal values for partial CPUs or "m" for millicores (e.g., 100m = 0.1 CPU).
+              limits:
+                type: group
+                label: Limits
+                items:
+                  memory:
+                    label: Memory
+                    type: string
+                    default: 4Gi
+                    tooltip: Set the maximum memory the pod can use (e.g., 1Gi, 2Gi).
+                  cpu:
+                    label: CPU
+                    type: string
+                    default: '4'
+                    tooltip: Set the maximum CPU the pod can use (e.g., 1, 2, 500m).
+                  select_gpu:
+                    label: Select GPU Device
+                    type: dropdown
+                    tooltip: Choose the type of GPU device for the deployment, if needed. Select "None" for CPU-only workloads or "Custom" to specify a custom GPU resource key.
+                    options:
+                      - value: None
+                        label: None
+                      - value: nvidia.com/gpu
+                        label: Nvidia GPU
+                      - value: amd.com/gpu
+                        label: AMD GPU
+                      - value: cloud-tpus.google.com/v3
+                        label: Google TPU
+                      - value: Custom
+                        label: Custom GPU Resource Key
+                  gpu_resource_key:
+                    label: Custom GPU Resource Key
+                    type: string
+                    hidden: ${{ inputs.k8s.resources.limits.select_gpu !== Custom }}
+                    ignore: ${{ .hidden }}
+                    tooltip: |
+                      Specify a custom GPU resource key for Kubernetes, such as:
+                        - nvidia.com/gpu
+                        - amd.com/gpu
+                        - cloud-tpus.google.com/v3
+                        - nvidia.com/mig-1g.5gb
+                        - nvidia.com/mig-2g.10gb
+                        - nvidia.com/mig-3g.20gb
+                  number_of_gpus:
+                    label: Number of GPUs
+                    type: number
+                    step: 1
+                    default: 1
+                    min: 1
+                    tooltip: Specify the number of GPUs to allocate for the deployment.
+                    hidden: ${{ inputs.k8s.resources.limits.select_gpu === None }}
+                    ignore: ${{ .hidden }}
+      service_k8s:
+        type: group
+        label: Service Settings
+        items:
+          image:
+            label: KasmVNC Image
+            type: string
+            default: kasmweb/desktop:1.16.0
+            tooltip: Sample container from https://hub.docker.com/r/kasmweb/desktop
+          image_port:
+            label: KasmVNC Port
+            type: number
+            default: 6901
+            tooltip: Define the port on which the KasmVNC runs inside the container. Default is 6901.
+          password:
+            label: Password
+            type: password
+            tooltip: Type in a password for user kasm_user

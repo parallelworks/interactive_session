@@ -36,8 +36,9 @@ jobs:
             echo "nvidia RuntimeClass is available"
             runtimeClassName="runtimeClassName: nvidia"
           fi
-          token=$(openssl rand -hex 16)
-          token=""
+          if [[ "${{ inputs.service_k8s.use_token_auth }}" == "true" ]]; then
+            token="$(openssl rand -hex 16)"
+          fi
           echo "token=${token}" | tee -a $OUTPUTS | tee -a OUTPUTS
           cat <<EOF > app.yaml
 
@@ -307,3 +308,7 @@ jobs:
             type: number
             default: 8888
             tooltip: Define the port on which the Jupyter Lab server runs inside the container. Default is 8888, which is standard for Jupyter Lab.
+          use_token_auth:
+            label: Use Token Authentication?
+            type: boolean
+            tooltip: Enable token-based authentication. Some containers may not support it.

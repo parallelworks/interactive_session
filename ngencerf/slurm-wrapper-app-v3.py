@@ -361,7 +361,7 @@ def submit_calibration_job():
         return log_and_return_error(str(e), 500)
     
     
-    slurm_job_id, exit_code = submit_job(input_file, output_file, calibration_run_id, job_type, singularity_run_cmd, nprocs = nprocss)
+    slurm_job_id, exit_code = submit_job(input_file, output_file, calibration_run_id, job_type, singularity_run_cmd, nprocs = nprocs)
     if exit_code == 500:
         return jsonify({"error": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_cal_commit_hash": ngen_cal_commit_hash}), exit_code
 

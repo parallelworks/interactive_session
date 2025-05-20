@@ -303,6 +303,11 @@ def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd, n
 
 @app.route('/submit-calibration-job', methods=['POST'])
 def submit_calibration_job():
+    logging.info("submit-calibration-job - Received POST request with the following parameters:")
+    for key, value in request.form.items():
+        logging.info(f"{key}: {value}")
+
+
     job_type = 'calibration'
     # ngen-cal job id
     calibration_run_id = request.form.get('calibration_run_id')
@@ -313,7 +318,7 @@ def submit_calibration_job():
     # Path to the SLURM job log file in the controller node
     auth_token = request.form.get('auth_token')
     # Number of MPI proc
-    nprocs = request.form.get('nprocs')
+    nprocs = request.form.get('nprocs', '1')
 
     if not calibration_run_id:
         return log_and_return_error("No calibration_run_id provided", status_code = 400)
@@ -326,9 +331,6 @@ def submit_calibration_job():
     
     if not auth_token:
         return log_and_return_error("No auth_token provided", status_code = 400)
-
-    if not nprocs:
-        nprocs = 1
 
     # Get commit hashes before job submission
     hashes_command = f'{SINGULARITY_EXEC_NGEN_CAL_CMD} cat {NGEN_CAL_GIT_HASH_FILES}'
@@ -368,6 +370,10 @@ def submit_calibration_job():
 
 @app.route('/submit-validation-job', methods=['POST'])
 def submit_validation_job():
+    logging.info("submit-validation-job - Received POST request with the following parameters:")
+    for key, value in request.form.items():
+        logging.info(f"{key}: {value}")
+
     job_type = 'validation'
     # ngen-cal job id
     validation_run_id = request.form.get('validation_run_id')
@@ -450,6 +456,10 @@ def submit_validation_job():
 
 @app.route('/submit-forecast-job', methods=['POST'])
 def submit_forecast_job():
+    logging.info("submit-forecast-job - Received POST request with the following parameters:")
+    for key, value in request.form.items():
+        logging.info(f"{key}: {value}")
+
     job_type = 'forecast'
     # ngen-cal job id
     forecast_run_id = request.form.get('forecast_run_id')
@@ -519,6 +529,10 @@ def submit_forecast_job():
 
 @app.route('/submit-forecast-forcing-download-job', methods=['POST'])
 def submit_forecast_forcing_download():
+    logging.info("submit-forecast-forcing-download-job - Received POST request with the following parameters:")
+    for key, value in request.form.items():
+        logging.info(f"{key}: {value}")
+
     job_type = 'forecast_forcing_download'
     # ngen-cal job id
     forecast_forcing_download_run_id = request.form.get('forecast_forcing_download_run_id')

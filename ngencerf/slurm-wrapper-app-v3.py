@@ -389,7 +389,8 @@ def submit_validation_job():
     worker_name = request.form.get('worker_name')
     # Iteration
     iteration = request.form.get('iteration')
-
+    # Number of MPI proc
+    nprocs = request.form.get('nprocs', '1')
 
     if not validation_run_id:
         return log_and_return_error("No validation_run_id provided", status_code = 400)
@@ -448,7 +449,7 @@ def submit_validation_job():
     except Exception as e:
         return log_and_return_error(str(e), status_code = 500) 
 
-    slurm_job_id, exit_code = submit_job(input_file, output_file, validation_run_id, job_type, singularity_run_cmd)
+    slurm_job_id, exit_code = submit_job(input_file, output_file, validation_run_id, job_type, singularity_run_cmd, nprocs = nprocs)
     if exit_code == 500:
         return jsonify({"error": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_cal_commit_hash": ngen_cal_commit_hash}), exit_code    
     return jsonify({"slurm_job_id": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_cal_commit_hash": ngen_cal_commit_hash}), exit_code

@@ -13,11 +13,14 @@ fi
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
+
+ollama_port=$(findAvailablePort)
+
 module load ollama
 module load singularity
 
 export OLLAMA_MODELS=${service_models}
-export OLLAMA_HOST=0.0.0.0:${service_port}
+export OLLAMA_HOST=0.0.0.0:${ollama_port}
 export OLLAMA_NUM_PARALLEL=${service_num_parallel}
 export OLLAMA_MAX_LOADED_MODELS=${service_max_loaded_models}
 export OLLAMA_DEFAULT_KEEP_ALIVE=${service_default_keep_alive}
@@ -32,5 +35,9 @@ sleep 5
 echo; echo
 echo "STARTING OPEN-WEBUI"
 mkdir open-webui
-echo "{\"version\": 0, \"ui\": {}, \"ollama\": {\"base_urls\": [\"http://0.0.0.0:$service_port\"]}}" > open-webui/config.json
-singularity exec --bind open-webui:/app/backend/data --env WEBUI_AUTH=False --env OLLAMA_API_BASE_URL=http://0.0.0.0:${service_port} ${service_nginx_sif} /app/backend/start.sh
+echo "{\"version\": 0, \"ui\": {}, \"ollama\": {\"base_urls\": [\"http://0.0.0.0:$ollama_port\"]}}" > open-webui/config.json
+singularity exec --bind open-webui:/app/backend/data \
+    --env WEBUI_AUTH=False \
+    --env OLLAMA_API_BASE_URL=http://0.0.0.0:${ollama_port} \
+    --env WEBUI_PORT=${service_port} \
+    ${service_nginx_sif} /app/backend/start.sh

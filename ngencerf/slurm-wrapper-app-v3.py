@@ -172,7 +172,7 @@ def write_callback(postprocessing_dir, callback_command):
 
     logger.info(f'Writing callback script {callback_file_path}')     
 
-def write_slurm_script(run_id, job_type, input_file_local, output_file_local, singularity_run_cmd):
+def write_slurm_script(run_id, job_type, input_file_local, output_file_local, singularity_run_cmd, nprocs = 1):
     job_script = input_file_local.replace('.yaml', '.slurm.sh')
 
     # Write the SLURM script
@@ -180,7 +180,7 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         script.write('#!/bin/bash\n')
         script.write(f'#SBATCH --job-name={job_type}-{run_id}\n')
         script.write('#SBATCH --nodes=1\n')
-        script.write('#SBATCH --ntasks-per-node=1\n')
+        script.write(f'#SBATCH --ntasks-per-node={nprocs}\n')
         script.write(f'#SBATCH --output={output_file_local}\n')
         script.write('\n')
         
@@ -249,7 +249,7 @@ def squeue_job_status(slurm_job_id):
     return result.stdout.strip(), None
     
 
-def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd):
+def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd, nprocs = 1):
     logger.info(f"Starting job submission for job run ID: {run_id}")
     # Check the file exists on the shared file system
     # Path to the input file on the shared file system
@@ -268,7 +268,7 @@ def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd):
         os.makedirs(os.path.dirname(output_file_local), exist_ok=True)
 
         # Save the script to the job's directory
-        job_script = write_slurm_script(run_id, job_type, input_file_local, output_file_local, singularity_run_cmd)
+        job_script = write_slurm_script(run_id, job_type, input_file_local, output_file_local, singularity_run_cmd, nprocs = nprocs)
         logger.info(f"Job script written to: {job_script}")
 
         # Submit the job and retrieve SLURM job ID
@@ -303,6 +303,11 @@ def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd):
 
 @app.route('/submit-calibration-job', methods=['POST'])
 def submit_calibration_job():
+    logging.info("submit-calibration-job - Received POST request with the following parameters:")
+    for key, value in request.form.items():
+        logging.info(f"{key}: {value}")
+
+
     job_type = 'calibration'
     # ngen-cal job id
     calibration_run_id = request.form.get('calibration_run_id')
@@ -312,6 +317,8 @@ def submit_calibration_job():
     output_file = request.form.get('output_file')
     # Path to the SLURM job log file in the controller node
     auth_token = request.form.get('auth_token')
+    # Number of MPI proc
+    nprocs = request.form.get('nprocs', '1')
 
     if not calibration_run_id:
         return log_and_return_error("No calibration_run_id provided", status_code = 400)
@@ -354,7 +361,7 @@ def submit_calibration_job():
         return log_and_return_error(str(e), 500)
     
     
-    slurm_job_id, exit_code = submit_job(input_file, output_file, calibration_run_id, job_type, singularity_run_cmd)
+    slurm_job_id, exit_code = submit_job(input_file, output_file, calibration_run_id, job_type, singularity_run_cmd, nprocs = nprocs)
     if exit_code == 500:
         return jsonify({"error": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_cal_commit_hash": ngen_cal_commit_hash}), exit_code
 
@@ -363,6 +370,10 @@ def submit_calibration_job():
 
 @app.route('/submit-validation-job', methods=['POST'])
 def submit_validation_job():
+    logging.info("submit-validation-job - Received POST request with the following parameters:")
+    for key, value in request.form.items():
+        logging.info(f"{key}: {value}")
+
     job_type = 'validation'
     # ngen-cal job id
     validation_run_id = request.form.get('validation_run_id')
@@ -378,7 +389,8 @@ def submit_validation_job():
     worker_name = request.form.get('worker_name')
     # Iteration
     iteration = request.form.get('iteration')
-
+    # Number of MPI proc
+    nprocs = request.form.get('nprocs', '1')
 
     if not validation_run_id:
         return log_and_return_error("No validation_run_id provided", status_code = 400)
@@ -437,7 +449,7 @@ def submit_validation_job():
     except Exception as e:
         return log_and_return_error(str(e), status_code = 500) 
 
-    slurm_job_id, exit_code = submit_job(input_file, output_file, validation_run_id, job_type, singularity_run_cmd)
+    slurm_job_id, exit_code = submit_job(input_file, output_file, validation_run_id, job_type, singularity_run_cmd, nprocs = nprocs)
     if exit_code == 500:
         return jsonify({"error": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_cal_commit_hash": ngen_cal_commit_hash}), exit_code    
     return jsonify({"slurm_job_id": slurm_job_id, "ngen_commit_hash": ngen_commit_hash, "ngen_cal_commit_hash": ngen_cal_commit_hash}), exit_code
@@ -445,6 +457,10 @@ def submit_validation_job():
 
 @app.route('/submit-forecast-job', methods=['POST'])
 def submit_forecast_job():
+    logging.info("submit-forecast-job - Received POST request with the following parameters:")
+    for key, value in request.form.items():
+        logging.info(f"{key}: {value}")
+
     job_type = 'forecast'
     # ngen-cal job id
     forecast_run_id = request.form.get('forecast_run_id')
@@ -514,6 +530,10 @@ def submit_forecast_job():
 
 @app.route('/submit-forecast-forcing-download-job', methods=['POST'])
 def submit_forecast_forcing_download():
+    logging.info("submit-forecast-forcing-download-job - Received POST request with the following parameters:")
+    for key, value in request.form.items():
+        logging.info(f"{key}: {value}")
+
     job_type = 'forecast_forcing_download'
     # ngen-cal job id
     forecast_forcing_download_run_id = request.form.get('forecast_forcing_download_run_id')

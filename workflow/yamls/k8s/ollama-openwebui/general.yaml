@@ -1,0 +1,393 @@
+permissions:
+  - '*'
+sessions:
+  session:
+    useTLS: false
+    redirect: true
+    useCustomDomain: true
+app:
+  target: inputs.k8s.cluster
+jobs:
+  auth_k8s:
+    steps:
+      - name: Authenticate kubectl
+        run: pw kube auth ${{ inputs.k8s.cluster }}
+  prepare_k8s_deployment:
+    needs:
+      - auth_k8s
+    steps:
+      - name: Defining App Name
+        run: |
+          job_number=$(pwd | rev | cut -d "/" -f1 | rev)
+          workflow_name=$(pwd | rev | cut -d "/" -f2 | rev)
+          app_name="${PW_USER}-${workflow_name}-${job_number}"
+          echo "app_name=${app_name}" | tee -a $OUTPUTS | tee -a OUTPUTS
+      - name: Creating Deployment and Service YAML
+        run: |
+          if [[ "${{ inputs.k8s.ollama_resources.limits.select_gpu }}" == "Custom" ]]; then
+            gpu_limits="${{ inputs.k8s.ollama_resources.limits.gpu_resource_key }}: ${{ inputs.k8s.ollama_resources.limits.number_of_gpus }}"
+          elif [[ "${{ inputs.k8s.ollama_resources.limits.select_gpu }}" != "None" ]]; then
+            gpu_limits="${{ inputs.k8s.ollama_resources.limits.select_gpu }}: ${{ inputs.k8s.ollama_resources.limits.number_of_gpus }}"
+          fi
+          # Attach RuntimeClass if it's available and using NVIDIA
+          if kubectl get runtimeclass nvidia &>/dev/null; then
+            echo "nvidia RuntimeClass is available"
+            runtimeClassName="runtimeClassName: nvidia"
+          fi
+          cat <<EOF > app.yaml
+          ---
+          # Deployment for ollama
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
+            template:
+              metadata:
+                labels:
+                  app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
+              spec:
+                ${runtimeClassName}
+                containers:
+                  - name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
+                    image: ${{ inputs.ollama_k8s.image }}
+                    ports:
+                      - containerPort: ${{ inputs.ollama_k8s.image_port }}
+                    env:
+                      - name: NVIDIA_VISIBLE_DEVICES
+                        value: "all"
+                      - name: NVIDIA_DRIVER_CAPABILITIES
+                        value: "compute,utility"
+                    resources:
+                      requests:
+                        memory: "${{ inputs.k8s.ollama_resources.requests.memory }}"
+                        cpu: "${{ inputs.k8s.ollama_resources.requests.cpu }}"
+                      limits:
+                        memory: "${{ inputs.k8s.ollama_resources.limits.memory }}"
+                        cpu: "${{ inputs.k8s.ollama_resources.limits.cpu }}"
+                        ${gpu_limits}
+                    
+          ---
+          # Service for ollama
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            selector:
+              app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
+            ports:
+              - protocol: TCP
+                port: ${{ inputs.ollama_k8s.image_port }}
+                targetPort: ${{ inputs.ollama_k8s.image_port }}
+
+          ---
+          # Deployment for openwebui
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-openwebui
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-openwebui
+            template:
+              metadata:
+                labels:
+                  app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-openwebui
+              spec:
+                containers:
+                  - name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-openwebui
+                    image: ${{ inputs.openwebui_k8s.image }}
+                    ports:
+                      - containerPort: ${{ inputs.openwebui_k8s.image_port }}
+                    env:
+                      - name: OLLAMA_BASE_URL
+                        value: "http://${{ needs.prepare_k8s_deployment.outputs.app_name }}.${{ inputs.k8s.namespace }}.svc.cluster.local:${{ inputs.ollama_k8s.image_port }}"
+                      - name: WEBUI_AUTH
+                        value: "False"
+                    resources:
+                      requests:
+                        memory: "${{ inputs.k8s.openwebui_resources.requests.memory }}"
+                        cpu: "${{ inputs.k8s.openwebui_resources.requests.cpu }}"
+                      limits:
+                        memory: "${{ inputs.k8s.openwebui_resources.limits.memory }}"
+                        cpu: "${{ inputs.k8s.openwebui_resources.limits.cpu }}"
+
+          ---
+          # Service for openwebui
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-lb
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            selector:
+              app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-openwebui
+            ports:
+              - protocol: TCP
+                port: ${{ inputs.openwebui_k8s.image_port }}
+                targetPort: ${{ inputs.openwebui_k8s.image_port }}
+          EOF
+      - name: Dry Run Deployment
+        run: |
+          echo "Performing dry run..."
+          kubectl apply -f app.yaml --dry-run=client
+  apply_k8s_deployment:
+    needs:
+      - prepare_k8s_deployment
+    steps:
+      - name: Load outputs
+        run: cat OUTPUTS >> $OUTPUTS
+      - name: Apply Deployment and Service
+        run: kubectl apply -f app.yaml
+        cleanup: |
+          kubectl delete -f app.yaml
+          touch app.deleted
+      - name: Wait for Deployment to be Ready
+        env:
+          app_name: ${{ needs.apply_k8s_deployment.outputs.app_name }}
+          namespace: ${{ inputs.k8s.namespace }}
+        run: |
+
+          log() {
+            while true; do
+              echo
+              echo; echo "[INFO] $(date) - Checking deployment status for ${app_name} in namespace ${namespace}..."
+              kubectl get deployment "${app_name}" -n "${namespace}" -o wide || echo "[WARN] Unable to get deployment"
+              
+              echo; echo "[INFO] $(date) - Pods status:"
+              kubectl get pods -l app="${app_name}" -n "${namespace}" -o wide || echo "[WARN] Unable to get pods"
+
+              pod_name=$(kubectl get pods -l app="${app_name}" -n "${namespace}" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+              if [[ -n "$pod_name" ]]; then
+                echo; echo "[INFO] $(date) - Describing pod ${pod_name}..."
+                kubectl describe pod "${pod_name}" -n "${namespace}" | grep -A20 "Events"
+              fi
+              
+              echo "---------------------------------------------"
+              sleep 10
+            done
+          }
+
+          log &
+          log_pid=$!
+          trap "kill ${log_pid}" EXIT
+          set -x
+          kubectl wait --for=condition=available --timeout=600s deployment/${app_name} -n ${namespace}
+          exit_code=$?
+          kubectl get deployment ${app_name} -n ${namespace} -o wide
+          kubectl describe deployment ${app_name} -n ${namespace}
+          exit ${exit_code}
+      - name: Wait for Pod to be Ready
+        env:
+          app_name: ${{ needs.apply_k8s_deployment.outputs.app_name }}
+          namespace: ${{ inputs.k8s.namespace }}
+        run: |
+          echo "Waiting for pod to be ready..."
+          kubectl wait --for=condition=Ready pod -l app=${app_name} -n ${namespace} --timeout=600s
+          pod=$(kubectl get pods -n ${namespace} -l app=${app_name} --field-selector=status.phase=Running -o jsonpath="{.items[0].metadata.name}")
+          echo "pod=$pod" | tee -a $OUTPUTS | tee -a OUTPUTS
+          touch pod.running
+      - name: Pull Ollama Models
+        env:
+          pod_name: ${{ needs.apply_k8s_deployment.outputs.pod }}
+          namespace: ${{ inputs.k8s.namespace }}
+        run: |
+          set -x
+          kubectl -n $namespace exec $pod_name -- /bin/sh -c "ollama pull llama3 && ollama pull mistral && ollama pull phi3" &
+      - name: Stream Ollama Logs
+        run: |
+          kubectl logs -f --selector=app=${{ needs.apply_k8s_deployment.outputs.app_name }} -n ${{ inputs.k8s.namespace }} &
+          ollama_stream_pid=$?
+          echo ${ollama_stream_pid} > ollama_stream.pid
+        cleanup: kill $(cat ollama_stream.pid)
+      - name: Stream OpenWebUI Logs
+        run: |
+          kubectl logs -f --selector=app=${{ needs.apply_k8s_deployment.outputs.app_name }}-openwebui -n ${{ inputs.k8s.namespace }}
+  create_k8s_session:
+    needs:
+      - prepare_k8s_deployment
+    steps:
+      - name: Wait until the Kubernetes deployment reaches its final stage
+        run: |
+          while true; do
+            if [ -f "app.deleted" ]; then
+              echo "File app.deleted was detected. Exiting..."
+              exit 0
+            elif [ -f "pod.running" ]; then
+              echo "Pod is ready"
+              break
+            fi
+            sleep 2 
+          done
+      - name: Get Service Name
+        run: |
+          source OUTPUTS
+          echo "service_name=${app_name}-lb" | tee -a $OUTPUTS
+      - name: Expose port
+        uses: parallelworks/update-session
+        with:
+          remotePort: ${{ inputs.openwebui_k8s.image_port }}
+          name: ${{ sessions.session }}
+          targetInfo:
+            name: ${{ inputs.k8s.cluster }}
+            namespace: ${{ inputs.k8s.namespace }}
+            resourceType: services
+            resourceName: ${{ needs.create_k8s_session.outputs.service_name }}
+'on':
+  execute:
+    inputs:
+      k8s:
+        type: group
+        label: Kubernetes Settings
+        items:
+          cluster:
+            label: Kubernetes cluster
+            type: kubernetes-clusters
+          namespace:
+            label: Namespace
+            type: kubernetes-namespaces
+            clusterName: ${{ inputs.k8s.cluster }}
+          pvc:
+            label: Persistent Volume Claim
+            type: dropdown
+            default: None
+            options:
+              - value: None
+                label: None
+          ollama_resources:
+            type: group
+            label: Ollama Resources
+            items:
+              requests:
+                type: group
+                label: Requests
+                items:
+                  memory:
+                    label: Memory
+                    type: string
+                    default: 2Gi
+                    tooltip: Specify the minimum memory required for the pod (e.g., 512Mi, 1Gi).
+                  cpu:
+                    label: CPU
+                    type: string
+                    default: '2'
+                    tooltip: Specify the minimum CPU required for the pod (e.g., 0.5, 1, 100m). Use decimal values for partial CPUs or "m" for millicores (e.g., 100m = 0.1 CPU).
+              limits:
+                type: group
+                label: Limits
+                items:
+                  memory:
+                    label: Memory
+                    type: string
+                    default: 4Gi
+                    tooltip: Set the maximum memory the pod can use (e.g., 1Gi, 2Gi).
+                  cpu:
+                    label: CPU
+                    type: string
+                    default: '4'
+                    tooltip: Set the maximum CPU the pod can use (e.g., 1, 2, 500m).
+                  select_gpu:
+                    label: Select GPU Device
+                    type: dropdown
+                    tooltip: Choose the type of GPU device for the deployment, if needed. Select "None" for CPU-only workloads or "Custom" to specify a custom GPU resource key.
+                    default: nvidia.com/gpu
+                    options:
+                      - value: None
+                        label: None
+                      - value: nvidia.com/gpu
+                        label: Nvidia GPU
+                      - value: amd.com/gpu
+                        label: AMD GPU
+                      - value: cloud-tpus.google.com/v3
+                        label: Google TPU
+                      - value: Custom
+                        label: Custom GPU Resource Key
+                  gpu_resource_key:
+                    label: Custom GPU Resource Key
+                    type: string
+                    hidden: ${{ inputs.k8s.ollama_resources.limits.select_gpu !== Custom }}
+                    ignore: ${{ .hidden }}
+                    tooltip: |
+                      Specify a custom GPU resource key for Kubernetes, such as:
+                        - nvidia.com/gpu
+                        - amd.com/gpu
+                        - cloud-tpus.google.com/v3
+                        - nvidia.com/mig-1g.5gb
+                        - nvidia.com/mig-2g.10gb
+                        - nvidia.com/mig-3g.20gb
+                  number_of_gpus:
+                    label: Number of GPUs
+                    type: number
+                    step: 1
+                    default: 1
+                    min: 1
+                    tooltip: Specify the number of GPUs to allocate for the deployment.
+                    hidden: ${{ inputs.k8s.ollama_resources.limits.select_gpu === None }}
+                    ignore: ${{ .hidden }}
+          openwebui_resources:
+            type: group
+            label: OpenWebUI Resources
+            collapsed: true
+            items:
+              requests:
+                type: group
+                label: Requests
+                items:
+                  memory:
+                    label: Memory
+                    type: string
+                    default: 2Gi
+                    tooltip: Specify the minimum memory required for the pod (e.g., 512Mi, 1Gi).
+                  cpu:
+                    label: CPU
+                    type: string
+                    default: '2'
+                    tooltip: Specify the minimum CPU required for the pod (e.g., 0.5, 1, 100m). Use decimal values for partial CPUs or "m" for millicores (e.g., 100m = 0.1 CPU).
+              limits:
+                type: group
+                label: Limits
+                items:
+                  memory:
+                    label: Memory
+                    type: string
+                    default: 4Gi
+                    tooltip: Set the maximum memory the pod can use (e.g., 1Gi, 2Gi).
+                  cpu:
+                    label: CPU
+                    type: string
+                    default: '4'
+                    tooltip: Set the maximum CPU the pod can use (e.g., 1, 2, 500m).
+      ollama_k8s:
+        type: group
+        label: Ollama Settings
+        items:
+          image:
+            label: Ollama Image
+            type: string
+            default: ollama/ollama:latest
+          image_port:
+            label: Ollama Port
+            type: number
+            default: 11434
+      openwebui_k8s:
+        type: group
+        label: Ollama Settings
+        items:
+          image:
+            label: OpenWebUI Image
+            type: string
+            default: ghcr.io/open-webui/open-webui:main
+          image_port:
+            label: OpenWebUI Port
+            type: number
+            default: 8080

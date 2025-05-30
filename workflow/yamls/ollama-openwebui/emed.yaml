@@ -152,6 +152,7 @@ jobs:
             type: compute-clusters
             label: Service host
             include-workspace: false
+            autoselect: true
             tooltip: Resource to host the service
           nports:
             type: number

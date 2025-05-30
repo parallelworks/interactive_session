@@ -267,6 +267,7 @@ jobs:
           ollama_resources:
             type: group
             label: Ollama Resources
+            collapsed: true
             items:
               requests:
                 type: group
@@ -370,6 +371,7 @@ jobs:
       ollama_k8s:
         type: group
         label: Ollama Settings
+        collapsed: true
         items:
           image:
             label: Ollama Image
@@ -381,7 +383,8 @@ jobs:
             default: 11434
       openwebui_k8s:
         type: group
-        label: Ollama Settings
+        label: OpenWebUI Settings
+        collapsed: true
         items:
           image:
             label: OpenWebUI Image

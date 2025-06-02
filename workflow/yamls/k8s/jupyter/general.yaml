@@ -21,7 +21,7 @@ jobs:
       - name: Defining App Name
         run: |
           job_number=$(pwd | rev | cut -d "/" -f1 | rev)
-          workflow_name=$(pwd | rev | cut -d "/" -f2 | rev)
+          workflow_name=$(pwd | rev | cut -d "/" -f2 | rev | tr '_' '-')
           app_name="${PW_USER}-${workflow_name}-${job_number}"
           echo "app_name=${app_name}" | tee -a $OUTPUTS | tee -a OUTPUTS
       - name: Creating Deployment and Service YAML

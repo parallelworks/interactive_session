@@ -185,7 +185,8 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         script.write('\n')
         
         script.write('echo Running Job $SLURM_JOB_ID \n\n')
-        
+        create_performance_files_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/job-start -d \"job_type={job_type}\" -d \"run_id={run_id}\"\n'
+
         # Execute the singularity command
         script.write(f'{singularity_run_cmd}\n') 
 
@@ -745,6 +746,44 @@ def run_sacct():
         return jsonify({"success": True, "message": f"Job status written to {performance_file}"}), 200
     except subprocess.CalledProcessError as e:
         return log_and_return_error(str(e), 500)
+
+@app.route('/job-start', methods=['POST'])
+def job_start():
+    job_type = request.form.get('job_type')
+    run_id = request.form.get('run_id')
+
+    # Validate inputs
+    if not job_type:
+        return log_and_return_error("No job type provided", 400)
+    
+    if not run_id:
+        return log_and_return_error("No job id provided", 400)
+    
+    
+    postprocessing_dir = os.path.join('postprocess', job_type, run_id)
+    callback_script = os.path.join(postprocessing_dir, 'callback')
+
+    if not os.path.exists(callback_script):
+        error_msg = f"Callback script ${callback_script} does not exist"
+        logger.error(error_msg)
+        log_and_return_error(error_msg, 500)  
+    
+    # Construct the command to run sleep and sacct
+    with open(callback_script, 'r') as f:
+        callback = f.read().replace('__job_status__', 'STARTING')
+
+    try:
+        # Run the command in the background using subprocess.Popen
+        logger.info(f"Running: {callback}")
+        subprocess.Popen(callback, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        # Return an immediate response while the command runs in the background
+        return jsonify({"success": True, "message": f"Starting callback was submitted"}), 200
+
+    except Exception as e:
+        # Return an error message if something goes wrong
+        return log_and_return_error(str(e), 500)
+
 
 @app.route('/postprocess', methods=['POST'])
 def postprocess():

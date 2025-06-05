@@ -270,6 +270,13 @@ else
     docker compose -f production-pw.yaml up -d
 fi
 
+ngencerf_image=$(docker compose -f production-pw.yaml config | awk '/ngencerf-server/{flag=1} flag && /image:/{print $2; exit}')
+echo "ngencerf_image=${ngencerf_image}"
+docker create --name extract "$ngencerf_image"
+sudo docker cp extract:/ngencerf/ngencerf-server/cli/dist/ngencerf /usr/local/bin/ngencerf
+docker rm extract
+sudo chmod +x /usr/local/bin/ngencerf
+
 # Tail the logs
 docker compose -f production-pw.yaml logs -f
 

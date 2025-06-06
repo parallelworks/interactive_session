@@ -12,7 +12,6 @@ jobs:
     steps:
       - name: Authenticate kubectl
         run: pw kube auth ${{ inputs.k8s.cluster }}
-
   prepare_k8s_pvc:
     needs:
       - auth_k8s
@@ -48,7 +47,6 @@ jobs:
         run: |
           echo "Performing dry run..."
           kubectl apply -f pvc.yaml --dry-run=client
-
   prepare_k8s_deployment:
     needs:
       - auth_k8s
@@ -59,7 +57,6 @@ jobs:
           workflow_name=$(pwd | rev | cut -d "/" -f2 | rev | tr '_' '-' | tr '.' '-')
           app_name="${PW_USER}-${workflow_name}-${job_number}"
           echo "app_name=${app_name}" | tee -a $OUTPUTS | tee -a OUTPUTS
-
       - name: Creating Deployment and Service YAML
         run: |
           if [[ "${{ inputs.k8s.resources.limits.select_gpu }}" == "Custom" ]]; then
@@ -101,6 +98,15 @@ jobs:
                   app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
               spec:
                 ${runtimeClassName}
+                initContainers:
+                  - name: set-permissions
+                    image: busybox
+                    command: ["sh", "-c", "chmod 777 ${{ inputs.k8s.volumes.pvc_mount_path }} -R"]
+                    securityContext:
+                      runAsUser: 0
+                    volumeMounts:
+                      - name: jupyter-storage
+                        mountPath: ${{ inputs.k8s.volumes.pvc_mount_path }}
                 containers:
                   - name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
                     image: ${{ inputs.service_k8s.image }}

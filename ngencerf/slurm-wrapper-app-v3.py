@@ -185,7 +185,8 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         script.write('\n')
         
         script.write('echo Running Job $SLURM_JOB_ID \n\n')
-        create_performance_files_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/job-start -d \"job_type={job_type}\" -d \"run_id={run_id}\"\n'
+        notify_job_start_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/job-start -d \"job_type={job_type}\" -d \"run_id={run_id}\"\n'
+        script.write(notify_job_start_cmd)
 
         # Execute the singularity command
         script.write(f'{singularity_run_cmd}\n') 

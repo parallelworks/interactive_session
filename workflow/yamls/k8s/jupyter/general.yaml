@@ -303,7 +303,9 @@ jobs:
                 default: /mnt
               pvc_existing:
                 label: Select PVC Name
-                type: string
+                type: kubernetes-pvc
+                clusterName: ${{ inputs.k8s.cluster }}
+                namespace: ${{ inputs.k8s.namespace }}
                 hidden: ${{ inputs.k8s.volumes.pvc !== Existing }}
                 ignore: ${{ .hidden }}
                 optional: ${{ .hidden }}

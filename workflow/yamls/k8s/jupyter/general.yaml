@@ -5,15 +5,48 @@ sessions:
     useTLS: false
     redirect: true
     useCustomDomain: true
-
 app:
   target: inputs.k8s.cluster
-
 jobs:
   auth_k8s:
     steps:
       - name: Authenticate kubectl
         run: pw kube auth ${{ inputs.k8s.cluster }}
+  prepare_k8s_pvc:
+    needs:
+      - auth_k8s
+    steps:
+      - name: Creating New PVC YAML
+        if: ${{ inputs.k8s.volumes.pvc === New }}
+        run: |
+          if [[ ${{ inputs.k8s.volumes.pvc_persist }} == "true" ]]; then
+            pvc_name="${{ inputs.k8s.volumes.pvc_name }}"
+          else
+            job_number=$(pwd | rev | cut -d "/" -f1 | rev)
+            workflow_name=$(pwd | rev | cut -d "/" -f2 | rev | tr '_' '-' | tr '.' '-')
+            pvc_name="${PW_USER}-${workflow_name}-${job_number}-pvc"
+          fi
+          echo "${pvc_name}" > pvc_name
+          cat <<EOF > pvc.yaml
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: ${pvc_name}
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: ${{ inputs.k8s.volumes.pvc_storage_size }}  
+            storageClassName: ${{ inputs.k8s.volumes.pvc_storage_class }} 
+          EOF
+          cat pvc.yaml
+      - name: Dry Run PVC
+        if: ${{ inputs.k8s.volumes.pvc === New }}
+        run: |
+          echo "Performing dry run..."
+          kubectl apply -f pvc.yaml --dry-run=client
   prepare_k8s_deployment:
     needs:
       - auth_k8s
@@ -40,6 +73,13 @@ jobs:
             token="$(openssl rand -hex 16)"
           fi
           echo "token=${token}" | tee -a $OUTPUTS | tee -a OUTPUTS
+
+          if [[ "${{ inputs.k8s.volumes.pvc }}" == "Existing" ]]; then
+            pvc_name=${{ inputs.k8s.volumes.pvc_existing }}
+          else
+            pvc_name=$(cat pvc_name)
+          fi
+
           cat <<EOF > app.yaml
 
           apiVersion: apps/v1
@@ -58,6 +98,15 @@ jobs:
                   app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
               spec:
                 ${runtimeClassName}
+                initContainers:
+                  - name: set-permissions
+                    image: busybox
+                    command: ["sh", "-c", "chmod 777 ${{ inputs.k8s.volumes.pvc_mount_path }} -R"]
+                    securityContext:
+                      runAsUser: 0
+                    volumeMounts:
+                      - name: jupyter-storage
+                        mountPath: ${{ inputs.k8s.volumes.pvc_mount_path }}
                 containers:
                   - name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
                     image: ${{ inputs.service_k8s.image }}
@@ -84,7 +133,13 @@ jobs:
                         memory: "${{ inputs.k8s.resources.limits.memory }}"
                         cpu: "${{ inputs.k8s.resources.limits.cpu }}"
                         ${gpu_limits}
-
+                    volumeMounts:
+                      - name: jupyter-storage
+                        mountPath: ${{ inputs.k8s.volumes.pvc_mount_path }}
+                volumes:
+                  - name: jupyter-storage
+                    persistentVolumeClaim:
+                      claimName: ${pvc_name}  # Assumes PVC name is provided as an input
           ---
           apiVersion: v1
           kind: Service
@@ -106,9 +161,18 @@ jobs:
   apply_k8s_deployment:
     needs:
       - prepare_k8s_deployment
+      - prepare_k8s_pvc
     steps:
       - name: Load outputs
         run: cat OUTPUTS >> $OUTPUTS
+      - name: Apply PVC
+        if: ${{ inputs.k8s.volumes.pvc === New }}
+        run: kubectl apply -f pvc.yaml
+        cleanup: |
+          if [[ "${{ inputs.k8s.volumes.pvc_persist }}" == "false" ]]; then
+            kubectl delete -f pvc.yaml
+            touch pvc.deleted
+          fi
       - name: Apply Deployment and Service
         run: kubectl apply -f app.yaml
         cleanup: |
@@ -160,10 +224,13 @@ jobs:
           echo "jupyter_pod=$jupyter_pod" | tee -a $OUTPUTS | tee -a OUTPUTS
           touch pod.running
       - name: Stream Logs
-        run: kubectl logs -f deployment/${{ needs.apply_k8s_deployment.outputs.app_name }} -n ${{ inputs.k8s.namespace }}
+        run: |
+          kubectl logs -f deployment/${{ needs.apply_k8s_deployment.outputs.app_name }} -n ${{ inputs.k8s.namespace }}
+          echo Existing
   create_k8s_session:
     needs:
       - prepare_k8s_deployment
+      - prepare_k8s_pvc
     steps:
       - name: Wait until the Kubernetes deployment reaches its final stage
         run: |
@@ -215,16 +282,66 @@ jobs:
             label: Namespace
             type: kubernetes-namespaces
             clusterName: ${{ inputs.k8s.cluster }}
-          pvc:
-            label: Persistent Volume Claim
-            type: dropdown
-            default: None
-            options:
-              - value: None
-                label: None
+          volumes:
+            type: group
+            label: Volumes
+            collapsed: true
+            tooltip: Specify storage settings for Persistent Volume Claims (PVCs), including size, storage class, and mount path.
+            items:
+              pvc:
+                label: Persistent Volume Claim
+                type: dropdown
+                default: New
+                options:
+                  - value: Existing
+                    label: Select Existing PVC
+                  - value: New
+                    label: Create New PVC
+              pvc_mount_path:
+                label: Mount Path
+                type: string
+                default: /mnt
+              pvc_existing:
+                label: Select PVC Name
+                type: kubernetes-pvc
+                clusterName: ${{ inputs.k8s.cluster }}
+                namespace: ${{ inputs.k8s.namespace }}
+                hidden: ${{ inputs.k8s.volumes.pvc !== Existing }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
+              pvc_storage_size:
+                label: Enter PVC Size
+                type: string
+                hidden: ${{ inputs.k8s.volumes.pvc !== New }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
+                default: 10Gi
+              pvc_storage_class:
+                label: Enter PVC Storage Size
+                type: string
+                hidden: ${{ inputs.k8s.volumes.pvc !== New }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
+                default: standard
+              pvc_persist:
+                label: Persist PVC After Completion
+                type: boolean
+                default: false
+                hidden: ${{ inputs.k8s.volumes.pvc !== 'New' }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
+                tooltip: If true, the PVC will persist after the job is canceled or completed. If false, it will be deleted.
+              pvc_name:
+                label: Enter PVC Name
+                type: string
+                hidden: ${{ inputs.k8s.volumes.pvc_persist === false || inputs.k8s.volumes.pvc !== New  }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
           resources:
             type: group
             label: Resources
+            collapsed: true
+            tooltip: Configure CPU, memory, and GPU settings to define the computational resources allocated to the pod.
             items:
               requests:
                 type: group

@@ -298,7 +298,7 @@ jobs:
                   - value: New
                     label: Create New PVC
               pvc_mount_path:
-                label: Select PVC Name
+                label: Mount Path
                 type: string
                 default: /mnt
               pvc_existing:

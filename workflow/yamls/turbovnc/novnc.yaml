@@ -159,6 +159,7 @@ jobs:
             include-workspace: false
             include-unprovisioned: true
             tooltip: Resource to host the service
+            csp: openstack
           nports:
             type: number
             label: Number of Ports to Reserve

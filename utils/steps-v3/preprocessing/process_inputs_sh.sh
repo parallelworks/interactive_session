@@ -19,15 +19,6 @@ fi
 
 sed -i "s/__job_number__/${job_number}/g" resources/host/inputs.sh
 
-# RUN IN CONTROLLER, SLURM PARTITION OR PBS QUEUE?
-if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
-    session_wrapper_dir=controller
-else
-    session_wrapper_dir=partition
-fi
-echo "export session_wrapper_dir=${session_wrapper_dir}" >> resources/host/inputs.sh
-
-
 # Paths to the scripts to kill the jobs
 echo "export kill_ssh=${pw_job_dir}/kill_ssh.sh" >> resources/host/inputs.sh
 echo "export kill_sh=${pw_job_dir}/kill.sh" >> resources/host/inputs.sh

@@ -10,9 +10,7 @@ app:
 
 jobs:
   preprocessing:
-    steps:
-      - name: Preprocessing
-        run: ./utils/steps-v3/preprocessing/preprocessing.sh 
+    steps: 
       - name: Validating Target Resource
         run: ./utils/steps-v3/preprocessing/input_form_resource_wrapper.sh ${{ inputs.pwrl_host.resource.ip }}
       - name: Process Inputs

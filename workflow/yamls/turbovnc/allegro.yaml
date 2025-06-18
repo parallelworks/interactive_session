@@ -243,7 +243,7 @@ jobs:
             tooltip: Make sure the display protocol is installed in the host!
             default: turbovnc
           load_env:
-            label: Command to load RStudio to the PATH
+            label: Command to load Allegro to the PATH
             type: string
             optional: true
             tooltip: To load the environment, enter the appropriate command, for example, module load module-name or source path/to/env.sh.
@@ -251,4 +251,4 @@ jobs:
             label: Launch command
             type: string
             default: flatpak run --command=bottles-cli com.usebottles.bottles run -b Cadence -p allegro_free_viewer
-            tooltip: Command to start RStudio
+            tooltip: Command to start Allegro

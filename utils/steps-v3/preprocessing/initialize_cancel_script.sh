@@ -26,7 +26,9 @@ job_to_clean="/pw/jobs/${workflow_name}/${formatted_job_number_to_clean}"
 completed_kill_sh=${job_to_clean}/kill.sh.completed
 
 echo "#!/bin/bash" > ${kill_sh}
-echo "mv ${kill_sh} ${kill_sh}.completed" >> ${kill_sh}
+echo "cp ${kill_sh} ${kill_sh}.completed" >> ${kill_sh}
+echo "echo ${kill_sh} was already executed" >> ${kill_sh}
+
 cat resources/host/inputs.sh >> ${kill_sh}
 if [ "${job_number_to_clean}" -gt 0 ] && [ -f "${completed_kill_sh}" ]; then
     echo "trap \"rm -rf ${job_to_clean}\" EXIT" >> ${kill_sh}

@@ -78,10 +78,10 @@
         value='1'
       ></param>
       <param 
-        name='_sch__dd_mem_d_per_d_cpu_e_' 
-        label='Minimum memory required per usable allocated CPU' 
+        name='_sch__dd_mem_e_' 
+        label='Minimum total memory required' 
         type='text' 
-        help='--mem-per-cpu=value slurm directive' 
+        help='--mem=value slurm directive' 
         value='8G'
         optional='true'  
       ></param>   

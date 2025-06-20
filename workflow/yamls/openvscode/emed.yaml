@@ -183,7 +183,7 @@ jobs:
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}          
             min: 1
-            max: 8
+            max: 4
             default: 1
             tooltip: "--gres=gpu:X slurm directive"
           _sch__dd_cpus_d_per_d_task_e_:

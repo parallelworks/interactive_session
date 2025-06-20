@@ -323,6 +323,7 @@ def get_scheduler_directives_from_input_form(inputs_dict):
             schd = schd.replace('_d_', '-')
             schd = schd.replace('_dd_', '--')
             schd = schd.replace('_e_', '=')
+            schd = schd.replace('_colon_', ':')
             schd = schd.replace('___', ' ')
             if v:
                 scheduler_directives.append(schd+str(v))

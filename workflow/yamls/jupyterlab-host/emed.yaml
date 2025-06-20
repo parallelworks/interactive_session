@@ -182,11 +182,11 @@ jobs:
             max: 32
             default: 1
             tooltip: --cpus-per-task=value slurm directive
-          _sch__dd_mem_d_per_d_cpu_e_:
+          _sch__dd_mem_e_:
             type:  string
-            label: Minimum memory required per usable allocated CPU
+            label: Minimum total memory required
             default: 8GB
-            tooltip: --mem-per-cpu=value slurm directive
+            tooltip: --mem=value slurm directive
             optional: true
           _sch__dd_time_e_:
             type:  string

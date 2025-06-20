@@ -178,7 +178,9 @@ jobs:
           _sch__dd_gres_e_gpu_colon_:
             type:  number
             label: Number of GPUs
-            hidden: ${{ inputs.pwrl_host._sch__dd_partition_e_ !== 'gpu' && inputs.pwrl_host._sch__dd_partition_e_ !== 'gpu-quick' }}            
+            hidden: ${{ inputs.pwrl_host._sch__dd_partition_e_ !== 'gpu' && inputs.pwrl_host._sch__dd_partition_e_ !== 'gpu-quick' }}  
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}          
             min: 1
             max: 8
             default: 1

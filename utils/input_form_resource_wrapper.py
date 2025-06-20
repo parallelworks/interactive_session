@@ -308,10 +308,11 @@ def get_scheduler_directives_from_input_form(inputs_dict):
     The parameter names are converted to scheduler directives
     # Character mapping for special scheduler parameters:
     # 1. _sch_ --> ''
-    # 1. _d_ --> '-'
-    # 2. _dd_ --> '--'
-    # 2. _e_ --> '='
-    # 3. ___ --> ' ' (Not in this function)
+    # 2. _d_ --> '-'
+    # 3. _dd_ --> '--'
+    # 4. _e_ --> '='
+    # 5. _colon_ --> ':'
+    # 5. ___ --> ' ' (Not in this function)
     # Get special scheduler parameters
     """
 
@@ -322,6 +323,7 @@ def get_scheduler_directives_from_input_form(inputs_dict):
             schd = schd.replace('_d_', '-')
             schd = schd.replace('_dd_', '--')
             schd = schd.replace('_e_', '=')
+            schd = schd.replace('_colon_', ':')
             schd = schd.replace('___', ' ')
             if v:
                 scheduler_directives.append(schd+str(v))

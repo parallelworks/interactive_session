@@ -175,6 +175,16 @@ jobs:
             optional: true
             tooltip: Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.
             resource: ${{ inputs.pwrl_host.resource }}
+          _sch__dd_gres_e_gpu_colon_:
+            type:  number
+            label: Number of GPUs
+            hidden: ${{ inputs.pwrl_host._sch__dd_partition_e_ !== 'gpu' && inputs.pwrl_host._sch__dd_partition_e_ !== 'gpu-quick' }}  
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}          
+            min: 1
+            max: 8
+            default: 1
+            tooltip: "--gres=gpu:X slurm directive"
           _sch__dd_cpus_d_per_d_task_e_:
             type:  number
             label: CPUs per task

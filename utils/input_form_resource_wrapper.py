@@ -280,7 +280,7 @@ def complete_resource_information(inputs_dict):
         inputs_dict, 
         {
             '__home__': inputs_dict['resource']['home'],
-            '__HOMED__': inputs_dict['resource']['home'],
+            '__HOME__': inputs_dict['resource']['home'],
             '__workdir__': inputs_dict['resource']['workdir'],
             '__WORKDIR__': inputs_dict['resource']['workdir'],
 	        '__user__': inputs_dict['resource']['username'],

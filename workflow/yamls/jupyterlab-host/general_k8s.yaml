@@ -444,7 +444,7 @@ jobs:
           parent_install_dir:
             label: Parent Install Directory
             type: string
-            default: __HOME__/pw/software
+            default: /pw/apps
             hidden: ${{ inputs.service.conda_install == false }}
             ignore: ${{ .hidden }}
             tooltip: Software dependencies are installed in this directory. Ensure the directory has sufficient space!

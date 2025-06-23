@@ -226,6 +226,9 @@ def complete_resource_information(inputs_dict):
 
     inputs_dict['resource']['publicIp'] = inputs_dict['resource']['username'] + '@' + inputs_dict['resource']['publicIp']
     
+    command_to_get_home_directory = f"{SSH_CMD} {inputs_dict['resource']['publicIp']} pwd"
+    inputs_dict['resource']['home'] = get_command_output(command_to_get_home_directory)
+
     if 'workdir' in inputs_dict:
         inputs_dict['resource']['workdir'] = inputs_dict['workdir']
 
@@ -238,8 +241,7 @@ def complete_resource_information(inputs_dict):
     else:
         workdir = inputs_dict['resource'].get('workdir')
         if not workdir or workdir == '${HOME}':
-            command_to_get_home_directory = f"{SSH_CMD} {inputs_dict['resource']['publicIp']} pwd"
-            inputs_dict['resource']['workdir'] = get_command_output(command_to_get_home_directory)
+            inputs_dict['resource']['workdir'] = inputs_dict['resource']['home'] 
 
         if inputs_dict['jobschedulertype'] == 'SLURM':
             if '_sch__dd_partition_e_' in inputs_dict:
@@ -277,6 +279,8 @@ def complete_resource_information(inputs_dict):
     inputs_dict = replace_placeholders(
         inputs_dict, 
         {
+            '__home__': inputs_dict['resource']['home'],
+            '__HOME__': inputs_dict['resource']['home'],
             '__workdir__': inputs_dict['resource']['workdir'],
             '__WORKDIR__': inputs_dict['resource']['workdir'],
 	        '__user__': inputs_dict['resource']['username'],

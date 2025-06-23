@@ -239,7 +239,7 @@ jobs:
           parent_install_dir:
             label: Parent Install Directory  
             type: string
-            default:  __WORKDIR__/pw/software
+            default:  __HOME__/pw/software
             hidden: ${{ inputs.service.conda_install == false }}
             ignore: ${{ .hidden }}
             tooltip: Software dependencies are installed in this directory. Ensure the directory has sufficient space!
@@ -262,7 +262,7 @@ jobs:
           load_env:
             label: Command to load Jupyter Notebook to the PATH
             type: string
-            default: source __WORKDIR__/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base
+            default: source __HOME__/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base
             hidden:  ${{ inputs.service.conda_install == true }}
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}

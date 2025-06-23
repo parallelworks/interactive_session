@@ -431,7 +431,7 @@ jobs:
             label: noVNC installation directory
             type: string
             hidden: true
-            default: __WORKDIR__/pw/software
+            default: __HOME__/pw/software
           name:
             type: string
             label: Select remote display protocol

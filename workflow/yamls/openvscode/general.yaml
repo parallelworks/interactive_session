@@ -239,7 +239,7 @@ jobs:
           directory:
             label: Directory to open in VS Code
             type: string
-            default: __WORKDIR__
+            default: __HOME__
             tooltip: 
               Directory to open in VS code
           github_token:

@@ -125,7 +125,7 @@ jobs:
           parent_install_dir:
             label: Parent Install Directory
             type: string
-            default: __WORKDIR__/pw/software
+            default: __HOME__/pw/software
             tooltip: 
               Defaults to ~/pw/software. Make sure there is enough disk space available!
           download_url:
@@ -143,7 +143,7 @@ jobs:
           directory:
             label: Directory to open in VS Code
             type: string
-            default: __WORKDIR__
+            default: __HOME__
             tooltip: 
               Directory to open in VS code
           github_token:

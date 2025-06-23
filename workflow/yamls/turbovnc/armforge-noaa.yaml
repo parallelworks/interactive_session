@@ -125,7 +125,7 @@ jobs:
             label: noVNC installation directory
             type: string
             hidden: true
-            default: __WORKDIR__/pw/software
+            default: __HOME__/pw/software
           novnc_tgz_basename:
             label: Basename of the novnc tgz file
             type: string

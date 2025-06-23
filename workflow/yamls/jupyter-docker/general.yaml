@@ -238,7 +238,7 @@ jobs:
           notebook_dir:
             label: Directory to start Jupyter
             type: string
-            default: __WORKDIR__
+            default: __HOME__
             tooltip: This is the directory that you start with when the JupyterHub graphical user interface starts.  The default value here is your home directory.
           mount_directories:
             label: Docker mount volumnes

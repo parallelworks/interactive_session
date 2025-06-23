@@ -227,7 +227,7 @@ jobs:
           parent_install_dir:
             label: Parent Install Directory  
             type: string
-            default:  __WORKDIR__/pw/software
+            default:  __HOME__/pw/software
             hidden: ${{ inputs.service.conda_install == false }}
             ignore: ${{ .hidden }}
             tooltip: Software dependencies are installed in this directory. Ensure the directory has sufficient space!
@@ -238,7 +238,7 @@ jobs:
           airflow_home:
             label: Airflow Home Directory  
             type: string
-            default:  __WORKDIR__/pw/airflow
+            default:  __HOME__/pw/airflow
             tooltip: Airflow is installed if the home directory is missing
           username:
             label: User Name

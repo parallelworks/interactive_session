@@ -141,7 +141,7 @@ jobs:
 
           # Function to check if server is listening
           check_server() {
-              ssh alvaro@23.251.150.60 "curl --silent --connect-timeout \"$TIMEOUT\" \"http://${remote_host}:${remote_port}\" >/dev/null 2>&1"
+              ${sshcmd} "curl --silent --connect-timeout \"$TIMEOUT\" \"http://${remote_host}:${remote_port}\" >/dev/null 2>&1"
               return $?
           }
 
@@ -151,7 +151,7 @@ jobs:
               echo "Attempt $attempt: Checking if server is listening on ${HOST}:${PORT}..."
               
               if check_server; then
-                  echo "Success: Server is listening on ${HOST}:${PORT}!"
+                  echo "Success: Server is listening on ${remote_host}:${remote_port}!"
                   exit 0
               else
                   echo "Server not responding. Retrying in ${RETRY_INTERVAL} seconds..."

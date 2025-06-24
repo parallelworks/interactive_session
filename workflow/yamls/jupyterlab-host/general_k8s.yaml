@@ -151,6 +151,7 @@ jobs:
               echo "Attempt $attempt: Checking if server is listening on ${HOST}:${PORT}..."
               
               if check_server; then
+                  sleep 20
                   echo "Success: Server is listening on ${remote_host}:${remote_port}!"
                   exit 0
               else

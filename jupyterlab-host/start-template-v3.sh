@@ -49,6 +49,40 @@ if [ -z ${service_notebook_dir} ]; then
     service_notebook_dir="/"
 fi
 
+####################
+# START JUPYTERLAB #
+####################
+
+if [ -z ${service_notebook_dir} ]; then
+    service_notebook_dir="/"
+fi
+
+export JUPYTER_CONFIG_DIR=${PWD}
+rm -f jupyter_lab_config.py
+jupyter-lab --generate-config
+
+sed -i "s|^.*c\.ExtensionApp\.default_url.*|c.ExtensionApp.default_url = '${basepath}'|" jupyter_lab_config.py
+sed -i "s|^.*c\.LabServerApp\.app_url.*|c.LabServerApp.app_url = '${basepath}/lab'|" jupyter_lab_config.py
+sed -i "s|^.*c\.LabApp\.app_url.*|c.LabApp.app_url = '/lab'|" jupyter_lab_config.py
+sed -i "s|^.*c\.LabApp\.default_url.*|c.LabApp.default_url = '${basepath}/lab'|" jupyter_lab_config.py
+sed -i "s|^.*c\.LabApp\.static_url_prefix.*|c.LabApp.static_url_prefix = '${basepath}/static'|" jupyter_lab_config.py
+sed -i "s|^.*c\.ServerApp\.allow_origin.*|c.ServerApp.allow_origin = '*'|" jupyter_lab_config.py
+sed -i "s|^.*c\.ServerApp\.allow_remote_access.*|c.ServerApp.allow_remote_access = True|" jupyter_lab_config.py
+sed -i "s|^.*c\.ServerApp\.base_url.*|c.ServerApp.base_url = '${basepath}'|" jupyter_lab_config.py
+sed -i "s|^.*c\.ServerApp\.default_url.*|c.ServerApp.default_url = '${basepath}/'|" jupyter_lab_config.py
+sed -i "s|^.*c\.ServerApp\.port.*|c.ServerApp.port = ${jupyterlab_port}|" jupyter_lab_config.py
+sed -i "s|^.*c\.ServerApp\.token.*|c.ServerApp.token = ''|" jupyter_lab_config.py
+sed -i "s|^.*c\.ServerApp\.tornado_settings.*|c.ServerApp.tornado_settings = {\"static_url_prefix\":\"${basepath}/static/\"}|" jupyter_lab_config.py
+sed -i "s|^.*c\.ServerApp\.root_dir.*|c.ServerApp.root_dir = '${service_notebook_dir}'|" jupyter_lab_config.py
+
+cd ${service_notebook_dir}
+jupyter-lab --port=${jupyterlab_port} --no-browser --config=${PWD}/jupyter_lab_config.py &
+pid=$!
+echo "kill ${pid} # jupyterlab" >> cancel.sh
+
+#jupyter-lab --port=${jupyterlab_port} --ip ${HOSTNAME} --no-browser --config=${PWD}/jupyter_lab_config.py
+
+
 #######################
 # START NGINX WRAPPER #
 #######################
@@ -148,36 +182,5 @@ else
     # Print logs
     sudo docker logs ${container_name}
 fi
-
-
-####################
-# START JUPYTERLAB #
-####################
-
-if [ -z ${service_notebook_dir} ]; then
-    service_notebook_dir="/"
-fi
-
-export JUPYTER_CONFIG_DIR=${PWD}
-rm -f jupyter_lab_config.py
-jupyter-lab --generate-config
-
-sed -i "s|^.*c\.ExtensionApp\.default_url.*|c.ExtensionApp.default_url = '${basepath}'|" jupyter_lab_config.py
-sed -i "s|^.*c\.LabServerApp\.app_url.*|c.LabServerApp.app_url = '${basepath}/lab'|" jupyter_lab_config.py
-sed -i "s|^.*c\.LabApp\.app_url.*|c.LabApp.app_url = '/lab'|" jupyter_lab_config.py
-sed -i "s|^.*c\.LabApp\.default_url.*|c.LabApp.default_url = '${basepath}/lab'|" jupyter_lab_config.py
-sed -i "s|^.*c\.LabApp\.static_url_prefix.*|c.LabApp.static_url_prefix = '${basepath}/static'|" jupyter_lab_config.py
-sed -i "s|^.*c\.ServerApp\.allow_origin.*|c.ServerApp.allow_origin = '*'|" jupyter_lab_config.py
-sed -i "s|^.*c\.ServerApp\.allow_remote_access.*|c.ServerApp.allow_remote_access = True|" jupyter_lab_config.py
-sed -i "s|^.*c\.ServerApp\.base_url.*|c.ServerApp.base_url = '${basepath}'|" jupyter_lab_config.py
-sed -i "s|^.*c\.ServerApp\.default_url.*|c.ServerApp.default_url = '${basepath}/'|" jupyter_lab_config.py
-sed -i "s|^.*c\.ServerApp\.port.*|c.ServerApp.port = ${jupyterlab_port}|" jupyter_lab_config.py
-sed -i "s|^.*c\.ServerApp\.token.*|c.ServerApp.token = ''|" jupyter_lab_config.py
-sed -i "s|^.*c\.ServerApp\.tornado_settings.*|c.ServerApp.tornado_settings = {\"static_url_prefix\":\"${basepath}/static/\"}|" jupyter_lab_config.py
-sed -i "s|^.*c\.ServerApp\.root_dir.*|c.ServerApp.root_dir = '${service_notebook_dir}'|" jupyter_lab_config.py
-
-cd ${service_notebook_dir}
-jupyter-lab --port=${jupyterlab_port} --no-browser --config=${PWD}/jupyter_lab_config.py
-#jupyter-lab --port=${jupyterlab_port} --ip ${HOSTNAME} --no-browser --config=${PWD}/jupyter_lab_config.py
 
 sleep inf

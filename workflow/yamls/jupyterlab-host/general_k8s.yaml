@@ -151,6 +151,8 @@ jobs:
               echo "Attempt $attempt: Checking if server is listening on ${HOST}:${PORT}..."
               
               if check_server; then
+                  # Give JupyterLab enough time to start to prevent NGINX proxy from erroring
+                  sleep 5
                   echo "Success: Server is listening on ${remote_host}:${remote_port}!"
                   exit 0
               else

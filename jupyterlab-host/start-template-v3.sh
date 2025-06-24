@@ -65,8 +65,15 @@ server {
  add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
+
+ # Define the upstream block
+ upstream backend {
+     server 127.0.0.1:${jupyterlab_port};
+ }
+
+
  location / {
-     proxy_pass http://127.0.0.1:${jupyterlab_port}${basepath}/;
+     proxy_pass http://backend:${jupyterlab_port}${basepath}/;
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";
@@ -74,6 +81,10 @@ server {
        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
        proxy_set_header Host \$http_host;
        proxy_set_header X-NginX-Proxy true;
+       # Retry logic for upstream errors
+       proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;
+       proxy_next_upstream_timeout 5s;  # Timeout for retry attempts
+       proxy_next_upstream_tries 3;    # Number of retry attempts
  }
 }
 HERE

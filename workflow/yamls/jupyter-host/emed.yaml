@@ -123,6 +123,37 @@ jobs:
             sleep 5
           done
           echo "remote_port=${remote_port}"  | tee -a $OUTPUTS
+      - name: Waiting for Server to Start
+        env:
+          sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
+          remote_port: ${{ needs.create_session.outputs.remote_port }}
+          remote_host: ${{ needs.create_session.outputs.target_hostname }}
+        run: |
+          TIMEOUT=5
+          RETRY_INTERVAL=3
+
+          # Function to check if server is listening
+          check_server() {
+              ${sshcmd} "curl --silent --connect-timeout \"$TIMEOUT\" \"http://${remote_host}:${remote_port}\" >/dev/null 2>&1"
+              return 0
+          }
+
+          # Main loop
+          attempt=1
+          while true; do
+              echo "Attempt $attempt: Checking if server is listening on ${HOST}:${PORT}..."
+              
+              if check_server; then
+                  # Sleep to wait for jupyter after nginx connects
+                  sleep 20
+                  echo "Success: Server is listening on ${remote_host}:${remote_port}!"
+                  exit 0
+              else
+                  echo "Server not responding. Retrying in ${RETRY_INTERVAL} seconds..."
+                  sleep "$RETRY_INTERVAL"
+                  ((attempt++))
+              fi
+          done
       - name: Select Local Port
         run: |
           local_port=$(pw agent open-port)

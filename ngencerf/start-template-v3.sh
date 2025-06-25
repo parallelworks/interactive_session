@@ -1,6 +1,14 @@
 # Initialize cancel script
 set -x
 
+PORT=5000
+if lsof -i :$PORT >/dev/null 2>&1; then
+    echo
+    echo "Error: Port $PORT is already in use."
+    echo "Please ensure that no other NGENCERF job is currently running in the cluster."
+    echo "Exiting workflow run"
+    exit 1
+fi
 
 # Test if the user can execute a passwordless sudo command
 if sudo -n true 2>/dev/null; then

@@ -165,6 +165,16 @@ jobs:
               workflow_name=$(pwd | rev | cut -d "/" -f2 | rev | tr '_' '-' | tr '.' '-')
               pvc_name="${PW_USER}-${workflow_name}-${job_number}-pvc"
             fi
+            pvc_storage_class=${{ inputs.k8s.volumes.pvc_storage_class }} 
+            if [ -z "${pvc_storage_class}" ] || [[ "${pvc_storage_class}" == "undefined" ]]; then
+              default_class=$(kubectl get storageclass -n ${{ inputs.k8s.namespace }} | grep '(default)' || true)
+              if [ -z "${default_class}" ]; then
+                echo "ERROR: No default storage class found. You must specify one explicitly."
+                exit 1
+              fi
+            else
+              storageClassName="storageClassName: ${{ inputs.k8s.volumes.pvc_storage_class }}"
+            fi
             echo "${pvc_name}" > pvc_name
             cat <<EOF > pvc.yaml
             apiVersion: v1
@@ -178,7 +188,7 @@ jobs:
               resources:
                 requests:
                   storage: ${{ inputs.k8s.volumes.pvc_storage_size }}  
-              storageClassName: ${{ inputs.k8s.volumes.pvc_storage_class }} 
+              ${storageClassName} 
             EOF
             cat pvc.yaml
         - name: Dry Run PVC
@@ -186,6 +196,8 @@ jobs:
           run: |
             echo "Performing dry run..."
             kubectl apply -f pvc.yaml --dry-run=client
+        - name: Dummy
+          run: echo Dummy
   prepare_k8s_deployment:
     needs:
       - auth_k8s
@@ -631,8 +643,8 @@ jobs:
                 type: string
                 hidden: ${{ inputs.k8s.volumes.pvc !== New }}
                 ignore: ${{ .hidden }}
-                optional: ${{ .hidden }}
-                default: standard
+                optional: true
+                tooltip: Leave blank to use the default storage class configured in the cluster.
               pvc_persist:
                 label: Persist PVC After Completion
                 type: boolean

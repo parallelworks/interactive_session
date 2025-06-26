@@ -639,7 +639,7 @@ jobs:
                 optional: ${{ .hidden }}
                 default: 10Gi
               pvc_storage_class:
-                label: Enter PVC Storage Size
+                label: Enter PVC Storage Class
                 type: string
                 hidden: ${{ inputs.k8s.volumes.pvc !== New }}
                 ignore: ${{ .hidden }}

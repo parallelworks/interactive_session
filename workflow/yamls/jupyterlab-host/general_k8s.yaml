@@ -196,8 +196,8 @@ jobs:
               pvc_name="${{ inputs.k8s.volumes.pvc_name }}"
             else
               job_number=$(pwd | rev | cut -d "/" -f1 | rev)
-              workflow_name=$(pwd | rev | cut -d "/" -f2 | rev | tr '_' '-' | tr '.' '-')
-              pvc_name="${PW_USER}-${workflow_name}-${job_number}-pvc"
+              workflow_name=$(pwd | rev | cut -d "/" -f2 | rev)
+              pvc_name=$(echo "${PW_USER}-${workflow_name}-${job_number}" | tr '_' '-' | tr '.' '-' | tr '[:upper:]' '[:lower:]')-pvc
             fi
             pvc_storage_class=${{ inputs.k8s.volumes.pvc_storage_class }} 
             if [ -z "${pvc_storage_class}" ] || [[ "${pvc_storage_class}" == "undefined" ]]; then

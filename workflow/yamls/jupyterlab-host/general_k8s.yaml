@@ -234,7 +234,7 @@ jobs:
           run: echo Dummy
   prepare_k8s_deployment:
     needs:
-      - auth_k8s
+      - prepare_k8s_pvc
     steps:
       - name: Defining App Name
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
@@ -350,7 +350,6 @@ jobs:
   apply_k8s_deployment:
     needs:
       - prepare_k8s_deployment
-      - prepare_k8s_pvc
     steps:
       - name: Load outputs
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
@@ -422,7 +421,6 @@ jobs:
   create_k8s_session:
     needs:
       - prepare_k8s_deployment
-      - prepare_k8s_pvc
     steps:
       - name: Wait until the Kubernetes deployment reaches its final stage
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}

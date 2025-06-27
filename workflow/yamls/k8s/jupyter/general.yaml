@@ -62,7 +62,7 @@ jobs:
         
   prepare_k8s_deployment:
     needs:
-      - auth_k8s
+      - prepare_k8s_pvc
     steps:
       - name: Defining App Name
         run: |
@@ -174,7 +174,6 @@ jobs:
   apply_k8s_deployment:
     needs:
       - prepare_k8s_deployment
-      - prepare_k8s_pvc
     steps:
       - name: Load outputs
         run: cat OUTPUTS >> $OUTPUTS
@@ -243,7 +242,6 @@ jobs:
   create_k8s_session:
     needs:
       - prepare_k8s_deployment
-      - prepare_k8s_pvc
     steps:
       - name: Wait until the Kubernetes deployment reaches its final stage
         run: |

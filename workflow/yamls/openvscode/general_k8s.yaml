@@ -156,7 +156,7 @@ jobs:
         run: pw kube auth ${{ inputs.k8s.cluster }}
   prepare_k8s_pvc:
       needs:
-        - prepare_k8s_pvc
+        - auth_k8s
       steps:
         - name: Creating New PVC YAML
           if: ${{ inputs.targetType === 'kubernetes-cluster' && inputs.k8s.volumes.pvc === New  }}
@@ -203,7 +203,7 @@ jobs:
           run: echo Dummy
   prepare_k8s_deployment:
     needs:
-      - auth_k8s
+      - prepare_k8s_pvc
     steps:
       - name: Defining App Name
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}

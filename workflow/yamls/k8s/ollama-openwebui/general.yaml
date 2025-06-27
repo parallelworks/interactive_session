@@ -23,7 +23,7 @@ jobs:
             else
               job_number=$(pwd | rev | cut -d "/" -f1 | rev)
               workflow_name=$(pwd | rev | cut -d "/" -f2 | rev)
-              pvc_name=$(echo "${PW_USER}-${workflow_name}-${job_number}" | tr '_' '-' | tr '.' '-' | tr '[:upper:]' '[:lower:]')-pvc
+              pvc_name=$(echo "${PW_USER}${workflow_name}${job_number}" | sed 's|_||g' | sed 's|\.||g' | tr '[:upper:]' '[:lower:]' | tail -c 56)-pvc
             fi
             pvc_storage_class=${{ inputs.k8s.volumes.pvc_storage_class }} 
             if [ -z "${pvc_storage_class}" ] || [[ "${pvc_storage_class}" == "undefined" ]]; then
@@ -65,7 +65,7 @@ jobs:
         run: |
           job_number=$(pwd | rev | cut -d "/" -f1 | rev)
           workflow_name=$(pwd | rev | cut -d "/" -f2 | rev)
-          app_name=$(echo "${PW_USER}-${workflow_name}-${job_number}" | sed 's|_||g' | sed 's|\.||g' | tr '[:upper:]' '[:lower:]' | tail -c 56)
+          app_name=$(echo "${PW_USER}${workflow_name}${job_number}" | sed 's|_||g' | sed 's|\.||g' | tr '[:upper:]' '[:lower:]' | tail -c 56)
           echo "app_name=${app_name}" | tee -a $OUTPUTS | tee -a OUTPUTS
       - name: Creating Deployment and Service YAML
         run: |

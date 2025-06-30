@@ -214,12 +214,24 @@ jobs:
           _sch__dd_partition_e__tag_existing:
             type: dropdown
             label: SLURM partition
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype || 'existing' !== inputs.pwrl_host.resource.provider || 'noaaursacluster' === inputs.pwrl_host.resource.name }}
             ignore: ${{ .hidden }}
             options:
               - label: service
                 value: service 
             default: service           
+            tooltip: >-
+              Partition to submit the interactive job. Leave empty to let SLURM
+              pick the optimal option.
+          _sch__dd_partition_e__tag_ursa:
+            type: dropdown
+            label: SLURM partition
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype || 'existing' !== inputs.pwrl_host.resource.provider || 'noaaursacluster' !== inputs.pwrl_host.resource.name }}
+            ignore: ${{ .hidden }}
+            options:
+              - label: u1-service
+                value: u1-service 
+            default: u1-service            
             tooltip: >-
               Partition to submit the interactive job. Leave empty to let SLURM
               pick the optimal option.

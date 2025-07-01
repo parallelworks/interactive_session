@@ -214,7 +214,7 @@ jobs:
           _sch__dd_partition_e__tag_existing:
             type: dropdown
             label: SLURM partition
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype || 'existing' !== inputs.pwrl_host.resource.provider || 'noaaursacluster' === inputs.pwrl_host.resource.name }}
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype || 'existing' !== inputs.pwrl_host.resource.provider ||  (inputs.pwrl_host.resource.name includes 'ursa') }}
             ignore: ${{ .hidden }}
             options:
               - label: service
@@ -226,7 +226,7 @@ jobs:
           _sch__dd_partition_e__tag_ursa:
             type: dropdown
             label: SLURM partition
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype || 'existing' !== inputs.pwrl_host.resource.provider || 'noaaursacluster' !== inputs.pwrl_host.resource.name }}
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype || 'existing' !== inputs.pwrl_host.resource.provider || (inputs.pwrl_host.resource.name !includes 'ursa')  }}
             ignore: ${{ .hidden }}
             options:
               - label: u1-service

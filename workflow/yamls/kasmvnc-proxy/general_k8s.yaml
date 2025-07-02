@@ -1,0 +1,729 @@
+permissions:
+  - '*'
+sessions:
+  session:
+    useTLS: true
+    useCustomDomain: true
+    redirect: true
+
+
+app:
+  target: inputs.pwrl_host.resource
+
+jobs:
+  preprocessing:
+    steps:
+      - name: Validating Target Resource
+        if: ${{ inputs.targetType === 'compute-cluster' }}
+        run: ./utils/steps-v3/preprocessing/input_form_resource_wrapper.sh ${{ inputs.pwrl_host.resource.ip }}
+      - name: Process Inputs
+        if: ${{ inputs.targetType === 'compute-cluster' }}
+        run: | 
+          ./utils/steps-v3/preprocessing/process_inputs_sh.sh 
+          echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
+      - name: Transfer Files to Controller
+        if: ${{ inputs.targetType === 'compute-cluster' }}
+        run: ./utils/steps-v3/preprocessing/transfer_files_to_controller.sh
+      - name: Controller Preprocessing
+        if: ${{ inputs.targetType === 'compute-cluster' }}
+        run: ./utils/steps-v3/preprocessing/controller_preprocessing.sh
+      - name: Initialize Cancel Script
+        if: ${{ inputs.targetType === 'compute-cluster' }}
+        run: ./utils/steps-v3/preprocessing/initialize_cancel_script.sh
+
+  controller_job:
+    needs:
+       - preprocessing
+    steps:
+      - name: Create Controller Session Script
+        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
+        run: ./utils/steps-v3/controller/create_session_script.sh
+      - name: Launch and Monitor Controller Job
+        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
+        run: ./utils/steps-v3/controller/launch_and_monitor_job.sh
+        cleanup: |
+          if [[ "${{ inputs.pwrl_host.jobschedulertype }}" == "CONTROLLER" ]]; then
+            ./kill.sh
+          fi
+      - name: Clean and Exit
+        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
+        run: ./utils/steps-v3/clean_and_exit.sh
+
+  compute_job:
+    needs:
+       - preprocessing
+    steps:
+      - name: Create Compute Session Script
+        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
+        run: ./utils/steps-v3/compute/create_session_script.sh
+      - name:  Launch and Monitor Compute Job
+        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
+        run: ./utils/steps-v3/compute/launch_and_monitor_job.sh
+        cleanup: |
+          if [[ "${{ inputs.pwrl_host.jobschedulertype }}" != "CONTROLLER" ]]; then
+            ./kill.sh
+          fi
+      - name: Clean and Exit
+        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
+        run: ./utils/steps-v3/clean_and_exit.sh
+
+
+  create_session:
+    needs:
+       - preprocessing
+    steps:
+      - name: Set Session Name
+        if: ${{ inputs.targetType === 'compute-cluster' }}
+        run: |
+          session_name=$(pwd | rev | cut -d'/' -f1-2 | tr '/' '-' | rev)
+          echo "session_name=${session_name}" | tee -a $OUTPUTS
+      - name: Get Controller Hostname
+        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
+        env:
+          sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
+        run: |
+          target_hostname=$(${sshcmd} hostname)
+          echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
+      - name: Get Compute Hostname
+        if: ${{ 'SLURM' === inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
+        env:
+          sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
+        run: |
+          source utils/load-env.sh
+          source resources/host/inputs.sh
+          while true; do
+            failIfError
+            echo "Waiting for target hostname..."
+
+            # Check if the service.port file exists and read its contents
+            target_hostname=$(${sshcmd} "if [ -f ${resource_jobdir}/target.hostname ]; then cat ${resource_jobdir}/target.hostname; fi")
+
+            # Exit the loop if file was found and read
+            if [ -n "${target_hostname}" ]; then
+              echo "Target's hostname found: ${target_hostname}"
+              break
+            fi
+
+            # Wait before the next check
+            sleep 5
+          done
+          job_id=$(${sshcmd} cat ${resource_jobdir}/job.id)
+          if [ -z "${job_id}" ]; then
+            echo "Error: SLURM job ID is empty!" >&2
+            exit 1
+          fi
+          target_hostname=$(${sshcmd} squeue -j "${job_id}" --noheader --format="%N")
+          echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
+
+      - name: Get Remote Port
+        if: ${{ inputs.targetType === 'compute-cluster' }}
+        env:
+          sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
+        run: |
+          source resources/host/inputs.sh
+          while true; do
+            echo "Waiting for service port file..."
+
+            # Check if the service.port file exists and read its contents
+            remote_port=$(${sshcmd} "bash -c \"if [ -f ${resource_jobdir}/service.port ]; then cat ${resource_jobdir}/service.port; fi\"")
+
+            # Exit the loop if remote_port is successfully set (file was found and read)
+            if [ -n "$remote_port" ]; then
+              echo "Service port found: $remote_port"
+              break
+            fi
+
+            # Wait before the next check
+            sleep 5
+          done
+          echo "remote_port=${remote_port}"  | tee -a $OUTPUTS
+      - name: Waiting for Server to Start
+        if: ${{ inputs.targetType === 'compute-cluster' }}
+        env:
+          sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
+          remote_port: ${{ needs.create_session.outputs.remote_port }}
+          remote_host: ${{ needs.create_session.outputs.target_hostname }}
+        run: |
+          TIMEOUT=5
+          RETRY_INTERVAL=3
+
+          # Function to check if server is listening
+          check_server() {
+              ${sshcmd} "curl --silent --connect-timeout \"$TIMEOUT\" \"http://${remote_host}:${remote_port}\" >/dev/null 2>&1"
+              return 0
+          }
+
+          # Main loop
+          attempt=1
+          while true; do
+              echo "Attempt $attempt: Checking if server is listening on ${HOST}:${PORT}..."
+              
+              if check_server; then
+                  echo "Success: Server is listening on ${remote_host}:${remote_port}!"
+                  exit 0
+              else
+                  echo "Server not responding. Retrying in ${RETRY_INTERVAL} seconds..."
+                  sleep "$RETRY_INTERVAL"
+                  ((attempt++))
+              fi
+          done
+      - name: Select Local Port
+        if: ${{ inputs.targetType === 'compute-cluster' }}
+        run: |
+          local_port=$(pw agent open-port)
+          echo "local_port=${local_port}"  | tee -a $OUTPUTS
+      - name: Expose Port
+        if: ${{ inputs.targetType === 'compute-cluster' }}
+        uses: parallelworks/update-session
+        with:
+          remotePort: "${{ needs.create_session.outputs.remote_port }}"
+          localPort: "${{ needs.create_session.outputs.local_port }}"
+          remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
+          target: ${{ inputs.pwrl_host.resource.id }}
+          name: ${{ sessions.session }}
+  auth_k8s:
+    steps:
+      - name: Authenticate kubectl
+        if: ${{ inputs.targetType === 'kubernetes-cluster' }}
+        run: pw kube auth ${{ inputs.k8s.cluster }}
+  prepare_k8s_pvc:
+      needs:
+        - auth_k8s
+      steps:
+        - name: Creating New PVC YAML
+          if: ${{ inputs.targetType === 'kubernetes-cluster' && inputs.k8s.volumes.pvc === New  }}
+          run: |
+            if [[ ${{ inputs.k8s.volumes.pvc_persist }} == "true" ]]; then
+              pvc_name="${{ inputs.k8s.volumes.pvc_name }}"
+            else
+              job_number=$(pwd | rev | cut -d "/" -f1 | rev)
+              workflow_name=$(pwd | rev | cut -d "/" -f2 | rev)
+              pvc_name=$(echo "${PW_USER}${workflow_name}${job_number}" | sed 's|_||g' | sed 's|\.||g' | tr '[:upper:]' '[:lower:]' | tail -c 56)-pvc
+            fi
+            pvc_storage_class=${{ inputs.k8s.volumes.pvc_storage_class }} 
+            if [ -z "${pvc_storage_class}" ] || [[ "${pvc_storage_class}" == "undefined" ]]; then
+              default_class=$(kubectl get storageclass -n ${{ inputs.k8s.namespace }} | grep '(default)' || true)
+              if [ -z "${default_class}" ]; then
+                echo "ERROR: No default storage class found. You must specify one explicitly."
+                exit 1
+              fi
+            else
+              storageClassName="storageClassName: ${{ inputs.k8s.volumes.pvc_storage_class }}"
+            fi
+            echo "${pvc_name}" > pvc_name
+            cat <<EOF > pvc.yaml
+            apiVersion: v1
+            kind: PersistentVolumeClaim
+            metadata:
+              name: ${pvc_name}
+              namespace: ${{ inputs.k8s.namespace }}
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: ${{ inputs.k8s.volumes.pvc_storage_size }}  
+              ${storageClassName} 
+            EOF
+            cat pvc.yaml
+        - name: Dry Run PVC
+          if: ${{ inputs.targetType === 'kubernetes-cluster' && inputs.k8s.volumes.pvc === New  }}
+          run: |
+            echo "Performing dry run..."
+            kubectl apply -f pvc.yaml --dry-run=client
+        - name: Dummy
+          run: echo Dummy
+
+  prepare_k8s_deployment:
+    needs:
+      - prepare_k8s_pvc
+    steps:
+      - name: Defining App Name
+        if: ${{ inputs.targetType === 'kubernetes-cluster' }}
+        run: |
+          job_number=$(pwd | rev | cut -d "/" -f1 | rev)
+          workflow_name=$(pwd | rev | cut -d "/" -f2 | rev)
+          app_name=$(echo "${PW_USER}${workflow_name}${job_number}" | sed 's|_||g' | sed 's|\.||g' | tr '[:upper:]' '[:lower:]' | tail -c 56)
+          echo "app_name=${app_name}" | tee -a $OUTPUTS | tee -a OUTPUTS
+      - name: Creating Deployment and Service YAML
+        if: ${{ inputs.targetType === 'kubernetes-cluster' }}
+        run: |
+          if [[ "${{ inputs.k8s.resources.limits.select_gpu }}" == "Custom" ]]; then
+            gpu_limits="${{ inputs.k8s.resources.limits.gpu_resource_key }}: ${{ inputs.k8s.resources.limits.number_of_gpus }}"
+          elif [[ "${{ inputs.k8s.resources.limits.select_gpu }}" != "None" ]]; then
+            gpu_limits="${{ inputs.k8s.resources.limits.select_gpu }}: ${{ inputs.k8s.resources.limits.number_of_gpus }}"
+          fi
+          # Attach RuntimeClass if it's available and using NVIDIA
+          if ! [ -z "${gpu_limits}" ]; then
+            if kubectl get runtimeclass nvidia &>/dev/null; then
+              echo "nvidia RuntimeClass is available"
+              runtimeClassName="runtimeClassName: nvidia"
+            fi
+          fi
+          
+          if [[ "${{ inputs.k8s.volumes.pvc }}" == "Existing" ]]; then
+            pvc_name=${{ inputs.k8s.volumes.pvc_existing }}
+          else
+            pvc_name=$(cat pvc_name)
+          fi
+
+          cat <<EOF > app.yaml
+
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
+            template:
+              metadata:
+                labels:
+                  app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
+              spec:
+                ${runtimeClassName}
+                initContainers:
+                  - name: set-permissions
+                    image: busybox
+                    command: ["sh", "-c", "chmod 777 ${{ inputs.k8s.volumes.pvc_mount_path }} -R"]
+                    securityContext:
+                      runAsUser: 0
+                    volumeMounts:
+                      - name: storage
+                        mountPath: ${{ inputs.k8s.volumes.pvc_mount_path }}
+                containers:
+                  - name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
+                    image: ${{ inputs.service_k8s.image }}
+                    ports:
+                      - containerPort: ${{ inputs.service_k8s.image_port }}
+                    env:
+                      - name: VNC_PW
+                        value: ${{ inputs.service_k8s.password }}
+                    securityContext:
+                      capabilities:
+                        add: ["NET_ADMIN"]  # Might be required depending on kasmvnc container usage
+                    resources:
+                      requests:
+                        memory: "${{ inputs.k8s.resources.requests.memory }}"
+                        cpu: "${{ inputs.k8s.resources.requests.cpu }}"
+                      limits:
+                        memory: "${{ inputs.k8s.resources.limits.memory }}"
+                        cpu: "${{ inputs.k8s.resources.limits.cpu }}"
+                        ${gpu_limits}
+                    volumeMounts:
+                      - name: storage
+                        mountPath: ${{ inputs.k8s.volumes.pvc_mount_path }}
+                volumes:
+                  - name: storage
+                    persistentVolumeClaim:
+                      claimName: ${pvc_name}  # Assumes PVC name is provided as an input
+
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-lb
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            selector:
+              app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}
+            ports:
+              - protocol: TCP
+                port: ${{ inputs.service_k8s.image_port }}
+                targetPort: ${{ inputs.service_k8s.image_port }}
+          EOF
+      - name: Dry Run Deployment
+        if: ${{ inputs.targetType === 'kubernetes-cluster' }}
+        run: |
+          echo "Performing dry run..."
+          kubectl apply -f app.yaml --dry-run=client
+  apply_k8s_deployment:
+    needs:
+      - prepare_k8s_deployment
+    steps:
+      - name: Load outputs
+        if: ${{ inputs.targetType === 'kubernetes-cluster' }}
+        run: cat OUTPUTS >> $OUTPUTS
+      - name: Apply PVC
+        if: ${{  inputs.targetType === 'kubernetes-cluster' && inputs.k8s.volumes.pvc === New }}
+        run: kubectl apply -f pvc.yaml
+        cleanup: |
+          if [[ "${{ inputs.k8s.volumes.pvc_persist }}" == "false" ]]; then
+            kubectl delete -f pvc.yaml
+            touch pvc.deleted
+          fi
+      - name: Apply Deployment and Service
+        if: ${{ inputs.targetType === 'kubernetes-cluster' }}
+        run: kubectl apply -f app.yaml
+        cleanup: |
+          kubectl delete -f app.yaml
+          touch app.deleted
+      - name: Wait for Deployment to be Ready
+        if: ${{ inputs.targetType === 'kubernetes-cluster' }}
+        env:
+          app_name: ${{ needs.apply_k8s_deployment.outputs.app_name }}
+          namespace: ${{ inputs.k8s.namespace }}
+        run: |
+
+          log() {
+            while true; do
+              echo
+              echo; echo "[INFO] $(date) - Checking deployment status for ${app_name} in namespace ${namespace}..."
+              kubectl get deployment "${app_name}" -n "${namespace}" -o wide || echo "[WARN] Unable to get deployment"
+              
+              echo; echo "[INFO] $(date) - Pods status:"
+              kubectl get pods -l app="${app_name}" -n "${namespace}" -o wide || echo "[WARN] Unable to get pods"
+
+              pod_name=$(kubectl get pods -l app="${app_name}" -n "${namespace}" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+              if [[ -n "$pod_name" ]]; then
+                echo; echo "[INFO] $(date) - Describing pod ${pod_name}..."
+                kubectl describe pod "${pod_name}" -n "${namespace}" | grep -A20 "Events"
+              fi
+              
+              echo "---------------------------------------------"
+              sleep 10
+            done
+          }
+
+          log &
+          log_pid=$!
+          trap "kill ${log_pid}" EXIT SIGINT SIGTERM
+          set -x
+          kubectl wait --for=condition=available --timeout=600s deployment/${app_name} -n ${namespace}
+          exit_code=$?
+          kubectl get deployment ${app_name} -n ${namespace} -o wide
+          kubectl describe deployment ${app_name} -n ${namespace}
+          exit ${exit_code}
+      - name: Wait for Pod to be Ready
+        if: ${{ inputs.targetType === 'kubernetes-cluster' }}
+        env:
+          app_name: ${{ needs.apply_k8s_deployment.outputs.app_name }}
+          namespace: ${{ inputs.k8s.namespace }}
+        run: |
+          echo "Waiting for pod to be ready..."
+          kubectl wait --for=condition=Ready pod -l app=${app_name} -n ${namespace} --timeout=600s
+          pod=$(kubectl get pods -n ${namespace} -l app=${app_name} --field-selector=status.phase=Running -o jsonpath="{.items[0].metadata.name}")
+          echo "pod=$pod" | tee -a $OUTPUTS | tee -a OUTPUTS
+          touch pod.running
+      - name: Stream Logs
+        if: ${{ inputs.targetType === 'kubernetes-cluster' }}
+        run: kubectl logs -f deployment/${{ needs.apply_k8s_deployment.outputs.app_name }} -n ${{ inputs.k8s.namespace }}
+  create_k8s_session:
+    needs:
+      - prepare_k8s_deployment
+    steps:
+      - name: Wait until the Kubernetes deployment reaches its final stage
+        if: ${{ inputs.targetType === 'kubernetes-cluster' }}
+        run: |
+          while true; do
+            if [ -f "app.deleted" ]; then
+              echo "File app.deleted was detected. Exiting..."
+              exit 0
+            elif [ -f "pod.running" ]; then
+              echo "Pod is ready"
+              break
+            fi
+            sleep 2 
+          done
+      - name: Get Service Name
+        if: ${{ inputs.targetType === 'kubernetes-cluster' }}
+        run: |
+          source OUTPUTS
+          echo "service_name=${app_name}-lb" | tee -a $OUTPUTS
+      - name: Expose port
+        if: ${{ inputs.targetType === 'kubernetes-cluster' }}
+        uses: parallelworks/update-session
+        with:
+          remotePort: ${{ inputs.service_k8s.image_port }}
+          name: ${{ sessions.session }}
+          targetInfo:
+            name: ${{ inputs.k8s.cluster }}
+            namespace: ${{ inputs.k8s.namespace }}
+            resourceType: services
+            resourceName: ${{ needs.create_k8s_session.outputs.service_name }}
+        
+'on':
+  execute:
+    inputs:
+      targetType:
+        label: Target Type
+        type: dropdown
+        default: kubernetes-cluster
+        options:
+          - label: Compute Cluster
+            value: compute-cluster
+          - label: Kubernetes Cluster
+            value: kubernetes-cluster
+      pwrl_host:
+        type: group
+        label: Service Host
+        hidden: ${{ inputs.targetType !== 'compute-cluster' }}
+        items:
+          resource:
+            type: compute-clusters
+            optional: ${{ inputs.targetType !== 'compute-cluster' }}
+            label: Service host
+            include-workspace: false
+            provider:
+              - gclusterv2
+              - pclusterv2
+              - azclusterv2
+              - aws-slurm
+              - google-slurm
+              - azure-slurm
+            tooltip: Resource to host the service. Only supported in cloud clusters.
+          nports:
+            type: number
+            label: Number of Ports to Reserve
+            hidden: true
+            default: 1
+            optional: true
+          jobschedulertype:
+            type: dropdown
+            label: Select Controller, SLURM Partition or PBS Queue
+            default: CONTROLLER
+            options:
+              - value: CONTROLLER
+                label: Controller
+              - value: SLURM
+                label: SLURM Partition
+              - value: PBS
+                label: PBS Queue
+            tooltip: Job will be submitted using SSH, sbatch or qsub, respectively
+          _sch__dd_partition_e_:
+            type: slurm-partitions
+            label: SLURM partition
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
+            ignore: ${{ .hidden }}
+            optional: true
+            tooltip: >-
+              Partition to submit the interactive job. Leave empty to let SLURM
+              pick the optimal option.
+            resource: ${{ inputs.pwrl_host.resource }}
+          scheduler_directives_slurm:
+            type: string
+            label: Scheduler directives
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
+            ignore: ${{ .hidden }}
+            optional: true
+            tooltip: >-
+              e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ;
+              to separate parameters. Do not include the SBATCH keyword.
+          _sch__d_q___:
+            type: string
+            label: PBS queue
+            hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
+            tooltip: >-
+              Queue to submit the interactive job. Must select one! Use [qstat
+              -f -Q] to list all queues on the system
+          scheduler_directives_pbs:
+            type: string
+            label: Scheduler directives
+            hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
+            ignore: ${{ .hidden }}
+            optional: true
+            tooltip: >-
+              e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ;
+              to separate parameters. Do not include the PBS keyword.
+        collapsed: false
+      service:
+        type: group
+        label: Service
+        hidden: ${{ inputs.targetType !== 'compute-cluster' }}
+        items:
+          novnc_parent_install_dir:
+            label: noVNC installation directory
+            type: string
+            hidden: true
+            default: __HOME__/pw/software
+          name:
+            type: string
+            label: Select remote display protocol
+            hidden: true
+            default: kasmvnc
+          download_url:
+            label: Download URL
+            type: string
+            default: https://github.com/kasmtech/KasmVNC/releases/download/v1.3.2/kasmvncserver_oracle_8_1.3.2_x86_64.rpm
+            tooltip: 
+              Installs the KasmVNC version specified in the URL
+          set_password:
+            label: Set Password
+            type: boolean
+            default: false
+            tooltip: |
+              Select 'Yes' to enable password authentication for KasmVNC, requiring users to enter a password to access the session.
+              Select 'No' to disable password authentication, allowing users to access the session without a password.
+          password:
+            label: Password
+            type: password
+            hidden: ${{ inputs.service.set_password == false }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
+            tooltip: The password applies to all sessions on the same target. Changing it affects active sessions, requiring the new password.
+
+      k8s:
+        type: group
+        label: Kubernetes Settings
+        hidden: ${{ inputs.targetType !== 'kubernetes-cluster' }}
+        items:
+          cluster:
+            label: Kubernetes cluster
+            type: kubernetes-clusters
+            optional: ${{ inputs.targetType !== 'kubernetes-cluster' }}
+          namespace:
+            label: Namespace
+            type: kubernetes-namespaces
+            clusterName: ${{ inputs.k8s.cluster }}
+            optional: ${{ inputs.targetType !== 'kubernetes-cluster' }}
+          volumes:
+            type: group
+            label: Volumes
+            collapsed: true
+            tooltip: Specify storage settings for Persistent Volume Claims (PVCs), including size, storage class, and mount path.
+            items:
+              pvc:
+                label: Persistent Volume Claim
+                type: dropdown
+                default: New
+                options:
+                  - value: Existing
+                    label: Select Existing PVC
+                  - value: New
+                    label: Create New PVC
+              pvc_mount_path:
+                label: Mount Path
+                type: string
+                default: /mnt
+              pvc_existing:
+                label: Select PVC Name
+                type: kubernetes-pvc
+                clusterName: ${{ inputs.k8s.cluster }}
+                namespace: ${{ inputs.k8s.namespace }}
+                hidden: ${{ inputs.k8s.volumes.pvc !== Existing }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
+              pvc_storage_size:
+                label: Enter PVC Size
+                type: string
+                hidden: ${{ inputs.k8s.volumes.pvc !== New }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
+                default: 10Gi
+              pvc_storage_class:
+                label: Enter PVC Storage Class
+                type: string
+                hidden: ${{ inputs.k8s.volumes.pvc !== New }}
+                ignore: ${{ .hidden }}
+                optional: true
+                tooltip: Leave blank to use the default storage class configured in the cluster.
+              pvc_persist:
+                label: Persist PVC After Completion
+                type: boolean
+                default: false
+                hidden: ${{ inputs.k8s.volumes.pvc !== 'New' }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
+                tooltip: If true, the PVC will persist after the job is canceled or completed. If false, it will be deleted.
+              pvc_name:
+                label: Enter PVC Name
+                type: string
+                hidden: ${{ inputs.k8s.volumes.pvc_persist === false || inputs.k8s.volumes.pvc !== New  }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
+          resources:
+            type: group
+            label: Resources
+            collapsed: true
+            tooltip: Configure CPU, memory, and GPU settings to define the computational resources allocated to the pod.
+            items:
+              requests:
+                type: group
+                label: Requests
+                items:
+                  memory:
+                    label: Memory
+                    type: string
+                    default: 2Gi
+                    tooltip: Specify the minimum memory required for the pod (e.g., 512Mi, 1Gi).
+                  cpu:
+                    label: CPU
+                    type: string
+                    default: '2'
+                    tooltip: Specify the minimum CPU required for the pod (e.g., 0.5, 1, 100m). Use decimal values for partial CPUs or "m" for millicores (e.g., 100m = 0.1 CPU).
+              limits:
+                type: group
+                label: Limits
+                items:
+                  memory:
+                    label: Memory
+                    type: string
+                    default: 4Gi
+                    tooltip: Set the maximum memory the pod can use (e.g., 1Gi, 2Gi).
+                  cpu:
+                    label: CPU
+                    type: string
+                    default: '4'
+                    tooltip: Set the maximum CPU the pod can use (e.g., 1, 2, 500m).
+                  select_gpu:
+                    label: Select GPU Device
+                    type: dropdown
+                    tooltip: Choose the type of GPU device for the deployment, if needed. Select "None" for CPU-only workloads or "Custom" to specify a custom GPU resource key.
+                    options:
+                      - value: None
+                        label: None
+                      - value: nvidia.com/gpu
+                        label: Nvidia GPU
+                      - value: amd.com/gpu
+                        label: AMD GPU
+                      - value: cloud-tpus.google.com/v3
+                        label: Google TPU
+                      - value: Custom
+                        label: Custom GPU Resource Key
+                  gpu_resource_key:
+                    label: Custom GPU Resource Key
+                    type: string
+                    hidden: ${{ inputs.k8s.resources.limits.select_gpu !== Custom }}
+                    ignore: ${{ .hidden }}
+                    tooltip: |
+                      Specify a custom GPU resource key for Kubernetes, such as:
+                        - nvidia.com/gpu
+                        - amd.com/gpu
+                        - cloud-tpus.google.com/v3
+                        - nvidia.com/mig-1g.5gb
+                        - nvidia.com/mig-2g.10gb
+                        - nvidia.com/mig-3g.20gb
+                  number_of_gpus:
+                    label: Number of GPUs
+                    type: number
+                    step: 1
+                    default: 1
+                    min: 1
+                    tooltip: Specify the number of GPUs to allocate for the deployment.
+                    hidden: ${{ inputs.k8s.resources.limits.select_gpu === None }}
+                    ignore: ${{ .hidden }}
+      service_k8s:
+        type: group
+        label: Service Settings
+        hidden: ${{ inputs.targetType !== 'kubernetes-cluster' }}
+        items:
+          image:
+            label: KasmVNC Image
+            type: string
+            default: kasmweb/desktop:1.16.0
+            tooltip: Sample container from https://hub.docker.com/r/kasmweb/desktop
+          image_port:
+            label: KasmVNC Port
+            type: number
+            default: 6901
+            tooltip: Define the port on which the KasmVNC runs inside the container. Default is 6901.
+          password:
+            label: Password
+            type: password
+            tooltip: Type in a password for user kasm_user
+            optional: ${{ inputs.targetType !== 'kubernetes-cluster' }}

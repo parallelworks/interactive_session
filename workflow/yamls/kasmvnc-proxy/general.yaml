@@ -163,6 +163,11 @@ jobs:
         run: |
           local_port=$(pw agent open-port)
           echo "local_port=${local_port}"  | tee -a $OUTPUTS
+      - name: Set URL SLUG
+        run: |
+          source resources/host/inputs.sh
+          slug="?resize=remote&autoconnect=true&show_dot=true&path=websockify&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
+          echo "slug=${slug}"  | tee -a $OUTPUTS
       - name: Expose Port
         uses: parallelworks/update-session
         with:

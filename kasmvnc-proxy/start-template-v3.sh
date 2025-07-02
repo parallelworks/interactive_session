@@ -15,10 +15,6 @@ is_kasmvnc_installed() {
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
-set -x
-
-
-
 # Runs via ssh + sbatch
 set -x
 
@@ -30,45 +26,12 @@ if [ -z "${service_nginx_sif}" ]; then
     service_nginx_sif=${service_parent_install_dir}/nginx-unprivileged.sif
 fi
 
-if [ -z "${service_load_env}" ]; then
-    service_conda_sh=${service_parent_install_dir}/${service_conda_install_dir}/etc/profile.d/conda.sh
-    service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
-fi
-
-eval "${service_load_env}"
-
-# Initialize cancel script
-echo '#!/bin/bash' > cancel.sh
-chmod +x cancel.sh
 kasmvnc_port=$(findAvailablePort)
 
-if [[ "${service_conda_install}" == "true" ]]; then
-    source ${service_conda_sh}
-    eval "conda activate ${service_conda_env}"
-else
     eval "${service_load_env}"
 fi
 
-if [ -z $(which jupyter-lab 2> /dev/null) ]; then
-    displayErrorMessage "jupyter-lab command not found"
-fi
-
 export XDG_RUNTIME_DIR=""
-
-# Generate sha:
-if [ -z "${service_password}" ]; then
-    echo "No password was specified"
-    sha=""
-else
-    echo "Generating sha"
-    sha=$(python3 -c "from notebook.auth.security import passwd; print(passwd('${service_password}', algorithm = 'sha1'))")
-fi
-# Set the launch directory for JupyterHub
-# If notebook_dir is not set or set to a templated value,
-# use the default value of "/".
-if [ -z ${service_notebook_dir} ]; then
-    service_notebook_dir="/"
-fi
 
 #######################
 # START NGINX WRAPPER #
@@ -87,7 +50,7 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
  location / {
-     proxy_pass https://127.0.0.1:${kasmvnc_port}/;
+     proxy_pass https://127.0.0.1:${kasmvnc_port};
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";

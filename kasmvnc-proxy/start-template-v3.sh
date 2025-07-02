@@ -28,9 +28,6 @@ fi
 
 kasmvnc_port=$(findAvailablePort)
 
-    eval "${service_load_env}"
-fi
-
 export XDG_RUNTIME_DIR=""
 
 #######################

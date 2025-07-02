@@ -2,8 +2,8 @@ permissions:
   - '*'
 sessions:
   session:
-    useTLS: true
-    useCustomDomain: true
+    useTLS: false
+    useCustomDomain: false
     redirect: true
 
 

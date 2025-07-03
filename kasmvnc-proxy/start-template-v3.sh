@@ -139,6 +139,7 @@ fi
 MAX_RETRIES=5
 RETRY_INTERVAL=5
 attempt=0
+installed_kasmvnc=false
 while ! is_kasmvnc_installed && [ $attempt -lt $MAX_RETRIES ]; do
     check_sudo_access "Install kasmvnc-server"
     echo "Attempt $((attempt+1)) to install kasmvnc..."
@@ -149,6 +150,7 @@ while ! is_kasmvnc_installed && [ $attempt -lt $MAX_RETRIES ]; do
     attempt=$((attempt+1))
     # Disable ssl
     #sudo sed -i 's/require_ssl: true/require_ssl: false/g' /usr/share/kasmvnc/kasmvnc_defaults.yaml
+    installed_kasmvnc=true
 done
 
 if ! is_kasmvnc_installed; then
@@ -157,7 +159,7 @@ fi
 
 # Check if user is already in the group
 sg kasmvnc-cert -c "groups"
-if ! sg kasmvnc-cert -c "groups | grep -q '\bkasmvnc-cert\b'"; then
+if [[ "${installed_kasmvnc}" == "true" ]]; then
     check_sudo_access "Add user to kasmvnc-cert group"
     echo "User is not in kasmvnc-cert group. Adding..."
     sudo usermod -a -G kasmvnc-cert $USER

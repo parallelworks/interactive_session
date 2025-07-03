@@ -157,7 +157,7 @@ fi
 
 # Check if user is already in the group
 groups
-if ! groups $USER | grep -q "\bkasmvnc-cert\b"; then
+if ! groups | grep -q "\bkasmvnc-cert\b"; then
     check_sudo_access "Add user to kasmvnc-cert group"
     echo "User is not in kasmvnc-cert group. Adding..."
     sudo usermod -a -G kasmvnc-cert $USER
@@ -170,11 +170,6 @@ else
     needs_newgrp=false
 fi
 groups
-
-if ! groups | grep -q "\bkasmvnc-cert\b"; then
-    echo $(date): "ERROR: User is not in kasmvnc-cert group."
-    exit 1
-fi
 
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
 # Find an available display port

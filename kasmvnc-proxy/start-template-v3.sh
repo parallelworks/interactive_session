@@ -164,6 +164,7 @@ if ! groups | grep -q "\bkasmvnc-cert\b"; then
     echo "Running newgrp to apply group changes..."
     env > env.sh
     newgrp kasmvnc-cert
+    set -x
     source env.sh
     groups
 else
@@ -175,6 +176,7 @@ if ! groups | grep -q "\bkasmvnc-cert\b"; then
     echo $(date): "ERROR: User is not in kasmvnc-cert group."
     env > env.sh
     newgrp kasmvnc-cert
+    set -x
     source env.sh
     groups
 fi

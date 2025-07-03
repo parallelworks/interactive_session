@@ -149,13 +149,21 @@ while ! is_kasmvnc_installed && [ $attempt -lt $MAX_RETRIES ]; do
     sleep $RETRY_INTERVAL
     attempt=$((attempt+1))
     # Disable ssl
-    sudo sed -i 's/require_ssl: true/require_ssl: false/g' /usr/share/kasmvnc/kasmvnc_defaults.yaml
+    #sudo sed -i 's/require_ssl: true/require_ssl: false/g' /usr/share/kasmvnc/kasmvnc_defaults.yaml
     installed_kasmvnc=true
 done
 
 if ! is_kasmvnc_installed; then
     displayErrorMessage "ERROR: KasmVNC installation failed."
 fi
+
+# Check if user is already in the group
+if [[ "${installed_kasmvnc}" == "true" ]]; then
+    check_sudo_access "Add user to kasmvnc-cert group"
+    echo "User is not in kasmvnc-cert group. Adding..."
+    sudo usermod -a -G kasmvnc-cert $USER
+fi
+sg kasmvnc-cert -c "groups"
 
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
 # Find an available display port
@@ -190,6 +198,7 @@ if [ "${service_set_password}" != true ]; then
     service_password=password
     disableBasicAuth="-disableBasicAuth"
 fi
+sg kasmvnc-cert -c "expect -c 'spawn vncpasswd -u ${USER} -w -r; expect \"Password:\"; send \"${service_password}\r\"; expect \"Verify:\"; send \"${service_password}\r\"; expect eof'"
 
 vncserver -kill ${DISPLAY}
 echo "vncserver -kill ${DISPLAY}" >> cancel.sh.sh

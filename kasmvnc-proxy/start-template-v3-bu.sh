@@ -156,15 +156,32 @@ if ! is_kasmvnc_installed; then
 fi
 
 # Check if user is already in the group
-sg kasmvnc-cert -c "groups"
-if ! sg kasmvnc-cert -c "groups | grep -q '\bkasmvnc-cert\b'"; then
+groups
+if ! groups | grep -q "\bkasmvnc-cert\b"; then
     check_sudo_access "Add user to kasmvnc-cert group"
     echo "User is not in kasmvnc-cert group. Adding..."
     sudo usermod -a -G kasmvnc-cert $USER
-    sg kasmvnc-cert -c "groups"
+    echo "Running newgrp to apply group changes..."
+    env > env.sh
+    newgrp kasmvnc-cert
+    set -x
+    source env.sh
+    groups
 else
     echo "User is already in kasmvnc-cert group."
 fi
+
+
+if ! groups | grep -q "\bkasmvnc-cert\b"; then
+    echo $(date): "ERROR: User is not in kasmvnc-cert group."
+    env > env.sh
+    newgrp kasmvnc-cert
+    set -x
+    source env.sh
+    groups
+fi
+
+
 
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
 # Find an available display port
@@ -199,7 +216,8 @@ if [ "${service_set_password}" != true ]; then
     service_password=password
     disableBasicAuth="-disableBasicAuth"
 fi
-sg kasmvnc-cert -c "expect -c 'spawn vncpasswd -u ${USER} -w -r; expect \"Password:\"; send \"${service_password}\r\"; expect \"Verify:\"; send \"${service_password}\r\"; expect eof'"
+expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "'"${service_password}"'\r"; expect "Verify:"; send "'"${service_password}"'\r"; expect eof'
+
 
 vncserver -kill ${DISPLAY}
 echo "vncserver -kill ${DISPLAY}" >> cancel.sh.sh

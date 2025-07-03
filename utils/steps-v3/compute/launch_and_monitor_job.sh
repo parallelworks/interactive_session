@@ -81,4 +81,4 @@ done
 
 echo "Job status: ${job_status}"
 
-$sshcmdscontrol show job ${jobid} -dd
+$sshcmd scontrol show job ${jobid} -dd

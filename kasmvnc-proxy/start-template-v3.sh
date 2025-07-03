@@ -27,6 +27,7 @@ if [ -z "${service_nginx_sif}" ]; then
 fi
 
 kasmvnc_port=$(findAvailablePort)
+export kasmvnc_port=${kasmvnc_port}
 
 export XDG_RUNTIME_DIR=""
 

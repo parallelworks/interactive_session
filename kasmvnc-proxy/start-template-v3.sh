@@ -155,6 +155,7 @@ if ! is_kasmvnc_installed; then
 fi
 
 # Check if user is already in the group
+groups
 if ! groups $USER | grep -q "\bkasmvnc-cert\b"; then
     check_sudo_access "Add user to kasmvnc-cert group"
     echo "User is not in kasmvnc-cert group. Adding..."
@@ -167,6 +168,7 @@ else
     echo "User is already in kasmvnc-cert group."
     needs_newgrp=false
 fi
+groups
 
 if ! groups | grep -q "\bkasmvnc-cert\b"; then
     echo $(date): "ERROR: User is not in kasmvnc-cert group."

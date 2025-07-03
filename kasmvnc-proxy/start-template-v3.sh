@@ -165,11 +165,21 @@ if ! groups | grep -q "\bkasmvnc-cert\b"; then
     env > env.sh
     newgrp kasmvnc-cert
     source env.sh
+    groups
 else
     echo "User is already in kasmvnc-cert group."
-    needs_newgrp=false
 fi
-groups
+
+
+if ! groups | grep -q "\bkasmvnc-cert\b"; then
+    echo $(date): "ERROR: User is not in kasmvnc-cert group."
+    env > env.sh
+    newgrp kasmvnc-cert
+    source env.sh
+    groups
+fi
+
+
 
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
 # Find an available display port

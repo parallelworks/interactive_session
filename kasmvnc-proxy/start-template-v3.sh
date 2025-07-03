@@ -136,23 +136,28 @@ fi
 # START KASMVNC #
 ####################
 
-MAX_RETRIES=5
-RETRY_INTERVAL=5
-attempt=0
-while ! is_kasmvnc_installed && [ $attempt -lt $MAX_RETRIES ]; do
+# MAX_RETRIES=5
+# RETRY_INTERVAL=5
+# attempt=0
+# while ! is_kasmvnc_installed && [ $attempt -lt $MAX_RETRIES ]; do
+#     check_sudo_access "Install kasmvnc-server"
+#     echo "Attempt $((attempt+1)) to install kasmvnc..."
+#     wget ${service_download_url}
+#     sudo dnf localinstall ./kasmvncserver_*.rpm --allowerasing -y 
+#     rm ./kasmvncserver_*.rpm
+#     sleep $RETRY_INTERVAL
+#     attempt=$((attempt+1))
+#     # Disable ssl
+#     #sudo sed -i 's/require_ssl: true/require_ssl: false/g' /usr/share/kasmvnc/kasmvnc_defaults.yaml
+# done
+
+if ! is_kasmvnc_installed; then
+    # displayErrorMessage "ERROR: KasmVNC installation failed."
     check_sudo_access "Install kasmvnc-server"
     echo "Attempt $((attempt+1)) to install kasmvnc..."
     wget ${service_download_url}
     sudo dnf localinstall ./kasmvncserver_*.rpm --allowerasing -y 
     rm ./kasmvncserver_*.rpm
-    sleep $RETRY_INTERVAL
-    attempt=$((attempt+1))
-    # Disable ssl
-    #sudo sed -i 's/require_ssl: true/require_ssl: false/g' /usr/share/kasmvnc/kasmvnc_defaults.yaml
-done
-
-if ! is_kasmvnc_installed; then
-    displayErrorMessage "ERROR: KasmVNC installation failed."
 fi
 
 # Check if user is already in the group

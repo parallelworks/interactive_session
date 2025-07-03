@@ -158,15 +158,12 @@ if ! is_kasmvnc_installed; then
 fi
 
 # Check if user is already in the group
-sg kasmvnc-cert -c "groups"
 if [[ "${installed_kasmvnc}" == "true" ]]; then
     check_sudo_access "Add user to kasmvnc-cert group"
     echo "User is not in kasmvnc-cert group. Adding..."
     sudo usermod -a -G kasmvnc-cert $USER
-    sg kasmvnc-cert -c "groups"
-else
-    echo "User is already in kasmvnc-cert group."
 fi
+sg kasmvnc-cert -c "groups"
 
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
 # Find an available display port

@@ -57,8 +57,7 @@ get_pbs_job_status() {
 
 
 # Job status file writen by remote script:
-set -x
-max_retries=20
+max_retries=10
 retry_count=0
 export sshcmd=$(echo ${sshcmd} | sed "s|ssh|ssh -o ConnectTimeout=10|g")
 while true; do

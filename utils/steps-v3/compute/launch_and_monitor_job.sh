@@ -57,6 +57,9 @@ get_pbs_job_status() {
 
 
 # Job status file writen by remote script:
+max_retries=10
+retry_count=0
+export sshcmd=$(echo ${sshcmd} | sed "s|ssh|ssh -o ConnectTimeout=10|g")
 while true; do
     sleep 15
     # squeue won't give you status of jobs that are not running or waiting to run
@@ -65,20 +68,43 @@ while true; do
         get_slurm_job_status
         # If job status is empty job is no longer running
         if [ -z "${job_status}" ]; then
-            job_status=$($sshcmd sacct -j ${jobid}  --format=state | tail -n1)
-            break
+            # Test ssh connection to support retries for disconnected clusters
+            ${sshcmd} exit
+            if [ $? -eq 0 ]; then
+                job_status=$($sshcmd sacct -j ${jobid}  --format=state | tail -n1)
+                break
+            else
+                echo "ERROR: Failed to get SLURM job status using ${sshcmd}"
+                echo "       (attempt $((retry_count + 1))/$max_retries)"
+                retry_count=$((retry_count + 1))
+            fi
         fi
     elif [[ ${jobschedulertype} == "PBS" ]]; then
         get_pbs_job_status
         if [[ "${job_status}" == "C" ]]; then
             break
         elif [ -z "${job_status}" ]; then
-            break
+            # Test ssh connection to support retries for disconnected clusters
+            ${sshcmd} exit
+            if [ $? -eq 0 ]; then
+                break
+            else
+                echo "ERROR: Failed to get SLURM job status using ${sshcmd}"
+                echo "       (attempt $((retry_count + 1))/$max_retries)"
+                retry_count=$((retry_count + 1))
+            fi  
         fi
     fi
+    if [ $retry_count -ge $max_retries ]; then
+        echo "[ $retry_count -lt $max_retries ]"
+        echo "ERROR: Reached maximum retries for ${sshcmd} command"
+        echo "       SSH connection to cluster failed"
+        echo "       Exiting workflow"
+        exit 2
+    fi
 done
-
 
 echo "Job status: ${job_status}"
 
 $sshcmd scontrol show job ${jobid} -dd
+$sshcmd sacct -j ${jobid}

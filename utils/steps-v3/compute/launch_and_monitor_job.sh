@@ -60,7 +60,7 @@ get_pbs_job_status() {
 set -x
 max_retries=20
 retry_count=0
-sshtimeoutcmd=$(echo ${sshcmd} | sed "s|ssh|ssh -o ConnectTimeout=10|g")
+export sshcmd=$(echo ${sshcmd} | sed "s|ssh|ssh -o ConnectTimeout=10|g")
 while true; do
     sleep 15
     # squeue won't give you status of jobs that are not running or waiting to run
@@ -70,12 +70,12 @@ while true; do
         # If job status is empty job is no longer running
         if [ -z "${job_status}" ]; then
             # Test ssh connection to support retries for disconnected clusters
-            ${sshtimeoutcmd} exit
+            ${sshcmd} exit
             if [ $? -eq 0 ]; then
                 job_status=$($sshcmd sacct -j ${jobid}  --format=state | tail -n1)
                 break
             else
-                echo "ERROR: Failed to get SLURM job status using ${sshtimeoutcmd}"
+                echo "ERROR: Failed to get SLURM job status using ${sshcmd}"
                 echo "       (attempt $((retry_count + 1))/$max_retries)"
                 retry_count=$((retry_count + 1))
             fi
@@ -86,11 +86,11 @@ while true; do
             break
         elif [ -z "${job_status}" ]; then
             # Test ssh connection to support retries for disconnected clusters
-            ${sshtimeoutcmd} exit
+            ${sshcmd} exit
             if [ $? -eq 0 ]; then
                 break
             else
-                echo "ERROR: Failed to get SLURM job status using ${sshtimeoutcmd}"
+                echo "ERROR: Failed to get SLURM job status using ${sshcmd}"
                 echo "       (attempt $((retry_count + 1))/$max_retries)"
                 retry_count=$((retry_count + 1))
             fi  
@@ -98,7 +98,7 @@ while true; do
     fi
     if [ $retry_count -ge $max_retries ]; then
         echo "[ $retry_count -lt $max_retries ]"
-        echo "ERROR: Reached maximum retries for ${sshtimeoutcmd} command"
+        echo "ERROR: Reached maximum retries for ${sshcmd} command"
         echo "       SSH connection to cluster failed"
         echo "       Exiting workflow"
         exit 2

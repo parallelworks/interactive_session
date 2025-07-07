@@ -57,6 +57,7 @@ get_pbs_job_status() {
 
 
 # Job status file writen by remote script:
+set -x
 max_retries=20
 retry_count=0
 while true; do

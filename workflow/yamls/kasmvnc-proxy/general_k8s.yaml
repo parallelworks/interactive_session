@@ -3,10 +3,13 @@ permissions:
 sessions:
   session:
     useTLS: false
+    useCustomDomain: false
     redirect: true
-    useCustomDomain: ${{ inputs.targetType === 'kubernetes-cluster' }}
+
+
 app:
   target: inputs.pwrl_host.resource
+
 jobs:
   preprocessing:
     steps:
@@ -15,7 +18,7 @@ jobs:
         run: ./utils/steps-v3/preprocessing/input_form_resource_wrapper.sh ${{ inputs.pwrl_host.resource.ip }}
       - name: Process Inputs
         if: ${{ inputs.targetType === 'compute-cluster' }}
-        run: |
+        run: | 
           ./utils/steps-v3/preprocessing/process_inputs_sh.sh 
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
       - name: Transfer Files to Controller
@@ -27,9 +30,10 @@ jobs:
       - name: Initialize Cancel Script
         if: ${{ inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/preprocessing/initialize_cancel_script.sh
+
   controller_job:
     needs:
-      - preprocessing
+       - preprocessing
     steps:
       - name: Create Controller Session Script
         if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
@@ -44,14 +48,15 @@ jobs:
       - name: Clean and Exit
         if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/clean_and_exit.sh
+
   compute_job:
     needs:
-      - preprocessing
+       - preprocessing
     steps:
       - name: Create Compute Session Script
         if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/compute/create_session_script.sh
-      - name: Launch and Monitor Compute Job
+      - name:  Launch and Monitor Compute Job
         if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/compute/launch_and_monitor_job.sh
         cleanup: |
@@ -61,9 +66,11 @@ jobs:
       - name: Clean and Exit
         if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/clean_and_exit.sh
+
+
   create_session:
     needs:
-      - preprocessing
+       - preprocessing
     steps:
       - name: Set Session Name
         if: ${{ inputs.targetType === 'compute-cluster' }}
@@ -107,6 +114,7 @@ jobs:
           fi
           target_hostname=$(${sshcmd} squeue -j "${job_id}" --noheader --format="%N")
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
+
       - name: Get Remote Port
         if: ${{ inputs.targetType === 'compute-cluster' }}
         env:
@@ -164,19 +172,13 @@ jobs:
         run: |
           local_port=$(pw agent open-port)
           echo "local_port=${local_port}"  | tee -a $OUTPUTS
-      - name: Set URL SLUG
-        if: ${{ inputs.targetType === 'compute-cluster' }}
-        run: |
-          source resources/host/inputs.sh
-          echo "slug=?folder=${service_directory}"  | tee -a $OUTPUTS
       - name: Expose Port
         if: ${{ inputs.targetType === 'compute-cluster' }}
         uses: parallelworks/update-session
         with:
-          remotePort: ${{ needs.create_session.outputs.remote_port }}
-          localPort: ${{ needs.create_session.outputs.local_port }}
-          remoteHost: ${{ needs.create_session.outputs.target_hostname }}
-          slug: ${{ needs.create_session.outputs.slug }}
+          remotePort: "${{ needs.create_session.outputs.remote_port }}"
+          localPort: "${{ needs.create_session.outputs.local_port }}"
+          remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.session }}
   auth_k8s:
@@ -231,6 +233,7 @@ jobs:
             kubectl apply -f pvc.yaml --dry-run=client
         - name: Dummy
           run: echo Dummy
+
   prepare_k8s_deployment:
     needs:
       - prepare_k8s_pvc
@@ -241,7 +244,7 @@ jobs:
           job_number=$(pwd | rev | cut -d "/" -f1 | rev)
           workflow_name=$(pwd | rev | cut -d "/" -f2 | rev)
           app_name=$(echo "${PW_USER}${workflow_name}${job_number}" | sed 's|_||g' | sed 's|\.||g' | tr '[:upper:]' '[:lower:]' | tail -c 56)
-          echo "app_name=${app_name}"  | tee -a $OUTPUTS | tee -a OUTPUTS
+          echo "app_name=${app_name}" | tee -a $OUTPUTS | tee -a OUTPUTS
       - name: Creating Deployment and Service YAML
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         run: |
@@ -257,13 +260,13 @@ jobs:
               runtimeClassName="runtimeClassName: nvidia"
             fi
           fi
-
+          
           if [[ "${{ inputs.k8s.volumes.pvc }}" == "Existing" ]]; then
             pvc_name=${{ inputs.k8s.volumes.pvc_existing }}
           else
             pvc_name=$(cat pvc_name)
           fi
-  
+
           cat <<EOF > app.yaml
 
           apiVersion: apps/v1
@@ -297,16 +300,11 @@ jobs:
                     ports:
                       - containerPort: ${{ inputs.service_k8s.image_port }}
                     env:
-                      - name: PASSWORD
+                      - name: VNC_PW
                         value: ${{ inputs.service_k8s.password }}
-                      - name: GITHUB_TOKEN
-                        value: ${{ inputs.service_k8s.github_token }}
-                    args:
-                      - --auth
-                      - password
-                      - --bind-addr
-                      - 0.0.0.0:8080
-                      - --disable-telemetry
+                    securityContext:
+                      capabilities:
+                        add: ["NET_ADMIN"]  # Might be required depending on kasmvnc container usage
                     resources:
                       requests:
                         memory: "${{ inputs.k8s.resources.requests.memory }}"
@@ -446,29 +444,37 @@ jobs:
             namespace: ${{ inputs.k8s.namespace }}
             resourceType: services
             resourceName: ${{ needs.create_k8s_session.outputs.service_name }}
+        
 'on':
   execute:
     inputs:
       targetType:
         label: Target Type
         type: dropdown
-        default: compute-cluster
+        default: kubernetes-cluster
         options:
           - label: Compute Cluster
             value: compute-cluster
           - label: Kubernetes Cluster
             value: kubernetes-cluster
       pwrl_host:
-        hidden: ${{ inputs.targetType !== 'compute-cluster' }}
         type: group
-        label: Compute Settings
+        label: Service Host
+        hidden: ${{ inputs.targetType !== 'compute-cluster' }}
         items:
           resource:
             type: compute-clusters
             optional: ${{ inputs.targetType !== 'compute-cluster' }}
             label: Service host
             include-workspace: false
-            tooltip: Resource to host the service
+            provider:
+              - gclusterv2
+              - pclusterv2
+              - azclusterv2
+              - aws-slurm
+              - google-slurm
+              - azure-slurm
+            tooltip: Resource to host the service. Only supported in cloud clusters.
           nports:
             type: number
             label: Number of Ports to Reserve
@@ -493,7 +499,9 @@ jobs:
             hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
-            tooltip: Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.
+            tooltip: >-
+              Partition to submit the interactive job. Leave empty to let SLURM
+              pick the optimal option.
             resource: ${{ inputs.pwrl_host.resource }}
           scheduler_directives_slurm:
             type: string
@@ -501,50 +509,64 @@ jobs:
             hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
-            tooltip: e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.
+            tooltip: >-
+              e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ;
+              to separate parameters. Do not include the SBATCH keyword.
           _sch__d_q___:
             type: string
             label: PBS queue
             hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
-            tooltip: Queue to submit the interactive job. Must select one! Use [qstat -f -Q] to list all queues on the system
+            tooltip: >-
+              Queue to submit the interactive job. Must select one! Use [qstat
+              -f -Q] to list all queues on the system
           scheduler_directives_pbs:
             type: string
             label: Scheduler directives
             hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
-            tooltip: e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to separate parameters. Do not include the PBS keyword.
+            tooltip: >-
+              e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ;
+              to separate parameters. Do not include the PBS keyword.
         collapsed: false
       service:
         type: group
-        label: VS Code Settings
+        label: Service
         hidden: ${{ inputs.targetType !== 'compute-cluster' }}
         items:
-          name:
+          novnc_parent_install_dir:
+            label: noVNC installation directory
             type: string
             hidden: true
-            default: openvscode
+            default: __HOME__/pw/software
+          name:
+            type: string
+            label: Select remote display protocol
+            hidden: true
+            default: kasmvnc
           download_url:
             label: Download URL
             type: string
-            default: https://github.com/coder/code-server/releases/download/v4.92.2/code-server-4.92.2-linux-amd64.tar.gz
-            tooltip: Downloads or uses the code-server server version specified in the URL
+            default: https://github.com/kasmtech/KasmVNC/releases/download/v1.3.2/kasmvncserver_oracle_8_1.3.2_x86_64.rpm
+            tooltip: 
+              Installs the KasmVNC version specified in the URL
+          set_password:
+            label: Set Password
+            type: boolean
+            default: false
+            tooltip: |
+              Select 'Yes' to enable password authentication for KasmVNC, requiring users to enter a password to access the session.
+              Select 'No' to disable password authentication, allowing users to access the session without a password.
           password:
-            label: Password for IDE session
+            label: Password
             type: password
-            optional: true
-            tooltip: Enter password or leave blank for no password
-          directory:
-            label: Directory to open in VS Code
-            type: string
-            default: __HOME__
-            tooltip: Directory to open in VS code
-          github_token:
-            label: GitHub authentication token
-            type: string
-            optional: true
+            hidden: ${{ inputs.service.set_password == false }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
+            tooltip: The password applies to all sessions on the same target. Changing it affects active sessions, requiring the new password.
+
       k8s:
         type: group
         label: Kubernetes Settings
@@ -627,12 +649,12 @@ jobs:
                   memory:
                     label: Memory
                     type: string
-                    default: 512Mi
+                    default: 2Gi
                     tooltip: Specify the minimum memory required for the pod (e.g., 512Mi, 1Gi).
                   cpu:
                     label: CPU
                     type: string
-                    default: '1'
+                    default: '2'
                     tooltip: Specify the minimum CPU required for the pod (e.g., 0.5, 1, 100m). Use decimal values for partial CPUs or "m" for millicores (e.g., 100m = 0.1 CPU).
               limits:
                 type: group
@@ -641,12 +663,12 @@ jobs:
                   memory:
                     label: Memory
                     type: string
-                    default: 1Gi
+                    default: 4Gi
                     tooltip: Set the maximum memory the pod can use (e.g., 1Gi, 2Gi).
                   cpu:
                     label: CPU
                     type: string
-                    default: '2'
+                    default: '4'
                     tooltip: Set the maximum CPU the pod can use (e.g., 1, 2, 500m).
                   select_gpu:
                     label: Select GPU Device
@@ -691,21 +713,17 @@ jobs:
         hidden: ${{ inputs.targetType !== 'kubernetes-cluster' }}
         items:
           image:
-            label: Code Server Image
+            label: KasmVNC Image
             type: string
-            default: codercom/code-server:latest
-            tooltip: Sample container from https://hub.docker.com/r/codercom/code-server
+            default: kasmweb/desktop:1.16.0
+            tooltip: Sample container from https://hub.docker.com/r/kasmweb/desktop
           image_port:
-            label: Code Server Port
+            label: KasmVNC Port
             type: number
-            default: 8080
-            tooltip: Define the port on which the Code Server runs inside the container. Default is 8080.
+            default: 6901
+            tooltip: Define the port on which the KasmVNC runs inside the container. Default is 6901.
           password:
             label: Password
+            type: password
+            tooltip: Type in a password for user kasm_user
             optional: ${{ inputs.targetType !== 'kubernetes-cluster' }}
-            type: password
-            tooltip: Type in a password
-          github_token:
-            label: GitHub Authentication Token
-            type: password
-            optional: true

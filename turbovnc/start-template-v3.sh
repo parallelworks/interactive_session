@@ -99,7 +99,7 @@ fi
 if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
 cat >> ${resource_jobdir}/service-kill-${job_number}-main.sh <<HERE
 service_pid=\$(cat ${resource_jobdir}/service.pid)
-if [ -z \${service_pid} ]; then
+if [ -z \"\${service_pid}\" ]; then
     echo "ERROR: No service pid was found!"
 else
     echo "$(hostname) - Killing process: \${service_pid}"

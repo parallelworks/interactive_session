@@ -15,6 +15,7 @@ jobs:
         run: ./utils/steps-v3/preprocessing/input_form_resource_wrapper.sh ${{ inputs.pwrl_host.resource.ip }}
       - name: Process Inputs
         run: |
+          set -e
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
           ./utils/steps-v3/preprocessing/process_inputs_sh.sh 
       - name: Transfer Files to Controller

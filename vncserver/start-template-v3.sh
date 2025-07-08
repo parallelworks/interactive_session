@@ -80,7 +80,7 @@ if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
     displayErrorMessage "ERROR: vncserver is not installed"
 fi
 
-service_vnc_type=$(${sshcmd} ${service_vnc_exec} -list | grep -oP '(TigerVNC|TurboVNC|KasmVNC)')
+service_vnc_type=$(${service_vnc_exec} -list | grep -oP '(TigerVNC|TurboVNC|KasmVNC)')
 if [ -z ${service_vnc_type} ]; then
     displayErrorMessage "ERROR: vncserver type not found. Supported type are TigerVNC, TurboVNC and KasmVNC"
 fi

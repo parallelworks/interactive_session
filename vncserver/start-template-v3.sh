@@ -20,7 +20,7 @@ chmod +x ${resource_jobdir}/cancel.sh
 echo "mv ${resource_jobdir}/cancel.sh ${resource_jobdir}/cancel.sh.executed" >> ${resource_jobdir}/cancel.sh
 
 # Trap SIGTERM (sent by scancel) and other relevant signals
-trap 'cleanup' SIGTERM SIGINT SIGHUP
+trap 'cleanup' SIGTERM SIGINT SIGUSR1 EXIT
 
 ###################
 ###################

@@ -6,21 +6,9 @@
 # PREPARE CLEANUP #
 ###################
 
-# Function to execute cancel.sh
-cleanup() {
-    echo "Running cleanup script: ${resource_jobdir}/cancel.sh"
-    if [ -f "${resource_jobdir}/cancel.sh" ]; then
-        bash "${resource_jobdir}/cancel.sh"
-    fi
-    exit 0
-}
-
 echo '#!/bin/bash' > ${resource_jobdir}/cancel.sh
 chmod +x ${resource_jobdir}/cancel.sh
 echo "mv ${resource_jobdir}/cancel.sh ${resource_jobdir}/cancel.sh.executed" >> ${resource_jobdir}/cancel.sh
-
-# Trap SIGTERM (sent by scancel) and other relevant signals
-trap 'cleanup' SIGTERM SIGINT SIGUSR1 EXIT
 
 ###################
 ###################

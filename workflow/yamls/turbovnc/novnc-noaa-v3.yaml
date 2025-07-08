@@ -129,6 +129,7 @@ jobs:
         run: |
           TIMEOUT=5
           RETRY_INTERVAL=3
+          set -x
 
           # Function to check if server is listening
           check_server() {

@@ -10,12 +10,14 @@ echo "export sshcmd=\"${sshcmd}\"" >> resources/host/inputs.sh
 
 # Obtain the service_name from any section of the XML
 export service_name=$(cat resources/host/inputs.sh | grep service_name | cut -d'=' -f2 | tr -d '"')
-echo "export service_name=${service_name}" >> resources/host/inputs.sh
 
 if ! [ -d "${service_name}" ]; then
     displayErrorMessage "ERROR: Directory ${service_name} was not found --> Service ${service_name} is not supported --> Exiting workflow"
     exit 1
 fi
+
+echo "export service_name=${service_name}" >> resources/host/inputs.sh
+
 
 sed -i "s/__job_number__/${job_number}/g" resources/host/inputs.sh
 

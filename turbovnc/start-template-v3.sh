@@ -232,7 +232,7 @@ if ! [[ $kernel_version == *microsoft* ]]; then
         # FIXME: Change ~/.vnc/config
         ${service_vnc_exec} ${DISPLAY} &> ${resource_jobdir}/vncserver.log &
         echo $! > ${resource_jobdir}/vncserver.pid
-    elif [[ ${service_vnc_type} == "turbovnc" ]]; then
+    elif [[ ${service_vnc_type} == "TurboVNC" ]]; then
         ${service_vnc_exec} ${DISPLAY} -SecurityTypes None
     else
         # tigervnc

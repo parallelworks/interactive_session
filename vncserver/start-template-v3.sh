@@ -35,12 +35,16 @@ start_gnome_session_with_retries() {
 }
 
 
-if [ -z ${service_novnc_parent_install_dir} ]; then
-    service_novnc_parent_install_dir=${HOME}/pw/software
+if [ -z ${service_parent_install_dir} ]; then
+    service_parent_install_dir=${HOME}/pw/software
+fi
+
+if [ -z "${service_nginx_sif}" ]; then
+    service_nginx_sif=${service_parent_install_dir}/nginx-unprivileged.sif
 fi
 
 service_novnc_tgz_stem=$(echo ${service_novnc_tgz_basename} | sed "s|.tar.gz||g" | sed "s|.tgz||g")
-service_novnc_install_dir=${service_novnc_parent_install_dir}/${service_novnc_tgz_stem}
+service_novnc_install_dir=${service_parent_install_dir}/${service_novnc_tgz_stem}
 
 # Determine if the service is running in windows using WSL
 kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')

@@ -11,25 +11,25 @@ download_and_install() {
 
     # 2. Navigate into the repository directory
     cd interactive_session
-    #git checkout download-dependencies
 
     # 3. Initialize sparse-checkout
     git sparse-checkout init
 
-    # 4. Configure sparse-checkout to include only the desired directory
+    # 4. Configure sparse-checkout to include both desired paths
+    echo "downloads/jupyter/nginx-unprivileged.sif" > .git/info/sparse-checkout
     service_novnc_tgz_repo_path="downloads/vnc/${service_novnc_tgz_basename}"
-    echo "${service_novnc_tgz_repo_path}" > .git/info/sparse-checkout
+    echo "${service_novnc_tgz_repo_path}" >> .git/info/sparse-checkout
 
     # 5. Perform the checkout
     git checkout
 
-    # 6. Extract tgz
-    tar -zxf ${service_novnc_tgz_repo_path} -C ${service_novnc_parent_install_dir}
+    # 6. Extract files
+    cp downloads/jupyter/nginx-unprivileged.sif "${service_nginx_sif}"
+    tar -zxf "${service_novnc_tgz_repo_path}" -C "${service_novnc_parent_install_dir}"
 
     # 7. Clean
     cd ../
     rm -rf interactive_session
-    
 }
 
 displayErrorMessage() {

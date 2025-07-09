@@ -1,3 +1,4 @@
+set -x
 # Runs in the controller node:
 if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
     echo "Running ${resource_jobdir}/cancel.sh"

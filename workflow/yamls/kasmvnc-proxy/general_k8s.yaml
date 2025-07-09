@@ -2,9 +2,9 @@ permissions:
   - '*'
 sessions:
   session:
-    useTLS: false
-    useCustomDomain: false
+    useTLS: ${{ inputs.targetType === 'kubernetes-cluster' }}
     redirect: true
+    useCustomDomain: ${{ inputs.targetType === 'kubernetes-cluster' }}
 
 
 app:
@@ -173,6 +173,11 @@ jobs:
         run: |
           local_port=$(pw agent open-port)
           echo "local_port=${local_port}"  | tee -a $OUTPUTS
+      - name: Set URL SLUG
+        run: |
+          source resources/host/inputs.sh
+          slug="?resize=remote&autoconnect=true&show_dot=true&path=websockify&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
+          echo "slug=${slug}"  | tee -a $OUTPUTS
       - name: Expose Port
         if: ${{ inputs.targetType === 'compute-cluster' }}
         uses: parallelworks/update-session
@@ -180,8 +185,10 @@ jobs:
           remotePort: "${{ needs.create_session.outputs.remote_port }}"
           localPort: "${{ needs.create_session.outputs.local_port }}"
           remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
+          slug: "${{ needs.create_session.outputs.slug }}"
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.session }}
+
   auth_k8s:
     steps:
       - name: Authenticate kubectl
@@ -445,19 +452,11 @@ jobs:
             namespace: ${{ inputs.k8s.namespace }}
             resourceType: services
             resourceName: ${{ needs.create_k8s_session.outputs.service_name }}
-        
+
+
 'on':
   execute:
     inputs:
-      targetType:
-        label: Target Type
-        type: dropdown
-        default: kubernetes-cluster
-        options:
-          - label: Compute Cluster
-            value: compute-cluster
-          - label: Kubernetes Cluster
-            value: kubernetes-cluster
       pwrl_host:
         type: group
         label: Service Host
@@ -546,10 +545,11 @@ jobs:
             type: string
             label: Select remote display protocol
             hidden: true
-            default: kasmvnc
+            default: kasmvnc-proxy
           download_url:
             label: Download URL
             type: string
+            hidden: true
             default: https://github.com/kasmtech/KasmVNC/releases/download/v1.3.2/kasmvncserver_oracle_8_1.3.2_x86_64.rpm
             tooltip: 
               Installs the KasmVNC version specified in the URL
@@ -567,7 +567,6 @@ jobs:
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
             tooltip: The password applies to all sessions on the same target. Changing it affects active sessions, requiring the new password.
-
       k8s:
         type: group
         label: Kubernetes Settings

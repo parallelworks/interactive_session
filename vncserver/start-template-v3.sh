@@ -9,7 +9,7 @@
 echo '#!/bin/bash' > ${resource_jobdir}/cancel.sh
 chmod +x ${resource_jobdir}/cancel.sh
 echo "mv ${resource_jobdir}/cancel.sh ${resource_jobdir}/cancel.sh.executed" >> ${resource_jobdir}/cancel.sh
-echo "scancel ${$SLURM_JOB_ID}"  >> ${resource_jobdir}/cancel.sh
+echo "scancel ${SLURM_JOB_ID}"  >> ${resource_jobdir}/cancel.sh
 
 ###################
 ###################

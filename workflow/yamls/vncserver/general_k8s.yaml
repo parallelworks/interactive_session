@@ -6,7 +6,6 @@ sessions:
     redirect: true
     useCustomDomain: ${{ inputs.targetType === 'kubernetes-cluster' }}
 
-
 app:
   target: inputs.pwrl_host.resource
 
@@ -18,7 +17,7 @@ jobs:
         run: ./utils/steps-v3/preprocessing/input_form_resource_wrapper.sh ${{ inputs.pwrl_host.resource.ip }}
       - name: Process Inputs
         if: ${{ inputs.targetType === 'compute-cluster' }}
-        run: | 
+        run: |
           set -e
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
           ./utils/steps-v3/preprocessing/process_inputs_sh.sh 
@@ -150,7 +149,7 @@ jobs:
 
           # Function to check if server is listening
           check_server() {
-              ${sshcmd} "curl --silent --connect-timeout \"$TIMEOUT\" \"http://${remote_host}:${remote_port}\"" >/dev/null 2>&1
+              ${sshcmd} "curl --silent --connect-timeout \"$TIMEOUT\" \"http://${remote_host}:${remote_port}\" >/dev/null 2>&1"
               return $?
           }
 
@@ -174,9 +173,10 @@ jobs:
           local_port=$(pw agent open-port)
           echo "local_port=${local_port}"  | tee -a $OUTPUTS
       - name: Set URL SLUG
+        if: ${{ inputs.targetType === 'compute-cluster' }}
         run: |
           source resources/host/inputs.sh
-          slug="?resize=remote&autoconnect=true&show_dot=true&path=websockify&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
+          slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=headless&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
           echo "slug=${slug}"  | tee -a $OUTPUTS
       - name: Expose Port
         if: ${{ inputs.targetType === 'compute-cluster' }}
@@ -460,7 +460,7 @@ jobs:
       targetType:
         label: Target Type
         type: dropdown
-        default: kubernetes-cluster
+        default: compute-cluster
         options:
           - label: Compute Cluster
             value: compute-cluster
@@ -473,17 +473,10 @@ jobs:
         items:
           resource:
             type: compute-clusters
-            optional: ${{ inputs.targetType !== 'compute-cluster' }}
             label: Service host
+            optional: ${{ inputs.targetType !== 'compute-cluster' }}
             include-workspace: false
-            provider:
-              - gclusterv2
-              - pclusterv2
-              - azclusterv2
-              - aws-slurm
-              - google-slurm
-              - azure-slurm
-            tooltip: Resource to host the service. Only supported in cloud clusters.
+            tooltip: Resource to host the service
           nports:
             type: number
             label: Number of Ports to Reserve
@@ -543,39 +536,23 @@ jobs:
       service:
         type: group
         label: Service
-        hidden: ${{ inputs.targetType !== 'compute-cluster' }}
+        hidden: true
         items:
           novnc_parent_install_dir:
             label: noVNC installation directory
             type: string
             hidden: true
             default: __HOME__/pw/software
+          novnc_tgz_basename:
+            label: Basename of the novnc tgz file
+            type: string
+            hidden: true
+            default: noVNC-1.5.0.tgz
           name:
             type: string
             label: Select remote display protocol
             hidden: true
-            default: kasmvnc-proxy
-          download_url:
-            label: Download URL
-            type: string
-            hidden: true
-            default: https://github.com/kasmtech/KasmVNC/releases/download/v1.3.2/kasmvncserver_oracle_8_1.3.2_x86_64.rpm
-            tooltip: 
-              Installs the KasmVNC version specified in the URL
-          set_password:
-            label: Set Password
-            type: boolean
-            default: false
-            tooltip: |
-              Select 'Yes' to enable password authentication for KasmVNC, requiring users to enter a password to access the session.
-              Select 'No' to disable password authentication, allowing users to access the session without a password.
-          password:
-            label: Password
-            type: password
-            hidden: ${{ inputs.service.set_password == false }}
-            ignore: ${{ .hidden }}
-            optional: ${{ .hidden }}
-            tooltip: The password applies to all sessions on the same target. Changing it affects active sessions, requiring the new password.
+            default: vncserver
       k8s:
         type: group
         label: Kubernetes Settings

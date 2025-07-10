@@ -182,7 +182,7 @@ jobs:
                       - containerPort: ${{ inputs.openwebui_k8s.image_port }}
                     env:
                       - name: OLLAMA_BASE_URL
-                        value: "http://${{ needs.prepare_k8s_deployment.outputs.app_name }}.${{ inputs.k8s.namespace }}.svc.cluster.local:${{ inputs.ollama_k8s.image_port }}"
+                        value: "http://${{ needs.prepare_k8s_deployment.outputs.app_name }}.${{ inputs.k8s.namespace }}.svc.cluster.local.:${{ inputs.ollama_k8s.image_port }}"
                       - name: WEBUI_AUTH
                         value: "False"
                     resources:

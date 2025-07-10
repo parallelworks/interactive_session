@@ -29,8 +29,12 @@ jobs:
             fi
             pvc_storage_class=${{ inputs.k8s.volumes.pvc_storage_class }} 
             if [ -z "${pvc_storage_class}" ] || [[ "${pvc_storage_class}" == "undefined" ]]; then
-              default_class=$(kubectl get storageclass -n ${{ inputs.k8s.namespace }} | grep '(default)' || true)
-              if [ -z "${default_class}" ]; then
+              default_class=$(kubectl get storageclass -n ${{ inputs.k8s.namespace }} | grep '(default)')
+              if [ $? -ne 0 ]; then
+                echo "WARNING: Could not obtain default storageClass with command:"
+                echo "         kubectl get storageclass -n ${{ inputs.k8s.namespace }}"
+                echo "         You might need to provide a storage class input"
+              elif [ -z "${default_class}" ]; then
                 echo "ERROR: No default storage class found. You must specify one explicitly."
                 exit 1
               fi

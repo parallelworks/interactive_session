@@ -3,6 +3,9 @@ This workflow starts a remote desktop [interactive session](https://github.com/p
 
 Use the `Target Type` input to select your environment.
 
+## Compute Cluster
+ It utilizes either TurboVNC, TigerVNC or KasmVNC, depending on which is installed on the target resource.
+
 ## Kubernetes Cluster
 Launches KasmVNC on a Kubernetes cluster using a user-specified image and resource settings. 
 
@@ -13,6 +16,3 @@ Launches KasmVNC on a Kubernetes cluster using a user-specified image and resour
 - **Configure Resources:** Set CPU, memory, and optional GPU requests/limits.
 - **Run the Workflow:** Deploy Code Server and access it via a web interface.
 
-
-## Compute Cluster
- It utilizes either TurboVNC, TigerVNC or KasmVNC, depending on which is installed on the target resource.

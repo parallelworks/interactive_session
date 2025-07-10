@@ -457,6 +457,15 @@ jobs:
 'on':
   execute:
     inputs:
+      targetType:
+        label: Target Type
+        type: dropdown
+        default: kubernetes-cluster
+        options:
+          - label: Compute Cluster
+            value: compute-cluster
+          - label: Kubernetes Cluster
+            value: kubernetes-cluster
       pwrl_host:
         type: group
         label: Service Host

@@ -86,7 +86,7 @@ while true; do
                 ssh_retry_count=$((ssh_retry_count + 1))
             fi
         else
-            status_max_retries=0
+            ssh_retry_count=0
             status_retry_count=0
         fi
     elif [[ ${jobschedulertype} == "PBS" ]]; then
@@ -104,7 +104,7 @@ while true; do
                 ssh_retry_count=$((ssh_retry_count + 1))
             fi  
         else
-            status_max_retries=0
+            ssh_retry_count=0
             status_retry_count=0
         fi
     fi

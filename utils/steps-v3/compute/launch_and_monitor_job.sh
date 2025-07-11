@@ -57,8 +57,10 @@ get_pbs_job_status() {
 
 
 # Job status file writen by remote script:
-max_retries=10
-retry_count=0
+ssh_max_retries=10
+ssh_retry_count=0
+status_max_retries=2
+status_retry_count=0
 export sshcmd=$(echo ${sshcmd} | sed "s|ssh|ssh -o ConnectTimeout=10|g")
 while true; do
     sleep 15
@@ -71,13 +73,21 @@ while true; do
             # Test ssh connection to support retries for disconnected clusters
             ${sshcmd} exit
             if [ $? -eq 0 ]; then
-                job_status=$($sshcmd sacct -j ${jobid}  --format=state | tail -n1)
-                break
+                status_retry_count=$((status_retry_count + 1))
+                echo "Job status is empty (status attempt ${status_retry_count}/${status_max_retries})"
+                if [ $status_retry_count -ge $status_max_retries ]; then
+                    job_status=$($sshcmd sacct -j ${jobid}  --format=state | tail -n1)
+                    echo "Exiting job status loop"
+                    break
+                fi
             else
                 echo "ERROR: Failed to get SLURM job status using ${sshcmd}"
-                echo "       (attempt $((retry_count + 1))/$max_retries)"
-                retry_count=$((retry_count + 1))
+                echo "       (ssh attempt $((ssh_retry_count + 1))/$ssh_max_retries)"
+                ssh_retry_count=$((ssh_retry_count + 1))
             fi
+        else
+            ssh_retry_count=0
+            status_retry_count=0
         fi
     elif [[ ${jobschedulertype} == "PBS" ]]; then
         get_pbs_job_status
@@ -90,14 +100,17 @@ while true; do
                 break
             else
                 echo "ERROR: Failed to get SLURM job status using ${sshcmd}"
-                echo "       (attempt $((retry_count + 1))/$max_retries)"
-                retry_count=$((retry_count + 1))
+                echo "       (ssh attempt $((ssh_retry_count + 1))/$ssh_max_retries)"
+                ssh_retry_count=$((ssh_retry_count + 1))
             fi  
+        else
+            ssh_retry_count=0
+            status_retry_count=0
         fi
     fi
-    if [ $retry_count -ge $max_retries ]; then
-        echo "[ $retry_count -lt $max_retries ]"
-        echo "ERROR: Reached maximum retries for ${sshcmd} command"
+    if [ $ssh_retry_count -ge $ssh_max_retries ]; then
+        echo "[ $ssh_retry_count -lt $ssh_max_retries ]"
+        echo "ERROR: Reached maximum ssh retries for ${sshcmd} command"
         echo "       SSH connection to cluster failed"
         echo "       Exiting workflow"
         exit 2

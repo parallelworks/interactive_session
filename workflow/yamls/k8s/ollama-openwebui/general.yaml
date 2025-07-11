@@ -17,6 +17,7 @@ jobs:
         - auth_k8s
       steps:
         - name: Creating New PVC YAML
+          if: ${{ inputs.k8s.volumes.pvc === New }}
           run: |
             if [[ ${{ inputs.k8s.volumes.pvc_persist }} == "true" ]]; then
               pvc_name="${{ inputs.k8s.volumes.pvc_name }}"
@@ -56,6 +57,7 @@ jobs:
             EOF
             cat pvc.yaml
         - name: Dry Run PVC
+          if: ${{ inputs.k8s.volumes.pvc === New }}
           run: |
             echo "Performing dry run..."
             kubectl apply -f pvc.yaml --dry-run=client
@@ -219,6 +221,7 @@ jobs:
       - name: Load outputs
         run: cat OUTPUTS >> $OUTPUTS
       - name: Apply PVC
+        if: ${{ inputs.k8s.volumes.pvc === New }}
         run: kubectl apply -f pvc.yaml
         cleanup: |
           if [[ "${{ inputs.k8s.volumes.pvc_persist }}" == "false" ]]; then

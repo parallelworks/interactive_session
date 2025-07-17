@@ -99,7 +99,7 @@ download_and_install_juice() {
     local OUTPUT_FILE="juice-gpu-linux.tar.gz"
     local RAW_URL="https://raw.githubusercontent.com/$REPO/$BRANCH/$FILE_PATH"
     local LFS_API_URL="https://github.com/$REPO.git/info/lfs/objects/batch"
-    
+
     # Check for jq dependency
     if ! command -v jq >/dev/null 2>&1; then
         echo "ERROR: jq is required to parse JSON."
@@ -248,6 +248,7 @@ if [[ "${juice_use_juice}" == "true" ]]; then
         juice_exec=${service_parent_install_dir}/juice/juice
         if ! [ -f ${juice_exec} ]; then
             echo "INFO: Installing Juice"
+            mkdir -p ${juice_install_dir}
             download_and_install_juice
         fi
         if ! [ -f ${juice_exec} ]; then

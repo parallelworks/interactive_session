@@ -57,7 +57,7 @@ get_pbs_job_status() {
 
 
 # Job status file writen by remote script:
-ssh_max_retries=10
+ssh_max_retries=15
 ssh_retry_count=0
 status_max_retries=2
 status_retry_count=0

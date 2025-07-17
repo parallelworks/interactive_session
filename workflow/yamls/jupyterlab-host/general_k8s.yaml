@@ -18,6 +18,9 @@ jobs:
         run: |
           set -e
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
+          if ! [ -z ${{ org.JUICE_TOKEN }} ]; then
+            echo "export JUICE_TOKEN=${{ org.JUICE_TOKEN }}"  >> resources/host/inputs.sh
+          fi
           ./utils/steps-v3/preprocessing/process_inputs_sh.sh 
       - name: Transfer Files to Controller
         if: ${{ inputs.targetType === 'compute-cluster' }}
@@ -128,8 +131,6 @@ jobs:
             sleep 5
           done
           echo "remote_port=${remote_port}"  | tee -a $OUTPUTS
-
-
       - name: Waiting for Server to Start
         if: ${{ inputs.targetType === 'compute-cluster' }}
         env:
@@ -467,6 +468,7 @@ jobs:
             namespace: ${{ inputs.k8s.namespace }}
             resourceType: services
             resourceName: ${{ needs.create_k8s_session.outputs.service_name }}
+
 'on':
   execute:
     inputs:
@@ -789,3 +791,21 @@ jobs:
             label: Use Token Authentication?
             type: boolean
             tooltip: Enable token-based authentication. Some containers may not support it.
+      juice:
+        type: group
+        label: Juice Settings
+        collapsed: true
+        hidden: ${{ org.JUICE_TOKEN == "" }}
+        items:
+          use_juice:
+            label: Enable Juice?
+            type: boolean
+            default: false
+            tooltip: Enable Juice to access and share remote GPUs over a network for your workload.
+          cmd_args:
+            label: Juice Run Command Arguments
+            type: string
+            hidden: ${{ inputs.juice.use_juice == false }}
+            ignore: ${{ .hidden }}
+            optional: true
+            tooltip: Optional arguments for the Juice run command to customize workload execution, e.g., "--pool-ids <pool_id>" to specify resource pools.

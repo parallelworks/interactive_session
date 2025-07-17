@@ -177,7 +177,24 @@ sed -i "s|^.*c\.ServerApp\.tornado_settings.*|c.ServerApp.tornado_settings = {\"
 sed -i "s|^.*c\.ServerApp\.root_dir.*|c.ServerApp.root_dir = '${service_notebook_dir}'|" jupyter_lab_config.py
 
 cd ${service_notebook_dir}
-jupyter-lab --port=${jupyterlab_port} --no-browser --config=${PWD}/jupyter_lab_config.py
+
+# JUICE https://docs.juicelabs.co/docs/juice/intro
+if [[ "${juice_use_juice}" == "true" ]]; then
+    echo "INFO: Enabling Juice for remote GPU access"
+    if [ -z "${juice_exec}" ]; then
+        juice_exec=${service_parent_install_dir}/juice/juice
+        echo "INFO: Set Juice executable path to ${juice_exec}"
+    fi
+    juice_cmd="${juice_exec} ${juice_cmd_args} run"
+    echo "INFO: Prepared Juice command: ${juice_exec}"
+    echo "INFO: Logging into Juice with provided token"
+    ${juice_exec} login -t "${JUICE_TOKEN}" || {
+        echo "ERROR: Failed to log into Juice"
+        exit 1
+    }
+fi
+
+${juice_cmd} jupyter-lab --port=${jupyterlab_port} --no-browser --config=${PWD}/jupyter_lab_config.py
 #jupyter-lab --port=${jupyterlab_port} --ip ${HOSTNAME} --no-browser --config=${PWD}/jupyter_lab_config.py
 
 sleep inf

@@ -185,7 +185,7 @@ if [[ "${juice_use_juice}" == "true" ]]; then
         juice_exec=${service_parent_install_dir}/juice/juice
         echo "INFO: Set Juice executable path to ${juice_exec}"
     fi
-    juice_exec="${juice_exec} ${juice_cmd_args}"
+    juice_exec="${juice_exec} ${juice_cmd_args} run"
     echo "INFO: Prepared Juice command: ${juice_exec}"
     echo "INFO: Logging into Juice with provided token"
     ${juice_exec} login -t "${JUICE_TOKEN}" || {

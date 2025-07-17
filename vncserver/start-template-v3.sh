@@ -35,8 +35,22 @@ fi
 service_novnc_tgz_stem=$(echo ${service_novnc_tgz_basename} | sed "s|.tar.gz||g" | sed "s|.tgz||g")
 service_novnc_install_dir=${service_parent_install_dir}/${service_novnc_tgz_stem}
 
-# Determine if the service is running in windows using WSL
-kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
+
+# JUICE https://docs.juicelabs.co/docs/juice/intro
+if [[ "${juice_use_juice}" == "true" ]]; then
+    echo "INFO: Enabling Juice for remote GPU access"
+    if [ -z "${juice_exec}" ]; then
+        juice_exec=${service_parent_install_dir}/juice/juice
+        echo "INFO: Set Juice executable path to ${juice_exec}"
+    fi
+    juice_cmd="${juice_exec} ${juice_cmd_args} run"
+    echo "INFO: Prepared Juice command: ${juice_exec}"
+    echo "INFO: Logging into Juice with provided token"
+    ${juice_exec} login -t "${JUICE_TOKEN}" || {
+        echo "ERROR: Failed to log into Juice"
+        exit 1
+    }
+fi
 
 # Deactive default conda environments (required for emed)
 export $(env | grep CONDA_PREFIX)
@@ -202,13 +216,13 @@ if [[ "${service_vnc_type}" == "TigerVNC" || "${service_vnc_type}" == "TurboVNC"
     # if vncserver is not tigervnc
     if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
         # FIXME: Change ~/.vnc/config
-        ${service_vnc_exec} ${DISPLAY} &> ${resource_jobdir}/vncserver.log &
+        ${juice_cmd} ${service_vnc_exec} ${DISPLAY} &> ${resource_jobdir}/vncserver.log &
         echo $! > ${resource_jobdir}/vncserver.pid
     elif [[ ${service_vnc_type} == "TurboVNC" ]]; then
-        ${service_vnc_exec} ${DISPLAY} -SecurityTypes None
+        ${juice_cmd} ${service_vnc_exec} ${DISPLAY} -SecurityTypes None
     else
         # tigervnc
-        ${service_vnc_exec} ${DISPLAY} -SecurityTypes=None
+        ${juice_cmd} ${service_vnc_exec} ${DISPLAY} -SecurityTypes=None
     fi
 
     rm -f ${resource_jobdir}/service.pid
@@ -265,7 +279,7 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     RETRY_DELAY=5
     RETRY_COUNT=0
 
-    vncserver_cmd="${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} -select-de gnome -websocketPort ${kasmvnc_port} -rfbport ${displayPort}"
+    vncserver_cmd="${juice_cmd} ${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} -select-de gnome -websocketPort ${kasmvnc_port} -rfbport ${displayPort}"
     echo Running:
     echo ${vncserver_cmd}
     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do

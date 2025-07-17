@@ -82,8 +82,8 @@ download_singularity_container() {
     # 5. Perform the checkout
     git checkout
 
-    # 6. Extract tgz
-    cp downloads/jupyter/nginx-unprivileged.sif ${service_nginx_sif}
+    # 6. Move
+    mv downloads/jupyter/nginx-unprivileged.sif ${service_nginx_sif}
 
     # 7. Clean
     cd ../
@@ -91,7 +91,37 @@ download_singularity_container() {
     
 }
 
+download_and_install_juice() {
+    # 1. Clone the repository with --no-checkout
+    export GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
+    # Needed for emed
+    git config --global --unset http.sslbackend
+    git clone --no-checkout https://github.com/parallelworks/interactive_session.git
 
+    # 2. Navigate into the repository directory
+    cd interactive_session
+    #git checkout download-dependencies
+
+    # 3. Initialize sparse-checkout
+    git sparse-checkout init
+
+    # 4. Configure sparse-checkout to include only the desired file
+    echo downloads/juice/juice-gpu-linux.tar.gz > .git/info/sparse-checkout
+
+    # 5. Perform the checkout
+    git checkout
+
+    # 6. Move
+    mv downloads/juice/juice-gpu-linux.tar.gz ${juice_install_dir}
+
+    # 7. Clean
+    cd ../
+    rm -rf interactive_session
+
+    # 8. Extraxct tgz
+    cd ${juice_install_dir}
+    tar -zxvf juice-gpu-linux.tar.gz
+}
 
 if [[ "${service_conda_install}" == "true" ]]; then
     
@@ -167,4 +197,20 @@ fi
 if ! [ -f "${service_nginx_sif}" ]; then
     echo; echo "Downloading nginx singularity from Github"
     download_singularity_container
+fi
+
+# Juice
+if [[ "${juice_use_juice}" == "true" ]]; then
+    if [ -z "${juice_exec}" ]; then
+        juice_install_dir=${service_parent_install_dir}/juice
+        juice_exec=${service_parent_install_dir}/juice/juice
+        if ! [ -f ${juice_exec} ]; then
+            echo "INFO: Installing Juice"
+            download_and_install_juice
+        fi
+        if ! [ -f ${juice_exec} ]; then
+            echo "ERROR: Juice installation failed"
+            exit 1
+        fi
+    fi
 fi

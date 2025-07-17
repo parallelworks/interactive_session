@@ -543,6 +543,7 @@ jobs:
       service:
         type: group
         label: Jupyter Lab Settings
+        collapsed: true
         hidden: ${{ inputs.targetType !== 'compute-cluster' }}
         items:
           name:
@@ -793,7 +794,7 @@ jobs:
             tooltip: Enable token-based authentication. Some containers may not support it.
       juice:
         type: group
-        label: Juice Settings
+        label: Attached GPU Settings
         collapsed: true
         hidden: ${{ org.JUICE_TOKEN == "" }}
         items:

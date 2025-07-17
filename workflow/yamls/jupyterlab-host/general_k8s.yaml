@@ -794,6 +794,7 @@ jobs:
         type: group
         label: Juice Settings
         collapsed: true
+        hidden: ${{ org.JUICE_TOKEN == "" }}
         items:
           use_juice:
             label: Enable Juice?

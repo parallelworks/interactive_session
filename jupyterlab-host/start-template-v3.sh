@@ -188,7 +188,7 @@ if [[ "${juice_use_juice}" == "true" ]]; then
     juice_exec="${juice_exec} ${juice_cmd_args}"
     echo "INFO: Prepared Juice command: ${juice_exec}"
     echo "INFO: Logging into Juice with provided token"
-    ./juice login -t "${JUICE_TOKEN}" || {
+    ${juice_exec} login -t "${JUICE_TOKEN}" || {
         echo "ERROR: Failed to log into Juice"
         exit 1
     }

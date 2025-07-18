@@ -1,6 +1,14 @@
 # Initialize cancel script
 set -x
 
+PORT=5000
+if lsof -i :$PORT >/dev/null 2>&1; then
+    echo
+    echo "Error: Port $PORT is already in use."
+    echo "Please ensure that no other NGENCERF job is currently running in the cluster."
+    echo "Exiting workflow run"
+    exit 1
+fi
 
 # Test if the user can execute a passwordless sudo command
 if sudo -n true 2>/dev/null; then
@@ -164,7 +172,8 @@ fi
 
 # Make sure permissions are set properly
 #sudo -n chown -R ${USER} ${local_data_dir}
-sudo -n chmod -R u+rw ${local_data_dir}
+#sudo -n chmod -R u+rw ${local_data_dir}
+sudo find "$local_data_dir" ! -perm -u+rw -print0 | sudo parallel -0 chmod u+rw
 #mkdir -p ${local_data_dir}/forecast_forcing_work/esmf_mesh
 #mkdir -p ${local_data_dir}/forecast_forcing_work/raw_input/HRRR
 #mkdir -p ${local_data_dir}/forecast_forcing_work/raw_input/RAP

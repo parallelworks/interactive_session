@@ -85,6 +85,11 @@ ${juice_cmd} ${service_exec} \
     ${password_flag} \
     ${service_directory}
 
+if [ $? -ne 0 ]; then
+    echo "ERROR: Command failed"
+    exit 1
+fi
+
 sleep 999999999
 # For openvscode-server
 ${service_exec} \

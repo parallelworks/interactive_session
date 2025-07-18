@@ -803,10 +803,24 @@ jobs:
             type: boolean
             default: false
             tooltip: Enable Juice to access and share remote GPUs over a network for your workload.
+          pool_ids:
+            label: Pool IDs
+            type: string
+            hidden: ${{ inputs.juice.use_juice == false }}
+            ignore: ${{ .hidden }}
+            optional: true
+            tooltip:  Comma separated list of pool ids from which to allocate the session resources, when empty any available pool you have access to is used
+          vram:
+            label: VRAM
+            type: string
+            hidden: ${{ inputs.juice.use_juice == false }}
+            ignore: ${{ .hidden }}
+            optional: true
+            tooltip:  Amount of VRAM requested in gibibytes. Can return a session with fewer bytes if there is not enough space on the device. Suffixes can be provided for convenience. E.g. 4 GiB (default "0")
           cmd_args:
             label: Juice Run Command Arguments
             type: string
             hidden: ${{ inputs.juice.use_juice == false }}
             ignore: ${{ .hidden }}
             optional: true
-            tooltip: Optional arguments for the Juice run command to customize workload execution, e.g., "--pool-ids <pool_id>" to specify resource pools.
+            tooltip: Optional arguments for the juice run command to customize workload execution, e.g., "--gpu-ids string".

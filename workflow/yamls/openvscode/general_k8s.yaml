@@ -18,6 +18,9 @@ jobs:
         run: |
           set -e
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
+          if ! [ -z ${{ org.JUICE_TOKEN }} ]; then
+            echo "export JUICE_TOKEN=${{ org.JUICE_TOKEN }}"  >> resources/host/inputs.sh
+          fi
           ./utils/steps-v3/preprocessing/process_inputs_sh.sh 
       - name: Transfer Files to Controller
         if: ${{ inputs.targetType === 'compute-cluster' }}
@@ -714,3 +717,35 @@ jobs:
             label: GitHub Authentication Token
             type: password
             optional: true
+      juice:
+        type: group
+        label: Attached GPU Settings
+        collapsed: true
+        hidden: ${{ org.JUICE_TOKEN == "" || inputs.targetType !== 'compute-cluster' }}
+        items:
+          use_juice:
+            label: Enable Juice?
+            type: boolean
+            default: false
+            tooltip: Enable Juice to access and share remote GPUs over a network for your workload.
+          pool_ids:
+            label: Pool IDs
+            type: string
+            hidden: ${{ inputs.juice.use_juice == false }}
+            ignore: ${{ .hidden }}
+            optional: true
+            tooltip:  Comma separated list of pool ids from which to allocate the session resources, when empty any available pool you have access to is used
+          vram:
+            label: VRAM
+            type: string
+            hidden: ${{ inputs.juice.use_juice == false }}
+            ignore: ${{ .hidden }}
+            optional: true
+            tooltip:  Amount of VRAM requested in gibibytes. Can return a session with fewer bytes if there is not enough space on the device. Suffixes can be provided for convenience. E.g. 4 GiB (default "0")
+          cmd_args:
+            label: Juice Run Command Arguments
+            type: string
+            hidden: ${{ inputs.juice.use_juice == false }}
+            ignore: ${{ .hidden }}
+            optional: true
+            tooltip: Optional arguments for the juice run command to customize workload execution, e.g., "--gpu-ids string".

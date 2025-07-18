@@ -11,12 +11,14 @@ jobs:
   auth_k8s:
     steps:
       - name: Authenticate kubectl
+        early-cancel: any-job-failed
         run: pw kube auth ${{ inputs.k8s.cluster }}
   prepare_k8s_pvc:
     needs:
       - auth_k8s
     steps:
       - name: Creating New PVC YAML
+        early-cancel: any-job-failed
         if: ${{ inputs.k8s.volumes.pvc === New }}
         run: |
           if [[ ${{ inputs.k8s.volumes.pvc_persist }} == "true" ]]; then
@@ -57,11 +59,13 @@ jobs:
           EOF
           cat pvc.yaml
       - name: Dry Run PVC
+        early-cancel: any-job-failed
         if: ${{ inputs.k8s.volumes.pvc === New }}
         run: |
           echo "Performing dry run..."
           kubectl apply -f pvc.yaml --dry-run=client
       - name: Dummy
+        early-cancel: any-job-failed
         run: echo Dummy
         
   prepare_k8s_deployment:
@@ -69,12 +73,14 @@ jobs:
       - prepare_k8s_pvc
     steps:
       - name: Defining App Name
+        early-cancel: any-job-failed
         run: |
           job_number=$(pwd | rev | cut -d "/" -f1 | rev)
           workflow_name=$(pwd | rev | cut -d "/" -f2 | rev)
           app_name=$(echo "${PW_USER}${workflow_name}${job_number}" | sed 's|_||g' | sed 's|\.||g' | tr '[:upper:]' '[:lower:]' | tail -c 56)
           echo "app_name=${app_name}" | tee -a $OUTPUTS | tee -a OUTPUTS
       - name: Creating Deployment and Service YAML
+        early-cancel: any-job-failed
         run: |
           if [[ "${{ inputs.k8s.resources.limits.select_gpu }}" == "Custom" ]]; then
             gpu_limits="${{ inputs.k8s.resources.limits.gpu_resource_key }}: ${{ inputs.k8s.resources.limits.number_of_gpus }}"
@@ -172,6 +178,7 @@ jobs:
                 targetPort: ${{ inputs.service_k8s.image_port }}
           EOF
       - name: Dry Run Deployment
+        early-cancel: any-job-failed
         run: |
           echo "Performing dry run..."
           kubectl apply -f app.yaml --dry-run=client
@@ -180,8 +187,10 @@ jobs:
       - prepare_k8s_deployment
     steps:
       - name: Load outputs
+        early-cancel: any-job-failed
         run: cat OUTPUTS >> $OUTPUTS
       - name: Apply PVC
+        early-cancel: any-job-failed
         if: ${{ inputs.k8s.volumes.pvc === New }}
         run: kubectl apply -f pvc.yaml
         cleanup: |
@@ -190,11 +199,13 @@ jobs:
             touch pvc.deleted
           fi
       - name: Apply Deployment and Service
+        early-cancel: any-job-failed
         run: kubectl apply -f app.yaml
         cleanup: |
           kubectl delete -f app.yaml
           touch app.deleted
       - name: Wait for Deployment to be Ready
+        early-cancel: any-job-failed
         env:
           app_name: ${{ needs.apply_k8s_deployment.outputs.app_name }}
           namespace: ${{ inputs.k8s.namespace }}
@@ -230,6 +241,7 @@ jobs:
           kubectl describe deployment ${app_name} -n ${namespace}
           exit ${exit_code}
       - name: Wait for Pod to be Ready
+        early-cancel: any-job-failed
         env:
           app_name: ${{ needs.apply_k8s_deployment.outputs.app_name }}
           namespace: ${{ inputs.k8s.namespace }}
@@ -240,6 +252,7 @@ jobs:
           echo "jupyter_pod=$jupyter_pod" | tee -a $OUTPUTS | tee -a OUTPUTS
           touch pod.running
       - name: Stream Logs
+        early-cancel: any-job-failed
         run: |
           kubectl logs -f deployment/${{ needs.apply_k8s_deployment.outputs.app_name }} -n ${{ inputs.k8s.namespace }}
           echo Existing
@@ -248,6 +261,7 @@ jobs:
       - prepare_k8s_deployment
     steps:
       - name: Wait until the Kubernetes deployment reaches its final stage
+        early-cancel: any-job-failed
         run: |
           while true; do
             if [ -f "app.deleted" ]; then
@@ -260,10 +274,12 @@ jobs:
             sleep 2 
           done
       - name: Get Service Name
+        early-cancel: any-job-failed
         run: |
           source OUTPUTS
           echo "service_name=${app_name}-lb" | tee -a $OUTPUTS
       - name: Get SLUG
+        early-cancel: any-job-failed
         run: |
           source OUTPUTS
           if [ -z "${token}" ]; then
@@ -273,6 +289,7 @@ jobs:
           fi
           echo "slug=${slug}" | tee -a $OUTPUTS
       - name: Expose port
+        early-cancel: any-job-failed
         uses: parallelworks/update-session
         with:
           remotePort: ${{ inputs.service_k8s.image_port }}

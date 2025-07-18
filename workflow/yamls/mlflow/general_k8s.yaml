@@ -12,21 +12,26 @@ jobs:
   preprocessing:
     steps:
       - name: Validating Target Resource
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/preprocessing/input_form_resource_wrapper.sh ${{ inputs.pwrl_host.resource.ip }}
       - name: Process Inputs
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'compute-cluster' }}
         run: | 
           set -e
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
           ./utils/steps-v3/preprocessing/process_inputs_sh.sh 
       - name: Transfer Files to Controller
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/preprocessing/transfer_files_to_controller.sh
       - name: Controller Preprocessing
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/preprocessing/controller_preprocessing.sh
       - name: Initialize Cancel Script
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/preprocessing/initialize_cancel_script.sh
 
@@ -35,9 +40,11 @@ jobs:
        - preprocessing
     steps:
       - name: Create Controller Session Script
+        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/controller/create_session_script.sh
       - name: Launch and Monitor Controller Job
+        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/controller/launch_and_monitor_job.sh
         cleanup: |
@@ -45,6 +52,7 @@ jobs:
             ./kill.sh
           fi
       - name: Clean and Exit
+        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/clean_and_exit.sh
 
@@ -53,9 +61,11 @@ jobs:
        - preprocessing
     steps:
       - name: Create Compute Session Script
+        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/compute/create_session_script.sh
       - name:  Launch and Monitor Compute Job
+        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/compute/launch_and_monitor_job.sh
         cleanup: |
@@ -63,6 +73,7 @@ jobs:
             ./kill.sh
           fi
       - name: Clean and Exit
+        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/clean_and_exit.sh
 
@@ -72,11 +83,13 @@ jobs:
        - preprocessing
     steps:
       - name: Set Session Name
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'compute-cluster' }}
         run: |
           session_name=$(pwd | rev | cut -d'/' -f1-2 | tr '/' '-' | rev)
           echo "session_name=${session_name}" | tee -a $OUTPUTS
       - name: Get Controller Hostname
+        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
@@ -84,6 +97,7 @@ jobs:
           target_hostname=$(${sshcmd} hostname)
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
       - name: Get Compute Hostname
+        early-cancel: any-job-failed
         if: ${{ 'SLURM' === inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
@@ -115,6 +129,7 @@ jobs:
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
 
       - name: Get Remote Port
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'compute-cluster' }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
@@ -137,6 +152,7 @@ jobs:
           done
           echo "remote_port=${remote_port}"  | tee -a $OUTPUTS
       - name: Waiting for Server to Start
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'compute-cluster' }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
@@ -167,11 +183,13 @@ jobs:
               fi
           done
       - name: Select Local Port
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'compute-cluster' }}
         run: |
           local_port=$(pw agent open-port)
           echo "local_port=${local_port}"  | tee -a $OUTPUTS
       - name: Expose Port
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'compute-cluster' }}
         uses: parallelworks/update-session
         with:
@@ -183,6 +201,7 @@ jobs:
   auth_k8s:
     steps:
       - name: Authenticate kubectl
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         run: pw kube auth ${{ inputs.k8s.cluster }}
   prepare_k8s_pvc:
@@ -190,6 +209,7 @@ jobs:
         - auth_k8s
       steps:
         - name: Creating New PVC YAML
+          early-cancel: any-job-failed
           if: ${{ inputs.targetType === 'kubernetes-cluster' && inputs.k8s.volumes.pvc === New  }}
           run: |
             if [[ ${{ inputs.k8s.volumes.pvc_persist }} == "true" ]]; then
@@ -230,17 +250,20 @@ jobs:
             EOF
             cat pvc.yaml
         - name: Dry Run PVC
+          early-cancel: any-job-failed
           if: ${{ inputs.targetType === 'kubernetes-cluster' && inputs.k8s.volumes.pvc === New  }}
           run: |
             echo "Performing dry run..."
             kubectl apply -f pvc.yaml --dry-run=client
         - name: Dummy
+          early-cancel: any-job-failed
           run: echo Dummy
   prepare_k8s_deployment:
     needs:
       - prepare_k8s_pvc
     steps:
       - name: Defining App Name
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         run: |
           job_number=$(pwd | rev | cut -d "/" -f1 | rev)
@@ -248,6 +271,7 @@ jobs:
           app_name=$(echo "${PW_USER}${workflow_name}${job_number}" | sed 's|_||g' | sed 's|\.||g' | tr '[:upper:]' '[:lower:]' | tail -c 56)
           echo "app_name=${app_name}" | tee -a $OUTPUTS | tee -a OUTPUTS
       - name: Creating Deployment and Service YAML
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         run: |
           if [[ "${{ inputs.k8s.resources.limits.select_gpu }}" == "Custom" ]]; then
@@ -338,6 +362,7 @@ jobs:
                 targetPort: ${{ inputs.service_k8s.image_port }}
           EOF
       - name: Dry Run Deployment
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         run: |
           echo "Performing dry run..."
@@ -347,9 +372,11 @@ jobs:
       - prepare_k8s_deployment
     steps:
       - name: Load outputs
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         run: cat OUTPUTS >> $OUTPUTS
       - name: Apply PVC
+        early-cancel: any-job-failed
         if: ${{  inputs.targetType === 'kubernetes-cluster' && inputs.k8s.volumes.pvc === New }}
         run: kubectl apply -f pvc.yaml
         cleanup: |
@@ -358,12 +385,14 @@ jobs:
             touch pvc.deleted
           fi
       - name: Apply Deployment and Service
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         run: kubectl apply -f app.yaml
         cleanup: |
           kubectl delete -f app.yaml
           touch app.deleted
       - name: Wait for Deployment to be Ready
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         env:
           app_name: ${{ needs.apply_k8s_deployment.outputs.app_name }}
@@ -400,6 +429,7 @@ jobs:
           kubectl describe deployment ${app_name} -n ${namespace}
           exit ${exit_code}
       - name: Wait for Pod to be Ready
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         env:
           app_name: ${{ needs.apply_k8s_deployment.outputs.app_name }}
@@ -411,6 +441,7 @@ jobs:
           echo "pod=$pod" | tee -a $OUTPUTS | tee -a OUTPUTS
           touch pod.running
       - name: Stream Logs
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         run: kubectl logs -f deployment/${{ needs.apply_k8s_deployment.outputs.app_name }} -n ${{ inputs.k8s.namespace }}
   create_k8s_session:
@@ -418,6 +449,7 @@ jobs:
       - prepare_k8s_deployment
     steps:
       - name: Wait until the Kubernetes deployment reaches its final stage
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         run: |
           while true; do
@@ -431,11 +463,13 @@ jobs:
             sleep 2 
           done
       - name: Get Service Name
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         run: |
           source OUTPUTS
           echo "service_name=${app_name}-lb" | tee -a $OUTPUTS
       - name: Expose port
+        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         uses: parallelworks/update-session
         with:

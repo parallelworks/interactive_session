@@ -1,7 +1,7 @@
 # Make sure no conda environment is activated! 
 # https://github.com/parallelworks/issues/issues/1081
 
-
+exit 1
 ###################
 # PREPARE CLEANUP #
 ###################

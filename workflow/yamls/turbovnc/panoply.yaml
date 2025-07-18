@@ -13,17 +13,22 @@ jobs:
   preprocessing:
     steps:
       - name: Validating Target Resource
+        early-cancel: any-job-failed
         run: ./utils/steps-v3/preprocessing/input_form_resource_wrapper.sh ${{ inputs.pwrl_host.resource.ip }}
       - name: Process Inputs
+        early-cancel: any-job-failed
         run: | 
           set -e
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
           ./utils/steps-v3/preprocessing/process_inputs_sh.sh 
       - name: Transfer Files to Controller
+        early-cancel: any-job-failed
         run: ./utils/steps-v3/preprocessing/transfer_files_to_controller.sh
       - name: Controller Preprocessing
+        early-cancel: any-job-failed
         run: ./utils/steps-v3/preprocessing/controller_preprocessing.sh
       - name: Initialize Cancel Script
+        early-cancel: any-job-failed
         run: ./utils/steps-v3/preprocessing/initialize_cancel_script.sh
 
   controller_job:

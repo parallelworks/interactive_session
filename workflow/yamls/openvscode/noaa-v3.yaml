@@ -12,17 +12,22 @@ jobs:
   preprocessing:
     steps:
       - name: Validating Target Resource
+        early-cancel: any-job-failed
         run: ./utils/steps-v3/preprocessing/input_form_resource_wrapper.sh  ${{ inputs.pwrl_host.resource.ip }}
       - name: Process Inputs
+        early-cancel: any-job-failed
         run: | 
           set -e
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
           ./utils/steps-v3/preprocessing/process_inputs_sh.sh 
       - name: Transfer Files to Controller
+        early-cancel: any-job-failed
         run: ./utils/steps-v3/preprocessing/transfer_files_to_controller.sh
       - name: Controller Preprocessing
+        early-cancel: any-job-failed
         run: ./utils/steps-v3/preprocessing/controller_preprocessing.sh
       - name: Initialize Cancel Script
+        early-cancel: any-job-failed
         run: ./utils/steps-v3/preprocessing/initialize_cancel_script.sh
 
   controller_job:
@@ -30,9 +35,11 @@ jobs:
        - preprocessing
     steps:
       - name: Create Controller Session Script
+        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/controller/create_session_script.sh
       - name: Launch and Monitor Controller Job
+        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/controller/launch_and_monitor_job.sh
         cleanup: |
@@ -40,6 +47,7 @@ jobs:
             ./kill.sh
           fi
       - name: Clean and Exit
+        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/clean_and_exit.sh
 
@@ -48,9 +56,11 @@ jobs:
        - preprocessing
     steps:
       - name: Create Compute Session Script
+        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/compute/create_session_script.sh
       - name:  Launch and Monitor Compute Job
+        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/compute/launch_and_monitor_job.sh
         cleanup: |
@@ -58,6 +68,7 @@ jobs:
             ./kill.sh
           fi
       - name: Clean and Exit
+        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/clean_and_exit.sh
 
@@ -67,10 +78,12 @@ jobs:
        - preprocessing
     steps:
       - name: Set Session Name
+        early-cancel: any-job-failed
         run: |
           session_name=$(pwd | rev | cut -d'/' -f1-2 | tr '/' '-' | rev)
           echo "session_name=${session_name}" | tee -a $OUTPUTS
       - name: Get Controller Hostname
+        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
@@ -78,6 +91,7 @@ jobs:
           target_hostname=$(${sshcmd} hostname)
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
       - name: Get Compute Hostname
+        early-cancel: any-job-failed
         if: ${{ 'SLURM' === inputs.pwrl_host.jobschedulertype }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
@@ -109,6 +123,7 @@ jobs:
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
 
       - name: Get Remote Port
+        early-cancel: any-job-failed
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -130,6 +145,7 @@ jobs:
           done
           echo "remote_port=${remote_port}"  | tee -a $OUTPUTS
       - name: Waiting for Server to Start
+        early-cancel: any-job-failed
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
           remote_port: ${{ needs.create_session.outputs.remote_port }}
@@ -159,14 +175,17 @@ jobs:
               fi
           done
       - name: Select Local Port
+        early-cancel: any-job-failed
         run: |
           local_port=$(pw agent open-port)
           echo "local_port=${local_port}"  | tee -a $OUTPUTS
       - name: Set URL SLUG
+        early-cancel: any-job-failed
         run: |
           source resources/host/inputs.sh
           echo "slug=?folder=${service_directory}"  | tee -a $OUTPUTS
       - name: Expose Port
+        early-cancel: any-job-failed
         uses: parallelworks/update-session
         with:
           remotePort: "${{ needs.create_session.outputs.remote_port }}"

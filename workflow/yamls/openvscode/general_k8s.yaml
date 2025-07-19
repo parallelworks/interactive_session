@@ -563,6 +563,7 @@ jobs:
       service:
         type: group
         label: VS Code Settings
+        collapsed: true
         hidden: ${{ inputs.targetType !== 'compute-cluster' }}
         items:
           name:

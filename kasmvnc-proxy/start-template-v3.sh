@@ -41,6 +41,14 @@ attempt=0
 while ! is_kasmvnc_installed && [ $attempt -lt $MAX_RETRIES ]; do
     check_sudo_access "Install kasmvnc-server"
     echo "Attempt $((attempt+1)) to install kasmvnc..."
+
+    # if running on rocky9 update the download url
+    source /etc/os-release
+    if [[ "$VERSION_ID" == *"9"* ]];then
+        echo "rocky9 version detected... updating service_download_url"
+        service_download_url="https://github.com/kasmtech/KasmVNC/releases/download/v1.3.2/kasmvncserver_oracle_9_1.3.2_x86_64.rpm"
+    fi
+
     wget ${service_download_url}
     sudo dnf localinstall ./kasmvncserver_*.rpm --allowerasing -y 
     rm ./kasmvncserver_*.rpm

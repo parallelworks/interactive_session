@@ -46,7 +46,7 @@ while ! is_kasmvnc_installed && [ $attempt -lt $MAX_RETRIES ]; do
     source /etc/os-release
     if [[ "$VERSION_ID" == *"9"* ]];then
         echo "rocky9 version detected... updating service_download_url"
-        service_download_url="https://github.com/kasmtech/KasmVNC/releases/download/v1.3.2/kasmvncserver_oracle_9_1.3.2_x86_64.rpm"
+        service_download_url="https://github.com/kasmtech/KasmVNC/releases/download/v1.3.4/kasmvncserver_oracle_9_1.3.4_x86_64.rpm"
     fi
 
     wget ${service_download_url}

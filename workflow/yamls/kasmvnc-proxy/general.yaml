@@ -287,13 +287,6 @@ jobs:
             label: Select remote display protocol
             hidden: true
             default: kasmvnc-proxy
-          download_url:
-            label: Download URL
-            type: string
-            hidden: true
-            default: https://github.com/kasmtech/KasmVNC/releases/download/v1.3.2/kasmvncserver_oracle_8_1.3.2_x86_64.rpm
-            tooltip: 
-              Installs the KasmVNC version specified in the URL
           set_password:
             label: Set Password
             type: boolean

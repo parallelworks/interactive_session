@@ -148,3 +148,19 @@ if [ ! -f ${service_exec} ]; then
     exit 1
 fi
 
+# Juice
+if [[ "${juice_use_juice}" == "true" ]]; then
+    if [ -z "${juice_exec}" ]; then
+        juice_install_dir=${service_parent_install_dir}/juice
+        juice_exec=${service_parent_install_dir}/juice/juice
+        if ! [ -f ${juice_exec} ]; then
+            echo "INFO: Installing Juice"
+            mkdir -p ${juice_install_dir}
+            download_and_install_juice
+        fi
+        if ! [ -f ${juice_exec} ]; then
+            echo "ERROR: Juice installation failed"
+            exit 1
+        fi
+    fi
+fi

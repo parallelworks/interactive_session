@@ -499,7 +499,7 @@ jobs:
       targetType:
         label: Target Type
         type: dropdown
-        default: kubernetes-cluster
+        default: compute-cluster
         options:
           - label: Compute Cluster
             value: compute-cluster
@@ -581,7 +581,8 @@ jobs:
         collapsed: false
       service:
         type: group
-        label: Service
+        label: Service Settings
+        collapsed: true
         hidden: ${{ inputs.targetType !== 'compute-cluster' }}
         items:
           novnc_parent_install_dir:

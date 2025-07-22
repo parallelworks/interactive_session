@@ -201,7 +201,7 @@ if [[ "${juice_use_juice}" == "true" ]]; then
     }
 fi
 
-${juice_cmd} jupyter-lab --port=${jupyterlab_port} --no-browser --config=${PWD}/jupyter_lab_config.py
+${juice_cmd} jupyter-lab --port=${jupyterlab_port} --no-browser --config=${PWD}/jupyter_lab_config.py --allow-root
 #jupyter-lab --port=${jupyterlab_port} --ip ${HOSTNAME} --no-browser --config=${PWD}/jupyter_lab_config.py
 
 sleep inf

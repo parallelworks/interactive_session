@@ -283,7 +283,7 @@ jobs:
         type: group
         label: Attached GPU Settings
         collapsed: true
-        hidden: ${{ org.JUICE_TOKEN == "" || inputs.targetType !== 'compute-cluster' }}
+        hidden: ${{ org.JUICE_TOKEN == "" }}
         items:
           use_juice:
             label: Enable Juice?

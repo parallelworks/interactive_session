@@ -1,6 +1,3 @@
-if [ -z ${service_parent_install_dir} ]; then
-    service_parent_install_dir=${HOME}/pw/software
-fi
 
 if [ -z ${service_parent_install_dir} ]; then
     service_parent_install_dir=${HOME}/pw/software

@@ -1,5 +1,9 @@
-if [ -z ${service_novnc_parent_install_dir} ]; then
-    service_novnc_parent_install_dir=${HOME}/pw/software
+if [ -z ${service_parent_install_dir} ]; then
+    service_parent_install_dir=${HOME}/pw/software
+fi
+
+if [ -z ${service_parent_install_dir} ]; then
+    service_parent_install_dir=${HOME}/pw/software
 fi
 
 #service_novnc_tgz_basename=noVNC-1.3.0.tgz
@@ -26,7 +30,7 @@ download_and_install() {
     git checkout
 
     # 6. Extract tgz
-    tar -zxf ${service_novnc_tgz_repo_path} -C ${service_novnc_parent_install_dir}
+    tar -zxf ${service_novnc_tgz_repo_path} -C ${service_parent_install_dir}
 
     # 7. Clean
     cd ../
@@ -115,10 +119,10 @@ displayErrorMessage() {
 
 echo; echo
 
-mkdir -p ${service_novnc_parent_install_dir}
+mkdir -p ${service_parent_install_dir}
 
 service_novnc_tgz_stem=$(echo ${service_novnc_tgz_basename} | sed "s|.tar.gz||g" | sed "s|.tgz||g")
-service_novnc_install_dir=${service_novnc_parent_install_dir}/${service_novnc_tgz_stem}
+service_novnc_install_dir=${service_parent_install_dir}/${service_novnc_tgz_stem}
 
 if ! [ -d "${service_novnc_install_dir}" ]; then
     echo "Downloading and installing ${service_novnc_install_dir}"

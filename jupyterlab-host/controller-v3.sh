@@ -29,6 +29,9 @@ f_install_miniconda() {
     rm -rf ${install_dir}
     mkdir -p $(dirname ${install_dir})
     nohup bash /tmp/miniconda-${ID}.sh -b -p ${install_dir} 2>&1 > /tmp/miniconda_sh-${ID}.out
+    source ${install_dir}/etc/profile.d/conda.sh
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
 }
 
 f_set_up_conda_from_yaml() {
@@ -58,8 +61,6 @@ f_set_up_conda_from_yaml() {
     conda activate ${CONDA_ENV}
     
     echo "Installing condda environment from YAML"
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
     conda env update -n ${CONDA_ENV} -f ${CONDA_YAML}
 }
 

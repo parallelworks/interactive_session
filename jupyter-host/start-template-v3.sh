@@ -1,5 +1,4 @@
 # Runs via ssh + sbatch
-set -x
 
 
 if [ -z ${service_parent_install_dir} ]; then

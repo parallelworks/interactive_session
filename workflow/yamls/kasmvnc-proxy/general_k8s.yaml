@@ -515,13 +515,6 @@ jobs:
             optional: ${{ inputs.targetType !== 'compute-cluster' }}
             label: Service host
             include-workspace: false
-            provider:
-              - gclusterv2
-              - pclusterv2
-              - azclusterv2
-              - aws-slurm
-              - google-slurm
-              - azure-slurm
             tooltip: Resource to host the service. Only supported in cloud clusters.
           nports:
             type: number

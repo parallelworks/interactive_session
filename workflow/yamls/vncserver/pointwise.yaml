@@ -576,6 +576,7 @@ jobs:
         type: group
         label: Service
         hidden: false
+        collapsed: true
         items:
           novnc_parent_install_dir:
             label: noVNC installation directory

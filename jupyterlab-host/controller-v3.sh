@@ -29,6 +29,9 @@ f_install_miniconda() {
     rm -rf ${install_dir}
     mkdir -p $(dirname ${install_dir})
     nohup bash /tmp/miniconda-${ID}.sh -b -p ${install_dir} 2>&1 > /tmp/miniconda_sh-${ID}.out
+    source ${install_dir}/etc/profile.d/conda.sh
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
 }
 
 f_set_up_conda_from_yaml() {
@@ -94,7 +97,7 @@ download_singularity_container() {
 download_and_install_juice() {
     # Configuration
     local REPO="parallelworks/interactive_session"
-    local BRANCH="juice-v2"
+    local BRANCH="main"
     local FILE_PATH="downloads/juice/juice-gpu-linux.tar.gz"
     local OUTPUT_FILE="juice-gpu-linux.tar.gz"
     local RAW_URL="https://raw.githubusercontent.com/$REPO/$BRANCH/$FILE_PATH"

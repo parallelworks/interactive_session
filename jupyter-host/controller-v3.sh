@@ -1,3 +1,5 @@
+set -x
+
 cd ${resource_jobdir}
 
 
@@ -113,6 +115,8 @@ if [[ "${service_conda_install}" == "true" ]]; then
             conda_dir=$(echo ${service_conda_sh} | sed "s|etc/profile.d/conda.sh||g" )
             f_install_miniconda ${conda_dir}
             source ${service_conda_sh}
+            conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+            conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
         }
         {
             eval "conda activate ${service_conda_env}"

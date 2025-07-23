@@ -41,7 +41,7 @@ install_code_server() {
 download_and_install_juice() {
     # Configuration
     local REPO="parallelworks/interactive_session"
-    local BRANCH="juice-v2"
+    local BRANCH="main"
     local FILE_PATH="downloads/juice/juice-gpu-linux.tar.gz"
     local OUTPUT_FILE="juice-gpu-linux.tar.gz"
     local RAW_URL="https://raw.githubusercontent.com/$REPO/$BRANCH/$FILE_PATH"

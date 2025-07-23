@@ -362,15 +362,39 @@ http {
 }
 HERE
 
-    echo "Running singularity container ${service_nginx_sif}"
-    # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
-    # and other users cannot use the node. Was not able to change this in the config.conf.
-    mkdir -p ./tmp
-    # Need to overwrite default configuration!
-    touch empty
-    singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B $PWD/nginx.conf:/etc/nginx/nginx.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} >> nginx.logs 2>&1 &
-    pid=$!
-    echo "kill ${pid} # Singularity Container" >> cancel.sh
+    if which docker >/dev/null 2>&1; then
+        container_name="nginx-${service_port}"
+        # Remove container when job is canceled
+        echo "sudo docker stop ${container_name}" >> cancel.sh
+        echo "sudo docker rm ${container_name}" >> cancel.sh
+        # Start container
+        sudo service docker start
+        touch empty
+        touch nginx.logs
+        # change ownership to nginx user
+        sudo chown 101:101 nginx.logs  # change ownership to nginx user
+        sudo docker run  -d --name ${container_name} \
+            -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
+            -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
+            -v $PWD/empty:/etc/nginx/conf.d/default.conf \
+            -v $PWD/nginx.logs:/var/log/nginx/access.log \
+            -v $PWD/nginx.logs:/var/log/nginx/error.log \
+            --network=host nginxinc/nginx-unprivileged:1.25.3
+        # Print logs
+        sudo docker logs ${container_name}
+    elif which singularity >/dev/null 2>&1; then
+        echo "Running singularity container ${service_nginx_sif}"
+        # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
+        # and other users cannot use the node. Was not able to change this in the config.conf.
+        mkdir -p ./tmp
+        # Need to overwrite default configuration!
+        touch empty
+        singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B $PWD/nginx.conf:/etc/nginx/nginx.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} >> nginx.logs 2>&1 &
+        pid=$!
+        echo "kill ${pid}" >> cancel.sh
+    else
+        displayErrorMessage "Need Docker or Singularity to start NGINX proxy"
+    fi
 fi
 
 

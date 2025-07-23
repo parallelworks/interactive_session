@@ -597,12 +597,11 @@ jobs:
             label: Command to load Virtuoso to the PATH
             type: string
             optional: true
-            default: cd /apps/extract_sim
             tooltip: To load the environment, enter the appropriate command, for example, module load module-name or source path/to/env.sh.
           bin:
             label: Launch command
             type: string
-            default: /apps/IC23.10.140/tools/dfII/bin/virtuoso
+            default: cd /apps/extract_sim && /apps/IC23.10.140/tools/dfII/bin/virtuoso
             tooltip: Command to start Virtuoso
       k8s:
         type: group

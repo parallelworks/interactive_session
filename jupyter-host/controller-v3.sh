@@ -1,3 +1,5 @@
+set -x
+
 cd ${resource_jobdir}
 
 

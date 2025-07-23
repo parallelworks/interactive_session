@@ -58,6 +58,8 @@ f_set_up_conda_from_yaml() {
     conda activate ${CONDA_ENV}
     
     echo "Installing condda environment from YAML"
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
     conda env update -n ${CONDA_ENV} -f ${CONDA_YAML}
 }
 

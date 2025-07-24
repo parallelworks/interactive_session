@@ -45,7 +45,6 @@ jobs:
         if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/controller/create_session_script.sh
       - name: Launch and Monitor Controller Job
-        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/controller/launch_and_monitor_job.sh
         cleanup: |
@@ -66,7 +65,6 @@ jobs:
         if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/compute/create_session_script.sh
       - name:  Launch and Monitor Compute Job
-        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/compute/launch_and_monitor_job.sh
         cleanup: |
@@ -387,7 +385,6 @@ jobs:
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         run: cat OUTPUTS >> $OUTPUTS
       - name: Apply PVC
-        early-cancel: any-job-failed
         if: ${{  inputs.targetType === 'kubernetes-cluster' && inputs.k8s.volumes.pvc === New }}
         run: kubectl apply -f pvc.yaml
         cleanup: |
@@ -396,7 +393,6 @@ jobs:
             touch pvc.deleted
           fi
       - name: Apply Deployment and Service
-        early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         run: kubectl apply -f app.yaml
         cleanup: |

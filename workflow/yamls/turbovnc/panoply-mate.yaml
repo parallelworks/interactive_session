@@ -39,7 +39,6 @@ jobs:
         if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/controller/create_session_script.sh
       - name: Launch and Monitor Controller Job
-        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/controller/launch_and_monitor_job.sh
         cleanup: |
@@ -60,7 +59,6 @@ jobs:
         if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/compute/create_session_script.sh
       - name:  Launch and Monitor Compute Job
-        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/compute/launch_and_monitor_job.sh
         cleanup: |

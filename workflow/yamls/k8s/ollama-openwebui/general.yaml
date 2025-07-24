@@ -229,7 +229,6 @@ jobs:
         early-cancel: any-job-failed
         run: cat OUTPUTS >> $OUTPUTS
       - name: Apply PVC
-        early-cancel: any-job-failed
         if: ${{ inputs.k8s.volumes.pvc === New }}
         run: kubectl apply -f pvc.yaml
         cleanup: |
@@ -238,7 +237,6 @@ jobs:
             touch pvc.deleted
           fi
       - name: Apply Deployment and Service
-        early-cancel: any-job-failed
         run: kubectl apply -f app.yaml
         cleanup: |
           kubectl delete -f app.yaml
@@ -299,7 +297,6 @@ jobs:
           set -x
           kubectl -n $namespace exec $pod_name -- /bin/sh -c "ollama pull llama3 && ollama pull mistral && ollama pull phi3" &
       - name: Stream Ollama Logs
-        early-cancel: any-job-failed
         run: |
           kubectl logs -f --selector=app=${{ needs.apply_k8s_deployment.outputs.app_name }} -n ${{ inputs.k8s.namespace }} &
           ollama_stream_pid=$?

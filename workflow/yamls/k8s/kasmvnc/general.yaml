@@ -179,7 +179,6 @@ jobs:
         early-cancel: any-job-failed
         run: cat OUTPUTS >> $OUTPUTS
       - name: Apply PVC
-        early-cancel: any-job-failed
         run: kubectl apply -f pvc.yaml
         cleanup: |
           if [[ "${{ inputs.k8s.volumes.pvc_persist }}" == "false" ]]; then
@@ -187,7 +186,6 @@ jobs:
             touch pvc.deleted
           fi
       - name: Apply Deployment and Service
-        early-cancel: any-job-failed
         run: kubectl apply -f app.yaml
         cleanup: |
           kubectl delete -f app.yaml

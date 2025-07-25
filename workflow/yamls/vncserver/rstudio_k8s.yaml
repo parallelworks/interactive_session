@@ -494,7 +494,7 @@ jobs:
       targetType:
         label: Target Type
         type: dropdown
-        default: kubernetes-cluster
+        default: compute-cluster
         options:
           - label: Compute Cluster
             value: compute-cluster

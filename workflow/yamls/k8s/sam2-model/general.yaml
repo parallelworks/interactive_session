@@ -1,0 +1,332 @@
+permissions:
+  - '*'
+sessions:
+  session:
+    useTLS: false
+    redirect: true
+    useCustomDomain: true
+app:
+  target: inputs.k8s.cluster
+jobs:
+  auth_k8s:
+    steps:
+      - name: Authenticate kubectl
+        run: pw kube auth ${{ inputs.k8s.cluster }}
+  prepare_k8s_pvc:
+    needs:
+      - auth_k8s
+    steps:
+      - name: Creating New PVC YAML
+        if: ${{ inputs.k8s.volumes.pvc === 'New' }}
+        run: |
+          pvc_name="${{ inputs.k8s.volumes.pvc_name }}"
+          pvc_storage_class=${{ inputs.k8s.volumes.pvc_storage_class }} 
+          if [ -z "${pvc_storage_class}" ] || [[ "${pvc_storage_class}" == "undefined" ]]; then
+            default_class=$(kubectl get storageclass -n ${{ inputs.k8s.namespace }} | grep '(default)' | awk '{print $1}')
+            if [ $? -ne 0 ]; then
+              echo "WARNING: Could not obtain default storageClass with command:"
+              echo "         kubectl get storageclass -n ${{ inputs.k8s.namespace }}"
+              echo "         Using empty storageClassName"
+              storageClassName=""
+            elif [ -z "${default_class}" ]; then
+              echo "ERROR: No default storage class found. You must specify one explicitly."
+              exit 1
+            else
+              storageClassName="storageClassName: ${default_class}"
+            fi
+          else
+            storageClassName="storageClassName: ${{ inputs.k8s.volumes.pvc_storage_class }}"
+          fi
+          echo "${pvc_name}" > pvc_name
+          cat <<EOF > test-pvc.yaml
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: ${pvc_name}
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: ${{ inputs.k8s.volumes.pvc_storage_size }}
+            ${storageClassName}
+          EOF
+          cat test-pvc.yaml
+      - name: Dry Run PVC
+        if: ${{ inputs.k8s.volumes.pvc === 'New' }}
+        run: |
+          echo "Performing dry run..."
+          kubectl apply -f test-pvc.yaml --dry-run=client
+      - name: Apply PVC
+        if: ${{ inputs.k8s.volumes.pvc === 'New' }}
+        run: kubectl apply -f test-pvc.yaml
+        cleanup: |
+          if [[ "${{ inputs.k8s.volumes.pvc_persist }}" == "false" ]]; then
+            kubectl delete -f test-pvc.yaml
+            touch pvc.deleted
+          fi
+  deploy_sam2:
+    needs:
+      - prepare_k8s_pvc
+    steps:
+      - name: Generate Deployment YAML
+        run: |
+          if [[ "${{ inputs.resources.gpu_type }}" == "Custom" ]]; then
+            gpu_limits="${{ inputs.resources.gpu_resource_key }}: ${{ inputs.resources.gpu_count }}"
+          elif [[ "${{ inputs.resources.gpu_type }}" != "None" ]]; then
+            gpu_limits="${{ inputs.resources.gpu_type }}: ${{ inputs.resources.gpu_count }}"
+          fi
+          if kubectl get runtimeclass nvidia &>/dev/null; then
+            echo "nvidia RuntimeClass is available"
+            runtimeClassName="runtimeClassName: nvidia"
+          fi
+          if [[ "${{ inputs.k8s.volumes.pvc }}" == "Existing" ]]; then
+            pvc_name=${{ inputs.k8s.volumes.pvc_existing }}
+          else
+            pvc_name=$(cat pvc_name)
+          fi
+          cat <<EOF > sam2-deployment.yaml
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: ${{ inputs.app.name }}
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: ${{ inputs.app.name }}
+            template:
+              metadata:
+                labels:
+                  app: ${{ inputs.app.name }}
+              spec:
+                ${runtimeClassName}
+                initContainers:
+                  - name: set-permissions
+                    image: busybox
+                    command: ["sh", "-c", "chmod -R 777 /models"]
+                    securityContext:
+                      runAsUser: 0
+                    volumeMounts:
+                      - name: model-storage
+                        mountPath: /models
+                containers:
+                  - name: ${{ inputs.app.name }}
+                    image: nhuytan/sam2-video-tracker:test
+                    imagePullPolicy: Always
+                    ports:
+                      - containerPort: 3000
+                    command: ["sh", "-c"]
+                    args: ["pnpm install && echo 'Starting Next.js server...' && pnpm start && tail -f /dev/null"]
+                    resources:
+                      limits:
+                        ${gpu_limits}
+                      requests:
+                        ${gpu_limits}
+                    env:
+                      - name: TORCH_DEVICE
+                        value: "cuda"
+                      - name: SAFE_MODE
+                        value: "true"
+                      - name: PYTORCH_CUDA_ALLOC_CONF
+                        value: "max_split_size_mb:128,garbage_collection_threshold:0.8"
+                      - name: NODE_ENV
+                        value: "production"
+                      - name: NEXT_TELEMETRY_DISABLED
+                        value: "1"
+                      - name: PYTHONPATH
+                        value: "/app"
+                      - name: NVIDIA_VISIBLE_DEVICES
+                        value: "all"
+                      - name: NVIDIA_DRIVER_CAPABILITIES
+                        value: "compute,utility"
+                      - name: PYTHONUNBUFFERED
+                        value: "1"
+                    volumeMounts:
+                      - name: model-storage
+                        mountPath: /models
+                volumes:
+                  - name: model-storage
+                    persistentVolumeClaim:
+                      claimName: ${pvc_name}
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: ${{ inputs.app.name }}
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            selector:
+              app: ${{ inputs.app.name }}
+            ports:
+              - protocol: TCP
+                port: 3000
+                targetPort: 3000
+            type: ClusterIP
+          EOF
+      - name: Apply Deployment
+        run: kubectl apply -f sam2-deployment.yaml
+      - name: Wait for Pod to be Ready
+        run: |
+          echo "Waiting for pod to be ready..."
+          kubectl wait --for=condition=Ready pod -l app=${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }} --timeout=300s
+  create_session:
+    needs:
+      - deploy_sam2
+    steps:
+      - name: Get SLUG
+        run: |
+          echo "slug=" >> $OUTPUTS
+      - name: Debug Service + Pod
+        run: |
+          echo "Checking pod + service for session connection..."
+          kubectl get svc ${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }}
+          kubectl get pods -l app=${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }}
+          kubectl describe svc ${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }}
+      - name: Wait for Port 3000 to be Ready
+        run: |
+          echo "Polling HTTP response from localhost:3000 inside container..."
+          pod=$(kubectl get pods -l app=${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }} -o jsonpath="{.items[0].metadata.name}")
+          for i in {1..30}; do
+            echo "Checking if port 3000 is responding (attempt $i)..."
+            if kubectl exec -n ${{ inputs.k8s.namespace }} "$pod" -- sh -c "curl -s http://localhost:3000 >/dev/null"; then
+              echo " Port 3000 is now responding!"
+              break
+            fi
+            sleep 2
+          done
+      - name: Expose Session
+        uses: parallelworks/update-session
+        with:
+          remotePort: '3000'
+          name: ${{ sessions.session }}
+          slug: ${{ needs.create_session.outputs.slug }}
+          targetInfo:
+            name: ${{ inputs.k8s.cluster }}
+            namespace: ${{ inputs.k8s.namespace }}
+            resourceType: services
+            resourceName: ${{ inputs.app.name }}
+  keep_alive:
+    needs:
+      - create_session
+    steps:
+      - name: Keep Session Running
+        run: tail -f /dev/null
+        cleanup: |
+          echo "Cleaning up resources..."
+          kubectl delete deployment ${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }} --ignore-not-found
+          kubectl delete service ${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }} --ignore-not-found
+          if [[ "${{ inputs.k8s.volumes.pvc_persist }}" == "false" ]]; then
+            kubectl delete pvc ${pvc_name} -n ${{ inputs.k8s.namespace }} --ignore-not-found
+          fi
+'on':
+  execute:
+    inputs:
+      k8s:
+        type: group
+        label: Kubernetes Settings
+        items:
+          cluster:
+            label: Kubernetes Cluster
+            type: kubernetes-clusters
+          namespace:
+            label: Namespace
+            type: kubernetes-namespaces
+            clusterName: ${{ inputs.k8s.cluster }}
+            default: summer2025interns
+          volumes:
+            type: group
+            label: Storage Settings
+            collapsed: true
+            tooltip: Specify storage settings for Persistent Volume Claims (PVCs), including size, storage class, and mount path.
+            items:
+              pvc:
+                label: Persistent Volume Claim
+                type: dropdown
+                default: New
+                options:
+                  - value: Existing
+                    label: Select Existing PVC
+                  - value: New
+                    label: Create New PVC
+              pvc_mount_path:
+                label: Mount Path
+                type: string
+                default: /models
+              pvc_existing:
+                label: Select PVC Name
+                type: kubernetes-pvc
+                clusterName: ${{ inputs.k8s.cluster }}
+                namespace: ${{ inputs.k8s.namespace }}
+                hidden: ${{ inputs.k8s.volumes.pvc !== 'Existing' }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
+                default: sam2
+              pvc_storage_size:
+                label: Enter PVC Size
+                type: string
+                hidden: ${{ inputs.k8s.volumes.pvc !== 'New' }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
+                default: 50Gi
+              pvc_storage_class:
+                label: Enter PVC Storage Class
+                type: string
+                hidden: ${{ inputs.k8s.volumes.pvc !== 'New' }}
+                ignore: ${{ .hidden }}
+                optional: true
+                tooltip: Leave blank to use the default storage class configured in the cluster.
+              pvc_persist:
+                label: Persist PVC After Completion
+                type: boolean
+                default: false
+                hidden: ${{ inputs.k8s.volumes.pvc !== 'New' }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
+                tooltip: If true, the PVC will persist after the job is canceled or completed. If false, it will be deleted.
+              pvc_name:
+                label: Enter PVC Name
+                type: string
+                hidden: ${{ inputs.k8s.volumes.pvc !== 'New' }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
+                default: sam2
+      app:
+        type: group
+        label: App Settings
+        items:
+          name:
+            label: Deployment Name
+            type: string
+            default: sam2demo
+      resources:
+        type: group
+        label: GPU Settings
+        items:
+          gpu_type:
+            label: Select GPU Device
+            type: dropdown
+            default: nvidia.com/gpu
+            options:
+              - value: None
+                label: None
+              - value: nvidia.com/gpu
+                label: Nvidia GPU
+              - value: Custom
+                label: Custom GPU Resource Key
+          gpu_resource_key:
+            label: Custom GPU Resource Key
+            type: string
+            hidden: ${{ inputs.resources.gpu_type !== 'Custom' }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
+          gpu_count:
+            label: Number of GPUs
+            type: number
+            default: 1
+            min: 1
+            step: 1
+            hidden: ${{ inputs.resources.gpu_type === 'None' }}
+            ignore: ${{ .hidden }}

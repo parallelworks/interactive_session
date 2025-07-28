@@ -149,6 +149,7 @@ jobs:
           remote_port: ${{ needs.create_session.outputs.remote_port }}
           remote_host: ${{ needs.create_session.outputs.target_hostname }}
         run: |
+          set -x
           TIMEOUT=5
           RETRY_INTERVAL=3
 

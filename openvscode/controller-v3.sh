@@ -47,12 +47,6 @@ download_and_install_juice() {
     local RAW_URL="https://raw.githubusercontent.com/$REPO/$BRANCH/$FILE_PATH"
     local LFS_API_URL="https://github.com/$REPO.git/info/lfs/objects/batch"
 
-    # Check for jq dependency
-    if ! command -v jq >/dev/null 2>&1; then
-        echo "ERROR: jq is required to parse JSON."
-        exit 1
-    fi
-
     # Step 1: Download the LFS pointer file
     echo "Fetching LFS pointer file..."
     curl -L -s -o lfs-pointer.txt "$RAW_URL" || {
@@ -88,7 +82,7 @@ download_and_install_juice() {
     }
 
     # Step 4: Extract the download URL from the JSON response
-    DOWNLOAD_URL=$(jq -r '.objects[0].actions.download.href' lfs-response.json 2>/dev/null)
+    DOWNLOAD_URL=$(grep -oP '"href": "\K[^"]+' lfs-response.json 2>/dev/null)
     if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" = "null" ]; then
         echo "ERROR: Could not extract download URL from LFS API response"
         cat lfs-response.json

@@ -4,7 +4,7 @@ sessions:
   session:
     useTLS: false
     redirect: true
-    useCustomDomain: true
+    useCustomDomain: false
 app:
   target: inputs.pwrl_host.resource
 jobs:
@@ -317,11 +317,6 @@ jobs:
                     image: ${{ inputs.service_k8s.image }}
                     ports:
                       - containerPort: 80
-                    env:
-                      - name: PGADMIN_DEFAULT_PASSWORD
-                        value: ${{ inputs.service_k8s.password }}
-                      - name: PGADMIN_DEFAULT_EMAIL
-                        value: ${{ inputs.service_k8s.email }}
                     args:
                       - --auth
                       - password
@@ -578,35 +573,19 @@ jobs:
         collapsed: false
       service:
         type: group
-        label: Pgadmin4 Settings
+        label: Metabase Settings
         collapsed: false
         hidden: ${{ inputs.targetType !== 'compute-cluster' }}
         items:
           name:
             type: string
             hidden: true
-            default: pgadmin4
+            default: metabase
           image:
-            label: Pgadmin4 Image
+            label: Metabase Image
             type: string
-            default: dpage/pgadmin4
-            tooltip: Sample container from https://hub.docker.com/r/dpage/pgadmin4/
-          mount_directories:
-            label: Docker mount volumes
-            type: string
-            optional: true
-            tooltip: 
-              "Type in the mount volume options for the docker command. E.g.: -v /mnt:/mnt -v /data:/data"
-          email:
-            label: Email
-            optional: ${{ inputs.targetType !== 'compute-cluster' }}
-            type: string
-            tooltip: Enter email for PGADMIN_DEFAULT_EMAIL variable
-          password:
-            label: Password
-            optional: ${{ inputs.targetType !== 'compute-cluster' }}
-            type: password
-            tooltip: Enter password for PGADMIN_DEFAULT_PASSWORD variable
+            default: metabase/metabase
+            tooltip: Sample container from https://hub.docker.com/r/metabase/metabase
       k8s:
         type: group
         label: Kubernetes Settings
@@ -754,17 +733,7 @@ jobs:
         hidden: ${{ inputs.targetType !== 'kubernetes-cluster' }}
         items:
           image:
-            label: Pgadmin4 Image
+            label: Metabase Image
             type: string
-            default: dpage/pgadmin4
-            tooltip: Sample container from https://hub.docker.com/r/dpage/pgadmin4/
-          email:
-            label: Email
-            optional: ${{ inputs.targetType !== 'kubernetes-cluster' }}
-            type: string
-            tooltip: Enter email for PGADMIN_DEFAULT_EMAIL variable
-          password:
-            label: Password
-            optional: ${{ inputs.targetType !== 'kubernetes-cluster' }}
-            type: password
-            tooltip: Enter password for PGADMIN_DEFAULT_PASSWORD variable
+            default: metabase/metabase
+            tooltip: Sample container from https://hub.docker.com/r/metabase/metabase

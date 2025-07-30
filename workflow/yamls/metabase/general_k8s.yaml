@@ -189,7 +189,7 @@ jobs:
           localPort: ${{ needs.create_session.outputs.local_port }}
           remoteHost: ${{ needs.create_session.outputs.target_hostname }}
           target: ${{ inputs.pwrl_host.resource.id }}
-          name: metabase
+          name: ${{ sessions.session }}
   auth_k8s:
     steps:
       - name: Authenticate kubectl

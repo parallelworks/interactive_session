@@ -17,6 +17,8 @@ if ! sudo -v >/dev/null 2>&1; then
     displayErrorMessage "You do not have sudo access. Exiting."
 fi
 
+set -x
+
 # Run docker container
 container_name="pgadmin4-${service_port}"
 

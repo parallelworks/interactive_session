@@ -556,7 +556,7 @@ jobs:
       service:
         type: group
         label: Pgadmin4 Settings
-        collapsed: true
+        collapsed: false
         hidden: ${{ inputs.targetType !== 'compute-cluster' }}
         items:
           name:

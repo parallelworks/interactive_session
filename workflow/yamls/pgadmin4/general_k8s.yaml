@@ -180,12 +180,6 @@ jobs:
         run: |
           local_port=$(pw agent open-port)
           echo "local_port=${local_port}"  | tee -a $OUTPUTS
-      - name: Set URL SLUG
-        early-cancel: any-job-failed
-        if: ${{ inputs.targetType === 'compute-cluster' }}
-        run: |
-          source resources/host/inputs.sh
-          echo "slug=?folder=${service_directory}"  | tee -a $OUTPUTS
       - name: Expose Port
         early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'compute-cluster' }}
@@ -194,7 +188,6 @@ jobs:
           remotePort: ${{ needs.create_session.outputs.remote_port }}
           localPort: ${{ needs.create_session.outputs.local_port }}
           remoteHost: ${{ needs.create_session.outputs.target_hostname }}
-          slug: ${{ needs.create_session.outputs.slug }}
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.session }}
   auth_k8s:

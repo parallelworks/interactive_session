@@ -37,7 +37,7 @@ chmod 777 docker-kill-${job_number}.sh
 # Start container
 sudo systemctl start docker
 sudo -n docker run -d --name ${container_name} \
-    ${service_mount_directories} -v ${HOME}:${HOME} \
+    ${service_mount_directories} \
     -p $service_port:80 \
     -e PGADMIN_DEFAULT_EMAIL=${service_email} \
     -e PGADMIN_DEFAULT_PASSWORD=${service_password} \

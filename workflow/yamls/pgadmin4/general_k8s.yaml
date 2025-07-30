@@ -468,7 +468,7 @@ jobs:
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         uses: parallelworks/update-session
         with:
-          remotePort: 80
+          remotePort: "80"
           name: ${{ sessions.session }}
           targetInfo:
             name: ${{ inputs.k8s.cluster }}

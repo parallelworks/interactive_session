@@ -376,16 +376,46 @@ jobs:
         if: ${{  inputs.targetType === 'kubernetes-cluster' && inputs.k8s.volumes.pvc === New }}
         run: kubectl apply -f pvc.yaml
         cleanup: |
+          set -x
           if [[ "${{ inputs.k8s.volumes.pvc_persist }}" == "false" ]]; then
-            kubectl delete -f pvc.yaml
-            touch pvc.deleted
+            MAX_ATTEMPTS=5
+            ATTEMPT=1
+            while true; do
+              if kubectl delete -f pvc.yaml; then
+                echo "PVC deleted successfully"
+                touch pvc.deleted
+                break
+              elif [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+                echo "Failed to delete PVC after $MAX_ATTEMPTS attempts"
+                exit 1
+              else
+                echo "Attempt $ATTEMPT to delete PVC failed. Retrying in 5 seconds..."
+                sleep 5
+                ((ATTEMPT++))
+              fi
+            done
           fi
       - name: Apply Deployment and Service
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         run: kubectl apply -f app.yaml
         cleanup: |
-          kubectl delete -f app.yaml
-          touch app.deleted
+          set -x
+          MAX_ATTEMPTS=5
+          ATTEMPT=1
+          while true; do
+            if kubectl delete -f app.yaml; then
+              echo "Resources deleted successfully"
+              touch app.deleted
+              break
+            elif [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+              echo "Failed to delete resources after $MAX_ATTEMPTS attempts"
+              exit 1
+            else
+              echo "Attempt $ATTEMPT to delete resources failed. Retrying in 5 seconds..."
+              sleep 5
+              ((ATTEMPT++))
+            fi
+          done
       - name: Wait for Deployment to be Ready
         early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}

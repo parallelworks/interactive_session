@@ -592,7 +592,7 @@ jobs:
             default: dpage/pgadmin4
             tooltip: Sample container from https://hub.docker.com/r/dpage/pgadmin4/
           mount_directories:
-            label: Docker mount volumnes
+            label: Docker mount volumes
             type: string
             optional: true
             tooltip: 

@@ -79,7 +79,7 @@ jobs:
         early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'compute-cluster' }}
         run: |
-          session_name=$(pwd | rev | cut -d'/' -f1-2 | tr '/' '-' | rev)
+          session_name=metabase
           echo "session_name=${session_name}" | tee -a $OUTPUTS
       - name: Get Controller Hostname
         early-cancel: any-job-failed

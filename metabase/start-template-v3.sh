@@ -123,7 +123,7 @@ else
 fi
 
 # Run docker container
-container_name="metabase-${service_port}"
+container_name="metabase"
 
 # CREATE CANCEL SCRIPT TO REMOVE DOCKER CONTAINER WHEN THE PW JOB IS CANCELED
 if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
@@ -139,7 +139,7 @@ chmod 777 docker-kill-${job_number}.sh
 
 # Start container
 sudo systemctl start docker
-sudo -n docker run -d -p 3000:3000 \
+sudo -n docker run -d --network=host \
   -v ~/metabase-data:/metabase-data \
   -e "MB_DB_FILE=/metabase-data/metabase.db" \
   --name ${container_name} ${service_image}

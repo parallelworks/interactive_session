@@ -18,6 +18,7 @@ if ! sudo -v >/dev/null 2>&1; then
 fi
 
 set -x
+sudo systemctl start docker
 
 #######################
 # START NGINX WRAPPER #
@@ -94,7 +95,6 @@ if which docker >/dev/null 2>&1; then
     echo "sudo docker stop ${container_name}" >> cancel.sh
     echo "sudo docker rm ${container_name}" >> cancel.sh
     # Start container
-    sudo service docker start
     touch empty
     touch nginx.logs
     # change ownership to nginx user
@@ -138,7 +138,6 @@ fi
 chmod 777 docker-kill-${job_number}.sh
 
 # Start container
-sudo systemctl start docker
 sudo -n docker run -d --network=host \
   -v ~/metabase-data:/metabase-data \
   -e "MB_DB_FILE=/metabase-data/metabase.db" \

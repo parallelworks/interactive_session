@@ -5,6 +5,8 @@ sessions:
     useTLS: false
     redirect: true
     useCustomDomain: false
+    prompt-for-name:
+      default: "metabase"
 app:
   target: inputs.pwrl_host.resource
 jobs:

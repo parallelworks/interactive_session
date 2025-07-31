@@ -89,11 +89,21 @@ http {
 }
 HERE
 
+echo '#!/bin/bash' > docker-kill-${job_number}.sh
+chmod +x docker-kill-${job_number}.sh
+
 if which docker >/dev/null 2>&1; then
     container_name="nginx-${service_port}"
     # Remove container when job is canceled
-    echo "sudo docker stop ${container_name}" >> cancel.sh
-    echo "sudo docker rm ${container_name}" >> cancel.sh
+    # CREATE CANCEL SCRIPT TO REMOVE DOCKER CONTAINER WHEN THE PW JOB IS CANCELED
+    if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
+        echo sudo "sudo docker stop ${container_name}" >> docker-kill-${job_number}.sh
+        echo sudo "sudo docker rm ${container_name}" >> docker-kill-${job_number}.sh
+    else
+        # Create kill script. Needs to be here because we need the hostname of the compute node.
+        echo ssh "'$(hostname)' sudo docker stop ${container_name}" >> docker-kill-${job_number}.sh
+        echo ssh "'$(hostname)' sudo docker rm ${container_name}" >> docker-kill-${job_number}.sh
+    fi
     # Start container
     touch empty
     touch nginx.logs
@@ -117,7 +127,7 @@ elif which singularity >/dev/null 2>&1; then
     touch empty
     singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B $PWD/nginx.conf:/etc/nginx/nginx.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} >> nginx.logs 2>&1 &
     pid=$!
-    echo "kill ${pid}" >> cancel.sh
+    echo "kill ${pid}" >> docker-kill-${job_number}.sh
 else
     displayErrorMessage "Need Docker or Singularity to start NGINX proxy"
 fi
@@ -127,11 +137,11 @@ container_name="metabase"
 
 # CREATE CANCEL SCRIPT TO REMOVE DOCKER CONTAINER WHEN THE PW JOB IS CANCELED
 if [[ ${jobschedulertype} == "CONTROLLER" ]]; then
-    echo sudo "sudo docker stop ${container_name}" > docker-kill-${job_number}.sh
+    echo sudo "sudo docker stop ${container_name}" >> docker-kill-${job_number}.sh
     echo sudo "sudo docker rm ${container_name}" >> docker-kill-${job_number}.sh
 else
     # Create kill script. Needs to be here because we need the hostname of the compute node.
-    echo ssh "'$(hostname)' sudo docker stop ${container_name}" > docker-kill-${job_number}.sh
+    echo ssh "'$(hostname)' sudo docker stop ${container_name}" >> docker-kill-${job_number}.sh
     echo ssh "'$(hostname)' sudo docker rm ${container_name}" >> docker-kill-${job_number}.sh
 fi
 

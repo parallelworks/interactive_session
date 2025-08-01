@@ -299,12 +299,6 @@ jobs:
                         value: ${{ inputs.service_k8s.user }}
                       - name: POSTGRES_DB
                         value: "${service_db}"
-                    args:
-                      - --auth
-                      - password
-                      - --bind-addr
-                      - 0.0.0.0:8080
-                      - --disable-telemetry
                     resources:
                       requests:
                         memory: "${{ inputs.k8s.resources.requests.memory }}"

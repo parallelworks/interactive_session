@@ -779,12 +779,12 @@ jobs:
               "Type in the mount volume options for the docker command. E.g.: -v /mnt:/mnt -v /data:/data"
           user:
             label: Postgress User
-            optional: ${{ inputs.targetType !== 'compute-cluster' }}
+            optional: ${{ inputs.targetType !== 'kubernetes-cluster' }}
             type: string
             tooltip: Enter email for POSTGRES_USER variable
           password:
             label: Password
-            optional: ${{ inputs.targetType !== 'compute-cluster' }}
+            optional: ${{ inputs.targetType !== 'kubernetes-cluster' }}
             type: password
             tooltip: Enter password for POSTGRES_PASSWORD variable
           db:

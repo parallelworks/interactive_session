@@ -765,7 +765,7 @@ jobs:
         items:
           image:
             label: KasmVNC Image
-            type: string
+            type: this is an error
             default: kasmweb/desktop:1.16.0
             tooltip: Sample container from https://hub.docker.com/r/kasmweb/desktop
           image_port:

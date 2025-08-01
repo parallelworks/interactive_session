@@ -34,7 +34,7 @@ fi
 
 chmod 777 docker-kill-${job_number}.sh
 
-if [ -z "${service_db}" ]; then
+if ! [ -z "${service_db}" ]; then
     POSTGRES_DB_ENV=" -e POSTGRES_DB=${service_db}"
 fi
 

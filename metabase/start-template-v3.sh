@@ -153,7 +153,7 @@ sudo -n docker run -d --network=host \
   -e "MB_DB_FILE=/metabase-data/metabase.db" \
   --name ${container_name} ${service_image}
 
-sudo docker logs ${container_name}
+sudo docker logs -f ${container_name}
 
 # If running docker with the -d option sleep here! 
 # Do not exit this script until the job is canceled!

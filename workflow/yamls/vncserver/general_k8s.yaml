@@ -778,3 +778,4 @@ jobs:
             type: password
             tooltip: Type in a password for user kasm_user
             optional: ${{ inputs.targetType !== 'kubernetes-cluster' }}
+            optional: true

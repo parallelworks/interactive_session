@@ -617,7 +617,6 @@ jobs:
             tooltip: Enter password for POSTGRES_PASSWORD variable
           db:
             label: DB
-            optional: ${{ inputs.targetType !== 'compute-cluster' }}
             type: string
             tooltip: Enter email for POSTGRES_DB variable
             optional: true
@@ -790,7 +789,6 @@ jobs:
             tooltip: Enter password for POSTGRES_PASSWORD variable
           db:
             label: DB
-            optional: ${{ inputs.targetType !== 'compute-cluster' }}
             type: string
             tooltip: Enter email for POSTGRES_DB variable
             optional: true

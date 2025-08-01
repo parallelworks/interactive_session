@@ -3,7 +3,7 @@ permissions:
 sessions:
   session:
     useTLS: false
-    redirect: true
+    redirect: false
     useCustomDomain: true
 app:
   target: inputs.pwrl_host.resource

@@ -46,7 +46,7 @@ sudo -n docker run -d --name ${container_name} \
     -e POSTGRES_USER=${service_user} -e POSTGRES_PASSWORD=${service_password} ${POSTGRES_DB_ENV} \
     ${service_image}
 
-sudo docker logs ${container_name}
+sudo docker logs -f ${container_name}
 
 # If running docker with the -d option sleep here! 
 # Do not exit this script until the job is canceled!

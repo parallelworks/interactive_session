@@ -11,12 +11,14 @@ jobs:
   auth_k8s:
     steps:
       - name: Authenticate kubectl
+        early-cancel: any-job-failed
         run: pw kube auth ${{ inputs.k8s.cluster }}
   prepare_k8s_pvc:
     needs:
       - auth_k8s
     steps:
       - name: Creating New PVC YAML
+        early-cancel: any-job-failed
         if: ${{ inputs.k8s.volumes.pvc === 'New' }}
         run: |
           pvc_name="${{ inputs.k8s.volumes.pvc_name }}"
@@ -38,7 +40,7 @@ jobs:
             storageClassName="storageClassName: ${{ inputs.k8s.volumes.pvc_storage_class }}"
           fi
           echo "${pvc_name}" > pvc_name
-          cat <<EOF > test-pvc.yaml
+          cat <<EOF > pvc.yaml
           apiVersion: v1
           kind: PersistentVolumeClaim
           metadata:
@@ -52,25 +54,23 @@ jobs:
                 storage: ${{ inputs.k8s.volumes.pvc_storage_size }}
             ${storageClassName}
           EOF
-          cat test-pvc.yaml
+          cat pvc.yaml
       - name: Dry Run PVC
+        early-cancel: any-job-failed
         if: ${{ inputs.k8s.volumes.pvc === 'New' }}
         run: |
           echo "Performing dry run..."
-          kubectl apply -f test-pvc.yaml --dry-run=client
-      - name: Apply PVC
-        if: ${{ inputs.k8s.volumes.pvc === 'New' }}
-        run: kubectl apply -f test-pvc.yaml
-        cleanup: |
-          if [[ "${{ inputs.k8s.volumes.pvc_persist }}" == "false" ]]; then
-            kubectl delete -f test-pvc.yaml
-            touch pvc.deleted
-          fi
-  deploy_sam2:
+          kubectl apply -f pvc.yaml --dry-run=client
+      - name: Dummy
+        early-cancel: any-job-failed
+        run: echo Dummy
+
+  prepare_sam2:
     needs:
       - prepare_k8s_pvc
     steps:
-      - name: Generate Deployment YAML
+      - name: Create Deployment and Service YAML
+        early-cancel: any-job-failed
         run: |
           if [[ "${{ inputs.resources.gpu_type }}" == "Custom" ]]; then
             gpu_limits="${{ inputs.resources.gpu_resource_key }}: ${{ inputs.resources.gpu_count }}"
@@ -86,7 +86,7 @@ jobs:
           else
             pvc_name=$(cat pvc_name)
           fi
-          cat <<EOF > sam2-deployment.yaml
+          cat <<EOF > app.yaml
           apiVersion: apps/v1
           kind: Deployment
           metadata:
@@ -166,16 +166,126 @@ jobs:
                 targetPort: 3000
             type: ClusterIP
           EOF
-      - name: Apply Deployment
-        run: kubectl apply -f sam2-deployment.yaml
+  apply_sam2:
+    needs:
+      - prepare_sam2
+    steps:
+      - name: Apply PVC
+        early-cancel: any-job-failed
+        if: ${{ inputs.k8s.volumes.pvc === 'New' }}
+        run: kubectl apply -f pvc.yaml
+        cleanup: |
+          set -x
+          if [[ "${{ inputs.k8s.volumes.pvc_persist }}" == "false" ]]; then
+            MAX_ATTEMPTS=5
+            ATTEMPT=1
+            while true; do
+              if kubectl delete -f pvc.yaml; then
+                echo "PVC deleted successfully"
+                touch pvc.deleted
+                break
+              elif [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+                echo "Failed to delete PVC after $MAX_ATTEMPTS attempts"
+                exit 1
+              else
+                echo "Attempt $ATTEMPT to delete PVC failed. Retrying in 5 seconds..."
+                sleep 5
+                ((ATTEMPT++))
+              fi
+            done
+          fi
+      - name: Apply Deployment and Service
+        run: kubectl apply -f app.yaml
+        cleanup: |
+          set -x
+          MAX_ATTEMPTS=5
+          ATTEMPT=1
+          while true; do
+            if kubectl delete -f app.yaml; then
+              echo "Resources deleted successfully"
+              touch app.deleted
+              break
+            elif [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+              echo "Failed to delete resources after $MAX_ATTEMPTS attempts"
+              exit 1
+            else
+              echo "Attempt $ATTEMPT to delete resources failed. Retrying in 5 seconds..."
+              sleep 5
+              ((ATTEMPT++))
+            fi
+          done
+
+      - name: Wait for Deployment to be Ready
+        early-cancel: any-job-failed
+        env:
+          app_name: ${{ inputs.app.name }}
+          namespace: ${{ inputs.k8s.namespace }}
+        run: |
+
+          log() {
+            while true; do
+              echo
+              echo; echo "[INFO] $(date) - Checking deployment status for ${app_name} in namespace ${namespace}..."
+              kubectl get deployment "${app_name}" -n "${namespace}" -o wide || echo "[WARN] Unable to get deployment"
+              
+              echo; echo "[INFO] $(date) - Pods status:"
+              kubectl get pods -l app="${app_name}" -n "${namespace}" -o wide || echo "[WARN] Unable to get pods"
+
+              pod_name=$(kubectl get pods -l app="${app_name}" -n "${namespace}" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+              if [[ -n "$pod_name" ]]; then
+                echo; echo "[INFO] $(date) - Describing pod ${pod_name}..."
+                kubectl describe pod "${pod_name}" -n "${namespace}" | grep -A20 "Events"
+              fi
+              
+              echo "---------------------------------------------"
+              sleep 20
+            done
+          }
+
+          log &
+          log_pid=$!
+          trap "kill ${log_pid}" EXIT
+          set -x
+          kubectl wait --for=condition=available --timeout=1200s deployment/${app_name} -n ${namespace}
+          exit_code=$?
+          kubectl get deployment ${app_name} -n ${namespace} -o wide
+          kubectl describe deployment ${app_name} -n ${namespace}
+          exit ${exit_code}
+
       - name: Wait for Pod to be Ready
+        early-cancel: any-job-failed
+        env:
+          app_name: ${{ inputs.app.name }}
+          namespace: ${{ inputs.k8s.namespace }}
         run: |
           echo "Waiting for pod to be ready..."
-          kubectl wait --for=condition=Ready pod -l app=${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }} --timeout=300s
+          kubectl wait --for=condition=Ready pod -l app=${app_name} -n ${namespace} --timeout=600s
+          sam2_pod=$(kubectl get pods -n ${namespace} -l app=${app_name} --field-selector=status.phase=Running -o jsonpath="{.items[0].metadata.name}")
+          echo "sam2_pod=$sam2_pod" | tee -a $OUTPUTS | tee -a OUTPUTS
+          touch pod.running
+
+      - name: Stream Logs
+        early-cancel: any-job-failed
+        run: |
+          kubectl logs -f deployment/${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }}
+          echo Existing
   create_session:
     needs:
-      - deploy_sam2
+      - prepare_sam2
     steps:
+      - name: Wait until the Kubernetes deployment reaches its final stage
+        early-cancel: any-job-failed
+        run: |
+          while true; do
+            if [ -f "app.deleted" ]; then
+              echo "File app.deleted was detected. Exiting..."
+              exit 0
+            elif [ -f "pod.running" ]; then
+              echo "Pod is ready"
+              break
+            fi
+            sleep 2 
+          done
       - name: Get SLUG
         run: |
           echo "slug=" >> $OUTPUTS
@@ -208,19 +318,6 @@ jobs:
             namespace: ${{ inputs.k8s.namespace }}
             resourceType: services
             resourceName: ${{ inputs.app.name }}
-  keep_alive:
-    needs:
-      - create_session
-    steps:
-      - name: Keep Session Running
-        run: tail -f /dev/null
-        cleanup: |
-          echo "Cleaning up resources..."
-          kubectl delete deployment ${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }} --ignore-not-found
-          kubectl delete service ${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }} --ignore-not-found
-          if [[ "${{ inputs.k8s.volumes.pvc_persist }}" == "false" ]]; then
-            kubectl delete pvc ${pvc_name} -n ${{ inputs.k8s.namespace }} --ignore-not-found
-          fi
 'on':
   execute:
     inputs:

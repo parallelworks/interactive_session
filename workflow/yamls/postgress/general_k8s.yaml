@@ -549,16 +549,16 @@ jobs:
         collapsed: false
       service:
         type: group
-        label: Postgress Settings
+        label: postgres Settings
         collapsed: false
         hidden: ${{ inputs.targetType !== 'compute-cluster' }}
         items:
           name:
             type: string
             hidden: true
-            default: postgress
+            default: postgres
           image:
-            label: Postgress Image
+            label: postgres Image
             type: string
             default: postgres:latest
             tooltip: Sample container from https://hub.docker.com/_/postgres
@@ -569,7 +569,7 @@ jobs:
             tooltip: 
               "Type in the mount volume options for the docker command. E.g.: -v /mnt:/mnt -v /data:/data"
           user:
-            label: Postgress User
+            label: postgres User
             optional: ${{ inputs.targetType !== 'compute-cluster' }}
             type: string
             tooltip: Enter email for POSTGRES_USER variable
@@ -730,7 +730,7 @@ jobs:
         hidden: ${{ inputs.targetType !== 'kubernetes-cluster' }}
         items:
           image:
-            label: Postgress Image
+            label: postgres Image
             type: string
             default: postgres:latest
             tooltip: Sample container from https://hub.docker.com/_/postgres
@@ -741,7 +741,7 @@ jobs:
             tooltip: 
               "Type in the mount volume options for the docker command. E.g.: -v /mnt:/mnt -v /data:/data"
           user:
-            label: Postgress User
+            label: postgres User
             optional: ${{ inputs.targetType !== 'kubernetes-cluster' }}
             type: string
             tooltip: Enter email for POSTGRES_USER variable

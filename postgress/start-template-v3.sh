@@ -20,7 +20,7 @@ fi
 set -x
 
 # Run docker container
-container_name="postgress-${service_port}"
+container_name="postgres-${service_port}"
 
 # CREATE CANCEL SCRIPT TO REMOVE DOCKER CONTAINER WHEN THE PW JOB IS CANCELED
 if [[ ${jobschedulertype} == "CONTROLLER" ]]; then

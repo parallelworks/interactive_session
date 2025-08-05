@@ -145,22 +145,22 @@ jobs:
             sleep 5
           done
           echo "remote_port=${remote_port}"  | tee -a $OUTPUTS
-      - name: Select Local Port
-        early-cancel: any-job-failed
-        if: ${{ inputs.targetType === 'compute-cluster' }}
-        run: |
-          local_port=$(pw agent open-port)
-          echo "local_port=${local_port}"  | tee -a $OUTPUTS
-      - name: Expose Port
-        early-cancel: any-job-failed
-        if: ${{ inputs.targetType === 'compute-cluster' }}
-        uses: parallelworks/update-session
-        with:
-          remotePort: ${{ needs.create_session.outputs.remote_port }}
-          localPort: ${{ needs.create_session.outputs.local_port }}
-          remoteHost: ${{ needs.create_session.outputs.target_hostname }}
-          target: ${{ inputs.pwrl_host.resource.id }}
-          name: ${{ sessions.session }}
+      # - name: Select Local Port
+      #   early-cancel: any-job-failed
+      #   if: ${{ inputs.targetType === 'compute-cluster' }}
+      #   run: |
+      #     local_port=$(pw agent open-port)
+      #     echo "local_port=${local_port}"  | tee -a $OUTPUTS
+      # - name: Expose Port
+      #   early-cancel: any-job-failed
+      #   if: ${{ inputs.targetType === 'compute-cluster' }}
+      #   uses: parallelworks/update-session
+      #   with:
+      #     remotePort: ${{ needs.create_session.outputs.remote_port }}
+      #     localPort: ${{ needs.create_session.outputs.local_port }}
+      #     remoteHost: ${{ needs.create_session.outputs.target_hostname }}
+      #     target: ${{ inputs.pwrl_host.resource.id }}
+      #     name: ${{ sessions.session }}
   auth_k8s:
     steps:
       - name: Authenticate kubectl

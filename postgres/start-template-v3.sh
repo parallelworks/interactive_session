@@ -39,16 +39,22 @@ if ! [ -z "${service_db}" ]; then
 fi
 
 # Start container
+sudo mkdir -p /postgres-data
+
 sudo systemctl start docker
 sudo -n docker run -d --name ${container_name} \
     ${service_mount_directories} \
     -p $service_port:5432 \
+    -e PGDATA=/var/lib/postgresql/data/pgdata \
+	-v /postgres-data:/var/lib/postgresql/data \
     -e POSTGRES_USER=${service_user} -e POSTGRES_PASSWORD=${service_password} ${POSTGRES_DB_ENV} \
     ${service_image}
 
-sudo docker logs -f ${container_name}
+sleep 5
+
+sudo docker logs ${container_name}
 
 # If running docker with the -d option sleep here! 
 # Do not exit this script until the job is canceled!
 # Exiting this script before the job is canceled triggers the cancel script!
-sleep inf
+#sleep inf

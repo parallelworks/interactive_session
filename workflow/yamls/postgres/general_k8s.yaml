@@ -565,11 +565,12 @@ jobs:
             default: postgres:latest
             tooltip: Sample container from https://hub.docker.com/_/postgres
           mount_directories:
-            label: Docker mount volumes
+            label: Docker Flags
             type: string
+            default: --network=host
             optional: true
             tooltip: 
-              "Type in the mount volume options for the docker command. E.g.: -v /mnt:/mnt -v /data:/data"
+              "Type in the docker flags and mount volume options for the docker command. E.g.: -v /mnt:/mnt -v /data:/data"
           user:
             label: postgres User
             optional: ${{ inputs.targetType !== 'compute-cluster' }}

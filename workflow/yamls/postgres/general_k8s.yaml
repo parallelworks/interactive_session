@@ -575,6 +575,7 @@ jobs:
             label: postgres User
             optional: ${{ inputs.targetType !== 'compute-cluster' }}
             type: string
+            default: postgres
             tooltip: Enter email for POSTGRES_USER variable
           password:
             label: Password
@@ -584,6 +585,7 @@ jobs:
           db:
             label: DB
             type: string
+            default: postgres
             tooltip: Enter email for POSTGRES_DB variable
             optional: true
       k8s:

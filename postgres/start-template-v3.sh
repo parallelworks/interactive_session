@@ -42,7 +42,7 @@ fi
 sudo mkdir -p /postgres-data
 
 sudo systemctl start docker
-sudo -n docker run -d --name ${container_name} \
+sudo -n docker run -d --rm --name ${container_name} \
     ${service_mount_directories} \
     -p $service_port:5432 \
     -e PGDATA=/var/lib/postgresql/data/pgdata \

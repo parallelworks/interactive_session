@@ -33,18 +33,15 @@ jobs:
     steps:
       - name: Create Controller Session Script
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype_tag_existing || 'CONTROLLER' === inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/controller/create_session_script.sh
       - name: Launch and Monitor Controller Job
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype_tag_existing || 'CONTROLLER' === inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/controller/launch_and_monitor_job.sh
-        cleanup: |
-          if [[ "${{ inputs.pwrl_host.jobschedulertype }}" == "CONTROLLER" ]]; then
-            ./kill.sh
-          fi
+        cleanup: ./kill.sh
       - name: Clean and Exit
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype_tag_existing || 'CONTROLLER' === inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/clean_and_exit.sh
   compute_job:
     needs:
@@ -52,18 +49,15 @@ jobs:
     steps:
       - name: Create Compute Session Script
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype_tag_existing || 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/compute/create_session_script.sh
       - name: Launch and Monitor Compute Job
-        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype_tag_existing || 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/compute/launch_and_monitor_job.sh
-        cleanup: |
-          if [[ "${{ inputs.pwrl_host.jobschedulertype }}" != "CONTROLLER" ]]; then
-            ./kill.sh
-          fi
+        cleanup: ./kill.sh
       - name: Clean and Exit
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype_tag_existing || 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/clean_and_exit.sh
   create_session:
     needs:
@@ -76,7 +70,7 @@ jobs:
           echo "session_name=${session_name}" | tee -a $OUTPUTS
       - name: Get Controller Hostname
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype_tag_existing }}
+        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype_tag_existing || 'CONTROLLER' === inputs.pwrl_host.jobschedulertype_tag_cloud }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -84,7 +78,7 @@ jobs:
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
       - name: Get Compute Hostname
         early-cancel: any-job-failed
-        if: ${{ 'SLURM' === inputs.pwrl_host.jobschedulertype_tag_existing }}
+        if: ${{ 'SLURM' === inputs.pwrl_host.jobschedulertype_tag_existing || 'SLURM' === inputs.pwrl_host.jobschedulertype_tag_cloud }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |

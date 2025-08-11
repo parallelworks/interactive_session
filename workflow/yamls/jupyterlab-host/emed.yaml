@@ -339,7 +339,7 @@ jobs:
             label: Parent Install Directory  
             type: string
             default:  __HOME__/pw/software
-            hidden: ${{ inputs.service.conda_install_tag_cloud. == false || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ inputs.service.conda_install_tag_cloud == false || 'existing' === inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             tooltip: Software dependencies are installed in this directory. Ensure the directory has sufficient space!
           conda_install_dir_tag_cloud:

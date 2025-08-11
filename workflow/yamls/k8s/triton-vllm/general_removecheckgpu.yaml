@@ -143,7 +143,12 @@ jobs:
                 containers:
                   - name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-triton
                     image: nvcr.io/nvidia/tritonserver:24.09-vllm-python-py3
-                    args: ["tritonserver", "--model-store=${{ inputs.k8s.volumes.pvc_mount_path }}", "--model-control-mode=POLL"]
+                    args: 
+                      - /bin/bash
+                      - -c
+                      - |
+                        pip install --upgrade "vllm[gptoss]" --pre --extra-index-url https://wheels.vllm.ai/gpt-oss/ && \
+                        tritonserver --model-store=$MODEL_STORE --model-control-mode=POLL
                     ports:
                       - containerPort: 8000
                         name: http
@@ -158,6 +163,8 @@ jobs:
                         value: "compute,utility"
                       - name: HF_TOKEN
                         value: "${{ inputs.triton_k8s.hf_token }}"
+                      - name: MODEL_STORE
+                        value: "${{ inputs.k8s.volumes.pvc_mount_path }}"
                     resources:
                       requests:
                         memory: "${{ inputs.k8s.triton_resources.requests.memory }}"
@@ -306,12 +313,53 @@ jobs:
       - prepare_k8s_deployment
     steps:
       - name: Load outputs
+        early-cancel: any-job-failed
         run: cat OUTPUTS >> $OUTPUTS
       - name: Apply PVC
+        early-cancel: any-job-failed
         if: ${{ inputs.k8s.volumes.pvc === New }}
         run: kubectl apply -f pvc.yaml
+        cleanup: |
+          set -x
+          if [[ "${{ inputs.k8s.volumes.pvc_persist }}" == "false" ]]; then
+            MAX_ATTEMPTS=5
+            ATTEMPT=1
+            while true; do
+              if kubectl delete -f pvc.yaml; then
+                echo "PVC deleted successfully"
+                touch pvc.deleted
+                break
+              elif [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+                echo "Failed to delete PVC after $MAX_ATTEMPTS attempts"
+                exit 1
+              else
+                echo "Attempt $ATTEMPT to delete PVC failed. Retrying in 5 seconds..."
+                sleep 5
+                ((ATTEMPT++))
+              fi
+            done
+          fi
       - name: Apply Deployment and Service
         run: kubectl apply -f app.yaml
+        early-cancel: any-job-failed
+        cleanup: |
+          set -x
+          MAX_ATTEMPTS=5
+          ATTEMPT=1
+          while true; do
+            if kubectl delete -f app.yaml; then
+              echo "Resources deleted successfully"
+              touch app.deleted
+              break
+            elif [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+              echo "Failed to delete resources after $MAX_ATTEMPTS attempts"
+              exit 1
+            else
+              echo "Attempt $ATTEMPT to delete resources failed. Retrying in 5 seconds..."
+              sleep 5
+              ((ATTEMPT++))
+            fi
+          done
       - name: Wait for Deployment to be Ready
         early-cancel: any-job-failed
         env:

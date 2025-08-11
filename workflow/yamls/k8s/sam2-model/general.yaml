@@ -166,7 +166,12 @@ jobs:
                 targetPort: 3000
             type: ClusterIP
           EOF
-  apply_sam2:
+      - name: Dry Run Deployment
+        early-cancel: any-job-failed
+        run: |
+          echo "Performing dry run..."
+          kubectl apply -f app.yaml --dry-run=client
+  apply_sam2_deployment:
     needs:
       - prepare_sam2
     steps:

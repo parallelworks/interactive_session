@@ -102,7 +102,7 @@ jobs:
                 labels:
                   app: ${{ inputs.app.name }}
               spec:
-                ${runtimeClassName}
+                runtimeClassName: nvidia
                 initContainers:
                   - name: set-permissions
                     image: busybox
@@ -176,7 +176,6 @@ jobs:
       - prepare_sam2
     steps:
       - name: Apply PVC
-        early-cancel: any-job-failed
         if: ${{ inputs.k8s.volumes.pvc === 'New' }}
         run: kubectl apply -f pvc.yaml
         cleanup: |

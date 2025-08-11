@@ -76,7 +76,7 @@ jobs:
           echo "session_name=${session_name}" | tee -a $OUTPUTS
       - name: Get Controller Hostname
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype_tag_existing }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -84,7 +84,7 @@ jobs:
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
       - name: Get Compute Hostname
         early-cancel: any-job-failed
-        if: ${{ 'SLURM' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'SLURM' === inputs.pwrl_host.jobschedulertype_tag_existing }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -144,7 +144,6 @@ jobs:
         run: |
           TIMEOUT=5
           RETRY_INTERVAL=3
-          set -x
 
           # Function to check if server is listening
           check_server() {

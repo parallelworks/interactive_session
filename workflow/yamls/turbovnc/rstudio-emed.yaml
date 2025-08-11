@@ -204,6 +204,8 @@ jobs:
           resource:
             type: compute-clusters
             label: Service host
+            provider:
+              - existing
             include-workspace: false
             autoselect: true
             tooltip: Resource to host the service

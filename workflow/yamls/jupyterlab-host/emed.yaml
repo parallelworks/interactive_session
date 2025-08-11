@@ -273,7 +273,7 @@ jobs:
           _sch__dd_partition_e__tag_cloud:
             type: slurm-partitions
             label: SLURM partition
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype.jobschedulertype_tag_cloud  || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype_tag_cloud  || 'existing' === inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: >-
@@ -284,13 +284,13 @@ jobs:
             label: Walltime
             type: string
             default: 01:00:00
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype.jobschedulertype_tag_cloud  || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype_tag_cloud  || 'existing' === inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             tooltip: e.g. 01:00:00 - Amount of time slurm will honor the interactive session.
           scheduler_directives_tag_cloud:
             type: string
             label: Scheduler directives
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype.jobschedulertype_tag_cloud  || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype_tag_cloud  || 'existing' === inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: >-

@@ -192,6 +192,7 @@ jobs:
       pwrl_host:
         type: group
         label: Jupyter Lab Host
+        collapsed: false
         items:
           resource:
             type: compute-clusters
@@ -207,52 +208,63 @@ jobs:
             hidden: true
             default: 1
             optional: true
-          jobschedulertype:
+          jobschedulertype_tag_existing:
             type: string
             label: Select Controller, SLURM Partition or PBS Queue
             default: SLURM
-            hidden: true
-          _sch__dd_partition_e_:
+            hidden: true 
+            ignore: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            optional: ${{ .ignore}}
+          _sch__dd_partition_e__tag_existing:
             type: slurm-partitions
             label: SLURM partition
             optional: true
             tooltip: Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.
             resource: ${{ inputs.pwrl_host.resource }}
-          _sch__dd_gres_e_gpu_colon_:
+            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+          _sch__dd_gres_e_gpu_colon__tag_existing:
             type: number
             label: Number of GPUs
-            hidden: ${{ inputs.pwrl_host._sch__dd_partition_e_ !== 'gpu' && inputs.pwrl_host._sch__dd_partition_e_ !== 'gpu-quick' }}
+            hidden: ${{ inputs.pwrl_host._sch__dd_partition_e__tag_existing !== 'gpu' && inputs.pwrl_host._sch__dd_partition_e__tag_existing !== 'gpu-quick' || 'existing' !== inputs.pwrl_host.resource.provider  }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
             min: 1
             max: 4
             default: 1
             tooltip: '--gres=gpu:X slurm directive'
-          _sch__dd_cpus_d_per_d_task_e_:
+          _sch__dd_cpus_d_per_d_task_e__tag_existing:
             type: number
             label: CPUs per task
             min: 1
             max: 32
             default: 1
             tooltip: '--cpus-per-task=value slurm directive'
-          _sch__dd_mem_e_:
+            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+          _sch__dd_mem_e__tag_existing:
             type: string
             label: Minimum total memory required
             default: 8GB
             tooltip: '--mem=value slurm directive'
+            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
             optional: true
-          _sch__dd_time_e_:
+          _sch__dd_time_e__tag_existing:
             type: string
             label: Walltime
             default: '01:00:00'
             tooltip: e.g. 01:00:00 - Amount of time slurm will honor the interactive session.
+            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
             optional: true
-          scheduler_directives:
+          scheduler_directives_tag_existing:
             type: string
             label: Scheduler directives
-            optional: true
             tooltip: e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.
-        collapsed: false
+            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            optional: true
       service:
         type: group
         label: Jupyter Lab Settings

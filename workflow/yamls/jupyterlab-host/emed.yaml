@@ -275,11 +275,10 @@ jobs:
             default: jupyterlab-host
           nginx_sif_tag_existing:
             type: string
-            hidden: true
             default: /public/apps/pw/nginx-unprivileged.sif
             hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
-            ignore: ${{ .hidden }}
-            optional: ${{ .hidden }}
+            ignore: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            optional: ${{ .ignore }}
           notebook_dir_tag_existing:
             label: Directory to start Jupyter Lab GUI
             type: string

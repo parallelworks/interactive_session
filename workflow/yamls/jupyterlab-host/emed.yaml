@@ -273,10 +273,29 @@ jobs:
             type: string
             hidden: true
             default: jupyterlab-host
-          nginx_sif:
+          nginx_sif_tag_existing:
             type: string
             hidden: true
             default: /public/apps/pw/nginx-unprivileged.sif
+            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
+          notebook_dir_tag_existing:
+            label: Directory to start Jupyter Lab GUI
+            type: string
+            default: __HOME__/pw/
+            tooltip: This is the directory that you start with when the Jupyter graphical user interface starts. The default value here is your home directory.
+            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
+          load_env_tag_existing:
+            label: Command to load Jupyter Lab to the PATH
+            type: string
+            default: source /gs/gsfs0/hpc01/rhel8/apps/conda3/etc/profile.d/conda.sh; conda activate base; module load cuda
+            tooltip: Use a bash command
+            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
           password:
             label: Password for notebook session
             type: password
@@ -284,13 +303,3 @@ jobs:
             hidden: true
             ignore: true
             tooltip: Enter password or leave blank for no password
-          notebook_dir:
-            label: Directory to start Jupyter Lab GUI
-            type: string
-            default: __HOME__/pw/
-            tooltip: This is the directory that you start with when the Jupyter graphical user interface starts. The default value here is your home directory.
-          load_env:
-            label: Command to load Jupyter Lab to the PATH
-            type: string
-            default: source /gs/gsfs0/hpc01/rhel8/apps/conda3/etc/profile.d/conda.sh; conda activate base; module load cuda
-            tooltip: Use a bash command

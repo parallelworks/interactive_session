@@ -16,10 +16,10 @@ jobs:
         run: ./utils/steps-v3/preprocessing/input_form_resource_wrapper.sh ${{ inputs.pwrl_host.resource.ip }}
       - name: Process Inputs
         early-cancel: any-job-failed
-        run: | 
+        run: |
           set -e
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
-          ./utils/steps-v3/preprocessing/process_inputs_sh.sh 
+          ./utils/steps-v3/preprocessing/process_inputs_sh.sh
       - name: Transfer Files to Controller
         early-cancel: any-job-failed
         run: ./utils/steps-v3/preprocessing/transfer_files_to_controller.sh
@@ -32,7 +32,7 @@ jobs:
 
   controller_job:
     needs:
-       - preprocessing
+      - preprocessing
     steps:
       - name: Create Controller Session Script
         early-cancel: any-job-failed
@@ -52,14 +52,14 @@ jobs:
 
   compute_job:
     needs:
-       - preprocessing
+      - preprocessing
     steps:
       - name: Create Compute Session Script
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/compute/create_session_script.sh
-      - name:  Launch and Monitor Compute Job
-        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
+      - name: Launch and Monitor Compute Job
+        if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/compute/launch_and_monitor_job.sh
         cleanup: |
           if [[ "${{ inputs.pwrl_host.jobschedulertype }}" != "CONTROLLER" ]]; then
@@ -67,13 +67,12 @@ jobs:
           fi
       - name: Clean and Exit
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/clean_and_exit.sh
-
 
   create_session:
     needs:
-       - preprocessing
+      - preprocessing
     steps:
       - name: Set Session Name
         early-cancel: any-job-failed
@@ -187,10 +186,10 @@ jobs:
         early-cancel: any-job-failed
         uses: parallelworks/update-session
         with:
-          remotePort: "${{ needs.create_session.outputs.remote_port }}"
-          localPort: "${{ needs.create_session.outputs.local_port }}"
-          remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
-          slug: "${{ needs.create_session.outputs.slug }}"
+          remotePort: '${{ needs.create_session.outputs.remote_port }}'
+          localPort: '${{ needs.create_session.outputs.local_port }}'
+          remoteHost: '${{ needs.create_session.outputs.target_hostname }}'
+          slug: '${{ needs.create_session.outputs.slug }}'
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.session }}
 
@@ -227,30 +226,30 @@ jobs:
             tooltip: Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.
             resource: ${{ inputs.pwrl_host.resource }}
           _sch__dd_gres_e_gpu_colon_:
-            type:  number
+            type: number
             label: Number of GPUs
-            hidden: ${{ inputs.pwrl_host._sch__dd_partition_e_ !== 'gpu' && inputs.pwrl_host._sch__dd_partition_e_ !== 'gpu-quick' }}  
+            hidden: ${{ inputs.pwrl_host._sch__dd_partition_e_ != 'gpu' && inputs.pwrl_host._sch__dd_partition_e_ != 'gpu-quick' }}
             ignore: ${{ .hidden }}
-            optional: ${{ .hidden }}          
+            optional: ${{ .hidden }}
             min: 1
             max: 4
             default: 1
-            tooltip: "--gres=gpu:X slurm directive"
+            tooltip: '--gres=gpu:X slurm directive'
           _sch__dd_cpus_d_per_d_task_e_:
-            type:  number
+            type: number
             label: CPUs per task
             min: 1
             max: 32
             default: 1
             tooltip: --cpus-per-task=value slurm directive
           _sch__dd_mem_e_:
-            type:  string
+            type: string
             label: Minimum total memory required
             default: 8GB
             tooltip: --mem=value slurm directive
             optional: true
           _sch__dd_time_e_:
-            type:  string
+            type: string
             label: Walltime
             default: 01:00:00
             tooltip: e.g. 01:00:00 - Amount of time slurm will honor the interactive session.

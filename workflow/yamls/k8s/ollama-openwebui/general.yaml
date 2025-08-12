@@ -14,59 +14,59 @@ jobs:
         early-cancel: any-job-failed
         run: pw kube auth ${{ inputs.k8s.cluster }}
   prepare_k8s_pvc:
-      needs:
-        - auth_k8s
-      steps:
-        - name: Creating New PVC YAML
-          early-cancel: any-job-failed
-          if: ${{ inputs.k8s.volumes.pvc === New }}
-          run: |
-            if [[ ${{ inputs.k8s.volumes.pvc_persist }} == "true" ]]; then
-              pvc_name="${{ inputs.k8s.volumes.pvc_name }}"
-            else
-              job_number=$(pwd | rev | cut -d "/" -f1 | rev)
-              workflow_name=$(pwd | rev | cut -d "/" -f2 | rev)
-              pvc_name=$(echo "${PW_USER}${workflow_name}${job_number}" | sed 's|_||g' | sed 's|\.||g' | tr '[:upper:]' '[:lower:]' | tail -c 56)-pvc
+    needs:
+      - auth_k8s
+    steps:
+      - name: Creating New PVC YAML
+        early-cancel: any-job-failed
+        if: ${{ inputs.k8s.volumes.pvc === New }}
+        run: |
+          if [[ ${{ inputs.k8s.volumes.pvc_persist }} == "true" ]]; then
+            pvc_name="${{ inputs.k8s.volumes.pvc_name }}"
+          else
+            job_number=$(pwd | rev | cut -d "/" -f1 | rev)
+            workflow_name=$(pwd | rev | cut -d "/" -f2 | rev)
+            pvc_name=$(echo "${PW_USER}${workflow_name}${job_number}" | sed 's|_||g' | sed 's|\.||g' | tr '[:upper:]' '[:lower:]' | tail -c 56)-pvc
+          fi
+          pvc_storage_class=${{ inputs.k8s.volumes.pvc_storage_class }} 
+          if [ -z "${pvc_storage_class}" ] || [[ "${pvc_storage_class}" == "undefined" ]]; then
+            default_class=$(kubectl get storageclass -n ${{ inputs.k8s.namespace }} | grep '(default)')
+            if [ $? -ne 0 ]; then
+              echo "WARNING: Could not obtain default storageClass with command:"
+              echo "         kubectl get storageclass -n ${{ inputs.k8s.namespace }}"
+              echo "         You might need to provide a storage class input"
+            elif [ -z "${default_class}" ]; then
+              echo "ERROR: No default storage class found. You must specify one explicitly."
+              exit 1
             fi
-            pvc_storage_class=${{ inputs.k8s.volumes.pvc_storage_class }} 
-            if [ -z "${pvc_storage_class}" ] || [[ "${pvc_storage_class}" == "undefined" ]]; then
-              default_class=$(kubectl get storageclass -n ${{ inputs.k8s.namespace }} | grep '(default)')
-              if [ $? -ne 0 ]; then
-                echo "WARNING: Could not obtain default storageClass with command:"
-                echo "         kubectl get storageclass -n ${{ inputs.k8s.namespace }}"
-                echo "         You might need to provide a storage class input"
-              elif [ -z "${default_class}" ]; then
-                echo "ERROR: No default storage class found. You must specify one explicitly."
-                exit 1
-              fi
-            else
-              storageClassName="storageClassName: ${{ inputs.k8s.volumes.pvc_storage_class }}"
-            fi
-            echo "${pvc_name}" > pvc_name
-            cat <<EOF > pvc.yaml
-            apiVersion: v1
-            kind: PersistentVolumeClaim
-            metadata:
-              name: ${pvc_name}
-              namespace: ${{ inputs.k8s.namespace }}
-            spec:
-              accessModes:
-                - ReadWriteOnce
-              resources:
-                requests:
-                  storage: ${{ inputs.k8s.volumes.pvc_storage_size }}  
-              ${storageClassName} 
-            EOF
-            cat pvc.yaml
-        - name: Dry Run PVC
-          early-cancel: any-job-failed
-          if: ${{ inputs.k8s.volumes.pvc === New }}
-          run: |
-            echo "Performing dry run..."
-            kubectl apply -f pvc.yaml --dry-run=client
-        - name: Dummy
-          early-cancel: any-job-failed
-          run: echo Dummy
+          else
+            storageClassName="storageClassName: ${{ inputs.k8s.volumes.pvc_storage_class }}"
+          fi
+          echo "${pvc_name}" > pvc_name
+          cat <<EOF > pvc.yaml
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: ${pvc_name}
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: ${{ inputs.k8s.volumes.pvc_storage_size }}  
+            ${storageClassName} 
+          EOF
+          cat pvc.yaml
+      - name: Dry Run PVC
+        early-cancel: any-job-failed
+        if: ${{ inputs.k8s.volumes.pvc === New }}
+        run: |
+          echo "Performing dry run..."
+          kubectl apply -f pvc.yaml --dry-run=client
+      - name: Dummy
+        early-cancel: any-job-failed
+        run: echo Dummy
   prepare_k8s_deployment:
     needs:
       - prepare_k8s_pvc
@@ -407,20 +407,20 @@ jobs:
                 type: kubernetes-pvc
                 clusterName: ${{ inputs.k8s.cluster }}
                 namespace: ${{ inputs.k8s.namespace }}
-                hidden: ${{ inputs.k8s.volumes.pvc !== Existing }}
+                hidden: ${{ inputs.k8s.volumes.pvc != Existing }}
                 ignore: ${{ .hidden }}
                 optional: ${{ .hidden }}
               pvc_storage_size:
                 label: Enter PVC Size
                 type: string
-                hidden: ${{ inputs.k8s.volumes.pvc !== New }}
+                hidden: ${{ inputs.k8s.volumes.pvc != New }}
                 ignore: ${{ .hidden }}
                 optional: ${{ .hidden }}
                 default: 20Gi
               pvc_storage_class:
                 label: Enter PVC Storage Class
                 type: string
-                hidden: ${{ inputs.k8s.volumes.pvc !== New }}
+                hidden: ${{ inputs.k8s.volumes.pvc != New }}
                 ignore: ${{ .hidden }}
                 optional: true
                 tooltip: Leave blank to use the default storage class configured in the cluster.
@@ -428,14 +428,14 @@ jobs:
                 label: Persist PVC After Completion
                 type: boolean
                 default: false
-                hidden: ${{ inputs.k8s.volumes.pvc !== 'New' }}
+                hidden: ${{ inputs.k8s.volumes.pvc != 'New' }}
                 ignore: ${{ .hidden }}
                 optional: ${{ .hidden }}
                 tooltip: If true, the PVC will persist after the job is canceled or completed. If false, it will be deleted.
               pvc_name:
                 label: Enter PVC Name
                 type: string
-                hidden: ${{ inputs.k8s.volumes.pvc_persist === false || inputs.k8s.volumes.pvc !== New  }}
+                hidden: ${{ inputs.k8s.volumes.pvc_persist === false || inputs.k8s.volumes.pvc != New  }}
                 ignore: ${{ .hidden }}
                 optional: ${{ .hidden }}
           ollama_resources:
@@ -490,7 +490,7 @@ jobs:
                   gpu_resource_key:
                     label: Custom GPU Resource Key
                     type: string
-                    hidden: ${{ inputs.k8s.ollama_resources.limits.select_gpu !== Custom }}
+                    hidden: ${{ inputs.k8s.ollama_resources.limits.select_gpu != Custom }}
                     ignore: ${{ .hidden }}
                     tooltip: |
                       Specify a custom GPU resource key for Kubernetes, such as:

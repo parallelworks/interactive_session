@@ -17,7 +17,7 @@ jobs:
         run: |
           set -e
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
-          ./utils/steps-v3/preprocessing/process_inputs_sh.sh 
+          ./utils/steps-v3/preprocessing/process_inputs_sh.sh
       - name: Transfer Files to Controller
         early-cancel: any-job-failed
         run: ./utils/steps-v3/preprocessing/transfer_files_to_controller.sh
@@ -49,15 +49,15 @@ jobs:
     steps:
       - name: Create Compute Session Script
         early-cancel: any-job-failed
-        if: ${{ 'existing' === inputs.pwrl_host.resource.provider || 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype_tag_cloud }}
+        if: ${{ 'existing' === inputs.pwrl_host.resource.provider || 'CONTROLLER' != inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/compute/create_session_script.sh
       - name: Launch and Monitor Compute Job
-        if: ${{ 'existing' === inputs.pwrl_host.resource.provider || 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype_tag_cloud }}
+        if: ${{ 'existing' === inputs.pwrl_host.resource.provider || 'CONTROLLER' != inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/compute/launch_and_monitor_job.sh
         cleanup: ./kill.sh
       - name: Clean and Exit
         early-cancel: any-job-failed
-        if: ${{ 'existing' === inputs.pwrl_host.resource.provider || 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype_tag_cloud }}
+        if: ${{ 'existing' === inputs.pwrl_host.resource.provider || 'CONTROLLER' != inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/clean_and_exit.sh
   create_session:
     needs:
@@ -204,8 +204,8 @@ jobs:
             type: string
             label: Select Controller, SLURM Partition or PBS Queue
             default: SLURM
-            hidden: true 
-            ignore: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: true
+            ignore: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
             optional: ${{ .ignore}}
           _sch__dd_partition_e__tag_existing:
             type: slurm-partitions
@@ -213,12 +213,12 @@ jobs:
             optional: true
             tooltip: Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.
             resource: ${{ inputs.pwrl_host.resource }}
-            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
           _sch__dd_gres_e_gpu_colon__tag_existing:
             type: number
             label: Number of GPUs
-            hidden: ${{ inputs.pwrl_host._sch__dd_partition_e__tag_existing !== 'gpu' && inputs.pwrl_host._sch__dd_partition_e__tag_existing !== 'gpu-quick' || 'existing' !== inputs.pwrl_host.resource.provider  }}
+            hidden: ${{ inputs.pwrl_host._sch__dd_partition_e__tag_existing != 'gpu' && inputs.pwrl_host._sch__dd_partition_e__tag_existing != 'gpu-quick' || 'existing' != inputs.pwrl_host.resource.provider  }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
             min: 1
@@ -232,14 +232,14 @@ jobs:
             max: 32
             default: 1
             tooltip: '--cpus-per-task=value slurm directive'
-            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
           _sch__dd_mem_e__tag_existing:
             type: string
             label: Minimum total memory required
             default: 8GB
             tooltip: '--mem=value slurm directive'
-            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: true
           _sch__dd_time_e__tag_existing:
@@ -247,14 +247,14 @@ jobs:
             label: Walltime
             default: '01:00:00'
             tooltip: e.g. 01:00:00 - Amount of time slurm will honor the interactive session.
-            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: true
           scheduler_directives_tag_existing:
             type: string
             label: Scheduler directives
             tooltip: e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.
-            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: true
           jobschedulertype_tag_cloud:
@@ -273,7 +273,7 @@ jobs:
           _sch__dd_partition_e__tag_cloud:
             type: slurm-partitions
             label: SLURM partition
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype_tag_cloud  || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype_tag_cloud  || 'existing' === inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: >-
@@ -284,13 +284,13 @@ jobs:
             label: Walltime
             type: string
             default: 01:00:00
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype_tag_cloud  || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype_tag_cloud  || 'existing' === inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             tooltip: e.g. 01:00:00 - Amount of time slurm will honor the interactive session.
           scheduler_directives_tag_cloud:
             type: string
             label: Scheduler directives
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype_tag_cloud  || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype_tag_cloud  || 'existing' === inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: >-
@@ -307,15 +307,15 @@ jobs:
           nginx_sif_tag_existing:
             type: string
             default: /public/apps/pw/nginx-unprivileged.sif
-            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
-            ignore: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
+            ignore: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
             optional: ${{ .ignore }}
           notebook_dir_tag_existing:
             label: Directory to start Jupyter Lab GUI
             type: string
             default: __HOME__/pw/
             tooltip: This is the directory that you start with when the Jupyter graphical user interface starts. The default value here is your home directory.
-            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
           load_env_tag_existing:
@@ -323,7 +323,7 @@ jobs:
             type: string
             default: source /gs/gsfs0/hpc01/rhel8/apps/conda3/etc/profile.d/conda.sh; conda activate base; module load cuda
             tooltip: Use a bash command
-            hidden: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
           conda_install_tag_cloud:
@@ -333,12 +333,11 @@ jobs:
             ignore: ${{ .hidden }}
             type: boolean
             default: true
-            tooltip:
-              Select Yes to install Jupyter in miniconda environment and No to load an existing python environment
+            tooltip: Select Yes to install Jupyter in miniconda environment and No to load an existing python environment
           parent_install_dir_tag_cloud:
-            label: Parent Install Directory  
+            label: Parent Install Directory
             type: string
-            default:  __HOME__/pw/software
+            default: __HOME__/pw/software
             hidden: ${{ inputs.service.conda_install_tag_cloud == false || 'existing' === inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             tooltip: Software dependencies are installed in this directory. Ensure the directory has sufficient space!
@@ -356,13 +355,12 @@ jobs:
             hidden: "${{ inputs.service.conda_install_tag_cloud == false || 'existing' === inputs.pwrl_host.resource.provider }}"
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}
-            tooltip:
-              Environment to active. The base environment enables changing kernel to other environments!
+            tooltip: Environment to active. The base environment enables changing kernel to other environments!
           load_env_tag_cloud:
             label: Command to load Jupyter Notebook to the PATH
             type: string
             default: source __HOME__/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base
-            hidden:  ${{ inputs.service.conda_install_tag_cloud == true || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ inputs.service.conda_install_tag_cloud == true || 'existing' === inputs.pwrl_host.resource.provider }}
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}
             tooltip: Use a bash command
@@ -384,11 +382,10 @@ jobs:
           yaml_tag_cloud:
             label: Paste Conda Environment Defition YAML
             type: editor
-            hidden: ${{ inputs.service.install_instructions_tag_cloud !== yaml ||  inputs.service.conda_install_tag_cloud == false || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ inputs.service.install_instructions_tag_cloud != yaml ||  inputs.service.conda_install_tag_cloud == false || 'existing' === inputs.pwrl_host.resource.provider }}
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}
-            tooltip:
-              Copy and paste a custom Conda environment definition YAML file
+            tooltip: Copy and paste a custom Conda environment definition YAML file
           install_kernels_tag_cloud:
             label: Select additional kernels to install
             type: multi-dropdown

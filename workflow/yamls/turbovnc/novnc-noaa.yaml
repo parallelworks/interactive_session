@@ -2,15 +2,15 @@ jobs:
   main:
     steps:
       - name: Preprocessing
-        run: ./utils/steps/preprocessing.sh 
+        run: ./utils/steps/preprocessing.sh
       - name: Validating Target Resource
         run: ./utils/steps/input_form_resource_wrapper.sh
       - name: Process Inputs
-        run: ./utils/steps/process_inputs_sh.sh 
+        run: ./utils/steps/process_inputs_sh.sh
       - name: Controller Preprocessing
         run: ./utils/steps/controller_preprocessing.sh
       - name: Prepare Service JSON
-        run: ./utils/steps/prepare_service_json.sh 
+        run: ./utils/steps/prepare_service_json.sh
       - name: Initialize Cancel Script
         run: ./utils/steps/initialize_cancel_script.sh
       - name: Create Session Script
@@ -49,22 +49,22 @@ jobs:
                 label: SLURM Partition
             tooltip: Job will be submitted using SSH or sbatch, respectively
           _sch__dd_account_e__tag_existing:
-            label: SLURM account 
-            type:  slurm-accounts
+            label: SLURM account
+            type: slurm-accounts
             resource: ${{ inputs.pwrl_host.resource }}
             tooltip: Account to submit the interactive job
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' != inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
           _sch__dd_partition_e__tag_existing:
             type: dropdown
             label: SLURM partition
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' != inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             options:
               - label: service
-                value: service 
-            default: service           
+                value: service
+            default: service
             tooltip: >-
               Partition to submit the interactive job. Leave empty to let SLURM
               pick the optimal option.
@@ -73,27 +73,27 @@ jobs:
             type: slurm-qos
             resource: ${{ inputs.pwrl_host.resource }}
             tooltip: Select a QOS from the drop down menu
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' != inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
           _sch__dd_ntasks_e__tag_existing:
             label: Number of tasks
-            type:  number
+            type: number
             min: 1
             max: 100
             default: 1
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' != inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
           _sch__dd_nodes_e__tag_existing:
             label: Number of nodes
-            type:  number
+            type: number
             default: 1
             hidden: true
-            ignore: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' != inputs.pwrl_host.resource.provider }}
           _sch__dd_partition_e__tag_cloud:
             type: slurm-partitions
             label: SLURM partition
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' === inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: >-
@@ -104,13 +104,13 @@ jobs:
             label: Walltime
             type: string
             default: 01:00:00
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  }}
             ignore: ${{ .hidden }}
             tooltip: e.g. 01:00:00 - Amount of time slurm will honor the interactive session.
           scheduler_directives_slurm:
             type: string
             label: Scheduler directives
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: >-
@@ -149,12 +149,10 @@ jobs:
             type: string
             default: turbovnc
             hidden: true
-            ignore: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
           desktop:
             label: Desktop Session
             type: string
             default: mate-session
             hidden: true
-            ignore: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
-
-        
+            ignore: ${{ 'existing' != inputs.pwrl_host.resource.provider }}

@@ -56,10 +56,10 @@ jobs:
     steps:
       - name: Create Compute Session Script
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/compute/create_session_script.sh
       - name:  Launch and Monitor Compute Job
-        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/compute/launch_and_monitor_job.sh
         cleanup: |
           if [[ "${{ inputs.pwrl_host.jobschedulertype }}" != "CONTROLLER" ]]; then
@@ -67,7 +67,7 @@ jobs:
           fi
       - name: Clean and Exit
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/clean_and_exit.sh
 
 
@@ -227,7 +227,7 @@ jobs:
           _sch__dd_partition_e_:
             type: slurm-partitions
             label: SLURM partition
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: >-
@@ -237,7 +237,7 @@ jobs:
           scheduler_directives_slurm:
             type: string
             label: Scheduler directives
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: >-
@@ -246,7 +246,7 @@ jobs:
           _sch__d_q___:
             type: string
             label: PBS queue
-            hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
+            hidden: ${{ 'PBS' != inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
             tooltip: >-
@@ -255,7 +255,7 @@ jobs:
           scheduler_directives_pbs:
             type: string
             label: Scheduler directives
-            hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
+            hidden: ${{ 'PBS' != inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: >-

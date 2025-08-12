@@ -22,7 +22,7 @@ jobs:
         run: |
           set -e
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
-          ./utils/steps-v3/preprocessing/process_inputs_sh.sh 
+          ./utils/steps-v3/preprocessing/process_inputs_sh.sh
       - name: Transfer Files to Controller
         early-cancel: any-job-failed
         if: ${{ inputs.targetType === 'compute-cluster' }}
@@ -38,7 +38,7 @@ jobs:
 
   controller_job:
     needs:
-       - preprocessing
+      - preprocessing
     steps:
       - name: Create Controller Session Script
         early-cancel: any-job-failed
@@ -58,14 +58,14 @@ jobs:
 
   compute_job:
     needs:
-       - preprocessing
+      - preprocessing
     steps:
       - name: Create Compute Session Script
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
+        if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/compute/create_session_script.sh
-      - name:  Launch and Monitor Compute Job
-        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
+      - name: Launch and Monitor Compute Job
+        if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/compute/launch_and_monitor_job.sh
         cleanup: |
           if [[ "${{ inputs.pwrl_host.jobschedulertype }}" != "CONTROLLER" ]]; then
@@ -73,13 +73,12 @@ jobs:
           fi
       - name: Clean and Exit
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
+        if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype && inputs.targetType === 'compute-cluster' }}
         run: ./utils/steps-v3/clean_and_exit.sh
-
 
   create_session:
     needs:
-       - preprocessing
+      - preprocessing
     steps:
       - name: Set Session Name
         early-cancel: any-job-failed
@@ -199,10 +198,10 @@ jobs:
         if: ${{ inputs.targetType === 'compute-cluster' }}
         uses: parallelworks/update-session
         with:
-          remotePort: "${{ needs.create_session.outputs.remote_port }}"
-          localPort: "${{ needs.create_session.outputs.local_port }}"
-          remoteHost: "${{ needs.create_session.outputs.target_hostname }}"
-          slug: "${{ needs.create_session.outputs.slug }}"
+          remotePort: '${{ needs.create_session.outputs.remote_port }}'
+          localPort: '${{ needs.create_session.outputs.local_port }}'
+          remoteHost: '${{ needs.create_session.outputs.target_hostname }}'
+          slug: '${{ needs.create_session.outputs.slug }}'
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.session }}
 
@@ -213,59 +212,59 @@ jobs:
         if: ${{ inputs.targetType === 'kubernetes-cluster' }}
         run: pw kube auth ${{ inputs.k8s.cluster }}
   prepare_k8s_pvc:
-      needs:
-        - auth_k8s
-      steps:
-        - name: Creating New PVC YAML
-          early-cancel: any-job-failed
-          if: ${{ inputs.targetType === 'kubernetes-cluster' && inputs.k8s.volumes.pvc === New  }}
-          run: |
-            if [[ ${{ inputs.k8s.volumes.pvc_persist }} == "true" ]]; then
-              pvc_name="${{ inputs.k8s.volumes.pvc_name }}"
-            else
-              job_number=$(pwd | rev | cut -d "/" -f1 | rev)
-              workflow_name=$(pwd | rev | cut -d "/" -f2 | rev)
-              pvc_name=$(echo "${PW_USER}${workflow_name}${job_number}" | sed 's|_||g' | sed 's|\.||g' | tr '[:upper:]' '[:lower:]' | tail -c 56)-pvc
+    needs:
+      - auth_k8s
+    steps:
+      - name: Creating New PVC YAML
+        early-cancel: any-job-failed
+        if: ${{ inputs.targetType === 'kubernetes-cluster' && inputs.k8s.volumes.pvc === New  }}
+        run: |
+          if [[ ${{ inputs.k8s.volumes.pvc_persist }} == "true" ]]; then
+            pvc_name="${{ inputs.k8s.volumes.pvc_name }}"
+          else
+            job_number=$(pwd | rev | cut -d "/" -f1 | rev)
+            workflow_name=$(pwd | rev | cut -d "/" -f2 | rev)
+            pvc_name=$(echo "${PW_USER}${workflow_name}${job_number}" | sed 's|_||g' | sed 's|\.||g' | tr '[:upper:]' '[:lower:]' | tail -c 56)-pvc
+          fi
+          pvc_storage_class=${{ inputs.k8s.volumes.pvc_storage_class }} 
+          if [ -z "${pvc_storage_class}" ] || [[ "${pvc_storage_class}" == "undefined" ]]; then
+            default_class=$(kubectl get storageclass -n ${{ inputs.k8s.namespace }} | grep '(default)')
+            if [ $? -ne 0 ]; then
+              echo "WARNING: Could not obtain default storageClass with command:"
+              echo "         kubectl get storageclass -n ${{ inputs.k8s.namespace }}"
+              echo "         You might need to provide a storage class input"
+            elif [ -z "${default_class}" ]; then
+              echo "ERROR: No default storage class found. You must specify one explicitly."
+              exit 1
             fi
-            pvc_storage_class=${{ inputs.k8s.volumes.pvc_storage_class }} 
-            if [ -z "${pvc_storage_class}" ] || [[ "${pvc_storage_class}" == "undefined" ]]; then
-              default_class=$(kubectl get storageclass -n ${{ inputs.k8s.namespace }} | grep '(default)')
-              if [ $? -ne 0 ]; then
-                echo "WARNING: Could not obtain default storageClass with command:"
-                echo "         kubectl get storageclass -n ${{ inputs.k8s.namespace }}"
-                echo "         You might need to provide a storage class input"
-              elif [ -z "${default_class}" ]; then
-                echo "ERROR: No default storage class found. You must specify one explicitly."
-                exit 1
-              fi
-            else
-              storageClassName="storageClassName: ${{ inputs.k8s.volumes.pvc_storage_class }}"
-            fi
-            echo "${pvc_name}" > pvc_name
-            cat <<EOF > pvc.yaml
-            apiVersion: v1
-            kind: PersistentVolumeClaim
-            metadata:
-              name: ${pvc_name}
-              namespace: ${{ inputs.k8s.namespace }}
-            spec:
-              accessModes:
-                - ReadWriteOnce
-              resources:
-                requests:
-                  storage: ${{ inputs.k8s.volumes.pvc_storage_size }}  
-              ${storageClassName} 
-            EOF
-            cat pvc.yaml
-        - name: Dry Run PVC
-          early-cancel: any-job-failed
-          if: ${{ inputs.targetType === 'kubernetes-cluster' && inputs.k8s.volumes.pvc === New  }}
-          run: |
-            echo "Performing dry run..."
-            kubectl apply -f pvc.yaml --dry-run=client
-        - name: Dummy
-          early-cancel: any-job-failed
-          run: echo Dummy
+          else
+            storageClassName="storageClassName: ${{ inputs.k8s.volumes.pvc_storage_class }}"
+          fi
+          echo "${pvc_name}" > pvc_name
+          cat <<EOF > pvc.yaml
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: ${pvc_name}
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: ${{ inputs.k8s.volumes.pvc_storage_size }}  
+            ${storageClassName} 
+          EOF
+          cat pvc.yaml
+      - name: Dry Run PVC
+        early-cancel: any-job-failed
+        if: ${{ inputs.targetType === 'kubernetes-cluster' && inputs.k8s.volumes.pvc === New  }}
+        run: |
+          echo "Performing dry run..."
+          kubectl apply -f pvc.yaml --dry-run=client
+      - name: Dummy
+        early-cancel: any-job-failed
+        run: echo Dummy
 
   prepare_k8s_deployment:
     needs:
@@ -295,7 +294,7 @@ jobs:
               runtimeClassName="runtimeClassName: nvidia"
             fi
           fi
-          
+
           if [[ "${{ inputs.k8s.volumes.pvc }}" == "Existing" ]]; then
             pvc_name=${{ inputs.k8s.volumes.pvc_existing }}
           else
@@ -488,7 +487,6 @@ jobs:
             resourceType: services
             resourceName: ${{ needs.create_k8s_session.outputs.service_name }}
 
-
 'on':
   execute:
     inputs:
@@ -504,12 +502,12 @@ jobs:
       pwrl_host:
         type: group
         label: Service Host
-        hidden: ${{ inputs.targetType !== 'compute-cluster' }}
+        hidden: ${{ inputs.targetType != 'compute-cluster' }}
         items:
           resource:
             type: compute-clusters
             label: Service host
-            optional: ${{ inputs.targetType !== 'compute-cluster' }}
+            optional: ${{ inputs.targetType != 'compute-cluster' }}
             include-workspace: false
             tooltip: Resource to host the service
           nports:
@@ -533,7 +531,7 @@ jobs:
           _sch__dd_partition_e_:
             type: slurm-partitions
             label: SLURM partition
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: >-
@@ -543,7 +541,7 @@ jobs:
           scheduler_directives_slurm:
             type: string
             label: Scheduler directives
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: >-
@@ -552,7 +550,7 @@ jobs:
           _sch__d_q___:
             type: string
             label: PBS queue
-            hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
+            hidden: ${{ 'PBS' != inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
             tooltip: >-
@@ -561,7 +559,7 @@ jobs:
           scheduler_directives_pbs:
             type: string
             label: Scheduler directives
-            hidden: ${{ 'PBS' !== inputs.pwrl_host.jobschedulertype }}
+            hidden: ${{ 'PBS' != inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: >-
@@ -602,17 +600,17 @@ jobs:
       k8s:
         type: group
         label: Kubernetes Settings
-        hidden: ${{ inputs.targetType !== 'kubernetes-cluster' }}
+        hidden: ${{ inputs.targetType != 'kubernetes-cluster' }}
         items:
           cluster:
             label: Kubernetes cluster
             type: kubernetes-clusters
-            optional: ${{ inputs.targetType !== 'kubernetes-cluster' }}
+            optional: ${{ inputs.targetType != 'kubernetes-cluster' }}
           namespace:
             label: Namespace
             type: kubernetes-namespaces
             clusterName: ${{ inputs.k8s.cluster }}
-            optional: ${{ inputs.targetType !== 'kubernetes-cluster' }}
+            optional: ${{ inputs.targetType != 'kubernetes-cluster' }}
           volumes:
             type: group
             label: Volumes
@@ -637,20 +635,20 @@ jobs:
                 type: kubernetes-pvc
                 clusterName: ${{ inputs.k8s.cluster }}
                 namespace: ${{ inputs.k8s.namespace }}
-                hidden: ${{ inputs.k8s.volumes.pvc !== Existing }}
+                hidden: ${{ inputs.k8s.volumes.pvc != Existing }}
                 ignore: ${{ .hidden }}
                 optional: ${{ .hidden }}
               pvc_storage_size:
                 label: Enter PVC Size
                 type: string
-                hidden: ${{ inputs.k8s.volumes.pvc !== New }}
+                hidden: ${{ inputs.k8s.volumes.pvc != New }}
                 ignore: ${{ .hidden }}
                 optional: ${{ .hidden }}
                 default: 10Gi
               pvc_storage_class:
                 label: Enter PVC Storage Class
                 type: string
-                hidden: ${{ inputs.k8s.volumes.pvc !== New }}
+                hidden: ${{ inputs.k8s.volumes.pvc != New }}
                 ignore: ${{ .hidden }}
                 optional: true
                 tooltip: Leave blank to use the default storage class configured in the cluster.
@@ -658,14 +656,14 @@ jobs:
                 label: Persist PVC After Completion
                 type: boolean
                 default: false
-                hidden: ${{ inputs.k8s.volumes.pvc !== 'New' }}
+                hidden: ${{ inputs.k8s.volumes.pvc != 'New' }}
                 ignore: ${{ .hidden }}
                 optional: ${{ .hidden }}
                 tooltip: If true, the PVC will persist after the job is canceled or completed. If false, it will be deleted.
               pvc_name:
                 label: Enter PVC Name
                 type: string
-                hidden: ${{ inputs.k8s.volumes.pvc_persist === false || inputs.k8s.volumes.pvc !== New  }}
+                hidden: ${{ inputs.k8s.volumes.pvc_persist === false || inputs.k8s.volumes.pvc != New  }}
                 ignore: ${{ .hidden }}
                 optional: ${{ .hidden }}
           resources:
@@ -720,7 +718,7 @@ jobs:
                   gpu_resource_key:
                     label: Custom GPU Resource Key
                     type: string
-                    hidden: ${{ inputs.k8s.resources.limits.select_gpu !== Custom }}
+                    hidden: ${{ inputs.k8s.resources.limits.select_gpu != Custom }}
                     ignore: ${{ .hidden }}
                     tooltip: |
                       Specify a custom GPU resource key for Kubernetes, such as:
@@ -742,7 +740,7 @@ jobs:
       service_k8s:
         type: group
         label: Service Settings
-        hidden: ${{ inputs.targetType !== 'kubernetes-cluster' }}
+        hidden: ${{ inputs.targetType != 'kubernetes-cluster' }}
         items:
           image:
             label: KasmVNC Image
@@ -758,4 +756,4 @@ jobs:
             label: Password
             type: password
             tooltip: Type in a password for user kasm_user
-            optional: ${{ inputs.targetType !== 'kubernetes-cluster' }}
+            optional: ${{ inputs.targetType != 'kubernetes-cluster' }}

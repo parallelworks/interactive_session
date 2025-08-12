@@ -33,11 +33,11 @@ jobs:
     steps:
       - name: Create Controller Session Script
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/controller/create_session_script.sh
       - name: Launch and Monitor Controller Job
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/controller/launch_and_monitor_job.sh
         cleanup: |
           if [[ "${{ inputs.pwrl_host.jobschedulertype }}" == "CONTROLLER" ]]; then
@@ -45,7 +45,7 @@ jobs:
           fi
       - name: Clean and Exit
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/clean_and_exit.sh
   compute_job:
     needs:
@@ -78,7 +78,7 @@ jobs:
           echo "session_name=${session_name}" | tee -a $OUTPUTS
       - name: Get Controller Hostname
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -86,7 +86,7 @@ jobs:
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
       - name: Get Compute Hostname
         early-cancel: any-job-failed
-        if: ${{ 'SLURM' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'SLURM' == inputs.pwrl_host.jobschedulertype }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -268,7 +268,7 @@ jobs:
           _sch__dd_partition_e__tag_cloud:
             type: slurm-partitions
             label: SLURM partition
-            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' == inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.
@@ -291,7 +291,7 @@ jobs:
       service:
         type: group
         label: Service
-        hidden: ${{ 'existing' === inputs.pwrl_host.resource.provider }}
+        hidden: ${{ 'existing' == inputs.pwrl_host.resource.provider }}
         items:
           novnc_parent_install_dir:
             label: noVNC installation directory

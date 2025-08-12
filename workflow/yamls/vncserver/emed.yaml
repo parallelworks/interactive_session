@@ -36,15 +36,15 @@ jobs:
     steps:
       - name: Create Controller Session Script
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype_tag_cloud }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/controller/create_session_script.sh
       - name: Launch and Monitor Controller Job
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype_tag_cloud }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/controller/launch_and_monitor_job.sh
         cleanup: ./kill.sh
       - name: Clean and Exit
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype_tag_cloud }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/clean_and_exit.sh
 
   compute_job:
@@ -53,15 +53,15 @@ jobs:
     steps:
       - name: Create Compute Session Script
         early-cancel: any-job-failed
-        if: ${{ 'existing' === inputs.pwrl_host.resource.provider || 'CONTROLLER' != inputs.pwrl_host.jobschedulertype_tag_cloud }}
+        if: ${{ 'existing' == inputs.pwrl_host.resource.provider || 'CONTROLLER' != inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/compute/create_session_script.sh
       - name: Launch and Monitor Compute Job
-        if: ${{ 'existing' === inputs.pwrl_host.resource.provider || 'CONTROLLER' != inputs.pwrl_host.jobschedulertype_tag_cloud }}
+        if: ${{ 'existing' == inputs.pwrl_host.resource.provider || 'CONTROLLER' != inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/compute/launch_and_monitor_job.sh
         cleanup: ./kill.sh
       - name: Clean and Exit
         early-cancel: any-job-failed
-        if: ${{ 'existing' === inputs.pwrl_host.resource.provider || 'CONTROLLER' != inputs.pwrl_host.jobschedulertype_tag_cloud }}
+        if: ${{ 'existing' == inputs.pwrl_host.resource.provider || 'CONTROLLER' != inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/clean_and_exit.sh
 
   create_session:
@@ -75,7 +75,7 @@ jobs:
           echo "session_name=${session_name}" | tee -a $OUTPUTS
       - name: Get Controller Hostname
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype_tag_cloud }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -83,7 +83,7 @@ jobs:
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
       - name: Get Compute Hostname
         early-cancel: any-job-failed
-        if: ${{ 'SLURM' === inputs.pwrl_host.jobschedulertype_tag_existing || 'SLURM' === inputs.pwrl_host.jobschedulertype_tag_cloud }}
+        if: ${{ 'SLURM' == inputs.pwrl_host.jobschedulertype_tag_existing || 'SLURM' == inputs.pwrl_host.jobschedulertype_tag_cloud }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -273,13 +273,13 @@ jobs:
               - value: SLURM
                 label: SLURM Partition
             tooltip: Job will be submitted using SSH or sbatch, respectively
-            hidden: ${{ 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'existing' == inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
           _sch__dd_partition_e__tag_cloud:
             type: slurm-partitions
             label: SLURM partition
-            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype_tag_cloud  || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype_tag_cloud  || 'existing' == inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: >-
@@ -290,13 +290,13 @@ jobs:
             label: Walltime
             type: string
             default: 01:00:00
-            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype_tag_cloud  || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype_tag_cloud  || 'existing' == inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             tooltip: e.g. 01:00:00 - Amount of time slurm will honor the interactive session.
           scheduler_directives_tag_cloud:
             type: string
             label: Scheduler directives
-            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype_tag_cloud  || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype_tag_cloud  || 'existing' == inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: >-

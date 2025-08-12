@@ -93,7 +93,7 @@ jobs:
           _sch__dd_partition_e__tag_cloud:
             type: slurm-partitions
             label: SLURM partition
-            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' == inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: >-
@@ -143,7 +143,7 @@ jobs:
                 value: scw
             tooltip: Make sure the display protocol is installed in the host!
             default: turbovnc
-            hidden: ${{ 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'existing' == inputs.pwrl_host.resource.provider }}
           vnc_type:
             label: VNC Server Type
             type: string

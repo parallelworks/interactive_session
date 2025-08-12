@@ -93,7 +93,7 @@ jobs:
           _sch__dd_partition_e__tag_cloud:
             type: slurm-partitions
             label: SLURM partition
-            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' == inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: >-
@@ -120,7 +120,7 @@ jobs:
       service:
         type: group
         label: Service
-        hidden: ${{ 'existing' === inputs.pwrl_host.resource.provider }}
+        hidden: ${{ 'existing' == inputs.pwrl_host.resource.provider }}
         items:
           novnc_parent_install_dir:
             label: noVNC installation directory

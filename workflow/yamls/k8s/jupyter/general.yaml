@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Creating New PVC YAML
         early-cancel: any-job-failed
-        if: ${{ inputs.k8s.volumes.pvc === New }}
+        if: ${{ inputs.k8s.volumes.pvc == New }}
         run: |
           if [[ ${{ inputs.k8s.volumes.pvc_persist }} == "true" ]]; then
             pvc_name="${{ inputs.k8s.volumes.pvc_name }}"
@@ -60,7 +60,7 @@ jobs:
           cat pvc.yaml
       - name: Dry Run PVC
         early-cancel: any-job-failed
-        if: ${{ inputs.k8s.volumes.pvc === New }}
+        if: ${{ inputs.k8s.volumes.pvc == New }}
         run: |
           echo "Performing dry run..."
           kubectl apply -f pvc.yaml --dry-run=client
@@ -190,7 +190,7 @@ jobs:
         early-cancel: any-job-failed
         run: cat OUTPUTS >> $OUTPUTS
       - name: Apply PVC
-        if: ${{ inputs.k8s.volumes.pvc === New }}
+        if: ${{ inputs.k8s.volumes.pvc == New }}
         run: kubectl apply -f pvc.yaml
         cleanup: |
           set -x
@@ -394,7 +394,7 @@ jobs:
               pvc_name:
                 label: Enter PVC Name
                 type: string
-                hidden: ${{ inputs.k8s.volumes.pvc_persist === false || inputs.k8s.volumes.pvc != New  }}
+                hidden: ${{ inputs.k8s.volumes.pvc_persist == false || inputs.k8s.volumes.pvc != New  }}
                 ignore: ${{ .hidden }}
                 optional: ${{ .hidden }}
           resources:
@@ -466,7 +466,7 @@ jobs:
                     default: 1
                     min: 1
                     tooltip: Specify the number of GPUs to allocate for the deployment.
-                    hidden: ${{ inputs.k8s.resources.limits.select_gpu === None }}
+                    hidden: ${{ inputs.k8s.resources.limits.select_gpu == None }}
                     ignore: ${{ .hidden }}
       service_k8s:
         type: group

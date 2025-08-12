@@ -36,10 +36,10 @@ jobs:
     steps:
       - name: Create Controller Session Script
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/controller/create_session_script.sh
       - name: Launch and Monitor Controller Job
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/controller/launch_and_monitor_job.sh
         cleanup: |
           if [[ "${{ inputs.pwrl_host.jobschedulertype }}" == "CONTROLLER" ]]; then
@@ -47,7 +47,7 @@ jobs:
           fi
       - name: Clean and Exit
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/clean_and_exit.sh
 
   compute_job:
@@ -81,7 +81,7 @@ jobs:
           echo "session_name=${session_name}" | tee -a $OUTPUTS
       - name: Get Controller Hostname
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -89,7 +89,7 @@ jobs:
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
       - name: Get Compute Hostname
         early-cancel: any-job-failed
-        if: ${{ 'SLURM' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'SLURM' == inputs.pwrl_host.jobschedulertype }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -261,7 +261,7 @@ jobs:
           _sch__dd_partition_e__tag_cloud:
             type: slurm-partitions
             label: SLURM partition
-            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' == inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: >-
@@ -322,21 +322,21 @@ jobs:
             label: Parent Install Directory
             type: string
             default: __HOME__/pw/software
-            hidden: ${{ inputs.service.conda_install == false || ('existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
+            hidden: ${{ inputs.service.conda_install == false || ('existing' == inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
             ignore: ${{ .hidden }}
             tooltip: Software dependencies are installed in this directory. Defaults to ~/pw/software. Ensure the directory has sufficient space!
           conda_install_dir:
             label: Name of the Conda Installation Directory
             type: string
             default: .miniconda3c
-            hidden: ${{ inputs.service.conda_install == false || ('existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
+            hidden: ${{ inputs.service.conda_install == false || ('existing' == inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
             ignore: ${{ .hidden }}
             tooltip: Ensure the directory has sufficient space for Conda and its packages.
           conda_env:
             label: Conda environment
             type: string
             default: base
-            hidden: ${{ inputs.service.conda_install == false || ('existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
+            hidden: ${{ inputs.service.conda_install == false || ('existing' == inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}
             tooltip: Environment to active. The base environment enables changing kernel to other environments!
@@ -344,7 +344,7 @@ jobs:
             label: Command to load Jupyter Notebook to the PATH
             type: string
             default: source __HOME__/pw/software/.miniconda3c/etc/profile.d/conda.sh; conda activate base
-            hidden: ${{ inputs.service.conda_install == true || ('existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
+            hidden: ${{ inputs.service.conda_install == true || ('existing' == inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}
             tooltip: Use a bash command
@@ -359,7 +359,7 @@ jobs:
           install_instructions_tag_cloud:
             label: Install Instructions
             type: dropdown
-            hidden: ${{ inputs.service.conda_install == false || ('existing' === inputs.pwrl_host.resource.provider  &&  inputs.service.use_conda == false) }}
+            hidden: ${{ inputs.service.conda_install == false || ('existing' == inputs.pwrl_host.resource.provider  &&  inputs.service.use_conda == false) }}
             ignore: ${{ .hidden }}
             default: notebook7.2.2-python3.12.2
             options:
@@ -378,7 +378,7 @@ jobs:
           yaml:
             label: Paste Conda Environment Defition YAML
             type: editor
-            hidden: ${{ inputs.service.install_instructions_tag_cloud != yaml ||  inputs.service.conda_install == false  ||  ('existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
+            hidden: ${{ inputs.service.install_instructions_tag_cloud != yaml ||  inputs.service.conda_install == false  ||  ('existing' == inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false) }}
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}
             tooltip: Copy and paste a custom Conda environment definition YAML file
@@ -386,7 +386,7 @@ jobs:
             label: Select additional kernels to install
             type: multi-dropdown
             optional: true
-            hidden: ${{ inputs.service.conda_install == false ||  ('existing' === inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false)  }}
+            hidden: ${{ inputs.service.conda_install == false ||  ('existing' == inputs.pwrl_host.resource.provider &&  inputs.service.use_conda == false)  }}
             ignore: ${{ .hidden }}
             options:
               - value: julia-kernel

@@ -369,7 +369,7 @@ jobs:
               pvc_name:
                 label: Enter PVC Name
                 type: string
-                hidden: ${{ inputs.k8s.volumes.pvc_persist === false || inputs.k8s.volumes.pvc != New  }}
+                hidden: ${{ inputs.k8s.volumes.pvc_persist == false || inputs.k8s.volumes.pvc != New  }}
                 ignore: ${{ .hidden }}
                 optional: ${{ .hidden }}
           resources:
@@ -441,7 +441,7 @@ jobs:
                     default: 1
                     min: 1
                     tooltip: Specify the number of GPUs to allocate for the deployment.
-                    hidden: ${{ inputs.k8s.resources.limits.select_gpu === None }}
+                    hidden: ${{ inputs.k8s.resources.limits.select_gpu == None }}
                     ignore: ${{ .hidden }}
       service_k8s:
         type: group

@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Creating New PVC YAML
         early-cancel: any-job-failed
-        if: ${{ inputs.k8s.volumes.pvc === New }}
+        if: ${{ inputs.k8s.volumes.pvc == New }}
         run: |
           if [[ ${{ inputs.k8s.volumes.pvc_persist }} == "true" ]]; then
             pvc_name="${{ inputs.k8s.volumes.pvc_name }}"
@@ -60,14 +60,14 @@ jobs:
           cat pvc.yaml
       - name: Dry Run PVC
         early-cancel: any-job-failed
-        if: ${{ inputs.k8s.volumes.pvc === New }}
+        if: ${{ inputs.k8s.volumes.pvc == New }}
         run: |
           echo "Performing dry run..."
           kubectl apply -f pvc.yaml --dry-run=client
       - name: Dummy
         early-cancel: any-job-failed
         run: echo Dummy
-        
+
   prepare_k8s_deployment:
     needs:
       - prepare_k8s_pvc
@@ -190,7 +190,7 @@ jobs:
         early-cancel: any-job-failed
         run: cat OUTPUTS >> $OUTPUTS
       - name: Apply PVC
-        if: ${{ inputs.k8s.volumes.pvc === New }}
+        if: ${{ inputs.k8s.volumes.pvc == New }}
         run: kubectl apply -f pvc.yaml
         cleanup: |
           set -x
@@ -366,20 +366,20 @@ jobs:
                 type: kubernetes-pvc
                 clusterName: ${{ inputs.k8s.cluster }}
                 namespace: ${{ inputs.k8s.namespace }}
-                hidden: ${{ inputs.k8s.volumes.pvc !== Existing }}
+                hidden: ${{ inputs.k8s.volumes.pvc != Existing }}
                 ignore: ${{ .hidden }}
                 optional: ${{ .hidden }}
               pvc_storage_size:
                 label: Enter PVC Size
                 type: string
-                hidden: ${{ inputs.k8s.volumes.pvc !== New }}
+                hidden: ${{ inputs.k8s.volumes.pvc != New }}
                 ignore: ${{ .hidden }}
                 optional: ${{ .hidden }}
                 default: 10Gi
               pvc_storage_class:
                 label: Enter PVC Storage Class
                 type: string
-                hidden: ${{ inputs.k8s.volumes.pvc !== New }}
+                hidden: ${{ inputs.k8s.volumes.pvc != New }}
                 ignore: ${{ .hidden }}
                 optional: true
                 tooltip: Leave blank to use the default storage class configured in the cluster.
@@ -387,14 +387,14 @@ jobs:
                 label: Persist PVC After Completion
                 type: boolean
                 default: false
-                hidden: ${{ inputs.k8s.volumes.pvc !== 'New' }}
+                hidden: ${{ inputs.k8s.volumes.pvc != 'New' }}
                 ignore: ${{ .hidden }}
                 optional: ${{ .hidden }}
                 tooltip: If true, the PVC will persist after the job is canceled or completed. If false, it will be deleted.
               pvc_name:
                 label: Enter PVC Name
                 type: string
-                hidden: ${{ inputs.k8s.volumes.pvc_persist === false || inputs.k8s.volumes.pvc !== New  }}
+                hidden: ${{ inputs.k8s.volumes.pvc_persist == false || inputs.k8s.volumes.pvc != New  }}
                 ignore: ${{ .hidden }}
                 optional: ${{ .hidden }}
           resources:
@@ -449,7 +449,7 @@ jobs:
                   gpu_resource_key:
                     label: Custom GPU Resource Key
                     type: string
-                    hidden: ${{ inputs.k8s.resources.limits.select_gpu !== Custom }}
+                    hidden: ${{ inputs.k8s.resources.limits.select_gpu != Custom }}
                     ignore: ${{ .hidden }}
                     tooltip: |
                       Specify a custom GPU resource key for Kubernetes, such as:
@@ -466,7 +466,7 @@ jobs:
                     default: 1
                     min: 1
                     tooltip: Specify the number of GPUs to allocate for the deployment.
-                    hidden: ${{ inputs.k8s.resources.limits.select_gpu === None }}
+                    hidden: ${{ inputs.k8s.resources.limits.select_gpu == None }}
                     ignore: ${{ .hidden }}
       service_k8s:
         type: group

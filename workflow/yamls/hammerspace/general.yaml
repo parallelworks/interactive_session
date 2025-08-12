@@ -16,10 +16,10 @@ jobs:
         run: ./utils/steps-v3/preprocessing/input_form_resource_wrapper.sh ${{ inputs.pwrl_host.resource.ip }}
       - name: Process Inputs
         early-cancel: any-job-failed
-        run: | 
+        run: |
           set -e
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
-          ./utils/steps-v3/preprocessing/process_inputs_sh.sh 
+          ./utils/steps-v3/preprocessing/process_inputs_sh.sh
       - name: Transfer Files to Controller
         early-cancel: any-job-failed
         run: ./utils/steps-v3/preprocessing/transfer_files_to_controller.sh
@@ -32,14 +32,14 @@ jobs:
 
   controller_job:
     needs:
-       - preprocessing
+      - preprocessing
     steps:
       - name: Create Controller Session Script
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/controller/create_session_script.sh
       - name: Launch and Monitor Controller Job
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/controller/launch_and_monitor_job.sh
         cleanup: |
           if [[ "${{ inputs.pwrl_host.jobschedulertype }}" == "CONTROLLER" ]]; then
@@ -47,12 +47,12 @@ jobs:
           fi
       - name: Clean and Exit
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/clean_and_exit.sh
 
   create_session:
     needs:
-       - preprocessing
+      - preprocessing
     steps:
       - name: Set Session Name
         early-cancel: any-job-failed
@@ -61,7 +61,7 @@ jobs:
           echo "session_name=${session_name}" | tee -a $OUTPUTS
       - name: Get Controller Hostname
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -133,10 +133,10 @@ jobs:
         early-cancel: any-job-failed
         uses: parallelworks/update-session
         with:
-          remotePort: "${{ needs.create_session.outputs.remote_port }}"
-          localPort: "${{ needs.create_session.outputs.local_port }}"
+          remotePort: '${{ needs.create_session.outputs.remote_port }}'
+          localPort: '${{ needs.create_session.outputs.local_port }}'
           remoteHost: ${{ inputs.service.host }}
-          slug: "${{ needs.create_session.outputs.slug }}"
+          slug: '${{ needs.create_session.outputs.slug }}'
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.session }}
 
@@ -151,8 +151,7 @@ jobs:
             type: compute-clusters
             label: Select Target
             include-workspace: false
-            tooltip:
-              Resource to host the service
+            tooltip: Resource to host the service
           nports:
             type: number
             label: Number of Ports to Reserve
@@ -171,14 +170,13 @@ jobs:
                 label: SLURM Partition
               - value: PBS
                 label: PBS Queue
-            tooltip:
-              Job will be submitted using SSH, sbatch or qsub, respectively
+            tooltip: Job will be submitted using SSH, sbatch or qsub, respectively
         collapsed: false
       service:
         type: group
         label: Hammespace Settings
         items:
-          name: 
+          name:
             type: string
             hidden: true
             default: hammerspace

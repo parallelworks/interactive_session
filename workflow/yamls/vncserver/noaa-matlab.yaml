@@ -17,7 +17,7 @@ jobs:
         run: |
           set -e
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
-          ./utils/steps-v3/preprocessing/process_inputs_sh.sh 
+          ./utils/steps-v3/preprocessing/process_inputs_sh.sh
       - name: Transfer Files to Controller
         early-cancel: any-job-failed
         run: ./utils/steps-v3/preprocessing/transfer_files_to_controller.sh
@@ -33,11 +33,11 @@ jobs:
     steps:
       - name: Create Controller Session Script
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/controller/create_session_script.sh
       - name: Launch and Monitor Controller Job
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/controller/launch_and_monitor_job.sh
         cleanup: |
           if [[ "${{ inputs.pwrl_host.jobschedulertype }}" == "CONTROLLER" ]]; then
@@ -45,7 +45,7 @@ jobs:
           fi
       - name: Clean and Exit
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/clean_and_exit.sh
   compute_job:
     needs:
@@ -53,11 +53,11 @@ jobs:
     steps:
       - name: Create Compute Session Script
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/compute/create_session_script.sh
       - name: Launch and Monitor Compute Job
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/compute/launch_and_monitor_job.sh
         cleanup: |
           if [[ "${{ inputs.pwrl_host.jobschedulertype }}" != "CONTROLLER" ]]; then
@@ -65,7 +65,7 @@ jobs:
           fi
       - name: Clean and Exit
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' !== inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/clean_and_exit.sh
   create_session:
     needs:
@@ -78,7 +78,7 @@ jobs:
           echo "session_name=${session_name}" | tee -a $OUTPUTS
       - name: Get Controller Hostname
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -86,7 +86,7 @@ jobs:
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
       - name: Get Compute Hostname
         early-cancel: any-job-failed
-        if: ${{ 'SLURM' === inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'SLURM' == inputs.pwrl_host.jobschedulertype }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -220,13 +220,13 @@ jobs:
             type: slurm-accounts
             resource: ${{ inputs.pwrl_host.resource }}
             tooltip: Account to submit the interactive job
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' != inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
           _sch__dd_partition_e__tag_existing:
             type: dropdown
             label: SLURM partition
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype || 'existing' !== inputs.pwrl_host.resource.provider ||  (inputs.pwrl_host.resource.name includes 'ursa') }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype || 'existing' != inputs.pwrl_host.resource.provider ||  (inputs.pwrl_host.resource.name includes 'ursa') }}
             ignore: ${{ .hidden }}
             options:
               - label: service
@@ -236,7 +236,7 @@ jobs:
           _sch__dd_partition_e__tag_ursa:
             type: dropdown
             label: SLURM partition
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype || 'existing' !== inputs.pwrl_host.resource.provider || (inputs.pwrl_host.resource.name !includes 'ursa')  }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype || 'existing' != inputs.pwrl_host.resource.provider || (inputs.pwrl_host.resource.name !includes 'ursa')  }}
             ignore: ${{ .hidden }}
             options:
               - label: u1-service
@@ -248,7 +248,7 @@ jobs:
             type: slurm-qos
             resource: ${{ inputs.pwrl_host.resource }}
             tooltip: Select a QOS from the drop down menu
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' != inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
           _sch__dd_ntasks_e__tag_existing:
@@ -257,18 +257,18 @@ jobs:
             min: 1
             max: 100
             default: 1
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' != inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
           _sch__dd_nodes_e__tag_existing:
             label: Number of nodes
             type: number
             default: 1
             hidden: true
-            ignore: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' != inputs.pwrl_host.resource.provider }}
           _sch__dd_partition_e__tag_cloud:
             type: slurm-partitions
             label: SLURM partition
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  || 'existing' === inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' == inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.
@@ -277,13 +277,13 @@ jobs:
             label: Walltime
             type: string
             default: '01:00:00'
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype  }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  }}
             ignore: ${{ .hidden }}
             tooltip: e.g. 01:00:00 - Amount of time slurm will honor the interactive session.
           scheduler_directives_slurm:
             type: string
             label: Scheduler directives
-            hidden: ${{ 'SLURM' !== inputs.pwrl_host.jobschedulertype }}
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype }}
             ignore: ${{ .hidden }}
             optional: true
             tooltip: e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.
@@ -291,7 +291,7 @@ jobs:
       service:
         type: group
         label: Service
-        hidden: ${{ 'existing' === inputs.pwrl_host.resource.provider }}
+        hidden: ${{ 'existing' == inputs.pwrl_host.resource.provider }}
         items:
           novnc_parent_install_dir:
             label: noVNC installation directory
@@ -314,12 +314,12 @@ jobs:
             type: string
             default: mate-session
             hidden: true
-            ignore: ${{ 'existing' !== inputs.pwrl_host.resource.provider }}
+            ignore: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
           load_env:
             label: Command to load MATLAB to the PATH
             type: string
             default: module load matlab
-            tooltip: "To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh."
+            tooltip: 'To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'
           bin:
             label: Command to launch MATLAB
             type: string

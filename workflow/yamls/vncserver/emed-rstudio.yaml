@@ -324,10 +324,18 @@ jobs:
             label: Select remote display protocol
             hidden: true
             default: vncserver
-          load_env:
+          load_env_tag_cloud:
+            label: Command to load RStudio
+            type: string
+            optional: true
+            hidden: ${{ 'existing' == inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+          load_env_tag_existing:
             label: Command to load RStudio
             type: string
             default: module load rstudio
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
           bin:
             label: Service Binary
             type: string

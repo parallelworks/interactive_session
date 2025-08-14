@@ -260,6 +260,7 @@ jobs:
         early-cancel: any-job-failed
         run: echo Dummy
   prepare_k8s_deployment:
+    if: ${{ always }}
     needs:
       - prepare_k8s_pvc
     steps:

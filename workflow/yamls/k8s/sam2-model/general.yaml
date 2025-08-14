@@ -291,15 +291,18 @@ jobs:
             sleep 2 
           done
       - name: Get SLUG
+        early-cancel: any-job-failed
         run: |
           echo "slug=" >> $OUTPUTS
       - name: Debug Service + Pod
+        early-cancel: any-job-failed
         run: |
           echo "Checking pod + service for session connection..."
           kubectl get svc ${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }}
           kubectl get pods -l app=${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }}
           kubectl describe svc ${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }}
       - name: Wait for Port 3000 to be Ready
+        early-cancel: any-job-failed
         run: |
           echo "Polling HTTP response from localhost:3000 inside container..."
           pod=$(kubectl get pods -l app=${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }} -o jsonpath="{.items[0].metadata.name}")
@@ -312,6 +315,7 @@ jobs:
             sleep 2
           done
       - name: Expose Session
+        early-cancel: any-job-failed
         uses: parallelworks/update-session
         with:
           remotePort: '3000'
@@ -378,7 +382,7 @@ jobs:
                 hidden: ${{ inputs.k8s.volumes.pvc !== 'New' }}
                 ignore: ${{ .hidden }}
                 optional: true
-                tooltip: Leave blank to use the default storage class configured in the cluster.
+                tooltip: Leave blank to use the default storage class configured in the cluster. Use 'local-path' if default does not work
               pvc_persist:
                 label: Persist PVC After Completion
                 type: boolean
@@ -399,7 +403,7 @@ jobs:
         label: App Settings
         items:
           name:
-            label: Deployment Name
+            label: App Name
             type: string
             default: sam2demo
       resources:

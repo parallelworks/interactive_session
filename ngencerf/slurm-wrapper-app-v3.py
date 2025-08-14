@@ -734,6 +734,7 @@ def postprocess():
     postprocessing_dir = os.path.join('postprocess', job_type, run_id)
     callback_script = os.path.join(postprocessing_dir, 'callback')
     performance_file_path = os.path.join(postprocessing_dir, 'performance_file')
+    callback_log_path = os.path.join(postprocessing_dir, 'callback.log')
 
     if not os.path.exists(callback_script):
         error_msg = f"Callback script ${callback_script} does not exist"
@@ -755,12 +756,12 @@ def postprocess():
         callback = f.read().replace('__job_status__', job_status)
 
     sacct_cmd = f'sacct -j {slurm_job_id} -o {SLURM_JOB_METRICS} --parsable --units=K > {performance_file}'
-    cmd = f'sleep 5; {sacct_cmd}; {callback}'
+    cmd = f'sleep 5; {sacct_cmd}; {callback} >> {callback_log_path} 2>&1'
 
     try:
         # Run the command in the background using subprocess.Popen
         logger.info(f"Running: {cmd}")
-        subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.Popen(cmd, shell=True)
 
         # Return an immediate response while the command runs in the background
         return jsonify({"success": True, "message": f"Job status will be written to {performance_file} after 10 seconds"}), 200

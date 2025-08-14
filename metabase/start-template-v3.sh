@@ -92,7 +92,7 @@ HERE
 echo '#!/bin/bash' > docker-kill-${job_number}.sh
 chmod +x docker-kill-${job_number}.sh
 
-if which docker >/dev/null 2>&1; then
+if sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
     container_name="nginx-${service_port}"
     # Remove container when job is canceled
     # CREATE CANCEL SCRIPT TO REMOVE DOCKER CONTAINER WHEN THE PW JOB IS CANCELED

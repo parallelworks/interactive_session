@@ -205,7 +205,7 @@ http {
 }
 HERE
 
-if which docker >/dev/null 2>&1; then
+if sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
     container_name="nginx-${service_port}"
     # Remove container when job is canceled
     echo "sudo docker stop ${container_name}" >> cancel.sh

@@ -256,9 +256,6 @@ jobs:
         run: |
           echo "Performing dry run..."
           kubectl apply -f pvc.yaml --dry-run=client
-      - name: Dummy
-        early-cancel: any-job-failed
-        run: echo Dummy
   prepare_k8s_deployment:
     if: ${{ always }}
     needs:

@@ -141,10 +141,10 @@ jobs:
               echo "Service port found: $remote_port"
               break
             fi
-
             # Wait before the next check
             sleep 5
           done
+          echo "DEBUG: remote_port=${remote_port}"
           echo "remote_port=${remote_port}"  | tee -a $OUTPUTS
       - name: Waiting for Server to Start
         early-cancel: any-job-failed
@@ -156,6 +156,11 @@ jobs:
         run: |
           TIMEOUT=5
           RETRY_INTERVAL=3
+          echo DEBUG ENV:
+          env
+          echo "------"
+          echo "DEBUG: remote_host=${remote_host}"
+          echo "DEBUG: remote_port=${remote_port}"
 
           # Function to check if server is listening
           check_server() {

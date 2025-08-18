@@ -158,7 +158,7 @@ jobs:
           # Main loop
           attempt=1
           while true; do
-              echo "Attempt $attempt: Checking if server is listening on ${HOST}:${PORT}..."
+              echo "Attempt $attempt: Checking if server is listening on ${remote_host}:${remote_port}..."
               
               if check_server; then
                   echo "Success: Server is listening on ${remote_host}:${remote_port}!"

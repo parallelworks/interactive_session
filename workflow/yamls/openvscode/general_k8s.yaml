@@ -127,7 +127,7 @@ jobs:
         early-cancel: any-job-failed
         if: ${{ inputs.targetType == 'compute-cluster' }}
         env:
-          sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
+          sshcmd: ssh -n -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
           source resources/host/inputs.sh
           while true; do

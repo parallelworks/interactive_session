@@ -77,7 +77,7 @@ jobs:
           echo "session_name=${session_name}" | tee -a $OUTPUTS
       - name: Get Controller Hostname
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype_tag_cloud }} 
+        if: ${{ 'CONTROLLER' === inputs.pwrl_host.jobschedulertype_tag_cloud }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -156,7 +156,7 @@ jobs:
           # Main loop
           attempt=1
           while true; do
-              echo "Attempt $attempt: Checking if server is listening on ${HOST}:${PORT}..."
+              echo "Attempt $attempt: Checking if server is listening on ${remote_host}:${remote_port}..."
               
               if check_server; then
                   echo "Success: Server is listening on ${remote_host}:${remote_port}!"

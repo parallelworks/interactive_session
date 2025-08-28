@@ -40,21 +40,20 @@ if [[ "${service_only_connect}" == "true" ]]; then
     sleep infinity
 fi
 
-
 if ! [ -f "${service_nginx_sif}" ]; then
    displayErrorMessage "NGINX proxy singularity container was not found ${service_nginx_sif}"
 fi
 
-if ! [ -f "${ngen_cal_singularity_container_path}" ]; then
-   displayErrorMessage "NGEN-CAL singularity container was not found ${ngen_cal_singularity_container_path}"
+if ! [ -f "${nwm_cal_mgr_singularity_container_path}" ]; then
+   displayErrorMessage "nwm-cal-mgr singularity container was not found ${nwm_cal_mgr_singularity_container_path}"
 fi
 
 if ! [ -f "${ngen_forcing_singularity_container_path}" ]; then
-   displayErrorMessage "NGEN-FORCING singularity container was not found ${ngen_forcing_singularity_container_path}"
+   displayErrorMessage "ngen-bmi-forcing singularity container was not found ${ngen_forcing_singularity_container_path}"
 fi
 
-if ! [ -f "${ngen_fcst_singularity_container_path}" ]; then
-   displayErrorMessage "NGEN-FCST singularity container was not found ${ngen_fcst_singularity_container_path}"
+if ! [ -f "${nwm_fcst_mgr_singularity_container_path}" ]; then
+   displayErrorMessage "nwm-fcst-mgr singularity container was not found ${nwm_fcst_mgr_singularity_container_path}"
 fi
 
 
@@ -124,7 +123,6 @@ events {
     worker_connections  1024;
 }
 
-
 http {
     proxy_temp_path /tmp/proxy_temp;
     client_body_temp_path /tmp/client_temp;
@@ -153,7 +151,7 @@ http {
 HERE
 
 echo "Running singularity container ${service_nginx_sif}"
-# We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
+# We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid
 # and other users cannot use the node. Was not able to change this in the config.conf.
 mkdir -p ./tmp
 # Need to overwrite default configuration!
@@ -220,7 +218,7 @@ fi
   --error-logfile slurm-wrapper-app-v3.log \
   --capture-output \
   --enable-stdio-inheritance > slurm-wrapper-app-v3.log 2>&1 &
-  
+
 #python3.8 slurm-wrapper-app-v3.py > slurm-wrapper-app-v3.log 2>&1 &
 
 slurm_wrapper_pid=$!
@@ -230,15 +228,15 @@ echo "kill ${slurm_wrapper_pid}" >> cancel.sh
 
 ###############
 # NGENCERF-UI #
-############### 
-# service_ngencerf_ui_dir=/ngencerf-app/nextgen_ui/compose.yaml
+###############
+# service_ngencerf_ui_dir=/ngencerf-app/ngencerf-ui/compose.yaml
 cat > ${service_ngencerf_ui_dir}/production-pw.yaml <<HERE
 
 name: ngencerf-ui
 
 services:
   ngencerf-app:
-    build: 
+    build:
       context: .
       dockerfile: ./Dockerfile.production-pw
       args:
@@ -271,7 +269,7 @@ cd ${service_ngencerf_docker_dir}
 #  ngencerf-ui -c "npm run generate && npx --yes serve .output/public/"
 # TODO: How about yeah, just run docker compose up from /ngencerf-app/ngencerf-docker/ folder?
 
-#docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui 
+#docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui
 
 if [[ "${service_build}" == "true" ]]; then
     CACHE_BUST=$(date +%s) docker compose -f production-pw.yaml up --build -d

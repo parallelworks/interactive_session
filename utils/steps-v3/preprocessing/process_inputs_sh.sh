@@ -27,5 +27,11 @@ echo "export kill_sh=${pw_job_dir}/kill.sh" >> resources/host/inputs.sh
 echo "export session_sh=${pw_job_dir}/session.sh"  >> resources/host/inputs.sh
 
 # Obtain path to pw command
-pw_cmd_path=$(${sshcmd} which pw)
+pw_cmd_path=$(${sshcmd} 'PATH=$HOME/pw:$PATH which pw')
+
+if [ -z "${pw_cmd_path}" ]; then
+    echo "$(date) ERROR: Unable to find pw client in the PATH"
+    exit 1
+fi
+
 echo "export pw_cmd_path=${pw_cmd_path}" >> resources/host/inputs.sh 

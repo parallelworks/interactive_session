@@ -97,19 +97,6 @@ if [ "${service_set_password}" != true ]; then
     service_password=password
     disableBasicAuth="-disableBasicAuth"
 fi
-
-if ! which expect >/dev/null 2>&1; then
-    echo "$(date) expect is not installed. Attempting to install..."
-    sudo dnf install -y expect
-fi
-
-# Verify installation
-if ! which expect >/dev/null 2>&1; then
-    echo "$(date) ERROR: expect installation failed or expect is not in PATH" >&2
-    exit 1
-fi
-
-
 expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "'"${service_password}"'\r"; expect "Verify:"; send "'"${service_password}"'\r"; expect eof'
 
 

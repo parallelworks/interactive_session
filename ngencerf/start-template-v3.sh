@@ -1,6 +1,8 @@
 # Initialize cancel script
 set -x
 
+echo whoami ": $(whoami)"
+
 PORT=5000
 if lsof -i :$PORT >/dev/null 2>&1; then
     echo

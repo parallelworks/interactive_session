@@ -212,25 +212,6 @@ if [ -z $(which jupyter-lab 2> /dev/null) ]; then
     displayErrorMessage "jupyter-lab command not found"
 fi
 
-if [[ "${service_conda_install}" != "true" ]]; then
-    exit 0
-fi
-
-
-if [[ $service_install_kernels == *"julia-kernel"* ]]; then
-    if [ -z $(which julia 2> /dev/null) ]; then
-        curl -fsSL https://install.julialang.org | sh -s -- -y
-        source ~/.bashrc
-        source ~/.bash_profile
-        julia -e 'using Pkg; Pkg.add("IJulia")'
-    fi
-fi
-
-if [[ $service_install_kernels == *"R-kernel"* ]]; then
-    conda install r-recommended r-irkernel -y
-    R -e 'IRkernel::installspec()'
-fi
-
 
 # Download singularity container if required
 if ! [ -f "${service_nginx_sif}" ]; then
@@ -253,4 +234,24 @@ if [[ "${juice_use_juice}" == "true" ]]; then
             exit 1
         fi
     fi
+fi
+
+
+if [[ "${service_conda_install}" != "true" ]]; then
+    exit 0
+fi
+
+
+if [[ $service_install_kernels == *"julia-kernel"* ]]; then
+    if [ -z $(which julia 2> /dev/null) ]; then
+        curl -fsSL https://install.julialang.org | sh -s -- -y
+        source ~/.bashrc
+        source ~/.bash_profile
+        julia -e 'using Pkg; Pkg.add("IJulia")'
+    fi
+fi
+
+if [[ $service_install_kernels == *"R-kernel"* ]]; then
+    conda install r-recommended r-irkernel -y
+    R -e 'IRkernel::installspec()'
 fi

@@ -33,6 +33,7 @@ fi
 ngencerf_port=3000 #$(findAvailablePort)
 
 echo '#!/bin/bash' > cancel.sh
+echo "$(date) Running cancel script" >> cancel.sh
 chmod +x cancel.sh
 
 if [[ "${service_only_connect}" == "true" ]]; then

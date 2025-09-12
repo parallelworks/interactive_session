@@ -143,6 +143,19 @@ if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
     displayErrorMessage "jupyter-notebook command not found"
 fi
 
+# Download singularity container if required
+jupyter_major_version=$(jupyter notebook --version | cut -d'.' -f1)
+echo "Jupyter version is"
+jupyter notebook --version 
+
+if [ "${jupyter_major_version}" -ge 7 ]; then
+    if ! [ -f "${service_nginx_sif}" ]; then
+        echo; echo "Downloading nginx singularity from Github"
+        download_singularity_container
+    fi
+fi
+
+
 if [[ "${service_conda_install}" != "true" ]]; then
     exit 0
 fi
@@ -160,17 +173,4 @@ fi
 if [[ $service_install_kernels == *"R-kernel"* ]]; then
     conda install r-recommended r-irkernel -y
     R -e 'IRkernel::installspec()'
-fi
-
-
-# Download singularity container if required
-jupyter_major_version=$(jupyter notebook --version | cut -d'.' -f1)
-echo "Jupyter version is"
-jupyter notebook --version 
-
-if [ "${jupyter_major_version}" -ge 7 ]; then
-    if ! [ -f "${service_nginx_sif}" ]; then
-        echo; echo "Downloading nginx singularity from Github"
-        download_singularity_container
-    fi
 fi

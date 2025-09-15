@@ -115,7 +115,7 @@ server {
 HERE
 
 cat >> nginx.conf <<HERE
-worker_processes  auto;
+worker_processes  2;
 
 error_log  /var/log/nginx/error.log notice;
 pid        /tmp/nginx.pid;

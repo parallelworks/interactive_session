@@ -1,6 +1,8 @@
 # Initialize cancel script
 set -x
 
+echo whoami ": $(whoami)"
+
 PORT=5000
 if lsof -i :$PORT >/dev/null 2>&1; then
     echo
@@ -41,21 +43,20 @@ if [[ "${service_only_connect}" == "true" ]]; then
     sleep infinity
 fi
 
-
 if ! [ -f "${service_nginx_sif}" ]; then
    displayErrorMessage "NGINX proxy singularity container was not found ${service_nginx_sif}"
 fi
 
-if ! [ -f "${ngen_cal_singularity_container_path}" ]; then
-   displayErrorMessage "NGEN-CAL singularity container was not found ${ngen_cal_singularity_container_path}"
+if ! [ -f "${nwm_cal_mgr_singularity_container_path}" ]; then
+   displayErrorMessage "nwm-cal-mgr singularity container was not found ${nwm_cal_mgr_singularity_container_path}"
 fi
 
-if ! [ -f "${ngen_forcing_singularity_container_path}" ]; then
-   displayErrorMessage "NGEN-FORCING singularity container was not found ${ngen_forcing_singularity_container_path}"
+if ! [ -f "${ngen_bmi_forcing_singularity_container_path}" ]; then
+   displayErrorMessage "ngen-bmi-forcing singularity container was not found ${ngen_bmi_forcing_singularity_container_path}"
 fi
 
-if ! [ -f "${ngen_fcst_singularity_container_path}" ]; then
-   displayErrorMessage "NGEN-FCST singularity container was not found ${ngen_fcst_singularity_container_path}"
+if ! [ -f "${nwm_fcst_mgr_singularity_container_path}" ]; then
+   displayErrorMessage "nwm-fcst-mgr singularity container was not found ${nwm_fcst_mgr_singularity_container_path}"
 fi
 
 
@@ -67,50 +68,59 @@ echo "Starting nginx wrapper on service port ${service_port}"
 
 # Write config file
 cat >> config.conf <<HERE
+map \$http_upgrade \$connection_upgrade { default upgrade; '' close; }
+
 server {
- listen ${service_port};
- server_name _;
- index index.html index.htm index.php;
- add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
- add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
- add_header X-Frame-Options "ALLOWALL";
- client_max_body_size 0;  # Remove upload size limit by setting to 0
+  listen ${service_port};
+  server_name _;
+  index index.html index.htm index.php;
+  client_max_body_size 0; # Remove upload size limit by setting to 0
 
- # Timeout settings
- proxy_connect_timeout 3600s;   # Time to establish connection with backend
- proxy_send_timeout 3600s;      # Time to send request to backend
- proxy_read_timeout 86400s;     # Time to wait for a response from the backend (increased to 1 day)
- send_timeout 3600s;            # Time to wait for the client to receive the response
+  # timeouts (shorter helps you notice app hangs)
+  proxy_connect_timeout 5s;
+  proxy_send_timeout    120s;
+  proxy_read_timeout    120s;
+  send_timeout          120s;
 
- # Buffers for large responses
- proxy_buffers 16 16k;
- proxy_buffer_size 32k;
+  # CORS (minimal)
+  add_header Access-Control-Allow-Origin  \$http_origin always;
+  add_header Vary                         Origin always;
+  add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
+  add_header Access-Control-Allow-Headers "Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since" always;
 
- # Keep-alive settings
- keepalive_timeout 65;          # Timeout for keeping the connection open with the backend
+  location / {
+    proxy_pass http://127.0.0.1:${ngencerf_port}${basepath}/;
+    proxy_http_version 1.1;
 
- location / {
-     proxy_pass http://127.0.0.1:${ngencerf_port}${basepath}/;
-     proxy_http_version 1.1;
-       proxy_set_header Upgrade \$http_upgrade;
-       proxy_set_header Connection "upgrade";
-       proxy_set_header X-Real-IP \$remote_addr;
-       proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-       proxy_set_header Host \$http_host;
-       proxy_set_header X-NginX-Proxy true;
- }
+    # only upgrade when client asked for it
+    proxy_set_header   Upgrade    \$http_upgrade;
+    proxy_set_header   Connection \$connection_upgrade;
 
- location /api/ {
-     proxy_pass http://127.0.0.1:8000/;
-     proxy_http_version 1.1;
-       proxy_set_header Upgrade \$http_upgrade;
-       proxy_set_header Connection "upgrade";
-       proxy_set_header X-Real-IP \$remote_addr;
-       proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-       proxy_set_header Host \$http_host;
-       proxy_set_header X-NginX-Proxy true;
+    proxy_set_header   X-Real-IP         \$remote_addr;
+    proxy_set_header   X-Forwarded-For   \$proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto \$scheme;
+    proxy_set_header   X-Forwarded-Host  \$host;
+    proxy_set_header   Host              \$host;
 
- }
+    # quick response to CORS preflight
+    if (\$request_method = OPTIONS) { return 204; }
+  }
+
+  location /api/ {
+    proxy_pass http://127.0.0.1:8000/;
+    proxy_http_version 1.1;
+
+    proxy_set_header   Upgrade    \$http_upgrade;
+    proxy_set_header   Connection \$connection_upgrade;
+
+    proxy_set_header   X-Real-IP         \$remote_addr;
+    proxy_set_header   X-Forwarded-For   \$proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto \$scheme;
+    proxy_set_header   X-Forwarded-Host  \$host;
+    proxy_set_header   Host              \$host;
+
+    if (\$request_method = OPTIONS) { return 204; }
+  }
 }
 HERE
 
@@ -124,7 +134,6 @@ pid        /tmp/nginx.pid;
 events {
     worker_connections  1024;
 }
-
 
 http {
     proxy_temp_path /tmp/proxy_temp;
@@ -154,7 +163,7 @@ http {
 HERE
 
 echo "Running singularity container ${service_nginx_sif}"
-# We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
+# We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid
 # and other users cannot use the node. Was not able to change this in the config.conf.
 mkdir -p ./tmp
 # Need to overwrite default configuration!
@@ -221,7 +230,7 @@ fi
   --error-logfile slurm-wrapper-app-v3.log \
   --capture-output \
   --enable-stdio-inheritance > slurm-wrapper-app-v3.log 2>&1 &
-  
+
 #python3.8 slurm-wrapper-app-v3.py > slurm-wrapper-app-v3.log 2>&1 &
 
 slurm_wrapper_pid=$!
@@ -231,15 +240,15 @@ echo "kill ${slurm_wrapper_pid}" >> cancel.sh
 
 ###############
 # NGENCERF-UI #
-############### 
-# service_ngencerf_ui_dir=/ngencerf-app/nextgen_ui/compose.yaml
+###############
+# service_ngencerf_ui_dir=/ngencerf-app/ngencerf-ui/compose.yaml
 cat > ${service_ngencerf_ui_dir}/production-pw.yaml <<HERE
 
 name: ngencerf-ui
 
 services:
   ngencerf-app:
-    build: 
+    build:
       context: .
       dockerfile: ./Dockerfile.production-pw
       args:
@@ -272,7 +281,7 @@ cd ${service_ngencerf_docker_dir}
 #  ngencerf-ui -c "npm run generate && npx --yes serve .output/public/"
 # TODO: How about yeah, just run docker compose up from /ngencerf-app/ngencerf-docker/ folder?
 
-#docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui 
+#docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui
 
 if [[ "${service_build}" == "true" ]]; then
     CACHE_BUST=$(date +%s) docker compose -f production-pw.yaml up --build -d

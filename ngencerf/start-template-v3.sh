@@ -67,7 +67,7 @@ echo "Starting nginx wrapper on service port ${service_port}"
 
 # Write config file
 cat >> config.conf <<HERE
-map $http_upgrade $connection_upgrade { default upgrade; '' close; }
+map \$http_upgrade \$connection_upgrade { default upgrade; '' close; }
 
 server {
   listen ${service_port};
@@ -82,47 +82,45 @@ server {
   send_timeout          120s;
 
   # CORS (minimal)
-  add_header Access-Control-Allow-Origin  $http_origin always;
+  add_header Access-Control-Allow-Origin  \$http_origin always;
   add_header Vary                         Origin always;
   add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
   add_header Access-Control-Allow-Headers "Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since" always;
-
 
   location / {
     proxy_pass http://127.0.0.1:${ngencerf_port}${basepath}/;
     proxy_http_version 1.1;
 
     # only upgrade when client asked for it
-    proxy_set_header   Upgrade    $http_upgrade;
-    proxy_set_header   Connection $connection_upgrade;
+    proxy_set_header   Upgrade    \$http_upgrade;
+    proxy_set_header   Connection \$connection_upgrade;
 
-    proxy_set_header   X-Real-IP         $remote_addr;
-    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
-    proxy_set_header   X-Forwarded-Proto $scheme;
-    proxy_set_header   X-Forwarded-Host  $host;
-    proxy_set_header   Host              $host;
+    proxy_set_header   X-Real-IP         \$remote_addr;
+    proxy_set_header   X-Forwarded-For   \$proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto \$scheme;
+    proxy_set_header   X-Forwarded-Host  \$host;
+    proxy_set_header   Host              \$host;
 
     # quick response to CORS preflight
-    if ($request_method = OPTIONS) { return 204; }
+    if (\$request_method = OPTIONS) { return 204; }
   }
 
   location /api/ {
     proxy_pass http://127.0.0.1:8000/;
     proxy_http_version 1.1;
 
-    proxy_set_header   Upgrade    $http_upgrade;
-    proxy_set_header   Connection $connection_upgrade;
+    proxy_set_header   Upgrade    \$http_upgrade;
+    proxy_set_header   Connection \$connection_upgrade;
 
-    proxy_set_header   X-Real-IP         $remote_addr;
-    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
-    proxy_set_header   X-Forwarded-Proto $scheme;
-    proxy_set_header   X-Forwarded-Host  $host;
-    proxy_set_header   Host              $host;
+    proxy_set_header   X-Real-IP         \$remote_addr;
+    proxy_set_header   X-Forwarded-For   \$proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto \$scheme;
+    proxy_set_header   X-Forwarded-Host  \$host;
+    proxy_set_header   Host              \$host;
 
-    if ($request_method = OPTIONS) { return 204; }
+    if (\$request_method = OPTIONS) { return 204; }
   }
 }
-
 HERE
 
 cat >> nginx.conf <<HERE

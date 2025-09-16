@@ -1,5 +1,5 @@
 import subprocess
-import os, shutil
+import os, shutil, tempfile
 from flask import Flask, request, jsonify
 import socket
 import copy
@@ -99,21 +99,6 @@ def get_next_partition(current_partition=None):
     return PARTITIONS[next_index]
 
 
-def grant_ownership(job_dir):
-    try:
-        # Get the current user's UID and GID
-        current_uid = os.getuid()
-        current_gid = os.getgid()
-        # Change ownership of the directory to the current user
-        command_chown = f"sudo chown -R {current_uid}:{current_gid} {job_dir}"
-        subprocess.run(command_chown, shell=True, check=True)
-        logger.info(f"Ownership granted to directory {job_dir}")
-        return {"success": True, "message": f"Access granted to {job_dir}"}
-    except subprocess.CalledProcessError as e:
-        logger.exception(f"Failed to change ownership for directory {job_dir}")
-        return {"success": False, "message": str(e)}
-
-
 def get_callback(callback_url, auth_token, **kwargs):
     # Prepare the data dictionary excluding the auth_token
     data = {key: value for key, value in kwargs.items()}
@@ -138,9 +123,13 @@ def write_callback(postprocessing_dir, callback_command):
 
 def write_slurm_script(run_id, job_type, input_file_local, output_file_local, singularity_run_cmd, nprocs = 1):
     job_script = input_file_local.replace('.yaml', '.slurm.sh')
+    job_dir = os.path.dirname(os.path.dirname(input_file_local))
+    # Get the current user's UID and GID
+    current_uid = os.getuid()
+    current_gid = os.getgid()
 
     # Write the SLURM script
-    with open(job_script, 'w') as script:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".slurm.sh", delete=False) as script:
         script.write('#!/bin/bash\n')
         script.write(f'#SBATCH --job-name={job_type}-{run_id}\n')
         script.write('#SBATCH --nodes=1\n')
@@ -149,6 +138,19 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         script.write('\n')
 
         script.write('echo Running Job $SLURM_JOB_ID \n\n')
+
+        # Change ownership of the directory to the current user
+        command_chown = f'sudo chown -R {current_uid}:{current_gid} {job_dir}\n'
+        script.write(command_chown)
+
+        # Make sure the directory exists for the output_file_local
+        output_file_dir = os.path.dirname(output_file_local)
+        script.write(f'mkdir -p {output_file_dir}\n')
+
+        # Store script in job directory after changing permissions
+        job_script_tmp = script.name
+        script.write(f'mv {job_script_tmp} {job_script}\n')
+
         notify_job_start_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/job-start -d \"job_type={job_type}\" -d \"run_id={run_id}\"\n'
         script.write(notify_job_start_cmd)
 
@@ -169,6 +171,8 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
 
         create_performance_files_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess  -d \"job_status=$job_status\" -d \"slurm_job_id=$SLURM_JOB_ID\" -d \"job_type={job_type}\" -d \"run_id={run_id}\"\n'
         script.write(create_performance_files_cmd)
+    
+    os.chmod(job_script_tmp, 0o755)
 
     return job_script
 
@@ -229,11 +233,6 @@ def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd, n
         return error_msg, 500
 
     try:
-        # FIXME: Remove
-        job_dir = os.path.dirname(os.path.dirname(input_file_local))
-        grant_ownership(job_dir)
-        os.makedirs(os.path.dirname(output_file_local), exist_ok=True)
-
         # Save the script to the job's directory
         job_script = write_slurm_script(run_id, job_type, input_file_local, output_file_local, singularity_run_cmd, nprocs = nprocs)
         logger.info(f"Job script written to: {job_script}")

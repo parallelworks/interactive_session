@@ -5,9 +5,6 @@ sessions:
     useTLS: false
     redirect: false
 
-app:
-  target: inputs.pwrl_host.resource
-
 jobs:
   preprocessing:
     steps:

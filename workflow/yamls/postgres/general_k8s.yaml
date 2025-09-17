@@ -7,8 +7,7 @@ sessions:
     useTLS: false
     redirect: false
     useCustomDomain: true
-app:
-  target: inputs.pwrl_host.resource
+
 jobs:
   preprocessing:
     steps:

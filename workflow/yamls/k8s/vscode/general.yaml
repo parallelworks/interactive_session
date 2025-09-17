@@ -4,8 +4,8 @@ sessions:
   session:
     redirect: true
     useCustomDomain: true
-app:
-  target: inputs.k8s.cluster
+
+
 jobs:
   auth_k8s:
     steps:

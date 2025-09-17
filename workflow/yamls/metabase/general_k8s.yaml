@@ -7,8 +7,7 @@ sessions:
     useCustomDomain: false
     prompt-for-name:
       default: 'metabase'
-app:
-  target: inputs.pwrl_host.resource
+
 jobs:
   preprocessing:
     steps:

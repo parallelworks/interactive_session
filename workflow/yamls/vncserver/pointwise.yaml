@@ -6,9 +6,6 @@ sessions:
     redirect: true
     useCustomDomain: ${{ inputs.targetType == 'kubernetes-cluster' }}
 
-app:
-  target: inputs.pwrl_host.resource
-
 jobs:
   preprocessing:
     steps:

@@ -76,7 +76,7 @@ server {
   index index.html index.htm index.php;
   client_max_body_size 0; # Remove upload size limit by setting to 0
 
-  # timeouts (shorter helps you notice app hangs)
+  # timeouts (shorter to notice app hangs)
   proxy_connect_timeout 5s;
   proxy_send_timeout    120s;
   proxy_read_timeout    120s;

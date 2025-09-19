@@ -17,6 +17,7 @@ init_code_server_settings() {
 cat > "${settings_json}" <<EOL
 {
     "github.copilot.advanced": {},
+    "cline.apiProvider": "openai-compatible",
     "files.exclude": {
         "**/.*": true
     }
@@ -32,8 +33,35 @@ install_code_server() {
     tar -zxf ${service_tgz_path} -C ${service_parent_install_dir}
     #wget -P ${service_parent_install_dir} -O ${service_copilot_vsix_path} ${service_copilot_url}
     ${service_exec} --install-extension ${service_copilot_vsix_path} --extensions-dir ${HOME}/.local/share/code-server/extensions
+
+    # install latest cline
+    if ! ${service_exec} --list-extensions | grep -q '^saoudrizwan.claude-dev$'; then
+        curl -s https://api.github.com/repos/cline/cline/releases/latest \
+            | jq -r '.assets[] | select(.name | endswith(".vsix")) | .browser_download_url' \
+            | xargs -n 1 wget -O cline-latest.vsix
+        ${service_exec} --install-extension cline-latest.vsix --extensions-dir ${HOME}/.local/share/code-server/extensions
+    fi
+
+# add a local mcp server
+CFGDIR="${HOME}/.local/share/code-server/User/globalStorage/saoudrizwan.claude-dev/settings"
+mkdir -p "$CFGDIR"
+cat >"$CFGDIR/cline_mcp_settings.json" <<'JSON'
+{
+  "mcpServers": {
+    "activate-mcp": {
+      "command": "python",
+      "args": ["-m", "mcp_server.server"],
+      "disabled": false,
+      "autoApprove": [],
+      "timeout": 60
+    }
+  }
+}
+JSON
+
     # Initialize default settings
     init_code_server_settings
+    
     # Clean tgz
     rm ${service_tgz_path}
 }

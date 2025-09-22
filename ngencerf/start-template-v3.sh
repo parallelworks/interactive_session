@@ -225,6 +225,7 @@ else
 fi
 
 
+mkdir slurm-tmp
 /usr/local/bin/gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app-v3:app \
   --access-logfile slurm-wrapper-app-v3.log \
   --error-logfile slurm-wrapper-app-v3.log \

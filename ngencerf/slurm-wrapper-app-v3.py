@@ -174,7 +174,7 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
     
     os.chmod(job_script_tmp, 0o755)
 
-    return job_script
+    return job_script_tmp
 
 
 def submit_slurm_job(job_script, partition=None):

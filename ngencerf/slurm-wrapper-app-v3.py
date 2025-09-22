@@ -129,12 +129,14 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
     current_gid = os.getgid()
 
     # Write the SLURM script
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".slurm.sh", delete=False) as script:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".slurm.sh", delete=False, dir=os.getcwd()) as script:
+        job_script_tmp = script.name
+
         script.write('#!/bin/bash\n')
         script.write(f'#SBATCH --job-name={job_type}-{run_id}\n')
         script.write('#SBATCH --nodes=1\n')
         script.write(f'#SBATCH --ntasks-per-node={nprocs}\n')
-        script.write(f'#SBATCH --output={output_file_local}\n')
+        script.write(f'#SBATCH --output={job_script_tmp}.out\n')
         script.write('\n')
 
         script.write('echo Running Job $SLURM_JOB_ID \n\n')
@@ -148,7 +150,6 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         script.write(f'mkdir -p {output_file_dir}\n')
 
         # Store script in job directory after changing permissions
-        job_script_tmp = script.name
         script.write(f'mv {job_script_tmp} {job_script}\n')
 
         notify_job_start_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/job-start -d \"job_type={job_type}\" -d \"run_id={run_id}\"\n'
@@ -171,6 +172,10 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
 
         create_performance_files_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess  -d \"job_status=$job_status\" -d \"slurm_job_id=$SLURM_JOB_ID\" -d \"job_type={job_type}\" -d \"run_id={run_id}\"\n'
         script.write(create_performance_files_cmd)
+        script.write(f'mv {job_script_tmp} {job_script}\n')
+        script.write(f'cp {job_script_tmp}.out {output_file_local}\n')
+
+
     
     os.chmod(job_script_tmp, 0o755)
 

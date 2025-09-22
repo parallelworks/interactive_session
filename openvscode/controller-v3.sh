@@ -42,23 +42,6 @@ install_code_server() {
         ${service_exec} --install-extension cline-latest.vsix --extensions-dir ${HOME}/.local/share/code-server/extensions
     fi
 
-# add a local mcp server
-CFGDIR="${HOME}/.local/share/code-server/User/globalStorage/saoudrizwan.claude-dev/settings"
-mkdir -p "$CFGDIR"
-cat >"$CFGDIR/cline_mcp_settings.json" <<'JSON'
-{
-  "mcpServers": {
-    "activate-mcp": {
-      "command": "python",
-      "args": ["-m", "mcp_server.server"],
-      "disabled": false,
-      "autoApprove": [],
-      "timeout": 60
-    }
-  }
-}
-JSON
-
     # Initialize default settings
     init_code_server_settings
     

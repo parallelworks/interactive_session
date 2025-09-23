@@ -189,7 +189,7 @@ p="$(command -v nproc >/dev/null 2>&1 && nproc || echo 8)"
 sudo find -L "$local_data_dir" \
   ! -type l \
   \( ! -perm -u+r -o ! -perm -u+w -o \( -xtype d ! -perm -u+x \) \) -print0 \
-| sudo xargs -0 -r -P"$p" -n1000 chmod u+rwX
+| sudo xargs -0 -r -P"$p" chmod u+rwX
 
 #mkdir -p ${local_data_dir}/forecast_forcing_work/esmf_mesh
 #mkdir -p ${local_data_dir}/forecast_forcing_work/raw_input/HRRR

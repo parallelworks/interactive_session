@@ -178,7 +178,7 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         script.write(
             f'sudo find -L "{job_dir}" ! -type l '
             f'\\( ! -perm -u+r -o ! -perm -u+w -o \\( -xtype d ! -perm -u+x \\) \\) -print0 '
-            f'| sudo xargs -0 -r -P"$p" -n1000 chmod u+rwX\n\n'
+            f'| sudo xargs -0 -r -P"$p" chmod u+rwX\n\n'
         )
 
 

@@ -176,9 +176,11 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
 
         # Ensure the owner has read+write on files and read+write+execute on directories in parallel
         script.write(
-            f'sudo find -L "{job_dir}" ! -type l -print0 '
-            f'| sudo xargs -0 -r -P"$p" chmod u+rwX\n\n'
+            f'sudo find -L "{job_dir}" ! -type l '
+            f'\\( ! -perm -u+r -o ! -perm -u+w -o \\( -xtype d ! -perm -u+x \\) \\) -print0 '
+            f'| sudo xargs -0 -r -P"$p" -n1000 chmod u+rwX\n\n'
         )
+
 
         notify_job_start_cmd = (
             f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/job-start '

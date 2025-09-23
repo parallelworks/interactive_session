@@ -182,8 +182,12 @@ fi
 
 # Make sure permissions are set properly
 #sudo -n chown -R ${USER} ${local_data_dir}
-sudo -n chmod -R u+rw ${local_data_dir}
-#sudo find "$local_data_dir" ! -perm -u+rw -print0 | sudo parallel -0 chmod u+rw
+# sudo -n chmod -R u+rw ${local_data_dir}
+
+# Ensure the owner has read+write on files and read+write+execute on directories
+sudo find "$local_data_dir" -print0 \
+| sudo xargs -0 -r -P"$(nproc)" chmod u+rwX
+
 #mkdir -p ${local_data_dir}/forecast_forcing_work/esmf_mesh
 #mkdir -p ${local_data_dir}/forecast_forcing_work/raw_input/HRRR
 #mkdir -p ${local_data_dir}/forecast_forcing_work/raw_input/RAP

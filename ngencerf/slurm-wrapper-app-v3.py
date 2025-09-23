@@ -139,7 +139,6 @@ def ensure_file_owned(file_path: str):
     except subprocess.CalledProcessError as e:
         logger.exception(f"Failed to change ownership of file {file_path}")
         return {"success": False, "message": str(e)}
-    
 
 
 def write_slurm_script(run_id, job_type, input_file_local, output_file_local, singularity_run_cmd, nprocs = 1):
@@ -162,13 +161,29 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
 
         script.write('echo Running Job $SLURM_JOB_ID \n\n')
 
-        # Change ownership of the directory to the current user
+        # Change ownership of the directory to the current user and group
         current_uid = os.getuid()
         current_gid = os.getgid()
-        command_chown = f'sudo chown -R {current_uid}:{current_gid} {job_dir}\n\n'
-        script.write(command_chown)
 
-        notify_job_start_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/job-start -d \"job_type={job_type}\" -d \"run_id={run_id}\"\n'
+        # Get number of processors
+        script.write('p="$(command -v nproc >/dev/null 2>&1 && nproc || echo 8)"\n')
+
+        # Change ownership in parallel only where uid/gid differ so we skip already-correct entries
+        script.write(
+            f'sudo find -L "{job_dir}" \\( ! -uid {current_uid} -o ! -gid {current_gid} \\) ! -type l -print0 '
+            f'| sudo xargs -0 -r -P"$p" chown {current_uid}:{current_gid}\n\n'
+        )
+
+        # Ensure the owner has read+write on files and read+write+execute on directories in parallel
+        script.write(
+            f'sudo find -L "{job_dir}" ! -type l -print0 '
+            f'| sudo xargs -0 -r -P"$p" chmod u+rwX\n\n'
+        )
+
+        notify_job_start_cmd = (
+            f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/job-start '
+            f'-d "job_type={job_type}" -d "run_id={run_id}"\n'
+        )
         script.write(notify_job_start_cmd)
 
         # Execute the singularity command
@@ -186,7 +201,11 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         script.write('echo Job Completed with status $job_status\n')
         script.write('echo\n\n')
 
-        create_performance_files_cmd = f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess  -d \"job_status=$job_status\" -d \"slurm_job_id=$SLURM_JOB_ID\" -d \"job_type={job_type}\" -d \"run_id={run_id}\"\n'
+        create_performance_files_cmd = (
+            f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess '
+            f'-d "job_status=$job_status" -d "slurm_job_id=$SLURM_JOB_ID" '
+            f'-d "job_type={job_type}" -d "run_id={run_id}"\n'
+        )
         script.write(create_performance_files_cmd)
 
     return job_script

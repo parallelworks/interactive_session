@@ -100,11 +100,8 @@ download_and_install_juice() {
 
     # Step 1: Get download URL from JuiceLabs API
     echo "Fetching JuiceLabs download URL..."
-    download=$(curl -s 'https://electra.juicelabs.co/v2/public/download/linux' \
-        | python -c "import sys, json; print(json.load(sys.stdin)['url'])") || {
-        echo "ERROR: Failed to fetch download URL"
-        exit 1
-    }
+    download=$(curl -s 'https://electra.juicelabs.co/v2/public/download/linux' | python3 -c "import sys, json; print(json.load(sys.stdin)['url'])")
+
 
     if [ -z "$download" ]; then
         echo "ERROR: Download URL is empty"

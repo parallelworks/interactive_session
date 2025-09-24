@@ -31,10 +31,16 @@ install_code_server() {
     # Install code server
     wget -P ${service_parent_install_dir} ${service_download_url}
     tar -zxf ${service_tgz_path} -C ${service_parent_install_dir}
-    #wget -P ${service_parent_install_dir} -O ${service_copilot_vsix_path} ${service_copilot_url}
+
+    # INSTALL CODE ASSIST TOOLS
+
+    # github copilot
     ${service_exec} --install-extension ${service_copilot_vsix_path} --extensions-dir ${HOME}/.local/share/code-server/extensions
 
-    # install latest cline
+    # google gemini - assume to move the extension to home directory
+    ${service_exec} --install-extension ~/Google.geminicodeassist-2.50.0.vsix --extensions-dir ${HOME}/.local/share/code-server/extensions
+
+    # cline
     if ! ${service_exec} --list-extensions | grep -q '^saoudrizwan.claude-dev$'; then
         curl -s https://api.github.com/repos/cline/cline/releases/latest \
             | jq -r '.assets[] | select(.name | endswith(".vsix")) | .browser_download_url' \

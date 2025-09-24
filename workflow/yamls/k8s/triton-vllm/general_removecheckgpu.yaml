@@ -1,0 +1,700 @@
+permissions:
+  - '*'
+sessions:
+  session:
+    useTLS: false
+    redirect: true
+    useCustomDomain: true
+app:
+  target: inputs.k8s.cluster
+jobs:
+  auth_k8s:
+    steps:
+      - name: Authenticate kubectl
+        early-cancel: any-job-failed
+        run: pw kube auth ${{ inputs.k8s.cluster }}
+  prepare_k8s_pvc:
+    needs:
+      - auth_k8s
+    steps:
+      - name: Creating New PVC YAML
+        early-cancel: any-job-failed
+        if: ${{ inputs.k8s.volumes.pvc === New }}
+        run: |
+          if [[ ${{ inputs.k8s.volumes.pvc_persist }} == "true" ]]; then
+            pvc_name="${{ inputs.k8s.volumes.pvc_name }}"
+          else
+            job_number=$(pwd | rev | cut -d "/" -f1 | rev)
+            workflow_name=$(pwd | rev | cut -d "/" -f2 | rev)
+            pvc_name=$(echo "${PW_USER}${workflow_name}${job_number}" | sed 's|_||g' | sed 's|\.||g' | tr '[:upper:]' '[:lower:]' | tail -c 56)-pvc
+          fi
+          pvc_storage_class=${{ inputs.k8s.volumes.pvc_storage_class }}
+          if [ -z "${pvc_storage_class}" ] || [[ "${pvc_storage_class}" == "undefined" ]]; then
+            default_class=$(kubectl get storageclass -n ${{ inputs.k8s.namespace }} | grep '(default)' | awk '{print $1}')
+            if [ -z "${default_class}" ]; then
+              echo "ERROR: No default storage class found. Available storage classes:"
+              kubectl get storageclass -n ${{ inputs.k8s.namespace }}
+              exit 1
+            fi
+            storageClassName="storageClassName: $default_class"
+          else
+            storageClassName="storageClassName: ${{ inputs.k8s.volumes.pvc_storage_class }}"
+          fi
+          echo "${pvc_name}" > pvc_name
+          cat <<EOF > pvc.yaml
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: ${pvc_name}
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: ${{ inputs.k8s.volumes.pvc_storage_size }}
+            ${storageClassName}
+          EOF
+          cat pvc.yaml
+      - name: Dry Run PVC
+        early-cancel: any-job-failed
+        if: ${{ inputs.k8s.volumes.pvc === New }}
+        run: |
+          echo "Performing dry run for PVC..."
+          kubectl apply -f pvc.yaml --dry-run=client
+      - name: Dummy
+        early-cancel: any-job-failed
+        run: echo Dummy
+  prepare_k8s_deployment:
+    needs:
+      - prepare_k8s_pvc
+    steps:
+      - name: Defining App Name
+        early-cancel: any-job-failed
+        run: |
+          job_number=$(pwd | rev | cut -d "/" -f1 | rev)
+          workflow_name=$(pwd | rev | cut -d "/" -f2 | rev)
+          app_name=$(echo "${PW_USER}${workflow_name}${job_number}" | sed 's|_||g' | sed 's|\.||g' | tr '[:upper:]' '[:lower:]' | tail -c 56)
+          echo "app_name=${app_name}" | tee -a $OUTPUTS | tee -a OUTPUTS
+      - name: Creating Deployment and Service YAML
+        early-cancel: any-job-failed
+        run: |
+          if [[ "${{ inputs.k8s.triton_resources.limits.select_gpu }}" == "Custom" ]]; then
+            gpu_limits="${{ inputs.k8s.triton_resources.limits.gpu_resource_key }}: ${{ inputs.k8s.triton_resources.limits.number_of_gpus }}"
+          else
+            gpu_limits="${{ inputs.k8s.triton_resources.limits.select_gpu }}: ${{ inputs.k8s.triton_resources.limits.number_of_gpus }}"
+          fi
+          gpu_check_limits="nvidia.com/gpu: 1"
+
+          tensor_parallel_size=${{ inputs.triton_k8s.tensor_parallel_size }}
+
+          if kubectl get runtimeclass nvidia &>/dev/null; then
+            runtimeClassName="runtimeClassName: nvidia"
+          else
+            runtimeClassName=""
+          fi
+
+          if [[ "${{ inputs.k8s.volumes.pvc }}" == "Existing" ]]; then
+            pvc_name=${{ inputs.k8s.volumes.pvc_existing }}
+          else
+            pvc_name=$(cat pvc_name)
+          fi
+
+          cat <<EOF > app.yaml
+          ---
+          # Deployment for Triton Inference Server
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-triton
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-triton
+            template:
+              metadata:
+                labels:
+                  app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-triton
+              spec:
+                runtimeClassName: nvidia
+                tolerations:
+                - key: "nvidia.com/gpu"
+                  operator: "Equal"
+                  value: "true"
+                  effect: "NoSchedule"
+                  
+                initContainers:
+                  - name: set-permissions
+                    image: busybox
+                    command: ["sh", "-c", "chmod -R 777 ${{ inputs.k8s.volumes.pvc_mount_path }}"]
+                    securityContext:
+                      runAsUser: 0
+                    volumeMounts:
+                      - name: storage
+                        mountPath: ${{ inputs.k8s.volumes.pvc_mount_path }}
+                  - name: init-model-repository
+                    image: busybox
+                    command: ["sh", "-c", "mkdir -p ${{ inputs.k8s.volumes.pvc_mount_path }}/vllm_model/1 && echo '{\"model\": \"${{ inputs.triton_k8s.model }}\", \"gpu_memory_utilization\": ${{ inputs.triton_k8s.gpu_memory_utilization }}, \"max_num_seqs\": ${{ inputs.triton_k8s.max_num_seqs }}, \"max_model_len\": ${{ inputs.triton_k8s.max_model_len }} ,\"tensor_parallel_size\": ${tensor_parallel_size}}' > ${{ inputs.k8s.volumes.pvc_mount_path }}/vllm_model/1/model.json && echo 'backend: \"vllm\"\ninstance_group [\n  {\n    count: 1\n    kind: KIND_GPU\n  }\n]' > ${{ inputs.k8s.volumes.pvc_mount_path }}/vllm_model/config.pbtxt"]
+                    volumeMounts:
+                      - name: storage
+                        mountPath: ${{ inputs.k8s.volumes.pvc_mount_path }}
+                containers:
+                  - name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-triton
+                    image: nvcr.io/nvidia/tritonserver:24.09-vllm-python-py3
+                    args: 
+                      - /bin/bash
+                      - -c
+                      - |
+                        pip install --upgrade "vllm[gptoss]" --pre --extra-index-url https://wheels.vllm.ai/gpt-oss/ && \
+                        tritonserver --model-store=$MODEL_STORE --model-control-mode=POLL
+                    ports:
+                      - containerPort: 8000
+                        name: http
+                      - containerPort: 8001
+                        name: grpc
+                      - containerPort: 8002
+                        name: metrics
+                    env:
+                      - name: NVIDIA_VISIBLE_DEVICES
+                        value: "all"
+                      - name: NVIDIA_DRIVER_CAPABILITIES
+                        value: "compute,utility"
+                      - name: HF_TOKEN
+                        value: "${{ inputs.triton_k8s.hf_token }}"
+                      - name: MODEL_STORE
+                        value: "${{ inputs.k8s.volumes.pvc_mount_path }}"
+                    resources:
+                      requests:
+                        memory: "${{ inputs.k8s.triton_resources.requests.memory }}"
+                        cpu: "${{ inputs.k8s.triton_resources.requests.cpu }}"
+                      limits:
+                        memory: "${{ inputs.k8s.triton_resources.limits.memory }}"
+                        cpu: "${{ inputs.k8s.triton_resources.limits.cpu }}"
+                        ${gpu_limits}
+                    volumeMounts:
+                      - name: storage
+                        mountPath: ${{ inputs.k8s.volumes.pvc_mount_path }}
+                volumes:
+                  - name: storage
+                    persistentVolumeClaim:
+                      claimName: ${pvc_name}
+          ---
+          # Service for Triton
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-triton
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            selector:
+              app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-triton
+            ports:
+              - protocol: TCP
+                port: 8000
+                targetPort: 8000
+                name: http
+              - protocol: TCP
+                port: 8001
+                targetPort: 8001
+                name: grpc
+              - protocol: TCP
+                port: 8002
+                targetPort: 8002
+                name: metrics
+          ---
+          # Deployment for Gradio UI
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-ui
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-ui
+            template:
+              metadata:
+                labels:
+                  app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-ui
+              spec:
+                containers:
+                  - name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-ui
+                    image: nhuytan/gradio-ui:latest
+                    env:
+                      - name: UI_MAX_TOKENS
+                        value: "${{inputs.webui_k8s.ui_max_tokens}}"
+                      - name: UI_TEMPERATURE
+                        value: "${{inputs.webui_k8s.ui_temperature}}"
+                    command:
+                      - sh
+                      - -c
+                      - |
+                          python -c " 
+                          import gradio as gr
+                          import requests
+                          import os
+
+                          # Get default values from shell environment variables
+                          default_max_tokens = int(os.getenv('UI_MAX_TOKENS', '150'))
+                          default_temperature = float(os.getenv('UI_TEMPERATURE', '0.8'))
+
+                          def chat(message, history, max_tokens, temperature):
+
+                              url = 'http://${{ needs.prepare_k8s_deployment.outputs.app_name }}-triton.${{ inputs.k8s.namespace }}.svc.cluster.local.:8000/v2/models/vllm_model/generate'
+                              
+
+                              payload = {
+                              'text_input': message, 
+                              'parameters': {
+                                'stream': False, 
+                                'temperature': temperature, 
+                                'max_tokens': max_tokens
+                                }
+                              }
+                              response = requests.post(url, json=payload)
+                              return response.json()['text_output']
+                          # Create Gradio components for input parameters
+                          max_tokens_slider = gr.Slider(
+                            minimum=1, 
+                            maximum=4096, # Or whatever is appropriate for your model
+                            value=default_max_tokens, 
+                            step=1, 
+                            label='Max Output Tokens')
+                          
+                          temperature_slider = gr.Slider(
+                            minimum=0.0, 
+                            maximum=2.0, 
+                            value=default_temperature, 
+                            step=0.1, 
+                            label='Temperature')
+                          
+                          # Pass the components to ChatInterface
+                          gr.ChatInterface(
+                            chat, 
+                            additional_inputs=[max_tokens_slider, temperature_slider],
+                            examples=[['What is the capital of Vietnam?', default_max_tokens, default_temperature],[ 'Tell me a short story.',200,0.7], ['Explain AI in simple terms.', 100, 0.5]]).launch(server_port=7860)"
+                    ports:
+                      - containerPort: 7860
+                        name: ui
+                    resources:
+                      requests:
+                        memory: "${{ inputs.k8s.webui_resources.requests.memory }}"
+                        cpu: "${{ inputs.k8s.webui_resources.requests.cpu }}"
+                      limits:
+                        memory: "${{ inputs.k8s.webui_resources.limits.memory }}"
+                        cpu: "${{ inputs.k8s.webui_resources.limits.cpu }}"
+          ---
+          # Service for Gradio UI
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-ui
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            selector:
+              app: ${{ needs.prepare_k8s_deployment.outputs.app_name }}-ui
+            ports:
+              - protocol: TCP
+                port: 7860
+                targetPort: 7860
+                name: ui
+          EOF
+          cat app.yaml
+      - name: Dry Run Deployment
+        early-cancel: any-job-failed
+        run: |
+          echo "Performing dry run for deployment..."
+          kubectl apply -f app.yaml --dry-run=client
+  apply_k8s_deployment:
+    needs:
+      - prepare_k8s_deployment
+    steps:
+      - name: Load outputs
+        early-cancel: any-job-failed
+        run: cat OUTPUTS >> $OUTPUTS
+      - name: Apply PVC
+        early-cancel: any-job-failed
+        if: ${{ inputs.k8s.volumes.pvc === New }}
+        run: kubectl apply -f pvc.yaml
+        cleanup: |
+          set -x
+          if [[ "${{ inputs.k8s.volumes.pvc_persist }}" == "false" ]]; then
+            MAX_ATTEMPTS=5
+            ATTEMPT=1
+            while true; do
+              if kubectl delete -f pvc.yaml; then
+                echo "PVC deleted successfully"
+                touch pvc.deleted
+                break
+              elif [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+                echo "Failed to delete PVC after $MAX_ATTEMPTS attempts"
+                exit 1
+              else
+                echo "Attempt $ATTEMPT to delete PVC failed. Retrying in 5 seconds..."
+                sleep 5
+                ((ATTEMPT++))
+              fi
+            done
+          fi
+      - name: Apply Deployment and Service
+        run: kubectl apply -f app.yaml
+        early-cancel: any-job-failed
+        cleanup: |
+          set -x
+          MAX_ATTEMPTS=5
+          ATTEMPT=1
+          while true; do
+            if kubectl delete -f app.yaml; then
+              echo "Resources deleted successfully"
+              touch app.deleted
+              break
+            elif [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+              echo "Failed to delete resources after $MAX_ATTEMPTS attempts"
+              exit 1
+            else
+              echo "Attempt $ATTEMPT to delete resources failed. Retrying in 5 seconds..."
+              sleep 5
+              ((ATTEMPT++))
+            fi
+          done
+      - name: Wait for Deployment to be Ready
+        early-cancel: any-job-failed
+        env:
+          app_name: ${{ needs.apply_k8s_deployment.outputs.app_name }}
+          namespace: ${{ inputs.k8s.namespace }}
+        run: |
+          log() {
+            while true; do
+              echo
+              echo "[INFO] $(date) - Checking deployment status for ${app_name}-triton in namespace ${namespace}..."
+              kubectl get deployment "${app_name}-triton" -n "${namespace}" -o wide || echo "[WARN] Unable to get deployment"
+              echo "[INFO] $(date) - Pods status:"
+              kubectl get pods -l app="${app_name}-triton" -n "${namespace}" -o wide || echo "[WARN] Unable to get pods"
+              pod_name=$(kubectl get pods -l app="${app_name}-triton" -n "${namespace}" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+              if [[ -n "$pod_name" ]]; then
+                echo "[INFO] $(date) - Describing pod ${pod_name}..."
+                kubectl describe pod "${pod_name}" -n "${namespace}" | grep -A20 "Events"
+                echo "[INFO] $(date) - Checking initContainer logs..."
+                kubectl logs "${pod_name}" -n "${namespace}" -c set-permissions 2>/dev/null || echo "[WARN] No logs for set-permissions"
+                kubectl logs "${pod_name}" -n "${namespace}" -c init-model-repository 2>/dev/null || echo "[WARN] No logs for init-model-repository"
+                echo "[INFO] $(date) - Checking pod status..."
+                kubectl get pod "${pod_name}" -n "${namespace}" -o yaml | grep -A10 "status:" || echo "[WARN] Unable to get pod status"
+              fi
+              echo "---------------------------------------------"
+              sleep 10
+            done
+          }
+          log &
+          log_pid=$!
+          trap "kill ${log_pid}" EXIT
+          set -x
+          kubectl wait --for=condition=available --timeout=600s deployment/${app_name}-triton -n ${namespace}
+          exit_code=$?
+          if [[ $exit_code -ne 0 ]]; then
+            echo "[ERROR] Deployment ${app_name}-triton failed to become available. Check pod events and initContainer logs above."
+            exit $exit_code
+          fi
+          kubectl get deployment ${app_name}-triton -n ${namespace} -o wide
+          kubectl describe deployment ${app_name}-triton -n ${namespace}
+          exit ${exit_code}
+      - name: Wait for Pod to be Ready
+        early-cancel: any-job-failed
+        env:
+          app_name: ${{ needs.apply_k8s_deployment.outputs.app_name }}
+          namespace: ${{ inputs.k8s.namespace }}
+        run: |
+          echo "Waiting for pod to be ready..."
+          kubectl wait --for=condition=Ready pod -l app=${app_name}-triton -n ${namespace} --timeout=600s
+          pod=$(kubectl get pods -n ${namespace} -l app=${app_name}-triton --field-selector=status.phase=Running -o jsonpath="{.items[0].metadata.name}")
+          echo "pod=$pod" | tee -a $OUTPUTS | tee -a OUTPUTS
+          touch pod.running
+      - name: Stream Triton Logs
+        early-cancel: any-job-failed
+        run: |
+          kubectl logs -f --selector=app=${{ needs.apply_k8s_deployment.outputs.app_name }}-triton -n ${{ inputs.k8s.namespace }} &
+          triton_stream_pid=$?
+          echo ${triton_stream_pid} > triton_stream.pid
+      - name: Stream WebUI Logs
+        early-cancel: any-job-failed
+        run: |
+          kubectl logs -f --selector=app=${{ needs.apply_k8s_deployment.outputs.app_name }}-ui -n ${{ inputs.k8s.namespace }} &
+          webui_stream_pid=$?
+          echo ${webui_stream_pid} > webui_stream.pid
+  create_k8s_session:
+    needs:
+      - apply_k8s_deployment
+    steps:
+      - name: Wait until the Kubernetes deployment reaches its final stage
+        early-cancel: any-job-failed
+        run: |
+          while true; do
+            if [ -f "app.deleted" ]; then
+              echo "File app.deleted was detected. Exiting..."
+              exit 0
+            elif [ -f "pod.running" ]; then
+              echo "Pod is ready"
+              break
+            fi
+            sleep 2
+          done
+      - name: Get Service Name
+        early-cancel: any-job-failed
+        run: |
+          source OUTPUTS
+          echo "service_name=${app_name}-ui" | tee -a $OUTPUTS
+      - name: Expose port
+        early-cancel: any-job-failed
+        uses: parallelworks/update-session
+        with:
+          remotePort: '7860'
+          name: ${{ sessions.session }}
+          targetInfo:
+            name: ${{ inputs.k8s.cluster }}
+            namespace: ${{ inputs.k8s.namespace }}
+            resourceType: services
+            resourceName: ${{ needs.create_k8s_session.outputs.service_name }}
+  keep_alive:
+    needs:
+      - create_k8s_session
+    steps:
+      - name: Keep Session Running
+        early-cancel: any-job-failed
+        run: tail -f /dev/null
+        cleanup: |
+          echo "Cleaning up resources for keep_alive job..."
+          source OUTPUTS
+          kubectl delete deployment ${app_name}-triton -n ${{ inputs.k8s.namespace }} --ignore-not-found
+          kubectl delete service ${app_name}-triton -n ${{ inputs.k8s.namespace }} --ignore-not-found
+          kubectl delete deployment ${app_name}-ui -n ${{ inputs.k8s.namespace }} --ignore-not-found
+          kubectl delete service ${app_name}-ui -n ${{ inputs.k8s.namespace }} --ignore-not-found
+'on':
+  execute:
+    inputs:
+      k8s:
+        type: group
+        label: Kubernetes Settings
+        items:
+          cluster:
+            label: Kubernetes cluster
+            type: kubernetes-clusters
+          namespace:
+            label: Namespace
+            type: kubernetes-namespaces
+            clusterName: ${{ inputs.k8s.cluster }}
+          volumes:
+            type: group
+            label: Triton Volumes
+            collapsed: true
+            tooltip: Specify storage settings for Persistent Volume Claims (PVCs), including size, storage class, and mount path.
+            items:
+              pvc:
+                label: Persistent Volume Claim
+                type: dropdown
+                default: Existing
+                options:
+                  - value: Existing
+                    label: Select Existing PVC
+                  - value: New
+                    label: Create New PVC
+              pvc_mount_path:
+                label: Mount Path
+                type: string
+                default: /models
+              pvc_existing:
+                label: Select PVC Name
+                type: kubernetes-pvc
+                clusterName: ${{ inputs.k8s.cluster }}
+                namespace: ${{ inputs.k8s.namespace }}
+                hidden: ${{ inputs.k8s.volumes.pvc !== Existing }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
+              pvc_storage_size:
+                label: Enter PVC Size
+                type: string
+                hidden: ${{ inputs.k8s.volumes.pvc !== New }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
+                default: 100Gi
+              pvc_storage_class:
+                label: Enter PVC Storage Class
+                type: string
+                hidden: ${{ inputs.k8s.volumes.pvc !== New }}
+                ignore: ${{ .hidden }}
+                optional: true
+                tooltip: Leave blank to use the default storage class configured in the cluster.
+              pvc_persist:
+                label: Persist PVC After Completion
+                type: boolean
+                default: false
+                hidden: ${{ inputs.k8s.volumes.pvc !== 'New' }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
+                tooltip: If true, the PVC will persist after the job is canceled or completed. If false, it will be deleted.
+              pvc_name:
+                label: Enter PVC Name
+                type: string
+                hidden: ${{ inputs.k8s.volumes.pvc_persist === false || inputs.k8s.volumes.pvc !== New }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
+          triton_resources:
+            type: group
+            label: Triton Resources
+            collapsed: true
+            items:
+              requests:
+                type: group
+                label: Requests
+                items:
+                  memory:
+                    label: Memory
+                    type: string
+                    default: 8Gi
+                    tooltip: Specify the minimum memory required for the pod (e.g., 512Mi, 8Gi).
+                  cpu:
+                    label: CPU
+                    type: string
+                    default: '4'
+                    tooltip: Specify the minimum CPU required for the pod (e.g., 0.5, 4, 100m).
+              limits:
+                type: group
+                label: Limits
+                items:
+                  memory:
+                    label: Memory
+                    type: string
+                    default: 16Gi
+                    tooltip: Set the maximum memory the pod can use (e.g., 8Gi, 16Gi).
+                  cpu:
+                    label: CPU
+                    type: string
+                    default: '8'
+                    tooltip: Set the maximum CPU the pod can use (e.g., 4, 8, 500m).
+                  select_gpu:
+                    label: Select GPU Device
+                    type: dropdown
+                    tooltip: Choose the type of GPU device for the deployment, if needed.
+                    default: nvidia.com/gpu
+                    options:
+                      - value: nvidia.com/gpu
+                        label: Nvidia GPU
+                      - value: amd.com/gpu
+                        label: AMD GPU
+                      - value: Custom
+                        label: Custom GPU Resource Key
+                  gpu_resource_key:
+                    label: Custom GPU Resource Key
+                    type: string
+                    hidden: ${{ inputs.k8s.triton_resources.limits.select_gpu !== Custom }}
+                    ignore: ${{ .hidden }}
+                    tooltip: Specify a custom GPU resource key for Kubernetes.
+                  number_of_gpus:
+                    label: Number of GPUs
+                    type: number
+                    step: 1
+                    default: 1
+                    min: 1
+                    tooltip: Specify the number of GPUs to allocate for the deployment.
+          webui_resources:
+            type: group
+            label: WebUI Resources
+            collapsed: true
+            items:
+              requests:
+                type: group
+                label: Requests
+                items:
+                  memory:
+                    label: Memory
+                    type: string
+                    default: 2Gi
+                    tooltip: Specify the minimum memory required for the pod (e.g., 512Mi, 2Gi).
+                  cpu:
+                    label: CPU
+                    type: string
+                    default: '2'
+                    tooltip: Specify the minimum CPU required for the pod (e.g., 0.5, 2, 100m).
+              limits:
+                type: group
+                label: Limits
+                items:
+                  memory:
+                    label: Memory
+                    type: string
+                    default: 4Gi
+                    tooltip: Set the maximum memory the pod can use (e.g., 2Gi, 4Gi).
+                  cpu:
+                    label: CPU
+                    type: string
+                    default: '4'
+                    tooltip: Set the maximum CPU the pod can use (e.g., 2, 4, 500m).
+      triton_k8s:
+        type: group
+        label: Triton Settings
+        collapsed: true
+        items:
+          model:
+            label: Model Name
+            type: string
+            default: meta-llama/Meta-Llama-3.1-8B-Instruct
+            tooltip: Specify the Hugging Face model to use with vLLM (e.g., meta-llama/Meta-Llama-3.1-8B-Instruct).
+          hf_token:
+            label: Hugging Face Token (hf_...)
+            type: password
+            optional: false
+            tooltip: Your Hugging Face API token for accessing private or gated models (e.g., Llama).
+          gpu_memory_utilization:
+            label: GPU Memory Utilization
+            type: number
+            default: 0.9
+            min: 0.1
+            max: 0.9
+            tooltip: Specify the fraction of GPU memory to utilize (0.1 to 0.9).
+          max_num_seqs:
+            label: Max Number of Sequences
+            type: number
+            default: 4
+            min: 1
+            tooltip: Specify the maximum number of sequences in a batch.(concurrent requests processed per batch in vLLM)
+          max_model_len:
+            label: Max Model Length
+            type: number
+            default: 1024
+            min: 512
+            tooltip: Maximum model length for sequences.(Define max token length for input sequences, limiting context size and KV cache memory)
+          tensor_parallel_size:
+            label: Tensor Parallel Size
+            type: number
+            default: 1
+            min: 1
+            tooltip: Specify the number of GPUs for tensor parallelism.
+      webui_k8s:
+        type: group
+        label: WebUI Settings
+        collapsed: true
+        items:
+          image:
+            label: WebUI Image
+            type: string
+            default: python:3.10-slim
+          image_port:
+            label: WebUI Port
+            type: number
+            default: 7860
+          ui_max_tokens:
+            label: Max Output Tokens (UI)
+            type: number
+            default: 150
+            min: 1
+            max: 4096
+            tooltip: Maximum number of tokens the model should generate in a single response for the WebUI.
+          ui_temperature:
+            label: Temperature (UI)
+            type: number
+            default: 0.8
+            min: 0
+            max: 2
+            step: 0.1
+            tooltip: Controls the randomness of the output. Higher values (e.g., 0.8-1.0) make output more creative, lower values (e.g., 0.2) make it more deterministic.

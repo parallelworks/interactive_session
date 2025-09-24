@@ -189,7 +189,7 @@ SENT="/var/tmp/chmod_since"
 sudo test -f "$SENT" || sudo touch -t 197001010000 "$SENT"
 
 p="$(command -v nproc >/dev/null 2>&1 && nproc || echo 8)"
-base_dir="$local_data_dir/run-logs"
+base_dir="${local_data_dir%/}/run-logs"
 [ -d "$base_dir" ] || exit 0
 
 # sent markers
@@ -205,7 +205,7 @@ emit_newer_in_dir() {
 
 {
   # 1) ngen_cal_YYYY-MM-DDThh:mm:ss.xxx directories
-  find "$base_dir" -maxdepth 1 -type d -name 'ngen_cal_*' -print0 |
+  find "${base_dir%/}" -maxdepth 1 -type d -name 'ngen_cal_*' -print0 |
   while IFS= read -r -d '' d; do
     name="$(basename "$d")"                 # ngen_cal_2025-09-02T17:38:54.386
     ts="${name#ngen_cal_}"                  # 2025-09-02T17:38:54.386
@@ -216,7 +216,7 @@ emit_newer_in_dir() {
   done
 
   # 2) YYYY-MM-DD date directories
-  find "$base_dir" -maxdepth 1 -type d -regextype posix-extended \
+  find "${base_dir%/}" -maxdepth 1 -type d -regextype posix-extended \
        -regex '.*/[0-9]{4}-[0-9]{2}-[0-9]{2}$' -print0 |
   while IFS= read -r -d '' d; do
     dir_day="$(basename "$d")"              # e.g., 2025-09-02
@@ -225,9 +225,9 @@ emit_newer_in_dir() {
   done
 
   # 3) mswm/YYYYMMDDThhmmss.log files (nested dir)
-  mswm_dir="$base_dir/mswm"
+  mswm_dir="${base_dir%/}/mswm"
   if [ -d "$mswm_dir" ]; then
-    find "$mswm_dir" -maxdepth 1 -type f -regextype posix-extended \
+    find "${mswm_dir%/}" -maxdepth 1 -type f -regextype posix-extended \
          -regex '.*/[0-9]{8}T[0-9]{6}\.log$' -print0 |
     while IFS= read -r -d '' f; do
       fname="$(basename "$f")"              # 20250923T215414.log

@@ -184,12 +184,25 @@ fi
 #sudo -n chown -R ${USER} ${local_data_dir}
 # sudo -n chmod -R u+rw ${local_data_dir}
 
-# Ensure the owner has read+write on files and read+write+execute on directories
+# bookmark of last successful run to track when we last fixed permissions
+SENT="/var/tmp/chmod_since"
+
+# create bookmark once if missing (set to long ago so first run catches anything)
+sudo test -f "$SENT" || sudo touch -t 197001010000 "$SENT"
+
 p="$(command -v nproc >/dev/null 2>&1 && nproc || echo 8)"
-sudo find -L "$local_data_dir" \
-  ! -type l \
-  \( ! -perm -u+r -o ! -perm -u+w -o \( -xtype d ! -perm -u+x \) \) -print0 \
-| sudo xargs -0 -r -P"$p" chmod u+rwX
+
+# Ensure the owner has read+write on files and read+write+execute on directories
+# only act on things changed since last run; still walk all dirs; only chmod if needed
+if sudo find -L "$local_data_dir" -xdev \
+    ! -type l \
+    \( -newer "$SENT" -o -cnewer "$SENT" \) \
+    \( ! -perm -u+r -o ! -perm -u+w -o \( -type d ! -perm -u+x \) \) -print0 |
+   sudo xargs -0 -r -P"$p" chmod u+rwX
+then
+  # advance the bookmark after a successful run
+  sudo touch "$SENT"
+fi
 
 #mkdir -p ${local_data_dir}/forecast_forcing_work/esmf_mesh
 #mkdir -p ${local_data_dir}/forecast_forcing_work/raw_input/HRRR

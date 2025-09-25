@@ -348,20 +348,41 @@ cd ${service_ngencerf_docker_dir}
 
 #docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui
 
-if [[ "${service_build}" == "true" ]]; then
-  DOCKER_BUILDKIT=0 CACHE_BUST=$(date +%s) docker compose -f production-pw.yaml up --build -d
+# ensure buildx uses the docker driver (not the docker-container helper)
+if docker buildx ls | grep -qE 'localdocker.+docker.+\*'; then
+  : # already selected
+elif docker buildx ls | grep -q 'localdocker'; then
+  docker buildx use localdocker
 else
-    docker compose -f production-pw.yaml up -d
+  docker buildx create --name localdocker --driver docker --use
 fi
 
-ngencerf_image=$(docker compose -f production-pw.yaml config | awk '/ngencerf-server/{flag=1} flag && /image:/{print $2; exit}')
+if [[ "${service_build}" == "true" ]]; then
+DOCKER_BUILDKIT=1 CACHE_BUST="$(date +%s)" docker compose -f production-pw.yaml build --no-cache \
+  && docker compose -f production-pw.yaml up -d
+
+else
+  docker compose -f production-pw.yaml up -d
+fi
+
+ngencerf_image="$(docker compose -f production-pw.yaml config | awk '/ngencerf-server/{flag=1} flag && /image:/{print $2; exit}')"
 echo "ngencerf_image=${ngencerf_image}"
-docker create --name extract "$ngencerf_image"
-sudo docker cp extract:/ngencerf/ngencerf-server/cli/dist/ngencerf /usr/local/bin/ngencerf
-docker rm extract
-sudo chmod +x /usr/local/bin/ngencerf
+
+# clean any previous temp container quietly
+docker rm -f extract >/dev/null 2>&1 || true
+
+# only attempt extract if the image exists locally
+if docker image inspect "${ngencerf_image}" >/dev/null 2>&1; then
+  docker create --name extract "${ngencerf_image}" >/dev/null
+  sudo docker cp extract:/ngencerf/ngencerf-server/cli/dist/ngencerf /usr/local/bin/ngencerf
+  docker rm extract >/dev/null
+  sudo chmod +x /usr/local/bin/ngencerf
+else
+  echo "warning: image ${ngencerf_image} not found locally; skipping CLI extract"
+fi
 
 # Tail the logs
 docker compose -f production-pw.yaml logs -f
 
 sleep infinity
+

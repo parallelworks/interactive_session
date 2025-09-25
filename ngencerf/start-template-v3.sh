@@ -185,62 +185,62 @@ fi
 # sudo -n chmod -R u+rw ${local_data_dir}
 
 
-SENT="/var/tmp/chmod_since"
-sudo test -f "$SENT" || sudo touch -t 197001010000 "$SENT"
+# SENT="/var/tmp/chmod_since"
+# sudo test -f "$SENT" || sudo touch -t 197001010000 "$SENT"
 
-p="$(command -v nproc >/dev/null 2>&1 && nproc || echo 8)"
-base_dir="${local_data_dir%/}/run-logs"
-[ -d "$base_dir" ] || exit 0
+# p="$(command -v nproc >/dev/null 2>&1 && nproc || echo 8)"
+# base_dir="${local_data_dir%/}/run-logs"
+# [ -d "$base_dir" ] || exit 0
 
-# sent markers
-sent_epoch="$(sudo stat -c %Y "$SENT")"
-sent_day="$(date -d "@$sent_epoch" +%F)"   # YYYY-MM-DD
+# # sent markers
+# sent_epoch="$(sudo stat -c %Y "$SENT")"
+# sent_day="$(date -d "@$sent_epoch" +%F)"   # YYYY-MM-DD
 
-emit_newer_in_dir() {
-  local d="$1"
-  find -L "$d" -xdev \
-    ! -type l \
-    \( -newer "$SENT" -o -cnewer "$SENT" \) -print0
-}
+# emit_newer_in_dir() {
+#   local d="$1"
+#   find -L "$d" -xdev \
+#     ! -type l \
+#     \( -newer "$SENT" -o -cnewer "$SENT" \) -print0
+# }
 
-{
-  # 1) ngen_cal_YYYY-MM-DDThh:mm:ss.xxx directories
-  find "${base_dir%/}" -maxdepth 1 -type d -name 'ngen_cal_*' -print0 |
-  while IFS= read -r -d '' d; do
-    name="$(basename "$d")"                 # ngen_cal_2025-09-02T17:38:54.386
-    ts="${name#ngen_cal_}"                  # 2025-09-02T17:38:54.386
-    ts_nomsec="${ts%%.*}"                   # 2025-09-02T17:38:54
-    dir_day="$(date -d "$ts_nomsec" +%F 2>/dev/null)" || continue
-    [ "$dir_day" \< "$sent_day" ] && continue
-    emit_newer_in_dir "$d"
-  done
+# {
+#   # 1) ngen_cal_YYYY-MM-DDThh:mm:ss.xxx directories
+#   find "${base_dir%/}" -maxdepth 1 -type d -name 'ngen_cal_*' -print0 |
+#   while IFS= read -r -d '' d; do
+#     name="$(basename "$d")"                 # ngen_cal_2025-09-02T17:38:54.386
+#     ts="${name#ngen_cal_}"                  # 2025-09-02T17:38:54.386
+#     ts_nomsec="${ts%%.*}"                   # 2025-09-02T17:38:54
+#     dir_day="$(date -d "$ts_nomsec" +%F 2>/dev/null)" || continue
+#     [ "$dir_day" \< "$sent_day" ] && continue
+#     emit_newer_in_dir "$d"
+#   done
 
-  # 2) YYYY-MM-DD date directories
-  find "${base_dir%/}" -maxdepth 1 -type d -regextype posix-extended \
-       -regex '.*/[0-9]{4}-[0-9]{2}-[0-9]{2}$' -print0 |
-  while IFS= read -r -d '' d; do
-    dir_day="$(basename "$d")"              # e.g., 2025-09-02
-    [ "$dir_day" \< "$sent_day" ] && continue
-    emit_newer_in_dir "$d"
-  done
+#   # 2) YYYY-MM-DD date directories
+#   find "${base_dir%/}" -maxdepth 1 -type d -regextype posix-extended \
+#        -regex '.*/[0-9]{4}-[0-9]{2}-[0-9]{2}$' -print0 |
+#   while IFS= read -r -d '' d; do
+#     dir_day="$(basename "$d")"              # e.g., 2025-09-02
+#     [ "$dir_day" \< "$sent_day" ] && continue
+#     emit_newer_in_dir "$d"
+#   done
 
-  # 3) mswm/YYYYMMDDThhmmss.log files (nested dir)
-  mswm_dir="${base_dir%/}/mswm"
-  if [ -d "$mswm_dir" ]; then
-    find "${mswm_dir%/}" -maxdepth 1 -type f -regextype posix-extended \
-         -regex '.*/[0-9]{8}T[0-9]{6}\.log$' -print0 |
-    while IFS= read -r -d '' f; do
-      fname="$(basename "$f")"              # 20250923T215414.log
-      stamp="${fname%.log}"                 # 20250923T215414
-      iso="${stamp:0:4}-${stamp:4:2}-${stamp:6:2}T${stamp:9:2}:${stamp:11:2}:${stamp:13:2}"
-      file_epoch="$(date -d "$iso" +%s 2>/dev/null || echo '')"
-      [ -n "$file_epoch" ] || continue
-      # same moment or newer than SENT
-      if [ "$file_epoch" -ge "$sent_epoch" ]; then
-        printf '%s\0' "$f"
-      fi
-    done
-  fi
+#   # 3) mswm/YYYYMMDDThhmmss.log files (nested dir)
+#   mswm_dir="${base_dir%/}/mswm"
+#   if [ -d "$mswm_dir" ]; then
+#     find "${mswm_dir%/}" -maxdepth 1 -type f -regextype posix-extended \
+#          -regex '.*/[0-9]{8}T[0-9]{6}\.log$' -print0 |
+#     while IFS= read -r -d '' f; do
+#       fname="$(basename "$f")"              # 20250923T215414.log
+#       stamp="${fname%.log}"                 # 20250923T215414
+#       iso="${stamp:0:4}-${stamp:4:2}-${stamp:6:2}T${stamp:9:2}:${stamp:11:2}:${stamp:13:2}"
+#       file_epoch="$(date -d "$iso" +%s 2>/dev/null || echo '')"
+#       [ -n "$file_epoch" ] || continue
+#       # same moment or newer than SENT
+#       if [ "$file_epoch" -ge "$sent_epoch" ]; then
+#         printf '%s\0' "$f"
+#       fi
+#     done
+#   fi
 
   # 4) run_calib subtree (mtime/ctime day >= sent_day)
   find -L "/ngencerf-app/data/ngen-cal-data/ngen-cal-work/run_calib" -xdev \
@@ -349,7 +349,7 @@ cd ${service_ngencerf_docker_dir}
 #docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui
 
 if [[ "${service_build}" == "true" ]]; then
-    CACHE_BUST=$(date +%s) docker compose -f production-pw.yaml up --build -d
+  DOCKER_BUILDKIT=0 CACHE_BUST=$(date +%s) docker compose -f production-pw.yaml up --build -d
 else
     docker compose -f production-pw.yaml up -d
 fi

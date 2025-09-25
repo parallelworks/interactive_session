@@ -242,12 +242,12 @@ fi
 #     done
 #   fi
 
-  # 4) run_calib subtree (mtime/ctime day >= sent_day)
-  find -L "/ngencerf-app/data/ngen-cal-data/ngen-cal-work/run_calib" -xdev \
-    ! -type l \
-    \( -newermt "$sent_day 00:00:00" -o -newerct "$sent_day 00:00:00" \) -print0
+#   # 4) run_calib subtree (mtime/ctime day >= sent_day)
+#   find -L "/ngencerf-app/data/ngen-cal-data/ngen-cal-work/run_calib" -xdev \
+#     ! -type l \
+#     \( -newermt "$sent_day 00:00:00" -o -newerct "$sent_day 00:00:00" \) -print0
 
-} | sudo xargs -0 -r -P"$p" chmod u+rwX && sudo touch "$SENT"
+# } | sudo xargs -0 -r -P"$p" chmod u+rwX && sudo touch "$SENT"
 
 
 #mkdir -p ${local_data_dir}/forecast_forcing_work/esmf_mesh

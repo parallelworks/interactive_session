@@ -182,7 +182,7 @@ fi
 
 # Make sure permissions are set properly
 #sudo -n chown -R ${USER} ${local_data_dir}
-# sudo -n chmod -R u+rw ${local_data_dir}
+# sudo -n chmod -R u+rwX ${local_data_dir}
 
 
 # SENT="/var/tmp/chmod_since"
@@ -302,7 +302,6 @@ slurm_wrapper_pid=$!
 echo "kill ${slurm_wrapper_pid}" >> cancel.sh
 
 
-
 ###############
 # NGENCERF-UI #
 ###############
@@ -349,6 +348,7 @@ cd ${service_ngencerf_docker_dir}
 #docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui
 
 # ensure buildx uses the docker driver (not the docker-container helper)
+# TODO: add this to PW start script
 if docker buildx ls | grep -qE 'localdocker.+docker.+\*'; then
   : # already selected
 elif docker buildx ls | grep -q 'localdocker'; then
@@ -385,4 +385,3 @@ fi
 docker compose -f production-pw.yaml logs -f
 
 sleep infinity
-

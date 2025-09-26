@@ -359,14 +359,14 @@ fi
 
 # Pull ngencerf-server image from ghcr.io and start containers without building by default
 if [[ "${service_build}" == "false" ]]; then
-  docker compose -f production-pw.yaml pull ngencerf-services
-  docker compose -f production-pw.yaml up -d --no-build ngencerf-services
+  docker compose -f production-pw.yaml pull ngencerf-services ngencerf-ui
+  docker compose -f production-pw.yaml up -d --no-build ngencerf-services ngencerf-ui
 
 else
   DOCKER_BUILDKIT=1 CACHE_BUST="$(date +%s)" \
-  docker compose -f production-pw.yaml build --no-cache --pull ngencerf-services
+  docker compose -f production-pw.yaml build --no-cache --pull ngencerf-services ngencerf-ui
 
-  docker compose -f production-pw.yaml up -d ngencerf-services
+  docker compose -f production-pw.yaml up -d ngencerf-services ngencerf-ui
 
 fi
 

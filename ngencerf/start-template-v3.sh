@@ -357,18 +357,13 @@ else
   docker buildx create --name localdocker --driver docker --use
 fi
 
-# Pull ngencerf-server image from ghcr.io and start containers without building by default
-if [[ "${service_build}" == "false" ]]; then
-  docker compose -f production-pw.yaml pull ngencerf-services ngencerf-ui
-  docker compose -f production-pw.yaml up -d --no-build ngencerf-services ngencerf-ui
+# bring up ngencerf-server
+docker compose -f production-pw.yaml pull ngencerf-services
+docker compose -f production-pw.yaml up -d --no-build ngencerf-services
 
-else
-  DOCKER_BUILDKIT=1 CACHE_BUST="$(date +%s)" \
-  docker compose -f production-pw.yaml build --no-cache --pull ngencerf-services ngencerf-ui
+# bring up ngencerf-ui
+docker compose -f production-pw.yaml up --build -d ngencerf-ui
 
-  docker compose -f production-pw.yaml up -d ngencerf-services ngencerf-ui
-
-fi
 
 ngencerf_image="$(docker compose -f production-pw.yaml config | awk '/ngencerf-server/{flag=1} flag && /image:/{print $2; exit}')"
 echo "ngencerf_image=${ngencerf_image}"

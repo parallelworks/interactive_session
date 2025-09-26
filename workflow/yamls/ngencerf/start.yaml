@@ -253,7 +253,7 @@ jobs:
           build:
             label: Build Docker Containers?
             type: boolean
-            default: true
+            default: false
             tooltip: Select Yes to build the docker container running docker compose up --build
           ngencerf_ui_dir:
             label: Directory with ngencerf-ui

@@ -362,7 +362,7 @@ docker compose -f production-pw.yaml pull ngencerf-services
 docker compose -f production-pw.yaml up -d --no-build ngencerf-services
 
 # bring up ngencerf-ui
-docker compose -f production-pw.yaml up --build -d ngencerf-ui
+docker compose -f production-pw.yaml up -d --build --no-deps ngencerf-ui
 
 
 ngencerf_image="$(docker compose -f production-pw.yaml config | awk '/ngencerf-server/{flag=1} flag && /image:/{print $2; exit}')"

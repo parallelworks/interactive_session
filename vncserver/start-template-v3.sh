@@ -84,7 +84,7 @@ for port in $(seq ${minPort} ${maxPort} | shuf); do
     out=$(netstat -aln | grep LISTEN | grep ${port})
     displayNumber=${port: -2}
     XdisplayNumber=$(echo ${displayNumber} | sed 's/^0*//')
-    if [ -z "${out}" ] && ! [ -e /tmp/.X11-unix/X${XdisplayNumber} ]; then
+    if [ -z "${out}" ] && ! [ -e /tmp/.X11-unix/X${XdisplayNumber} ] && ! [ -e /tmp/.X${XdisplayNumber}-lock ]; then
         # To prevent multiple users from using the same available port --> Write file to reserve it
         portFile=/tmp/${port}.port.used
         if ! [ -f "${portFile}" ]; then

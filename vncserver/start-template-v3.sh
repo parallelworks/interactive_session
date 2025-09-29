@@ -254,7 +254,8 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
         service_password=password
         disableBasicAuth="-disableBasicAuth"
     fi
-    expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "'"${service_password}"'\r"; expect "Verify:"; send "'"${service_password}"'\r"; expect eof'
+    #expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "'"${service_password}"'\r"; expect "Verify:"; send "'"${service_password}"'\r"; expect eof'
+    printf "%s\n%s\n" "$service_password" "$service_password" | vncpasswd -u "$USER" -w -r
 
 
     ${service_vnc_exec} -kill ${DISPLAY}
@@ -283,10 +284,10 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
 
     rm -rf ${portFile}
 
-    if ! [ -f "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid" ]; then
-        echo $(date): "KasmVNC server failed to start. Exiting workflow."
-        exit 1
-    fi
+    #if ! [ -f "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid" ]; then
+    #    echo $(date): "KasmVNC server failed to start. Exiting workflow."
+    #    exit 1
+    #fi
 
     vncserver_pid=$(cat "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid")
     echo "kill ${vncserver_pid} #${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid" >> cancel.sh

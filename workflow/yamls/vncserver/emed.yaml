@@ -150,6 +150,7 @@ jobs:
 
           # Main loop
           attempt=1
+          sleep 30
           while true; do
               echo "Attempt $attempt: Checking if server is listening on ${remote_host}:${remote_port}..."
               

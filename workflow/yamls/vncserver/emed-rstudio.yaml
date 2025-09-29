@@ -337,3 +337,9 @@ jobs:
             type: string
             hidden: true
             default: rstudio
+          nginx_sif_tag_existing:
+            type: string
+            default: /public/apps/pw/nginx-unprivileged.sif
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
+            ignore: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
+            optional: ${{ .ignore }}

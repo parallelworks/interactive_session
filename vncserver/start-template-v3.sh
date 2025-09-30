@@ -284,16 +284,16 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
 
     rm -rf ${portFile}
 
-    if ! [ -f "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid" ]; then
+    if ! [ -f "${HOME}/.vnc/$(hostname)${DISPLAY}.pid" ]; then
         echo $(date): "KasmVNC server failed to start. Exiting workflow."
         exit 1
     fi
 
-    vncserver_pid=$(cat "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid")
-    echo "kill ${vncserver_pid} #${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid" >> cancel.sh
-    cat "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.log"  >> cancel.sh
-    echo "rm \"${HOME}/.vnc/${HOSTNAME}${DISPLAY}*\"" >> cancel.sh
-    cat ${HOME}/.vnc/${HOSTNAME}${DISPLAY}.log
+    vncserver_pid=$(cat "${HOME}/.vnc/$(hostname)${DISPLAY}.pid")
+    echo "kill ${vncserver_pid} #${HOME}/.vnc/$(hostname)${DISPLAY}.pid" >> cancel.sh
+    cat "${HOME}/.vnc/$(hostname)${DISPLAY}.log"  >> cancel.sh
+    echo "rm \"${HOME}/.vnc/$(hostname)${DISPLAY}*\"" >> cancel.sh
+    cat ${HOME}/.vnc/$(hostname)${DISPLAY}.log
 
     #######################
     # START NGINX WRAPPER #

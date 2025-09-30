@@ -284,10 +284,10 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
 
     rm -rf ${portFile}
 
-    #if ! [ -f "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid" ]; then
-    #    echo $(date): "KasmVNC server failed to start. Exiting workflow."
-    #    exit 1
-    #fi
+    if ! [ -f "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid" ]; then
+        echo $(date): "KasmVNC server failed to start. Exiting workflow."
+        exit 1
+    fi
 
     vncserver_pid=$(cat "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid")
     echo "kill ${vncserver_pid} #${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid" >> cancel.sh

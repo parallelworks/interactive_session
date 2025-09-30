@@ -161,7 +161,7 @@ jobs:
           attempt=1
           while true; do
               echo "Attempt $attempt: Checking if server is listening on ${remote_host}:${remote_port}..."
-              
+
               if check_server; then
                   echo "Success: Server is listening on ${remote_host}:${remote_port}!"
                   exit 0
@@ -194,20 +194,20 @@ jobs:
         type: boolean
         default: true
         hidden: true
-      ngen_cal_singularity_container_path:
-        label: Path to the ngen-cal singularity container
+      nwm_cal_mgr_singularity_container_path:
+        label: Path to the nwm-cal-mgr singularity container
         type: string
-        default: /ngencerf-app/singularity/ngen-cal.sif
+        default: /ngencerf-app/singularity/nwm-cal-mgr.sif
         hidden: true
-      ngen_forcing_singularity_container_path:
+      ngen_bmi_forcing_singularity_container_path:
         label: Path to the ngen-forcing singularity container
         type: string
         default: /ngencerf-app/singularity/ngen-bmi-forcing.sif
         hidden: true
-      ngen_fcst_singularity_container_path:
-        label: Path to the ngen-fcst singularity container
+      nwm_fcst_mgr_singularity_container_path:
+        label: Path to the nwm-fcst-mgr singularity container
         type: string
-        default: /ngencerf-app/singularity/ngen-fcst.sif
+        default: /ngencerf-app/singularity/nwm-fcst-mgr.sif
         hidden: true
       container_data_dir:
         label: Path to the data directory within the container
@@ -256,12 +256,12 @@ jobs:
             default: true
             tooltip: Select Yes to build the docker container running docker compose up --build
           ngencerf_ui_dir:
-            label: Directory with ngencerf_ui
+            label: Directory with ngencerf-ui
             type: string
-            default: /ngencerf-app/ngencerf_ui
+            default: /ngencerf-app/ngencerf-ui
             hidden: true
           ngencerf_docker_dir:
-            label: Directory with ngencerf_docker
+            label: Directory with ngencerf-docker
             type: string
             default: /ngencerf-app/ngencerf-docker
             hidden: true

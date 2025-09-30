@@ -231,7 +231,7 @@ jobs:
             tooltip: SLURM partition to submit the interactive job
             hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' != inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
-            optional: ${{ .hidden }}
+            optional: true
           qos_tag_existing:
             label: Quality of Service [QoS]
             type: slurm-qos

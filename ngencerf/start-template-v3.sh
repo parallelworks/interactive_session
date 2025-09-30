@@ -357,13 +357,23 @@ else
   docker buildx create --name localdocker --driver docker --use
 fi
 
-# bring up ngencerf-server
-docker compose -f production-pw.yaml pull ngencerf-services
-docker compose -f production-pw.yaml up -d --no-build ngencerf-services
 
-# bring up ngencerf-ui
-docker compose -f production-pw.yaml up -d --build --no-deps ngencerf-ui
+if [[ "${service_build}" == "true" ]]; then
+  # bring up ngencerf-server
+  CACHE_BUST=$(date +%s) docker compose -f production-pw.yaml up -d --build ngencerf-services
 
+  # bring up ngencerf-ui
+  docker compose -f production-pw.yaml up -d --build --no-deps ngencerf-ui
+
+else
+  # bring up ngencerf-server
+  CACHE_BUST=$(date +%s) docker compose -f production-pw.yaml pull ngencerf-services
+  CACHE_BUST=$(date +%s) docker compose -f production-pw.yaml up -d --no-build ngencerf-services
+
+  # bring up ngencerf-ui
+  # TODO: pull here too
+  docker compose -f production-pw.yaml up -d --build --no-deps ngencerf-ui
+fi
 
 ngencerf_image="$(docker compose -f production-pw.yaml config | awk '/ngencerf-server/{flag=1} flag && /image:/{print $2; exit}')"
 echo "ngencerf_image=${ngencerf_image}"

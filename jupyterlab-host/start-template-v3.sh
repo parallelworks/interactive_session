@@ -1,6 +1,30 @@
 # Runs via ssh + sbatch
 set -x
 
+start_rootless_docker() {
+    local MAX_RETRIES=20
+    local RETRY_INTERVAL=2
+    local ATTEMPT=1
+
+    dockerd-rootless-setuptool.sh install
+    PATH=/usr/bin:/sbin:/usr/sbin:$PATH dockerd-rootless.sh --exec-opt native.cgroupdriver=cgroupfs > docker-rootless.log 2>&1 & #--data-root /docker-rootless/docker-rootless/
+
+    # Wait for Docker daemon to be ready
+    until docker info > /dev/null 2>&1; do
+        if [ $ATTEMPT -le $MAX_RETRIES ]; then
+            echo "$(date) Attempt $ATTEMPT of $MAX_RETRIES: Waiting for Docker daemon to start..."
+            sleep $RETRY_INTERVAL
+            ((ATTEMPT++))
+        else
+            echo "$(date) ERROR: Docker daemon failed to start after $MAX_RETRIES attempts."
+            return 1
+        fi
+    done
+
+    echo  "$(date): Docker daemon is ready!"
+    return 0
+}
+
 if [ -z ${service_parent_install_dir} ]; then
     service_parent_install_dir=${HOME}/pw/software
 fi
@@ -117,18 +141,30 @@ http {
 }
 HERE
 
-if sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
-    container_name="nginx-${service_port}"
-    # Remove container when job is canceled
-    echo "sudo docker stop ${container_name}" >> cancel.sh
-    echo "sudo docker rm ${container_name}" >> cancel.sh
-    # Start container
-    sudo service docker start
+if which docker >/dev/null 2>&1; then
     touch empty
     touch nginx.logs
-    # change ownership to nginx user
-    sudo chown 101:101 nginx.logs  # change ownership to nginx user
-    sudo docker run  -d --name ${container_name} \
+    if sudo -n true 2>/dev/null; then
+        docker_cmd="sudo docker"
+        # Start container
+        sudo service docker start
+        # change ownership to nginx user
+        sudo chown 101:101 nginx.logs  # change ownership to nginx user
+    else
+        if ! docker ps >/dev/null 2>&1; then
+            start_rootless_docker
+        fi
+        if ! docker ps >/dev/null 2>&1; then
+            echo "$(date) ERROR: User cannot run docker"
+        fi
+        docker_cmd="docker"
+    fi
+    container_name="nginx-${service_port}"
+    # Remove container when job is canceled
+    echo "${docker_cmd} stop ${container_name}" >> cancel.sh
+    echo "${docker_cmd} rm ${container_name}" >> cancel.sh
+
+    ${docker_cmd} run  -d --name ${container_name} \
          -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
          -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
          -v $PWD/empty:/etc/nginx/conf.d/default.conf \
@@ -136,7 +172,7 @@ if sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
          -v $PWD/nginx.logs:/var/log/nginx/error.log \
          --network=host nginxinc/nginx-unprivileged:1.25.3
     # Print logs
-    sudo docker logs ${container_name}
+    ${docker_cmd} logs ${container_name}
 elif which singularity >/dev/null 2>&1; then
     echo "Running singularity container ${service_nginx_sif}"
     # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 

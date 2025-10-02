@@ -156,6 +156,7 @@ if which docker >/dev/null 2>&1; then
         fi
         if ! docker ps >/dev/null 2>&1; then
             echo "$(date) ERROR: User cannot run docker"
+            exit 1
         fi
         docker_cmd="docker"
     fi

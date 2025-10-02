@@ -172,8 +172,6 @@ if which docker >/dev/null 2>&1; then
          -v $PWD/config.conf:/etc/nginx/conf.d/config.conf:ro \
          -v $PWD/nginx.conf:/etc/nginx/nginx.conf:ro \
          -v $PWD/empty:/etc/nginx/conf.d/default.conf:ro \
-         -v $PWD/nginx.logs:/var/log/nginx/access.log \
-         -v $PWD/nginx.logs:/var/log/nginx/error.log \
          --network=host nginxinc/nginx-unprivileged:1.25.3
     # Print logs
     ${docker_cmd} logs ${container_name}

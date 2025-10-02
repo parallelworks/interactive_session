@@ -6,6 +6,7 @@ start_rootless_docker() {
     local RETRY_INTERVAL=2
     local ATTEMPT=1
 
+    export XDG_RUNTIME_DIR=/run/user/$(id -u)
     dockerd-rootless-setuptool.sh install
     PATH=/usr/bin:/sbin:/usr/sbin:$PATH dockerd-rootless.sh --exec-opt native.cgroupdriver=cgroupfs > docker-rootless.log 2>&1 & #--data-root /docker-rootless/docker-rootless/
 
@@ -142,6 +143,7 @@ http {
 HERE
 
 if which docker >/dev/null 2>&1; then
+    container_name="nginx-${service_port}"
     touch empty
     touch nginx.logs
     if sudo -n true 2>/dev/null; then
@@ -159,16 +161,17 @@ if which docker >/dev/null 2>&1; then
             exit 1
         fi
         docker_cmd="docker"
+        echo "docker volume rm ${container_name}" >> cancel.sh
+        docker volume create ${container_name}
     fi
-    container_name="nginx-${service_port}"
     # Remove container when job is canceled
     echo "${docker_cmd} stop ${container_name}" >> cancel.sh
     echo "${docker_cmd} rm ${container_name}" >> cancel.sh
 
     ${docker_cmd} run  -d --name ${container_name} \
-         -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
-         -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
-         -v $PWD/empty:/etc/nginx/conf.d/default.conf \
+         -v $PWD/config.conf:/etc/nginx/conf.d/config.conf:ro \
+         -v $PWD/nginx.conf:/etc/nginx/nginx.conf:ro \
+         -v $PWD/empty:/etc/nginx/conf.d/default.conf:ro \
          -v $PWD/nginx.logs:/var/log/nginx/access.log \
          -v $PWD/nginx.logs:/var/log/nginx/error.log \
          --network=host nginxinc/nginx-unprivileged:1.25.3

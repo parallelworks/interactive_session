@@ -443,38 +443,35 @@ def submit_forecast_job():
         logging.info(f"{key}: {value}")
 
     job_type = 'forecast'
-    # ngen-cal job id
+    # job id
     forecast_run_id = request.form.get('forecast_run_id')
-    # Path to the ngen-cal input file within the container
-    input_file = request.form.get('input_file')
+    # validation yaml
+    validation_yaml = request.form.get('validation_yaml')
+    # realization file
+    realization_file = request.form.get('realization_file')
     # Path to the SLURM job log file in the controller node
     stdout_file = request.form.get('stdout_file')
-    # Directory of where the output will be stored
-    forecast_dir = request.form.get('forecast_dir')
-    # The complete path of the forcing file (written by the forecast-download-job)
-    forcing_dir = request.form.get('forcing_dir')
+    # Path to the SLURM job log file in the controller node
+    stdout_file = request.form.get('stdout_file')
     # Path to the SLURM job log file in the controller node
     auth_token = request.form.get('auth_token')
 
     if not forecast_run_id:
         return log_and_return_error("No forecast_run_id provided", status_code=400)
 
-    if not input_file:
-        return log_and_return_error("No ngen-cal input file provided", status_code=400)
+    if not validation_yaml:
+        return log_and_return_error("No validation_yaml provided", status_code=400)
+    
+    if not realization_file:
+        return log_and_return_error("No realization_file provided", status_code=400)
 
     if not stdout_file:
         return log_and_return_error("No stdout_file provided", status_code=400)
 
-    if not forcing_dir:
-        return log_and_return_error("No forcing_dir provided", status_code=400)
-
-    if not forecast_dir:
-        return log_and_return_error("No forecast_dir provided", status_code=400)
-
     if not auth_token:
         return log_and_return_error("No auth_token provided", status_code=400)
 
-    singularity_run_cmd = f"{SINGULARITY_RUN_NWM_FCST_MGR_CMD} forecast {forcing_dir} {input_file} {forecast_dir}"
+    singularity_run_cmd = f"{SINGULARITY_RUN_NWM_FCST_MGR_CMD} forecast {validation_yaml} {realization_file}"
 
     postprocessing_dir = os.path.join("postprocess", job_type, forecast_run_id)
 
@@ -492,7 +489,7 @@ def submit_forecast_job():
     except Exception as e:
         return log_and_return_error(str(e), status_code=500)
 
-    slurm_job_id, exit_code = submit_job(input_file, stdout_file, forecast_run_id, job_type, singularity_run_cmd)
+    slurm_job_id, exit_code = submit_job(validation_yaml, stdout_file, forecast_run_id, job_type, singularity_run_cmd)
     if exit_code == 500:
         return jsonify({"error": slurm_job_id}), exit_code
 

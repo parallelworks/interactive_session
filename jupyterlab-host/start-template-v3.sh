@@ -171,6 +171,7 @@ if which docker >/dev/null 2>&1; then
     chmod 644 ${PWD}/{nginx.conf,config.conf,empty}
 
     ${docker_cmd} run  -d --name ${container_name} \
+         --add-host=host.docker.internal:host-gateway \
          -p ${service_port}:${service_port} \
          -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
          -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
@@ -244,7 +245,7 @@ if [[ "${juice_use_juice}" == "true" ]]; then
     }
 fi
 
-${juice_cmd} jupyter-lab --port=${jupyterlab_port} --no-browser --config=${PWD}/jupyter_lab_config.py --allow-root
+${juice_cmd} jupyter-lab --ip=0.0.0.0 --port=${jupyterlab_port} --no-browser --config=${PWD}/jupyter_lab_config.py --allow-root
 #jupyter-lab --port=${jupyterlab_port} --ip ${HOSTNAME} --no-browser --config=${PWD}/jupyter_lab_config.py
 
 sleep inf

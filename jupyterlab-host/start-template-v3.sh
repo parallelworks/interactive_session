@@ -91,7 +91,7 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
  location / {
-     proxy_pass http://127.0.0.1:${jupyterlab_port}${basepath}/;
+     proxy_pass http://host.docker.internal:${jupyterlab_port}${basepath}/;
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";
@@ -171,10 +171,11 @@ if which docker >/dev/null 2>&1; then
     chmod 644 ${PWD}/{nginx.conf,config.conf,empty}
 
     ${docker_cmd} run  -d --name ${container_name} \
+         -p ${service_port}:${service_port} \
          -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
          -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
          -v $PWD/empty:/etc/nginx/conf.d/default.conf \
-         --network=host nginxinc/nginx-unprivileged:1.25.3
+         nginxinc/nginx-unprivileged:1.25.3
     # Print logs
     ${docker_cmd} logs ${container_name}
 elif which singularity >/dev/null 2>&1; then

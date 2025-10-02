@@ -168,6 +168,8 @@ if which docker >/dev/null 2>&1; then
     echo "${docker_cmd} stop ${container_name}" >> cancel.sh
     echo "${docker_cmd} rm ${container_name}" >> cancel.sh
 
+    chmod 644 ${PWD}/{nginx.conf,config.conf,empty}
+
     ${docker_cmd} run  -d --name ${container_name} \
          -v $PWD/config.conf:/etc/nginx/conf.d/config.conf:ro \
          -v $PWD/nginx.conf:/etc/nginx/nginx.conf:ro \

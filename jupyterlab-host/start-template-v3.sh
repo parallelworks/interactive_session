@@ -171,9 +171,9 @@ if which docker >/dev/null 2>&1; then
     chmod 644 ${PWD}/{nginx.conf,config.conf,empty}
 
     ${docker_cmd} run  -d --name ${container_name} \
-         -v $PWD/config.conf:/etc/nginx/conf.d/config.conf:ro \
-         -v $PWD/nginx.conf:/etc/nginx/nginx.conf:ro \
-         -v $PWD/empty:/etc/nginx/conf.d/default.conf:ro \
+         -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
+         -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
+         -v $PWD/empty:/etc/nginx/conf.d/default.conf \
          --network=host nginxinc/nginx-unprivileged:1.25.3
     # Print logs
     ${docker_cmd} logs ${container_name}

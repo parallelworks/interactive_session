@@ -219,6 +219,8 @@ sed -i "s|^.*c\.ServerApp\.port.*|c.ServerApp.port = ${jupyterlab_port}|" jupyte
 sed -i "s|^.*c\.ServerApp\.token.*|c.ServerApp.token = ''|" jupyter_lab_config.py
 sed -i "s|^.*c\.ServerApp\.tornado_settings.*|c.ServerApp.tornado_settings = {\"static_url_prefix\":\"${basepath}/static/\"}|" jupyter_lab_config.py
 sed -i "s|^.*c\.ServerApp\.root_dir.*|c.ServerApp.root_dir = '${service_notebook_dir}'|" jupyter_lab_config.py
+sed -i "s|^.*c\.ServerApp\.ip.*|c.ServerApp.ip = '0.0.0.0'|" jupyter_lab_config.py
+
 
 cd ${service_notebook_dir}
 

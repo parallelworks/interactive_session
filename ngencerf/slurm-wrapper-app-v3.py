@@ -142,11 +142,10 @@ def ensure_file_owned(file_path: str):
 
 
 def write_slurm_script(run_id, job_type, input_file_local, output_file_local, singularity_run_cmd, nprocs = 1):
-    job_script = input_file_local.replace('.yaml', '.slurm.sh')
+    job_script = output_file_local.rsplit('.', 1)[0] + '.slurm.sh'
     job_dir = os.path.dirname(os.path.dirname(input_file_local))
 
     # We need to change these ownerships to be able to write the SLURM script and its output file
-    job_script = input_file_local.replace('.yaml', '.slurm.sh')
     ensure_file_owned(job_script)
     ensure_file_owned(output_file_local)
 

@@ -495,7 +495,7 @@ def submit_forecast_job():
 
 
 @app.route('/submit-cold-start-job', methods=['POST'])
-def submit_forecast_job():
+def submit_cold_start_job():
     logging.info("submit-cold-start-job - Received POST request with the following parameters:")
     for key, value in request.form.items():
         logging.info(f"{key}: {value}")

@@ -536,7 +536,7 @@ def submit_cold_start_job():
             f'http://{CONTROLLER_HOSTNAME}:8000/calibration/cold_start_job_slurm_callback/',
             auth_token,
             cold_start_run_id=cold_start_run_id,
-            job_status="_job_status__"
+            job_status="__job_status__"
         )
 
         write_callback(postprocessing_dir, callback)

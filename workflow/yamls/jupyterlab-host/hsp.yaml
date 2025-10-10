@@ -314,6 +314,11 @@ jobs:
             type: string
             default: __HOME__
             tooltip: This is the directory that you start with when the Jupyter graphical user interface starts. The default value here is your home directory.
+          rootless_docker:
+            label: Use Rootless Docker?
+            type: boolean
+            default: true
+            hidden: true
           conda_install:
             label: Install miniconda environment if not there?
             type: boolean

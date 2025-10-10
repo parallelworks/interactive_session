@@ -321,3 +321,8 @@ jobs:
             label: Select remote display protocol
             hidden: true
             default: vncserver
+          rootless_docker:
+            label: Use Rootless Docker?
+            type: boolean
+            default: true
+            hidden: true

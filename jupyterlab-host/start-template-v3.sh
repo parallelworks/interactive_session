@@ -86,6 +86,10 @@ if which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]];
         echo "$(date) ERROR: Rootless docker is NOT support on this system"
         exit 1
     fi
+    if ! which socat >/dev/null 2>&1; then
+        echo "$(date) ERROR: socat is not installed"
+        exit 1
+    fi
     start_rootless_docker
     # Need to run this for the container to be able to access the port on the host's network
     proxy_port=$(findAvailablePort)

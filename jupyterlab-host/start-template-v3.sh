@@ -89,7 +89,7 @@ if which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]];
     start_rootless_docker
     # Need to run this for the container to be able to access the port on the host's network
     proxy_port=$(findAvailablePort)
-    proxy_host=$(hostname -I)
+    proxy_host=$(hostname -I | xargs)
     socat TCP-LISTEN:${proxy_port},fork,reuseaddr TCP:127.0.0.1:${jupyterlab_port} >> socat.logs 2>&1 &
     pid=$!
     echo "kill ${pid} #socat" >> cancel.sh
@@ -176,7 +176,7 @@ if which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]];
          -v $PWD/empty:/etc/nginx/conf.d/default.conf \
          nginxinc/nginx-unprivileged:1.25.3
     # Print logs
-    ${docker_cmd} logs ${container_name}
+    docker logs ${container_name}
 elif sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
     container_name="nginx-${service_port}"
     # Remove container when job is canceled

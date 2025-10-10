@@ -324,7 +324,7 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     # START NGINX WRAPPER #
     #######################
 
-    proxy_port=${jupyterlab_port}
+    proxy_port=${kasmvnc_port}
     proxy_host="127.0.0.1"
     if which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]]; then
         if ! dockerd-rootless-setuptool.sh check; then
@@ -339,7 +339,7 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
         # Need to run this for the container to be able to access the port on the host's network
         proxy_port=$(findAvailablePort)
         proxy_host=$(hostname -I | xargs)
-        socat TCP-LISTEN:${proxy_port},fork,reuseaddr TCP:127.0.0.1:${jupyterlab_port} >> socat.logs 2>&1 &
+        socat TCP-LISTEN:${proxy_port},fork,reuseaddr TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
         pid=$!
         echo "kill ${pid} #socat" >> cancel.sh
     fi

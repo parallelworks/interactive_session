@@ -1,6 +1,32 @@
 # Runs via ssh + sbatch
 set -x
 
+start_rootless_docker() {
+    local MAX_RETRIES=20
+    local RETRY_INTERVAL=2
+    local ATTEMPT=1
+
+    export XDG_RUNTIME_DIR=/run/user/$(id -u)
+    dockerd-rootless-setuptool.sh install
+    PATH=/usr/bin:/sbin:/usr/sbin:$PATH dockerd-rootless.sh --exec-opt native.cgroupdriver=cgroupfs > docker-rootless.log 2>&1 & #--data-root /docker-rootless/docker-rootless/
+
+    # Wait for Docker daemon to be ready
+    until docker info > /dev/null 2>&1; do
+        if [ $ATTEMPT -le $MAX_RETRIES ]; then
+            echo "$(date) Attempt $ATTEMPT of $MAX_RETRIES: Waiting for Docker daemon to start..."
+            sleep $RETRY_INTERVAL
+            ((ATTEMPT++))
+        else
+            echo "$(date) ERROR: Docker daemon failed to start after $MAX_RETRIES attempts."
+            return 1
+        fi
+    done
+
+    echo  "$(date): Docker daemon is ready!"
+    return 0
+}
+
+
 if [ -z ${service_parent_install_dir} ]; then
     service_parent_install_dir=${HOME}/pw/software
 fi
@@ -53,6 +79,26 @@ fi
 # START NGINX WRAPPER #
 #######################
 
+proxy_port=${jupyterlab_port}
+proxy_host="127.0.0.1"
+if which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]]; then
+    if ! dockerd-rootless-setuptool.sh check; then
+        echo "$(date) ERROR: Rootless docker is NOT support on this system"
+        exit 1
+    fi
+    if ! which socat >/dev/null 2>&1; then
+        echo "$(date) ERROR: socat is not installed"
+        exit 1
+    fi
+    start_rootless_docker
+    # Need to run this for the container to be able to access the port on the host's network
+    proxy_port=$(findAvailablePort)
+    proxy_host=$(hostname -I | xargs)
+    socat TCP-LISTEN:${proxy_port},fork,reuseaddr TCP:127.0.0.1:${jupyterlab_port} >> socat.logs 2>&1 &
+    pid=$!
+    echo "kill ${pid} #socat" >> cancel.sh
+fi
+
 echo "Starting nginx wrapper on service port ${service_port}"
 
 # Write config file
@@ -66,7 +112,7 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
  location / {
-     proxy_pass http://127.0.0.1:${jupyterlab_port}${basepath}/;
+     proxy_pass http://${proxy_host}:${proxy_port}${basepath}/;
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";
@@ -117,7 +163,25 @@ http {
 }
 HERE
 
-if sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
+if which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]]; then
+    container_name="nginx-${service_port}"
+    touch empty
+    touch nginx.logs
+    echo "docker volume rm ${container_name}" >> cancel.sh
+    docker volume create ${container_name}
+    echo "docker stop ${container_name}" >> cancel.sh
+    echo "docker rm ${container_name}" >> cancel.sh
+    chmod 644 ${PWD}/{nginx.conf,config.conf,empty}
+    docker run  -d --name ${container_name} \
+         --add-host=host.docker.internal:host-gateway \
+         -p ${service_port}:${service_port} \
+         -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
+         -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
+         -v $PWD/empty:/etc/nginx/conf.d/default.conf \
+         nginxinc/nginx-unprivileged:1.25.3
+    # Print logs
+    docker logs ${container_name}
+elif sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
     container_name="nginx-${service_port}"
     # Remove container when job is canceled
     echo "sudo docker stop ${container_name}" >> cancel.sh

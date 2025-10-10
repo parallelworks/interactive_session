@@ -339,7 +339,7 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
         # Need to run this for the container to be able to access the port on the host's network
         proxy_port=$(findAvailablePort)
         proxy_host=$(hostname -I | xargs)
-        socat TCP-LISTEN:${proxy_port},fork,reuseaddr TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
+        socat TCP-LISTEN:${proxy_port},fork,reuseaddr,bind=0.0.0.0 TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
         pid=$!
         echo "kill ${pid} #socat" >> cancel.sh
     fi
@@ -356,7 +356,7 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
  location / {
-     proxy_pass http://${proxy_host}:${proxy_port};
+     proxy_pass https://${proxy_host}:${proxy_port};
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";

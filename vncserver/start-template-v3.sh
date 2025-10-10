@@ -290,7 +290,7 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     RETRY_DELAY=5
     RETRY_COUNT=0
 
-    vncserver_cmd="${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} -select-de gnome -websocketPort ${kasmvnc_port} -rfbport ${displayPort} -interface 0.0.0.0"
+    vncserver_cmd="${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} -select-de gnome -websocketPort ${kasmvnc_port} -rfbport ${displayPort}"
     echo Running:
     echo ${vncserver_cmd}
     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
@@ -339,7 +339,7 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
         # Need to run this for the container to be able to access the port on the host's network
         proxy_port=$(findAvailablePort)
         proxy_host=$(hostname -I | xargs)
-        socat TCP-LISTEN:${proxy_port},fork,reuseaddr,bind=0.0.0.0 TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
+        socat TCP-LISTEN:${proxy_port},fork,reuseaddr TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
         pid=$!
         echo "kill ${pid} #socat" >> cancel.sh
     fi

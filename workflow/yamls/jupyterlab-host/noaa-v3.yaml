@@ -293,9 +293,6 @@ jobs:
           password:
             label: Password for Jupyter Lab session
             type: password
-            optional: true
-            hidden: true
-            ignore: true
             tooltip: Enter password or leave blank for no password
           notebook_dir:
             label: Directory to start Jupyter Lab GUI

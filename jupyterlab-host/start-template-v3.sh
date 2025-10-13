@@ -67,17 +67,30 @@ server {
  client_max_body_size 1000M;
  location / {
      proxy_pass http://127.0.0.1:${jupyterlab_port}${basepath}/;
-     proxy_http_version 1.1;
-       proxy_set_header Upgrade \$http_upgrade;
-       proxy_set_header Connection "upgrade";
-       proxy_set_header X-Real-IP \$remote_addr;
-       proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-       proxy_set_header Host \$http_host;
-       proxy_set_header X-NginX-Proxy true;
+    proxy_http_version 1.1;
+    proxy_read_timeout 86400;
+    proxy_send_timeout 86400;
 
-       # Avoid cookie/token stripping
-       proxy_redirect off;
-       proxy_buffering off;
+    # WebSocket support
+    proxy_set_header Upgrade \$http_upgrade;
+    proxy_set_header Connection "upgrade";
+
+    # Preserve client info
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Host \$server_name;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+
+    # Forward auth info (CRUCIAL)
+    proxy_set_header Authorization \$http_authorization;
+
+    # Do not modify cookies or redirect paths
+    proxy_redirect off;
+    proxy_buffering off;
+
+    # Fix cookie path issues if basepath is used
+    proxy_cookie_path / ${basepath}/;
  }
 }
 HERE

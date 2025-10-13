@@ -34,20 +34,24 @@ fi
 
 export XDG_RUNTIME_DIR=""
 
-# Generate sha:
-if [ -z "${service_password}" ]; then
-    echo "No password was specified"
-    sha=""
-else
-    echo "Generating sha"
-    sha=$(python3 -c "from notebook.auth.security import passwd; print(passwd('${service_password}', algorithm = 'sha1'))")
-fi
 # Set the launch directory for JupyterHub
 # If notebook_dir is not set or set to a templated value,
 # use the default value of "/".
 if [ -z ${service_notebook_dir} ]; then
     service_notebook_dir="/"
 fi
+
+
+if ! [ -z "${service_token}" ]; then
+    jupyter-lab --no-browser  \
+        --ServerApp.trust_xheaders=True \
+        --allow-root \
+        --ServerApp.allow_origin='*' \
+        --ServerApp.allow_remote_access=True \
+        --ServerApp.token=${service_token} \
+        --ServerApp.root_dir=${service_notebook_dir}
+fi
+
 
 #######################
 # START NGINX WRAPPER #

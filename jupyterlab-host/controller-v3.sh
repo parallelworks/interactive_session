@@ -189,7 +189,7 @@ fi
 
 
 # Download singularity container if required
-if ! [ -f "${service_nginx_sif}" ]; then
+if ! [ -f "${service_nginx_sif}" ] && [ -z "${service_token}" ]; then
     echo; echo "Downloading nginx singularity from Github"
     download_singularity_container
 fi

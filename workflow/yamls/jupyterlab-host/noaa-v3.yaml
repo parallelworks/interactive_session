@@ -4,6 +4,8 @@ sessions:
   session:
     useTLS: false
     redirect: true
+    useCustomDomain: true
+    
 
 jobs:
   preprocessing:
@@ -17,6 +19,8 @@ jobs:
           set -e
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
           ./utils/steps-v3/preprocessing/process_inputs_sh.sh
+          service_token=$(openssl rand -hex 32)
+          echo "export service_token=${service_token}"  >> resources/host/inputs.sh
       - name: Transfer Files to Controller
         early-cancel: any-job-failed
         run: ./utils/steps-v3/preprocessing/transfer_files_to_controller.sh
@@ -178,7 +182,8 @@ jobs:
       - name: Set URL SLUG
         early-cancel: any-job-failed
         run: |
-          echo "slug=lab"  | tee -a $OUTPUTS
+          source resources/host/inputs.sh
+          echo "slug=lab?token=${service_token}"  | tee -a $OUTPUTS
       - name: Expose Port
         early-cancel: any-job-failed
         uses: parallelworks/update-session

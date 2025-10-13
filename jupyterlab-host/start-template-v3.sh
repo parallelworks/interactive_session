@@ -40,11 +40,10 @@ if [ -z ${service_notebook_dir} ]; then
     service_notebook_dir="/"
 fi
 
-
+#         --ip=0.0.0.0 \
 if ! [ -z "${service_token}" ]; then
     jupyter-lab --no-browser  \
         --port=${service_port} \
-        --ip=0.0.0.0 \
         --ServerApp.trust_xheaders=True \
         --allow-root \
         --ServerApp.allow_origin='*' \

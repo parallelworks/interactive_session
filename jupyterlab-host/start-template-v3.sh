@@ -58,34 +58,44 @@ echo "Starting nginx wrapper on service port ${service_port}"
 # Write config file
 cat >> config.conf <<HERE
 server {
- listen ${service_port};
- server_name _;
- index index.html index.htm index.php;
- add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
- add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
- add_header X-Frame-Options "ALLOWALL";
- client_max_body_size 1000M;
- location / {
-     proxy_pass http://127.0.0.1:${jupyterlab_port}${basepath}/;
-    proxy_http_version 1.1;
-    proxy_read_timeout 86400;
-    proxy_send_timeout 86400;
+    listen ${service_port};
+    server_name _;
 
-    proxy_set_header Upgrade \$http_upgrade;
-    proxy_set_header Connection "upgrade";
-    proxy_set_header Host \$host;
-    proxy_set_header X-Real-IP \$remote_addr;
-    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Host \$server_name;
-    proxy_set_header X-Forwarded-Proto \$scheme;
+    client_max_body_size 1000M;
 
-    # Pass through all auth & cookie info
-    proxy_set_header Authorization \$http_authorization;
-    proxy_set_header Cookie \$http_cookie;
+    # Security headers
+    add_header X-Frame-Options "ALLOWALL";
+    add_header 'Access-Control-Allow-Origin' *;
+    add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+    add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, X-Requested-With, X-XSRFToken, XSRFToken, Cookie';
 
-    proxy_redirect off;
-    proxy_buffering off;
- }
+    location / {
+        proxy_pass http://127.0.0.1:${jupyterlab_port}${basepath}/;
+        proxy_http_version 1.1;
+        proxy_read_timeout 86400;
+        proxy_send_timeout 86400;
+
+        # WebSocket support
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Pass through original info
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+
+        # Forward authentication + cookies
+        proxy_set_header Authorization \$http_authorization;
+        proxy_set_header Cookie \$http_cookie;
+        proxy_set_header Origin \$http_origin;
+
+        # Keep URLs & cookies aligned
+        proxy_redirect off;
+        proxy_buffering off;
+        proxy_cookie_path / ${basepath}/;
+    }
 }
 HERE
 

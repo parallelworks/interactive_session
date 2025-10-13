@@ -44,7 +44,7 @@ fi
 
 if ! [ -z "${service_token}" ]; then
     jupyter-lab --no-browser  \
-        --port=${jupyterlab_port} \
+        --port=${service_port} \
         --ip=${HOSTNAME} \
         --ServerApp.trust_xheaders=True \
         --allow-root \

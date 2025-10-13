@@ -19,7 +19,6 @@ eval "${service_load_env}"
 # Initialize cancel script
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
-jupyterlab_port=$(findAvailablePort)
 
 if [[ "${service_conda_install}" == "true" ]]; then
     source ${service_conda_sh}
@@ -58,6 +57,7 @@ fi
 #######################
 # START NGINX WRAPPER #
 #######################
+jupyterlab_port=$(findAvailablePort)
 
 echo "Starting nginx wrapper on service port ${service_port}"
 

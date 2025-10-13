@@ -71,26 +71,20 @@ server {
     proxy_read_timeout 86400;
     proxy_send_timeout 86400;
 
-    # WebSocket support
     proxy_set_header Upgrade \$http_upgrade;
     proxy_set_header Connection "upgrade";
-
-    # Preserve client info
     proxy_set_header Host \$host;
     proxy_set_header X-Real-IP \$remote_addr;
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Host \$server_name;
     proxy_set_header X-Forwarded-Proto \$scheme;
 
-    # Forward auth info (CRUCIAL)
+    # Pass through all auth & cookie info
     proxy_set_header Authorization \$http_authorization;
+    proxy_set_header Cookie \$http_cookie;
 
-    # Do not modify cookies or redirect paths
     proxy_redirect off;
     proxy_buffering off;
-
-    # Fix cookie path issues if basepath is used
-    proxy_cookie_path / ${basepath}/;
  }
 }
 HERE

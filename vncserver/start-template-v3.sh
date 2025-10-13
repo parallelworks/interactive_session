@@ -197,17 +197,22 @@ if [[ "${service_vnc_type}" == "TigerVNC" || "${service_vnc_type}" == "TurboVNC"
         chmod +x ~/.vnc/xstartup
     fi
 
-    # service_vnc_type needs to be an input to the workflow in the XML
+    # service_vnc_type needs to be an input to the workflow in the YAML
     # if vncserver is not tigervnc
+
+    # Set password
+    printf "${password}\n${password}\n\n" | vncpasswd -f > ${resource_jobdir}/.vncpasswd
+    chmod 600 ${resource_jobdir}/.vncpasswd
+
     if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
         # FIXME: Change ~/.vnc/config
         ${service_vnc_exec} ${DISPLAY} &> ${resource_jobdir}/vncserver.log &
         echo $! > ${resource_jobdir}/vncserver.pid
     elif [[ ${service_vnc_type} == "TurboVNC" ]]; then
-        ${service_vnc_exec} ${DISPLAY} -SecurityTypes None
+        ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${resource_jobdir}/.vncpasswd
     else
         # tigervnc
-        ${service_vnc_exec} ${DISPLAY} -SecurityTypes=None
+        ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${resource_jobdir}/.vncpasswd
     fi
 
     rm -f ${resource_jobdir}/service.pid

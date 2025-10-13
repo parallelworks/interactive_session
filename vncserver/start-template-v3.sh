@@ -255,14 +255,13 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     export kasmvnc_port=$(findAvailablePort)
     export XDG_RUNTIME_DIR=""
 
-    #if [ "${service_set_password}" != true ]; then
-    #    service_password=password
-    #    disableBasicAuth="-disableBasicAuth"
-    #fi
+    if [ "${service_set_password}" != true ]; then
+        service_password=password
+        disableBasicAuth="-disableBasicAuth"
+    fi
     #expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "'"${service_password}"'\r"; expect "Verify:"; send "'"${service_password}"'\r"; expect eof'
-    #printf "%s\n%s\n" "$service_password" "$service_password" | vncpasswd -u "$USER" -w -r
+    printf "%s\n%s\n" "$service_password" "$service_password" | vncpasswd -u "$USER" -w -r
 
-    echo -e "${password}\n${password}\n" | kasmvncpasswd -u ${USER} ${resource_jobdir}/.vncpasswd
 
     ${service_vnc_exec} -kill ${DISPLAY}
     echo "${service_vnc_exec} -kill ${DISPLAY}" >> cancel.sh.sh
@@ -271,8 +270,7 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     RETRY_DELAY=5
     RETRY_COUNT=0
 
-    #vncserver_cmd="${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} -select-de gnome -websocketPort ${kasmvnc_port} -rfbport ${displayPort}"
-    vncserver_cmd="${service_vnc_exec} ${DISPLAY}  -SecurityTypes VncAuth -PasswordFile ${resource_jobdir}/.vncpasswd -select-de gnome -websocketPort ${kasmvnc_port} -rfbport ${displayPort}"
+    vncserver_cmd="${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} -select-de gnome -websocketPort ${kasmvnc_port} -rfbport ${displayPort}"
     echo Running:
     echo ${vncserver_cmd}
     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do

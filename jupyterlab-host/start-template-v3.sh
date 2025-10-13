@@ -74,6 +74,10 @@ server {
        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
        proxy_set_header Host \$http_host;
        proxy_set_header X-NginX-Proxy true;
+
+       # Avoid cookie/token stripping
+       proxy_redirect off;
+       proxy_buffering off;
  }
 }
 HERE

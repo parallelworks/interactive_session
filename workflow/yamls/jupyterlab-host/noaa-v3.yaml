@@ -183,11 +183,7 @@ jobs:
         early-cancel: any-job-failed
         run: |
           source resources/host/inputs.sh
-          if [ -z "${service_token}" ]; then
-            echo "slug=lab"  | tee -a $OUTPUTS
-          else
-            echo "slug=lab?token=${service_token}"  | tee -a $OUTPUTS
-          fi
+          echo "slug=lab?token=${service_token}"  | tee -a $OUTPUTS
       - name: Expose Port
         early-cancel: any-job-failed
         uses: parallelworks/update-session

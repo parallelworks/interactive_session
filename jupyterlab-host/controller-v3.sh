@@ -194,6 +194,9 @@ if ! [ -f "${service_nginx_sif}" ] && [ -z "${service_token}" ]; then
     download_singularity_container
 fi
 
+if ! [ -z "${service_token}" ]; then
+    pip3 install jupyterlab_widgets
+fi
 # Juice
 if [[ "${juice_use_juice}" == "true" ]]; then
     if [ -z "${juice_exec}" ]; then

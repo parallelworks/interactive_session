@@ -41,7 +41,6 @@ if [ -z ${service_notebook_dir} ]; then
 fi
 
 if ! [ -z "${service_token}" ]; then
-    pip3 install jupyterlab_widgets
     jupyter-lab --no-browser  \
         --port=${service_port} \
         --ip=${HOSTNAME} \

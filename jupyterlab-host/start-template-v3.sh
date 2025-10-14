@@ -57,9 +57,21 @@ if ! [ -z "${service_token}" ]; then
     else
         echo "Detected JupyterLab v${lab_version} → using Lab 4+ launch flags"
 
+        # Normalize environment
+        export HOME="/home/Alvaro.Vidal"
+        export TMPDIR="/tmp"
         export XDG_RUNTIME_DIR="/tmp/runtime-${USER}"
-        mkdir -p "${XDG_RUNTIME_DIR}"
-        chmod 700 "${XDG_RUNTIME_DIR}"
+        mkdir -p "${XDG_RUNTIME_DIR}" "${HOME}/.local/share/jupyter/runtime"
+        chmod 700 "${XDG_RUNTIME_DIR}" "${HOME}/.local/share/jupyter/runtime"
+
+        # Fix trailing colon in LD_LIBRARY_PATH (common bug)
+        export LD_LIBRARY_PATH="$(echo "$LD_LIBRARY_PATH" | sed 's/:$//')"
+
+        # Ensure PATH includes user-local bin
+        export PATH="$HOME/.local/bin:/apps/oneapi/intelpython/latest/envs/2022.0.2/bin:$PATH"
+
+        # Optional but helps with headless jobs
+        export TERM="xterm"
         env > env.auto
         jupyter-lab --no-browser \
             --port="${service_port}" \

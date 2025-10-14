@@ -41,15 +41,32 @@ if [ -z ${service_notebook_dir} ]; then
 fi
 
 if ! [ -z "${service_token}" ]; then
-    jupyter-lab --no-browser  \
-        --port=${service_port} \
-        --ip=0.0.0.0 \
-        --ServerApp.trust_xheaders=True \
-        --allow-root \
-        --ServerApp.allow_origin='*' \
-        --ServerApp.allow_remote_access=True \
-        --ServerApp.token=${service_token} \
-        --ServerApp.root_dir=${service_notebook_dir}
+    lab_version=$(python3 -m jupyter lab --version | cut -d. -f1)
+
+    if [ "$lab_version" = "3" ]; then
+        echo "Detected JupyterLab v3 → using legacy launch flags"
+        jupyter-lab --no-browser \
+            --port="${service_port}" \
+            --ip=0.0.0.0 \
+            --ServerApp.trust_xheaders=True \
+            --allow-root \
+            --ServerApp.allow_origin='*' \
+            --ServerApp.allow_remote_access=True \
+            --ServerApp.token="${service_token}" \
+            --ServerApp.root_dir="${service_notebook_dir}"
+    else
+        echo "Detected JupyterLab v${lab_version} → using Lab 4+ launch flags"
+        jupyter-lab --no-browser \
+            --port="${service_port}" \
+            --ip=0.0.0.0 \
+            --allow-root \
+            --ServerApp.trust_xheaders=True \
+            --ServerApp.allow_remote_access=True \
+            --ServerApp.allow_origin_pat='.*' \
+            --ServerApp.allow_credentials=True \
+            --ServerApp.token="${service_token}" \
+            --ServerApp.root_dir="${service_notebook_dir}"
+    fi
 fi
 
 #######################

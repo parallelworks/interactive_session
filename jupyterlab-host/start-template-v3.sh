@@ -57,10 +57,9 @@ if ! [ -z "${service_token}" ]; then
     else
         echo "Detected JupyterLab v${lab_version} → using Lab 4+ launch flags"
 
-
-        echo XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
-        echo SHELL=${SHELL}
-        echo HOME=${HOME}
+        export XDG_RUNTIME_DIR="/tmp/runtime-${USER}"
+        mkdir -p "${XDG_RUNTIME_DIR}"
+        chmod 700 "${XDG_RUNTIME_DIR}"
         jupyter-lab --no-browser \
             --port="${service_port}" \
             --ip=0.0.0.0 \

@@ -195,7 +195,7 @@ if ! [ -f "${service_nginx_sif}" ] && [ -z "${service_token}" ]; then
 fi
 
 if ! [ -z "${service_token}" ]; then
-    pip3 install jupyterlab_widgets
+    pip3 install --user jupyterlab_widgets
 fi
 # Juice
 if [[ "${juice_use_juice}" == "true" ]]; then

@@ -242,6 +242,8 @@ if [[ "${service_vnc_type}" == "TigerVNC" || "${service_vnc_type}" == "TurboVNC"
 
     cd ${service_novnc_install_dir}
     
+    # Give gnome-session enough time to start
+    sleep 10
     echo "Running ./utils/novnc_proxy --vnc ${HOSTNAME}:${displayPort} --listen ${HOSTNAME}:${service_port}"
     ./utils/novnc_proxy --vnc ${HOSTNAME}:${displayPort} --listen ${HOSTNAME}:${service_port} </dev/null &
     echo $! >> ${resource_jobdir}/service.pid

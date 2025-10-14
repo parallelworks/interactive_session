@@ -52,7 +52,6 @@ if ! [ -z "${service_token}" ]; then
         --ServerApp.root_dir=${service_notebook_dir}
 fi
 
-
 #######################
 # START NGINX WRAPPER #
 #######################

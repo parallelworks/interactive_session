@@ -65,17 +65,6 @@ if ! [ -z "${service_token}" ]; then
             --ServerApp.allow_origin_pat='.*' \
             --ServerApp.allow_credentials=True \
             --ServerApp.token="${service_token}" \
-            --ServerApp.root_dir="${service_notebook_dir}"
-
-        jupyter-lab --no-browser \
-            --port="${service_port}" \
-            --ip=0.0.0.0 \
-            --allow-root \
-            --ServerApp.trust_xheaders=True \
-            --ServerApp.allow_remote_access=True \
-            --ServerApp.allow_origin_pat='.*' \
-            --ServerApp.allow_credentials=True \
-            --ServerApp.token="${service_token}" \
             --ServerApp.disable_check_xsrf=True \
             --ServerApp.root_dir="${service_notebook_dir}"
     fi

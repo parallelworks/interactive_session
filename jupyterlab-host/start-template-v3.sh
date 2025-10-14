@@ -56,6 +56,11 @@ if ! [ -z "${service_token}" ]; then
             --ServerApp.root_dir="${service_notebook_dir}"
     else
         echo "Detected JupyterLab v${lab_version} → using Lab 4+ launch flags"
+
+
+        echo XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
+        echo SHELL=${SHELL}
+        echo HOME=${HOME}
         jupyter-lab --no-browser \
             --port="${service_port}" \
             --ip=0.0.0.0 \

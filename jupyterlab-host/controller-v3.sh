@@ -196,13 +196,14 @@ fi
 
 if ! [ -z "${service_token}" ]; then
     pip3 install --user jupyterlab_widgets
-    jupyter labextension disable jupyterlab_pygments
-    jupyter labextension disable @jupyter-notebook/lab-extension
-    rm -rf ~/.local/share/jupyter/labextensions
-    rm -rf ~/.jupyter/labconfig
-    rm -rf ~/.local/etc/jupyter
-    pip install --upgrade jupyterlab jupyterlab_server jupyter_server
-    pip install --upgrade "notebook>=7.4" "nbclassic>=1.1"
+    pip install "jupyter_server_fileid" "jupyter_server_ydoc" "y-py" "ypy-websocket"
+    #jupyter labextension disable jupyterlab_pygments
+    #jupyter labextension disable @jupyter-notebook/lab-extension
+    #rm -rf ~/.local/share/jupyter/labextensions
+    #rm -rf ~/.jupyter/labconfig
+    #rm -rf ~/.local/etc/jupyter
+    #pip install --upgrade jupyterlab jupyterlab_server jupyter_server
+    #pip install --upgrade "notebook>=7.4" "nbclassic>=1.1"
 fi
 # Juice
 if [[ "${juice_use_juice}" == "true" ]]; then

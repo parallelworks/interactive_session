@@ -60,6 +60,7 @@ if ! [ -z "${service_token}" ]; then
         export XDG_RUNTIME_DIR="/tmp/runtime-${USER}"
         mkdir -p "${XDG_RUNTIME_DIR}"
         chmod 700 "${XDG_RUNTIME_DIR}"
+        env > env.auto
         jupyter-lab --no-browser \
             --port="${service_port}" \
             --ip=0.0.0.0 \

@@ -16,6 +16,12 @@ echo "scancel ${SLURM_JOB_ID}"  >> ${resource_jobdir}/cancel.sh
 start_gnome_session_with_retries() {
     k=1
     while true; do
+        if [ $k -gt 1 ]; then
+            echo "$(date) Restarting vncserver"
+            ${service_vnc_exec} -kill ${DISPLAY}
+            sleep 5
+            ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${resource_jobdir}/.vncpasswd
+        fi
         echo "$(date) Starting gnome-session"
         gnome-session
         sleep $((k*60))
@@ -209,8 +215,6 @@ if [[ "${service_vnc_type}" == "TigerVNC" || "${service_vnc_type}" == "TurboVNC"
         # FIXME: Change ~/.vnc/config
         ${service_vnc_exec} ${DISPLAY} &> ${resource_jobdir}/vncserver.log &
         echo $! > ${resource_jobdir}/vncserver.pid
-    elif [[ ${service_vnc_type} == "TurboVNC" ]]; then
-        ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${resource_jobdir}/.vncpasswd
     else
         # tigervnc
         ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${resource_jobdir}/.vncpasswd

@@ -441,7 +441,7 @@ HERE
             -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
             -v $PWD/empty:/etc/nginx/conf.d/default.conf \
             -v ${PWD}/certs/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro \
-            -v ${PWD}/certs/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
+            -v ${PWD}/certs/privkey.pem:/etc/nginx/ssl/privkey.pem:ro \
             nginxinc/nginx-unprivileged:1.25.3
         # Print logs
         docker logs ${container_name}

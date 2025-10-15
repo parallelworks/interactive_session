@@ -16,6 +16,7 @@ echo "scancel ${SLURM_JOB_ID}"  >> ${resource_jobdir}/cancel.sh
 start_gnome_session_with_retries() {
     k=1
     while true; do
+        echo "$(date) Starting gnome-session"
         gnome-session
         sleep $((k*60))
         k=$((k+1))

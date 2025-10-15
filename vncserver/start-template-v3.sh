@@ -339,9 +339,10 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
         # Need to run this for the container to be able to access the port on the host's network
         proxy_port=$(findAvailablePort)
         proxy_host=$(hostname -I | xargs)
-        openssl req -x509 -newkey rsa:2048 -keyout server.key -out server.pem -days 365 -nodes -subj "/CN=localhost"
-        socat OPENSSL-LISTEN:${proxy_port},cert=server.pem,key=server.key,verify=0,fork,reuseaddr TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
+        #openssl req -x509 -newkey rsa:2048 -keyout server.key -out server.pem -days 365 -nodes -subj "/CN=localhost"
+        #socat OPENSSL-LISTEN:${proxy_port},cert=server.pem,key=server.key,verify=0,fork,reuseaddr TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
         #socat TCP-LISTEN:${proxy_port},fork,reuseaddr TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
+        socat TCP-LISTEN:${proxy_port},reuseaddr,fork,bind=0.0.0.0 TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
         pid=$!
         echo "kill ${pid} #socat" >> cancel.sh
     fi

@@ -349,6 +349,10 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
             -keyout ${PWD}/certs/privkey.pem \
             -out ${PWD}/certs/fullchain.pem \
             -subj "/CN=localhost"
+
+        chmod 644 ./certs/fullchain.pem
+        chmod 644 ./certs/privkey.pem
+        chmod 755 ./certs
         
         socat TCP-LISTEN:${proxy_port},reuseaddr,fork,bind=0.0.0.0 TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
         pid=$!

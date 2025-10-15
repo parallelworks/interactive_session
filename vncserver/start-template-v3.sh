@@ -342,6 +342,14 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
         #openssl req -x509 -newkey rsa:2048 -keyout server.key -out server.pem -days 365 -nodes -subj "/CN=localhost"
         #socat OPENSSL-LISTEN:${proxy_port},cert=server.pem,key=server.key,verify=0,fork,reuseaddr TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
         #socat TCP-LISTEN:${proxy_port},fork,reuseaddr TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
+        
+        mkdir -p ${PWD}/certs
+        openssl req -x509 -nodes -days 365 \
+            -newkey rsa:2048 \
+            -keyout ${PWD}/certs/privkey.pem \
+            -out ${PWD}/certs/fullchain.pem \
+            -subj "/CN=localhost"
+        
         socat TCP-LISTEN:${proxy_port},reuseaddr,fork,bind=0.0.0.0 TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
         pid=$!
         echo "kill ${pid} #socat" >> cancel.sh
@@ -351,8 +359,11 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     # Write config file
     cat >> config.conf <<HERE
 server {
- listen ${service_port};
+ listen ${service_port} ssl;
  server_name _;
+ ssl_certificate /etc/nginx/ssl/fullchain.pem;
+ ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+
  index index.html index.htm index.php;
  add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
  add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
@@ -367,6 +378,10 @@ server {
        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
        proxy_set_header Host \$http_host;
        proxy_set_header X-NginX-Proxy true;
+
+       # If KasmVNC uses a self-signed cert, either disable verify:
+       proxy_ssl_verify off;
+       proxy_ssl_server_name on;
  }
 }
 HERE
@@ -425,6 +440,8 @@ HERE
             -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
             -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
             -v $PWD/empty:/etc/nginx/conf.d/default.conf \
+            -v ${PWD}/certs/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro \
+            -v ${PWD}/certs/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
             nginxinc/nginx-unprivileged:1.25.3
         # Print logs
         docker logs ${container_name}

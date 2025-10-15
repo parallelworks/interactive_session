@@ -19,12 +19,13 @@ start_gnome_session_with_retries() {
         if [ $k -gt 1 ]; then
             echo "$(date) Restarting vncserver"
             ${service_vnc_exec} -kill ${DISPLAY}
-            sleep 5
+            sleep 3
             ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${resource_jobdir}/.vncpasswd
         fi
+        sleep 2
         echo "$(date) Starting gnome-session"
         gnome-session
-        sleep $((k*60))
+        sleep $((k*10))
         k=$((k+1))
     done
 }

@@ -41,22 +41,8 @@ echo "scancel ${SLURM_JOB_ID}"  >> ${resource_jobdir}/cancel.sh
 start_gnome_session_with_retries() {
     k=1
     while true; do
-        if xset q >/dev/null 2>&1; then
-            echo "(date) X server on $DISPLAY is alive."
-            sleep $((k*10))
-        else
-            echo "(date) X server on $DISPLAY is unresponsive."
-            if [ $k -gt 1 ]; then
-                echo "$(date) Restarting vncserver"
-                ${service_vnc_exec} -kill ${DISPLAY}
-                sleep 3
-                ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${resource_jobdir}/.vncpasswd
-            fi
-            sleep 2
-            echo "$(date) Starting gnome-session"
-            gnome-session --debug
-            sleep $((k*10))
-        fi
+        gnome-session
+        sleep $((k*60))
         k=$((k+1))
     done
 }
@@ -236,20 +222,17 @@ if [[ "${service_vnc_type}" == "TigerVNC" || "${service_vnc_type}" == "TurboVNC"
         chmod +x ~/.vnc/xstartup
     fi
 
-    # service_vnc_type needs to be an input to the workflow in the YAML
+    # service_vnc_type needs to be an input to the workflow in the XML
     # if vncserver is not tigervnc
-
-    # Set password
-    printf "${password}\n${password}\n\n" | vncpasswd -f > ${resource_jobdir}/.vncpasswd
-    chmod 600 ${resource_jobdir}/.vncpasswd
-
     if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
         # FIXME: Change ~/.vnc/config
         ${service_vnc_exec} ${DISPLAY} &> ${resource_jobdir}/vncserver.log &
         echo $! > ${resource_jobdir}/vncserver.pid
+    elif [[ ${service_vnc_type} == "TurboVNC" ]]; then
+        ${service_vnc_exec} ${DISPLAY} -SecurityTypes None
     else
         # tigervnc
-        ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${resource_jobdir}/.vncpasswd
+        ${service_vnc_exec} ${DISPLAY} -SecurityTypes=None
     fi
 
     rm -f ${resource_jobdir}/service.pid

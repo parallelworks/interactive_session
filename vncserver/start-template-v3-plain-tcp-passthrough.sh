@@ -41,22 +41,8 @@ echo "scancel ${SLURM_JOB_ID}"  >> ${resource_jobdir}/cancel.sh
 start_gnome_session_with_retries() {
     k=1
     while true; do
-        if xset q >/dev/null 2>&1; then
-            echo "(date) X server on $DISPLAY is alive."
-            sleep $((k*10))
-        else
-            echo "(date) X server on $DISPLAY is unresponsive."
-            if [ $k -gt 1 ]; then
-                echo "$(date) Restarting vncserver"
-                ${service_vnc_exec} -kill ${DISPLAY}
-                sleep 3
-                ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${resource_jobdir}/.vncpasswd
-            fi
-            sleep 2
-            echo "$(date) Starting gnome-session"
-            gnome-session --debug
-            sleep $((k*10))
-        fi
+        gnome-session
+        sleep $((k*60))
         k=$((k+1))
     done
 }
@@ -236,20 +222,17 @@ if [[ "${service_vnc_type}" == "TigerVNC" || "${service_vnc_type}" == "TurboVNC"
         chmod +x ~/.vnc/xstartup
     fi
 
-    # service_vnc_type needs to be an input to the workflow in the YAML
+    # service_vnc_type needs to be an input to the workflow in the XML
     # if vncserver is not tigervnc
-
-    # Set password
-    printf "${password}\n${password}\n\n" | vncpasswd -f > ${resource_jobdir}/.vncpasswd
-    chmod 600 ${resource_jobdir}/.vncpasswd
-
     if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
         # FIXME: Change ~/.vnc/config
         ${service_vnc_exec} ${DISPLAY} &> ${resource_jobdir}/vncserver.log &
         echo $! > ${resource_jobdir}/vncserver.pid
+    elif [[ ${service_vnc_type} == "TurboVNC" ]]; then
+        ${service_vnc_exec} ${DISPLAY} -SecurityTypes None
     else
         # tigervnc
-        ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${resource_jobdir}/.vncpasswd
+        ${service_vnc_exec} ${DISPLAY} -SecurityTypes=None
     fi
 
     rm -f ${resource_jobdir}/service.pid
@@ -356,7 +339,24 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
         # Need to run this for the container to be able to access the port on the host's network
         proxy_port=$(findAvailablePort)
         proxy_host=$(hostname -I | xargs)
+        #openssl req -x509 -newkey rsa:2048 -keyout server.key -out server.pem -days 365 -nodes -subj "/CN=localhost"
+        #socat OPENSSL-LISTEN:${proxy_port},cert=server.pem,key=server.key,verify=0,fork,reuseaddr TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
+        #socat TCP-LISTEN:${proxy_port},fork,reuseaddr TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
         
+        mkdir -p ${PWD}/certs
+        openssl req -x509 -nodes -days 365 \
+            -newkey rsa:2048 \
+            -keyout ${PWD}/certs/privkey.pem \
+            -out ${PWD}/certs/fullchain.pem \
+            -subj "/CN=localhost"
+
+        chmod 644 ./certs/fullchain.pem
+        chmod 644 ./certs/privkey.pem
+        chmod 755 ./certs
+
+        sudo cp ${PWD}/certs/fullchain.pem /etc/pki/tls/certs/localhost.crt
+        sudo cp ${PWD}/certs/fullchain.pem /etc/pki/ca-trust/source/anchors/localhost.crt
+        sudo update-ca-trust
         socat TCP-LISTEN:${proxy_port},reuseaddr,fork,bind=0.0.0.0 TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
         pid=$!
         echo "kill ${pid} #socat" >> cancel.sh
@@ -366,22 +366,38 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     # Write config file
     cat >> config.conf <<HERE
 server {
- listen ${service_port};
+ listen ${service_port} ssl;
  server_name _;
+ ssl_certificate /etc/nginx/ssl/fullchain.pem;
+ ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+
  index index.html index.htm index.php;
  add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
  add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
+ 
  location / {
-     proxy_pass https://${proxy_host}:${proxy_port};
-     proxy_http_version 1.1;
-       proxy_set_header Upgrade \$http_upgrade;
-       proxy_set_header Connection "upgrade";
-       proxy_set_header X-Real-IP \$remote_addr;
-       proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-       proxy_set_header Host \$http_host;
-       proxy_set_header X-NginX-Proxy true;
+     proxy_pass http://${proxy_host}:${proxy_port};
+         # WebSocket Support
+         proxy_set_header        Upgrade \$http_upgrade;
+         proxy_set_header        Connection "upgrade";
+
+         # Host and X headers
+         proxy_set_header        Host \$host;
+         proxy_set_header        X-Real-IP \$remote_addr;
+         proxy_set_header        X-Forwarded-For \$proxy_add_x_forwarded_for;
+         proxy_set_header        X-Forwarded-Proto \$scheme;
+
+         # Connectivity Options
+         proxy_http_version      1.1;
+         proxy_read_timeout      1800s;
+         proxy_send_timeout      1800s;
+         proxy_connect_timeout   1800s;
+         proxy_buffering         off;
+
+         # Allow large requests to support file uploads to sessions
+         client_max_body_size 10M;
  }
 }
 HERE
@@ -440,6 +456,8 @@ HERE
             -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
             -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
             -v $PWD/empty:/etc/nginx/conf.d/default.conf \
+            -v /etc/pki/tls/private/kasmvnc.pem:/etc/nginx/ssl/fullchain.pem:ro \
+            -v /etc/pki/tls/private/kasmvnc.pem:/etc/nginx/ssl/privkey.pem:ro \
             nginxinc/nginx-unprivileged:1.25.3
         # Print logs
         docker logs ${container_name}

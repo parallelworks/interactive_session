@@ -354,6 +354,9 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
         chmod 644 ./certs/privkey.pem
         chmod 755 ./certs
         
+        sudo cp ${PWD}/certs/fullchain.pem /etc/pki/tls/certs/localhost.crt
+        sudo cp ${PWD}/certs/fullchain.pem /etc/pki/ca-trust/source/anchors/localhost.crt
+        sudo update-ca-trust
         socat TCP-LISTEN:${proxy_port},reuseaddr,fork,bind=0.0.0.0 TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
         pid=$!
         echo "kill ${pid} #socat" >> cancel.sh

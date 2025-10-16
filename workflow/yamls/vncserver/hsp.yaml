@@ -2,7 +2,7 @@ permissions:
   - '*'
 sessions:
   session:
-    useTLS: true
+    useTLS: false
     redirect: true
 
 jobs:

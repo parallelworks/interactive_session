@@ -377,9 +377,9 @@ server {
  location /websockify {
     proxy_pass https://${proxy_host}:${proxy_port}/websockify;
     proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Upgrade \$http_upgrade;
     proxy_set_header Connection "upgrade";
-    proxy_set_header Host $host;
+    proxy_set_header Host \$host;
     proxy_ssl_verify off;
     proxy_ssl_server_name on;
 }

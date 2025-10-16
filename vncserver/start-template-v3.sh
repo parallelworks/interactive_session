@@ -357,7 +357,7 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
  location / {
-     proxy_pass https://${proxy_host}:${proxy_port};
+     proxy_pass http://${proxy_host}:${proxy_port};
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";

@@ -353,7 +353,7 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
         chmod 644 ./certs/fullchain.pem
         chmod 644 ./certs/privkey.pem
         chmod 755 ./certs
-        
+
         sudo cp ${PWD}/certs/fullchain.pem /etc/pki/tls/certs/localhost.crt
         sudo cp ${PWD}/certs/fullchain.pem /etc/pki/ca-trust/source/anchors/localhost.crt
         sudo update-ca-trust
@@ -456,8 +456,8 @@ HERE
             -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
             -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
             -v $PWD/empty:/etc/nginx/conf.d/default.conf \
-            -v ${PWD}/certs/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro \
-            -v ${PWD}/certs/privkey.pem:/etc/nginx/ssl/privkey.pem:ro \
+            -v /etc/pki/tls/private/kasmvnc.pem:/etc/nginx/ssl/fullchain.pem:ro \
+            -v /etc/pki/tls/private/kasmvnc.pem:/etc/nginx/ssl/privkey.pem:ro \
             nginxinc/nginx-unprivileged:1.25.3
         # Print logs
         docker logs ${container_name}

@@ -120,7 +120,7 @@ MAX_RETRIES=5
 RETRY_DELAY=5
 RETRY_COUNT=0
 
-vncserver_cmd="vncserver ${DISPLAY} ${disableBasicAuth} -select-de gnome -websocketPort ${kasmvnc_port} -rfbport ${displayPort} -hw3d -drinode /dev/dri/renderD129"
+vncserver_cmd="vncserver ${DISPLAY} ${disableBasicAuth} -select-de gnome -websocketPort ${kasmvnc_port} -rfbport ${displayPort}"
 echo Running:
 echo ${vncserver_cmd}
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do

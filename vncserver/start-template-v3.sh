@@ -134,6 +134,7 @@ if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
     service_vnc_exec="singularity exec --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} ${service_vncserver_sif} vncserver"
     service_vnc_type="TurboVNC"
     service_desktop="echo Starting no service desktop on the host"
+    mkdir -p /tmp/.X11-unix
     rm -f ~/.vnc/xstartup.turbovnc
 cat >> ~/.vnc/xstartup.turbovnc <<HERE
 unset SESSION_MANAGER

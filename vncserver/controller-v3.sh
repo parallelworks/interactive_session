@@ -114,5 +114,10 @@ if [ -z "${service_vnc_exec}" ] || ! [ -f "${service_vnc_exec}" ]; then
         echo "(date) ERROR: No vncserver or singularity command found"
         exit 1
     fi
-    download_singularity_container downloads/vnc/vncserver.sif ${service_vncserver_sif}
+    wget -O ${service_vncserver_sif} https://github.com/parallelworks/interactive_session/raw/vncserver-singularity/downloads/vnc/vncserver.sif
+    if ! [ -f ${service_vncserver_sif} ]; then
+        echo "$(date) ERROR: Failed to download file ${service_vncserver_sif}"
+        exit 1
+    fi
+    chmod +x ${service_vncserver_sif}
 fi

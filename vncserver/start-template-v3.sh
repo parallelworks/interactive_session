@@ -125,8 +125,11 @@ if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
     echo "$(date): vncserver is not installed. Using singularity container..."
     service_vnc_exec="singularity exec --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} ${service_vncserver_sif} vncserver"
     service_vnc_type="TurboVNC"
-    mkdir -p /tmp/.X11-unix
-    chmod 1777 /tmp/.X11-unix
+    if ! [ -d "/tmp/.X11-unix" ]; then
+        mkdir -p /tmp/.X11-unix
+        chmod 1777 /tmp/.X11-unix
+        sudo chown root:root /tmp/.X11-unix
+    fi
 fi
 
 if [ -z ${service_vnc_type} ]; then

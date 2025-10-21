@@ -105,6 +105,10 @@ if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
     export service_vnc_exec=/usr/lib/vncserver
 fi
 
+if [[ ${service_singularity_vncserver} != "true" ]]; then
+    exit 0
+fi
+
 if [ -z "${service_vnc_exec}" ]; then
     service_vnc_exec=$(which vncserver)
 fi

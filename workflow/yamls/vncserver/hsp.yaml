@@ -328,3 +328,8 @@ jobs:
             type: boolean
             default: true
             hidden: true
+          download_vncserver_container:
+            label: Use singularity vncserver if necessary
+            type: boolean
+            default: true
+            hidden: true

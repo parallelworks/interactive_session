@@ -105,19 +105,10 @@ if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
     export service_vnc_exec=/usr/lib/vncserver
 fi
 
-if [[ ${service_singularity_vncserver} != "true" ]]; then
-    exit 0
-fi
-
-if [ -z "${service_vnc_exec}" ]; then
-    service_vnc_exec=$(which vncserver)
-fi
-
-if [ -z "${service_vnc_exec}" ] || ! [ -f "${service_vnc_exec}" ]; then
-    if ! which singularity > /dev/null 2>&1; then
-        echo "(date) ERROR: No vncserver or singularity command found"
-        exit 1
-    fi
+# The reason we need service_download_vncserver_container is:
+# - vncserver can be installed in the compute nodes but not in the controlle nodes
+# - Some compute nodes don't have access to the internet
+if [[ ${service_download_vncserver_container} == "true" ]]; then
     if ! [ -f ${service_vncserver_sif} ]; then
         wget -O ${service_vncserver_sif} https://github.com/parallelworks/interactive_session/raw/vncserver-singularity/downloads/vnc/vncserver.sif
     fi

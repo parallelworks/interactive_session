@@ -1,1 +1,2 @@
 downloads/juice/juice-gpu-linux.tar.gz filter=lfs diff=lfs merge=lfs -text
+downloads/vnc/vncserver.sif filter=lfs diff=lfs merge=lfs -text

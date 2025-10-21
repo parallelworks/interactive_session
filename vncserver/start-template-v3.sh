@@ -80,6 +80,10 @@ if [ -z "${service_nginx_sif}" ]; then
     service_nginx_sif=${service_parent_install_dir}/nginx-unprivileged.sif
 fi
 
+if [ -z "${service_vncserver_sif}" ]; then
+    service_vncserver_sif=${service_parent_install_dir}/vncserver.sif
+fi
+
 service_novnc_tgz_stem=$(echo ${service_novnc_tgz_basename} | sed "s|.tar.gz||g" | sed "s|.tgz||g")
 service_novnc_install_dir=${service_parent_install_dir}/${service_novnc_tgz_stem}
 
@@ -118,10 +122,23 @@ if [ -z "${service_vnc_exec}" ]; then
 fi
 
 if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
-    displayErrorMessage "ERROR: vncserver is not installed"
+    echo "$(date): vncserver is not installed. Using singularity container..."
+    service_vnc_exec="singularity exec --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} ${service_vncserver_sif} vncserver"
+    service_vnc_type="TurboVNC"
+    service_desktop="echo Starting no service desktop on the host"
+    rm -f ~/.vnc/xstartup.turbovnc
+cat >> ~/.vnc/xstartup.turbovnc <<HERE
+unset SESSION_MANAGER
+unset DBUS_SESSION_BUS_ADDRESS
+startxfce4 &
+HERE
+    chmod +x ~/.vnc/xstartup.turbovnc
 fi
 
-service_vnc_type=$(${service_vnc_exec} -list | grep -oP '(TigerVNC|TurboVNC|KasmVNC)')
+if [ -z ${service_vnc_type} ]; then
+    service_vnc_type=$(${service_vnc_exec} -list | grep -oP '(TigerVNC|TurboVNC|KasmVNC)')
+fi
+
 if [ -z ${service_vnc_type} ]; then
     displayErrorMessage "ERROR: vncserver type not found. Supported type are TigerVNC, TurboVNC and KasmVNC"
 fi
@@ -257,9 +274,10 @@ if [[ "${service_vnc_type}" == "TigerVNC" || "${service_vnc_type}" == "TurboVNC"
         # FIXME: Change ~/.vnc/config
         ${service_vnc_exec} ${DISPLAY} &> ${resource_jobdir}/vncserver.log &
         echo $! > ${resource_jobdir}/vncserver.pid
-    else
-        # tigervnc
+    elif [[ "${service_vnc_type}" == "TigerVNC" ]]; then
         ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${resource_jobdir}/.vncpasswd
+    elif [[ "${service_vnc_type}" == "TurboVNC" ]]; then
+        ${service_vnc_exec} ${DISPLAY} -SecurityTypes None
     fi
 
     rm -f ${resource_jobdir}/service.pid

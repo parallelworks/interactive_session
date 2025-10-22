@@ -5,9 +5,6 @@ sessions:
     useTLS: false
     redirect: true
 
-app:
-  target: inputs.pwrl_host.resource
-
 jobs:
   preprocessing:
     steps:
@@ -301,7 +298,7 @@ jobs:
           download_url:
             label: Download URL
             type: string
-            default: https://github.com/coder/code-server/releases/download/v4.92.2/code-server-4.92.2-linux-amd64.tar.gz
+            default: https://github.com/coder/code-server/releases/download/v4.104.0/code-server-4.104.0-linux-amd64.tar.gz
             tooltip: Downloads or uses the code-server server version specified in the URL
           password:
             label: Password for IDE session

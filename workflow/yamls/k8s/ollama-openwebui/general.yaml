@@ -5,8 +5,8 @@ sessions:
     useTLS: false
     redirect: true
     useCustomDomain: true
-app:
-  target: inputs.k8s.cluster
+
+
 jobs:
   auth_k8s:
     steps:
@@ -121,6 +121,14 @@ jobs:
                     command: ["sh", "-c", "chmod 777 ${{ inputs.k8s.volumes.pvc_mount_path }} -R"]
                     securityContext:
                       runAsUser: 0
+                    resources:
+                      requests:
+                        memory: "${{ inputs.k8s.ollama_resources.requests.memory }}"
+                        cpu: "${{ inputs.k8s.ollama_resources.requests.cpu }}"
+                      limits:
+                        memory: "${{ inputs.k8s.ollama_resources.limits.memory }}"
+                        cpu: "${{ inputs.k8s.ollama_resources.limits.cpu }}"
+                        ${gpu_limits}
                     volumeMounts:
                       - name: storage
                         mountPath: ${{ inputs.k8s.volumes.pvc_mount_path }}

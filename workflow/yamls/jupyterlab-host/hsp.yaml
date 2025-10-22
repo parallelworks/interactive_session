@@ -36,7 +36,6 @@ jobs:
         if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/controller/create_session_script.sh
       - name: Launch and Monitor Controller Job
-        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/controller/launch_and_monitor_job.sh
         cleanup: |
@@ -57,7 +56,6 @@ jobs:
         if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/compute/create_session_script.sh
       - name: Launch and Monitor Compute Job
-        early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype }}
         run: ./utils/steps-v3/compute/launch_and_monitor_job.sh
         cleanup: |
@@ -99,7 +97,7 @@ jobs:
             echo "Waiting for target hostname..."
 
             # Check if the service.port file exists and read its contents
-            target_hostname=$(${sshcmd} "if [ -f ${resource_jobdir}/target.hostname ]; then cat ${resource_jobdir}/target.hostname; fi")
+            target_hostname=$(${sshcmd} "bash -c \"if [ -f ${resource_jobdir}/target.hostname ]; then cat ${resource_jobdir}/target.hostname; fi\"")
 
             # Exit the loop if file was found and read
             if [ -n "${target_hostname}" ]; then
@@ -157,12 +155,13 @@ jobs:
           }
 
           # Main loop
-          sleep 30
           attempt=1
           while true; do
               echo "Attempt $attempt: Checking if server is listening on ${remote_host}:${remote_port}..."
               
               if check_server; then
+                  # Sleep to wait for jupyterlab after nginx connects
+                  sleep 20
                   echo "Success: Server is listening on ${remote_host}:${remote_port}!"
                   exit 0
               else
@@ -179,9 +178,7 @@ jobs:
       - name: Set URL SLUG
         early-cancel: any-job-failed
         run: |
-          source resources/host/inputs.sh
-          slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=headless&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
-          echo "slug=${slug}"  | tee -a $OUTPUTS
+          echo "slug=lab"  | tee -a $OUTPUTS
       - name: Expose Port
         early-cancel: any-job-failed
         uses: parallelworks/update-session
@@ -198,100 +195,197 @@ jobs:
     inputs:
       pwrl_host:
         type: group
-        label: Desktop Host
+        label: Service Host
         items:
           resource:
             type: compute-clusters
             label: Service host
-            provider:
-              - existing
             include-workspace: false
-            autoselect: true
             tooltip: Resource to host the service
           nports:
             type: number
             label: Number of Ports to Reserve
             hidden: true
             default: 1
-            optional: true
           jobschedulertype:
+            type: dropdown
+            label: Select Controller or SLURM Partition
+            default: CONTROLLER
+            options:
+              - value: CONTROLLER
+                label: Controller
+              - value: SLURM
+                label: SLURM Partition
+              - value: PBS
+                label: PBS Queue
+            tooltip: Job will be submitted using SSH, sbatch or qsub, respectively
+          _sch__dd_account_e__tag_existing:
+            label: SLURM account
             type: string
-            label: Select Controller, SLURM Partition or PBS Queue
-            default: SLURM
-            hidden: true
-          _sch__dd_partition_e_:
-            type: slurm-partitions
-            label: SLURM partition
-            optional: true
-            tooltip: Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.
-            resource: ${{ inputs.pwrl_host.resource }}
-          _sch__dd_gres_e_gpu_colon_:
-            type: number
-            label: Number of GPUs
-            hidden: ${{ inputs.pwrl_host._sch__dd_partition_e_ != 'gpu' && inputs.pwrl_host._sch__dd_partition_e_ != 'gpu-quick' }}
+            tooltip: Account to submit the interactive job
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' != inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
-            min: 1
-            max: 4
-            default: 1
-            tooltip: '--gres=gpu:X slurm directive'
-          _sch__dd_cpus_d_per_d_task_e_:
+          _sch__dd_partition_e__tag_existing:
+            label: SLURM partition
+            type: slurm-partitions
+            resource: ${{ inputs.pwrl_host.resource }}
+            tooltip: SLURM partition to submit the interactive job
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' != inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            optional: true
+          qos_tag_existing:
+            label: Quality of Service [QoS]
+            type: slurm-qos
+            resource: ${{ inputs.pwrl_host.resource }}
+            tooltip: Select a QOS from the drop down menu
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' != inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
+          _sch__dd_ntasks_e__tag_existing:
+            label: Number of tasks
             type: number
-            label: CPUs per task
             min: 1
-            max: 32
+            max: 100
             default: 1
-            tooltip: --cpus-per-task=value slurm directive
-          _sch__dd_mem_e_:
-            type: string
-            label: Minimum total memory required
-            default: 8GB
-            tooltip: --mem=value slurm directive
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' != inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+          _sch__dd_nodes_e__tag_existing:
+            label: Number of nodes
+            type: number
+            default: 1
+            hidden: true
+            ignore: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' != inputs.pwrl_host.resource.provider }}
+          _sch__dd_partition_e__tag_cloud:
+            type: slurm-partitions
+            label: SLURM partition
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' == inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
             optional: true
+            tooltip: >-
+              Partition to submit the interactive job. Leave empty to let SLURM
+              pick the optimal option.
+            resource: ${{ inputs.pwrl_host.resource }}
           _sch__dd_time_e_:
-            type: string
             label: Walltime
+            type: string
             default: 01:00:00
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  }}
+            ignore: ${{ .hidden }}
             tooltip: e.g. 01:00:00 - Amount of time slurm will honor the interactive session.
-            optional: true
-          scheduler_directives:
+          scheduler_directives_slurm:
             type: string
             label: Scheduler directives
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype }}
+            ignore: ${{ .hidden }}
             optional: true
-            tooltip: e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.
+            tooltip: >-
+              e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ;
+              to separate parameters. Do not include the SBATCH keyword.
+          _sch__d_q___:
+            type: string
+            label: PBS queue
+            hidden: ${{ 'PBS' != inputs.pwrl_host.jobschedulertype }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
+            tooltip:
+              Queue to submit the interactive job. Must select one! Use [qstat -f
+              -Q] to list all queues on the system
+          scheduler_directives_pbs:
+            type: string
+            label: Scheduler directives
+            hidden: ${{ 'PBS' != inputs.pwrl_host.jobschedulertype }}
+            ignore: ${{ .hidden }}
+            optional: true
+            tooltip:
+              e.g. -l mem=1000;-l nodes=1:ppn=4 - Use the semicolon character ; to
+              separate parameters. Do not include the PBS keyword.
         collapsed: false
       service:
         type: group
-        label: Service
-        hidden: true
+        label: Jupyter Lab Settings
         items:
-          novnc_parent_install_dir:
-            label: noVNC installation directory
-            type: string
-            hidden: true
-            default: __HOME__/pw/software
-          novnc_tgz_basename:
-            label: Basename of the novnc tgz file
-            type: string
-            hidden: true
-            default: noVNC-1.5.0.tgz
           name:
             type: string
-            label: Select remote display protocol
             hidden: true
-            default: vncserver
+            default: jupyterlab-host
+          notebook_dir:
+            label: Directory to start Jupyter Lab GUI
+            type: string
+            default: __HOME__
+            tooltip: This is the directory that you start with when the Jupyter graphical user interface starts. The default value here is your home directory.
+          conda_install:
+            label: Install miniconda environment if not there?
+            type: boolean
+            default: true
+            tooltip: Select Yes to install Jupyter in miniconda environment and No to load an existing python environment
+          parent_install_dir:
+            label: Parent Install Directory
+            type: string
+            default: __HOME__/pw/software
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
+            tooltip: Software dependencies are installed in this directory. Ensure the directory has sufficient space!
+          conda_install_dir:
+            label: Name of the Conda Installation Directory
+            type: string
+            default: .miniconda3c
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
+            tooltip: Ensure the directory has sufficient space for Conda and its packages.
+          conda_env:
+            label: Conda environment
+            type: string
+            default: base
+            hidden: '${{ inputs.service.conda_install == false }}'
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Environment to active. The base environment enables changing kernel to other environments!
           load_env:
-            label: Command to load Matlab
+            label: Command to load Jupyter Notebook to the PATH
             type: string
-            default: module load matlab
-          bin:
-            label: Service Binary
-            type: string
+            default: source __HOME__/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base
+            hidden: ${{ inputs.service.conda_install == true }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Use a bash command
+          password:
+            label: Password for notebook session
+            type: password
+            optional: true
             hidden: true
-            default: matlab -desktop
-          nginx_sif_tag_existing:
-            type: string
-            default: /public/apps/pw/nginx-unprivileged.sif
-            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
-            ignore: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
-            optional: ${{ .ignore }}
+            ignore: true
+            tooltip: Enter password or leave blank for no password
+          install_instructions:
+            label: Select Jupyter Lab Installation
+            type: dropdown
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
+            default: jupyterlab4.1.5-python3.11.5
+            options:
+              - value: jupyterlab4.1.5-python3.11.5
+                label: Jupyter Lab 4.1.5 with Python 3.11.5
+              - value: latest
+                label: Latest versions of Jupyter Lab and Python (not thoroughly tested)
+              - value: dask-extension-jupyterlab
+                label: Dask dependencies for PW
+              - value: yaml
+                label: Provide custom Conda environment YAML file
+          yaml:
+            label: Paste Conda Environment Defition YAML
+            type: editor
+            hidden: ${{ inputs.service.install_instructions != yaml ||  inputs.service.conda_install == false }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Copy and paste a custom Conda environment definition YAML file
+          install_kernels:
+            label: Select additional kernels to install
+            type: multi-dropdown
+            optional: true
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
+            options:
+              - value: julia-kernel
+                label: Julia Kernel
+              - value: R-kernel
+                label: R Kernel

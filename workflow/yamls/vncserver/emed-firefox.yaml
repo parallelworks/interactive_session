@@ -5,9 +5,6 @@ sessions:
     useTLS: false
     redirect: true
 
-app:
-  target: inputs.pwrl_host.resource
-
 jobs:
   preprocessing:
     steps:
@@ -160,6 +157,7 @@ jobs:
           }
 
           # Main loop
+          sleep 30
           attempt=1
           while true; do
               echo "Attempt $attempt: Checking if server is listening on ${remote_host}:${remote_port}..."
@@ -287,3 +285,9 @@ jobs:
             type: string
             hidden: true
             default: firefox
+          nginx_sif_tag_existing:
+            type: string
+            default: /public/apps/pw/nginx-unprivileged.sif
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
+            ignore: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
+            optional: ${{ .ignore }}

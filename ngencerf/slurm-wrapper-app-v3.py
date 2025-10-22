@@ -142,11 +142,10 @@ def ensure_file_owned(file_path: str):
 
 
 def write_slurm_script(run_id, job_type, input_file_local, output_file_local, singularity_run_cmd, nprocs = 1):
-    job_script = input_file_local.replace('.yaml', '.slurm.sh')
+    job_script = output_file_local.rsplit('.', 1)[0] + '.slurm.sh'
     job_dir = os.path.dirname(os.path.dirname(input_file_local))
 
     # We need to change these ownerships to be able to write the SLURM script and its output file
-    job_script = input_file_local.replace('.yaml', '.slurm.sh')
     ensure_file_owned(job_script)
     ensure_file_owned(output_file_local)
 
@@ -443,38 +442,33 @@ def submit_forecast_job():
         logging.info(f"{key}: {value}")
 
     job_type = 'forecast'
-    # ngen-cal job id
+    # job id
     forecast_run_id = request.form.get('forecast_run_id')
-    # Path to the ngen-cal input file within the container
-    input_file = request.form.get('input_file')
+    # validation yaml
+    validation_yaml = request.form.get('validation_yaml')
+    # realization file
+    realization_file = request.form.get('realization_file')
     # Path to the SLURM job log file in the controller node
     stdout_file = request.form.get('stdout_file')
-    # Directory of where the output will be stored
-    forecast_dir = request.form.get('forecast_dir')
-    # The complete path of the forcing file (written by the forecast-download-job)
-    forcing_dir = request.form.get('forcing_dir')
     # Path to the SLURM job log file in the controller node
     auth_token = request.form.get('auth_token')
 
     if not forecast_run_id:
         return log_and_return_error("No forecast_run_id provided", status_code=400)
 
-    if not input_file:
-        return log_and_return_error("No ngen-cal input file provided", status_code=400)
+    if not validation_yaml:
+        return log_and_return_error("No validation_yaml provided", status_code=400)
+    
+    if not realization_file:
+        return log_and_return_error("No realization_file provided", status_code=400)
 
     if not stdout_file:
         return log_and_return_error("No stdout_file provided", status_code=400)
 
-    if not forcing_dir:
-        return log_and_return_error("No forcing_dir provided", status_code=400)
-
-    if not forecast_dir:
-        return log_and_return_error("No forecast_dir provided", status_code=400)
-
     if not auth_token:
         return log_and_return_error("No auth_token provided", status_code=400)
 
-    singularity_run_cmd = f"{SINGULARITY_RUN_NWM_FCST_MGR_CMD} forecast {forcing_dir} {input_file} {forecast_dir}"
+    singularity_run_cmd = f"{SINGULARITY_RUN_NWM_FCST_MGR_CMD} forecast {validation_yaml} {realization_file}"
 
     postprocessing_dir = os.path.join("postprocess", job_type, forecast_run_id)
 
@@ -484,7 +478,7 @@ def submit_forecast_job():
             f'http://{CONTROLLER_HOSTNAME}:8000/calibration/forecast_job_slurm_callback/',
             auth_token,
             forecast_run_id=forecast_run_id,
-            job_status="_job_status__"
+            job_status="__job_status__"
         )
 
         write_callback(postprocessing_dir, callback)
@@ -492,64 +486,57 @@ def submit_forecast_job():
     except Exception as e:
         return log_and_return_error(str(e), status_code=500)
 
-    slurm_job_id, exit_code = submit_job(input_file, stdout_file, forecast_run_id, job_type, singularity_run_cmd)
+    slurm_job_id, exit_code = submit_job(validation_yaml, stdout_file, forecast_run_id, job_type, singularity_run_cmd)
     if exit_code == 500:
         return jsonify({"error": slurm_job_id}), exit_code
 
     return jsonify({"slurm_job_id": slurm_job_id}), exit_code
 
 
-@app.route('/submit-forecast-forcing-download-job', methods=['POST'])
-def submit_forecast_forcing_download():
-    logging.info("submit-forecast-forcing-download-job - Received POST request with the following parameters:")
+@app.route('/submit-cold-start-job', methods=['POST'])
+def submit_cold_start_job():
+    logging.info("submit-cold-start-job - Received POST request with the following parameters:")
     for key, value in request.form.items():
         logging.info(f"{key}: {value}")
 
-    job_type = 'forecast_forcing_download'
-    # ngen-cal job id
-    forecast_forcing_download_run_id = request.form.get('forecast_forcing_download_run_id')
+    job_type = 'cold-start'
+    # job id
+    cold_start_run_id = request.form.get('cold_start_run_id')
+    # validation yaml
+    validation_yaml = request.form.get('validation_yaml')
+    # realization file
+    realization_file = request.form.get('realization_file')
     # Path to the SLURM job log file in the controller node
     stdout_file = request.form.get('stdout_file')
-    cycle_name = request.form.get('cycle_name')
-    gpkg_file = request.form.get('gpkg_file')
-    forcing_dir = request.form.get('forcing_dir')
-    # The code verifies the presence of input_file and replace the .yaml with .slurm.sh to write the SLURM script
-    config_file = request.form.get('config_file')
     # Path to the SLURM job log file in the controller node
     auth_token = request.form.get('auth_token')
 
-    if not forecast_forcing_download_run_id:
-        return log_and_return_error("No forecast_forcing_download_run_id provided", status_code=400)
+    if not cold_start_run_id:
+        return log_and_return_error("No cold_start_run_id provided", status_code=400)
 
-    if not config_file:
-        return log_and_return_error("No ngen-forecast config file provided", status_code=400)
+    if not validation_yaml:
+        return log_and_return_error("No validation_yaml provided", status_code=400)
+    
+    if not realization_file:
+        return log_and_return_error("No realization_file provided", status_code=400)
 
     if not stdout_file:
         return log_and_return_error("No stdout_file provided", status_code=400)
 
-    if not cycle_name:
-        return log_and_return_error("No cycle_name provided", status_code=400)
-
-    if not gpkg_file:
-        return log_and_return_error("No gpkg_file provided", status_code=400)
-
-    if not forcing_dir:
-        return log_and_return_error("No forcing_dir provided", status_code=400)
-
     if not auth_token:
         return log_and_return_error("No auth_token provided", status_code=400)
 
-    singularity_run_cmd = f"{SINGULARITY_RUN_NGEN_BMI_FORCING_CMD} forecast_forcing {cycle_name} {gpkg_file} {config_file} {forcing_dir}"
+    singularity_run_cmd = f"{SINGULARITY_RUN_NWM_FCST_MGR_CMD} cold_start {validation_yaml} {realization_file}"
 
-    postprocessing_dir = os.path.join("postprocess", job_type, forecast_forcing_download_run_id)
+    postprocessing_dir = os.path.join("postprocess", job_type, cold_start_run_id)
 
     try:
         # Get callback
         callback = get_callback(
-            f'http://{CONTROLLER_HOSTNAME}:8000/calibration/forecast_forcing_download_job_slurm_callback/',
+            f'http://{CONTROLLER_HOSTNAME}:8000/calibration/cold_start_job_slurm_callback/',
             auth_token,
-            forecast_forcing_download_run_id = forecast_forcing_download_run_id,
-            job_status = "__job_status__"
+            cold_start_run_id=cold_start_run_id,
+            job_status="__job_status__"
         )
 
         write_callback(postprocessing_dir, callback)
@@ -557,7 +544,7 @@ def submit_forecast_forcing_download():
     except Exception as e:
         return log_and_return_error(str(e), status_code=500)
 
-    slurm_job_id, exit_code = submit_job(config_file, stdout_file, forecast_forcing_download_run_id, job_type, singularity_run_cmd)
+    slurm_job_id, exit_code = submit_job(validation_yaml, stdout_file, cold_start_run_id, job_type, singularity_run_cmd)
     if exit_code == 500:
         return jsonify({"error": slurm_job_id}), exit_code
 

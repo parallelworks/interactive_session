@@ -84,7 +84,7 @@ for port in $(seq ${minPort} ${maxPort} | shuf); do
     out=$(netstat -aln | grep LISTEN | grep ${port})
     displayNumber=${port: -2}
     XdisplayNumber=$(echo ${displayNumber} | sed 's/^0*//')
-    if [ -z "${out}" ] && ! [ -e /tmp/.X11-unix/X${XdisplayNumber} ]; then
+    if [ -z "${out}" ] && ! [ -e /tmp/.X11-unix/X${XdisplayNumber} ] && ! [ -e /tmp/.X${XdisplayNumber}-lock ]; then
         # To prevent multiple users from using the same available port --> Write file to reserve it
         portFile=/tmp/${port}.port.used
         if ! [ -f "${portFile}" ]; then
@@ -254,7 +254,8 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
         service_password=password
         disableBasicAuth="-disableBasicAuth"
     fi
-    expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "'"${service_password}"'\r"; expect "Verify:"; send "'"${service_password}"'\r"; expect eof'
+    #expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "'"${service_password}"'\r"; expect "Verify:"; send "'"${service_password}"'\r"; expect eof'
+    printf "%s\n%s\n" "$service_password" "$service_password" | vncpasswd -u "$USER" -w -r
 
 
     ${service_vnc_exec} -kill ${DISPLAY}
@@ -283,16 +284,16 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
 
     rm -rf ${portFile}
 
-    if ! [ -f "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid" ]; then
+    if ! [ -f "${HOME}/.vnc/$(hostname)${DISPLAY}.pid" ]; then
         echo $(date): "KasmVNC server failed to start. Exiting workflow."
         exit 1
     fi
 
-    vncserver_pid=$(cat "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid")
-    echo "kill ${vncserver_pid} #${HOME}/.vnc/${HOSTNAME}${DISPLAY}.pid" >> cancel.sh
-    cat "${HOME}/.vnc/${HOSTNAME}${DISPLAY}.log"  >> cancel.sh
-    echo "rm \"${HOME}/.vnc/${HOSTNAME}${DISPLAY}*\"" >> cancel.sh
-    cat ${HOME}/.vnc/${HOSTNAME}${DISPLAY}.log
+    vncserver_pid=$(cat "${HOME}/.vnc/$(hostname)${DISPLAY}.pid")
+    echo "kill ${vncserver_pid} #${HOME}/.vnc/$(hostname)${DISPLAY}.pid" >> cancel.sh
+    cat "${HOME}/.vnc/$(hostname)${DISPLAY}.log"  >> cancel.sh
+    echo "rm \"${HOME}/.vnc/$(hostname)${DISPLAY}*\"" >> cancel.sh
+    cat ${HOME}/.vnc/$(hostname)${DISPLAY}.log
 
     #######################
     # START NGINX WRAPPER #

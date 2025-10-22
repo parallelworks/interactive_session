@@ -6,9 +6,6 @@ sessions:
     redirect: true
     useCustomDomain: ${{ inputs.targetType == 'kubernetes-cluster' }}
 
-app:
-  target: inputs.pwrl_host.resource
-
 jobs:
   preprocessing:
     steps:
@@ -323,6 +320,14 @@ jobs:
                     command: ["sh", "-c", "chmod 777 ${{ inputs.k8s.volumes.pvc_mount_path }} -R"]
                     securityContext:
                       runAsUser: 0
+                    resources:
+                      requests:
+                        memory: "${{ inputs.k8s.resources.requests.memory }}"
+                        cpu: "${{ inputs.k8s.resources.requests.cpu }}"
+                      limits:
+                        memory: "${{ inputs.k8s.resources.limits.memory }}"
+                        cpu: "${{ inputs.k8s.resources.limits.cpu }}"
+                        ${gpu_limits}
                     volumeMounts:
                       - name: storage
                         mountPath: ${{ inputs.k8s.volumes.pvc_mount_path }}

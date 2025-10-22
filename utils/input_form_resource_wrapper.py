@@ -148,6 +148,13 @@ os.makedirs(RESOURCES_DIR, exist_ok = True)
 log_file = os.path.join(RESOURCES_DIR, os.path.basename(__file__).replace('py', 'log'))
 logger = get_logger(log_file, 'resource_wrapper')
 
+# Given   /home/alvaro/pw/jobs/vscodecodeassist/00001
+# Returns              pw/jobs/vscodecodeassist/00001
+def get_pw_path(path):
+    marker = "pw/"
+    if marker in path:
+        return marker + path.split(marker, 1)[1]
+    raise ValueError("The string does not contain 'pw/'")
 
 def get_command_output(command):
     logger.info(f'Running command <{command}>')
@@ -271,9 +278,7 @@ def complete_resource_information(inputs_dict):
 
     inputs_dict['resource']['jobdir'] = os.path.join(
         inputs_dict['resource']['workdir'],
-        'pw/jobs',
-        inputs_dict['workflow_name'],
-        inputs_dict['job_number']
+        get_pw_path(os.getcwd())
     )
 
     inputs_dict = replace_placeholders(
@@ -502,11 +507,12 @@ if __name__ == '__main__':
     inputs_dict = clean_inputs(inputs_dict)
 
     # Add basic job info to inputs_dict:
-    inputs_dict['job_number'] = os.path.basename(os.getcwd())
+    pw_job_dir = os.getcwd()
+    inputs_dict['pw_job_dir'] = pw_job_dir
+    inputs_dict['job_number'] = get_pw_path(pw_job_dir).split('/')[3]
     inputs_dict['job_number_int'] = int(inputs_dict['job_number'])
-    inputs_dict['workflow_name'] = os.path.basename(os.path.dirname(os.getcwd()))
+    inputs_dict['workflow_name'] = get_pw_path(pw_job_dir).split('/')[2]
     inputs_dict['job_name'] = "{}-{}".format(inputs_dict['workflow_name'], inputs_dict['job_number'])
-    inputs_dict['pw_job_dir'] = os.getcwd()
     inputs_dict['pw_user'] = os.environ.get('PW_USER')
     inputs_dict['pw_platform_host'] = os.environ.get('PW_PLATFORM_HOST')
 

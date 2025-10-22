@@ -137,6 +137,7 @@ if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
     mkdir -p /tmp/.X11-unix
     rm -f ~/.vnc/xstartup.turbovnc
 cat >> ~/.vnc/xstartup.turbovnc <<HERE
+#!/bin/sh
 unset SESSION_MANAGER
 unset DBUS_SESSION_BUS_ADDRESS
 startxfce4 &

@@ -141,12 +141,6 @@ jobs:
             # Wait before the next check
             sleep 5
           done
-          job_id=$(${sshcmd} cat ${resource_jobdir}/job.id)
-          if [ -z "${job_id}" ]; then
-            echo "Error: PBS job ID is empty!" >&2
-            exit 1
-          fi
-          target_hostname=$(${sshcmd} qstat -f "${jobid}" | awk -F= '/exec_host/ {print $2}' | cut -d'+' -f1 | cut -d'/' -f1)
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
       - name: Get Remote Port
         early-cancel: any-job-failed

@@ -150,7 +150,7 @@ mkdir -p /var/lib/dbus
 dbus-uuidgen --ensure
 ln -sf /var/lib/dbus/machine-id /etc/machine-id
 eval \$(dbus-launch --sh-syntax)
-xfce4-session &
+startxfce4 &
 HERE
     #startxfce4 &
     chmod +x ~/.vnc/xstartup.turbovnc

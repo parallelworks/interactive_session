@@ -140,8 +140,9 @@ cat >> ~/.vnc/xstartup.turbovnc <<HERE
 #!/bin/sh
 unset SESSION_MANAGER
 unset DBUS_SESSION_BUS_ADDRESS
-startxfce4 &
+xfce4-session &
 HERE
+    #startxfce4 &
     chmod +x ~/.vnc/xstartup.turbovnc
 fi
 

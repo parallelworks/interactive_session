@@ -132,7 +132,7 @@ if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
     fi
     echo "$(date): vncserver is not installed. Using singularity container..."
     service_vncserver_sif=
-    service_vnc_exec="singularity exec --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} ${service_vncserver_sif} vncserver"
+    service_vnc_exec="singularity exec --writable-tmpfs --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} ${service_vncserver_sif} vncserver"
     service_vnc_type="TurboVNC"
     service_desktop="echo Starting no service desktop on the host"
     mkdir -p /tmp/.X11-unix
@@ -141,7 +141,7 @@ cat >> ~/.vnc/xstartup.turbovnc <<HERE
 #!/bin/sh
 unset SESSION_MANAGER
 unset DBUS_SESSION_BUS_ADDRESS
-xfce4-session &
+startxfce4 &
 HERE
     chmod +x ~/.vnc/xstartup.turbovnc
 fi

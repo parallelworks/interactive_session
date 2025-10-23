@@ -135,12 +135,15 @@ if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
     service_vnc_type="TurboVNC"
     service_desktop="echo Starting no service desktop on the host"
     mkdir -p /tmp/.X11-unix
+    mkdir -p $HOME/.run
+    export XDG_RUNTIME_DIR="$HOME/.run"
+
     rm -f ~/.vnc/xstartup.turbovnc
 cat >> ~/.vnc/xstartup.turbovnc <<HERE
 #!/bin/sh
 unset SESSION_MANAGER
 unset DBUS_SESSION_BUS_ADDRESS
-# Start dbus and XFCE session like OnDemand does
+mkdir -p \$XDG_RUNTIME_DIR
 eval \$(dbus-launch --sh-syntax)
 xfce4-session &
 HERE

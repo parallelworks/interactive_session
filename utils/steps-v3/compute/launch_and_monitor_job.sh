@@ -43,6 +43,8 @@ get_slurm_job_status() {
     export job_status=$(echo ${status_response} | awk -v id="${jobid}" -v col="$status_column" '{print $col}')
 }
 
+set -x
+
 get_pbs_job_status() {
     # Get the header line to determine the column index corresponding to the job status
     if [ -z "${QSTAT_HEADER}" ]; then

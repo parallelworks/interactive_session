@@ -84,6 +84,7 @@ jobs:
         run: |
           target_hostname=$(${sshcmd} hostname)
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
+
       - name: Get Compute Hostname
         early-cancel: any-job-failed
         if: ${{ 'SLURM' == inputs.pwrl_host.jobschedulertype || 'PBS' == inputs.pwrl_host.jobschedulertype }}

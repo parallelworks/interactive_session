@@ -143,7 +143,12 @@ cat >> ~/.vnc/xstartup.turbovnc <<HERE
 #!/bin/sh
 unset SESSION_MANAGER
 unset DBUS_SESSION_BUS_ADDRESS
-mkdir -p \$XDG_RUNTIME_DIR
+export XDG_RUNTIME_DIR="\$HOME/.run"
+mkdir -p "\$XDG_RUNTIME_DIR"
+chmod 0700 "\$XDG_RUNTIME_DIR"
+mkdir -p /var/lib/dbus
+dbus-uuidgen --ensure
+ln -sf /var/lib/dbus/machine-id /etc/machine-id
 eval \$(dbus-launch --sh-syntax)
 xfce4-session &
 HERE

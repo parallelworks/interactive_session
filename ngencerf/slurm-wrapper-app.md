@@ -6,13 +6,13 @@ The environment variables are defined in the XML or YAML definition file of the 
 - `LOCAL_DATA_DIR`: Path to the data directory on the shared filesystem (e.g., `/ngencerf-app/data/ngen-cal-data/`).
 - `CONTAINER_DATA_DIR`: Path to the data directory within the container (e.g., `/ngencerf/data/`).
 - `NGEN_CAL_SINGULARITY_CONTAINER_PATH`: Path to the Singularity container that includes `ngen-cal`.
-- `NGEN_FORCING_SINGULARITY_CONTAINER_PATH`: Path to the Singularity container that includes `ngen-forcing`.
+- `NGEN_BMI_FORCING_SINGULARITY_CONTAINER_PATH`: Path to the Singularity container that includes `ngen-bmi-forcing`.
 
 
 ## API Endpoints
 ### 1. Submit a Calibration Job
 Submit a `ngen-cal` calibration job to SLURM.
-**Endpoint:** 
+**Endpoint:**
 ```
 POST /submit-calibration-job
 ```
@@ -45,7 +45,7 @@ curl -X POST http://<controller-ip>:5000/submit-calibration-job \
 ### 2. Submit a Validation Job
 Submit a ngen-cal validation job to SLURM. Endpoint:
 
-**Endpoint:** 
+**Endpoint:**
 ```
 POST /submit-validation-job
 ```
@@ -79,7 +79,7 @@ curl -X POST http://<controller-ip>:5000/submit-validation-job \
 ### 2. Check Job Status
 Check the status of a submitted SLURM job.
 
-**Endpoint:** 
+**Endpoint:**
 ```
 GET /job-status
 ```
@@ -100,7 +100,7 @@ curl -X GET "http://<controller-ip>:5000/job-status?slurm_job_id=123456"
 ### 3. Cancel a Job
 Cancel a running or pending SLURM job.
 
-**Endpoint:** 
+**Endpoint:**
 ```
 POST /cancel-job
 ```
@@ -113,7 +113,7 @@ POST /cancel-job
 **Curl Example:**
 ```
 curl -X POST http://<controller-ip>:5000/cancel-job \
-    -F "slurm_job_id=123456" 
+    -F "slurm_job_id=123456"
 ```
 
 ## Error Handling

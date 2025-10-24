@@ -335,7 +335,6 @@ if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
     echo "${service_desktop_pid}" >> ${resource_jobdir}/service.pid
 
     cd ${service_novnc_install_dir}
-    
     ./utils/novnc_proxy --vnc ${HOSTNAME}:${displayPort} --listen ${HOSTNAME}:${service_port} </dev/null &
     echo $! >> ${resource_jobdir}/service.pid
     pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
@@ -349,6 +348,7 @@ elif [[ "${service_vnc_type}" == "SingularityTurboVNC" ]]; then
     ${singularity_exec} ${resource_jobdir}/vncserver.sh | tee -a vncserver.out &
     echo "kill $! # singularity exec" >> cancel.sh
 
+    cd ${service_novnc_install_dir}
     ./utils/novnc_proxy --vnc ${HOSTNAME}:${displayPort} --listen ${HOSTNAME}:${service_port} </dev/null &
     echo "kill $! # novnc_proxy" >> cancel.sh
     pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')

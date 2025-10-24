@@ -152,7 +152,7 @@ if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
         exit 1
     fi
     echo "$(date): vncserver is not installed. Using singularity container..."
-    singularity_exec="singularity exec --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} ${service_vncserver_sif}"
+    singularity_exec="singularity run --writable-tmpfs --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} ${service_vncserver_sif}"
     service_vnc_exec="${singularity_exec} vncserver"
     service_vnc_type="SingularityTurboVNC"
     service_desktop="echo Starting no service desktop on the host"
@@ -346,7 +346,7 @@ elif [[ "${service_vnc_type}" == "SingularityTurboVNC" ]]; then
     ${service_vnc_exec} -kill ${DISPLAY}
     echo "${service_vnc_exec} -kill ${DISPLAY}" >> cancel.sh
     ${singularity_exec} ${resource_jobdir}/vncserver.sh | tee -a vncserver.out &
-    echo "kill $! # singularity exec" >> cancel.sh
+    echo "kill $! # singularity run" >> cancel.sh
 
     cd ${service_novnc_install_dir}
     ./utils/novnc_proxy --vnc ${HOSTNAME}:${displayPort} --listen ${HOSTNAME}:${service_port} </dev/null &

@@ -178,7 +178,7 @@ export XDG_RUNTIME_DIR=\$HOME/.run
 chmod 700 \$HOME/.run
 addr=\$(dbus-daemon --session --fork --print-address)
 export DBUS_SESSION_BUS_ADDRESS="\$addr"
-mkdir -p \$HOME
+mkdir -p ${TMPDIR} ${WORKDIR}
 mkdir -p "\$HOME/.config"
 chmod 700 "\$HOME/.config"
 startxfce4 --replace

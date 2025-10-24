@@ -338,7 +338,7 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
 
 
     ${service_vnc_exec} -kill ${DISPLAY}
-    echo "${service_vnc_exec} -kill ${DISPLAY}" >> cancel.sh.sh
+    echo "${service_vnc_exec} -kill ${DISPLAY}" >> cancel.sh
 
     MAX_RETRIES=5
     RETRY_DELAY=5

@@ -165,6 +165,8 @@ unset DBUS_SESSION_BUS_ADDRESS
 HERE
 cat >> ${resource_jobdir}/vncserver.sh <<HERE
 #!/bin/bash
+set -x
+vncserver -kill ${DISPLAY}
 vncserver ${DISPLAY} -SecurityTypes None
 mkdir -p /run/user/\$(id -u)
 chown "\$(id -u):\$(id -g)" /run/user/\$(id -u)
@@ -344,7 +346,6 @@ if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
 elif [[ "${service_vnc_type}" == "SingularityTurboVNC" ]]; then
     # Start service
     mkdir -p ~/.vnc
-    ${service_vnc_exec} -kill ${DISPLAY}
     echo "${service_vnc_exec} -kill ${DISPLAY}" >> cancel.sh
     ${singularity_exec} ${resource_jobdir}/vncserver.sh | tee -a vncserver.out &
     echo "kill $! # singularity run" >> cancel.sh

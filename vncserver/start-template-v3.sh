@@ -103,6 +103,26 @@ fi
 
 set -x
 
+# Find an available display port
+minPort=5901
+maxPort=5999
+for port in $(seq ${minPort} ${maxPort} | shuf); do
+    out=$(netstat -aln | grep LISTEN | grep ${port})
+    displayNumber=${port: -2}
+    XdisplayNumber=$(echo ${displayNumber} | sed 's/^0*//')
+    if [ -z "${out}" ] && ! [ -e /tmp/.X11-unix/X${XdisplayNumber} ] && ! [ -e /tmp/.X${XdisplayNumber}-lock ]; then
+        # To prevent multiple users from using the same available port --> Write file to reserve it
+        portFile=/tmp/${port}.port.used
+        if ! [ -f "${portFile}" ]; then
+            touch ${portFile}
+            echo "rm ${portFile}" >> cancel.sh
+            export displayPort=${port}
+            export DISPLAY=:${displayNumber#0}
+            break
+        fi
+    fi
+done
+
 if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
     export service_vnc_exec=/usr/lib/vncserver
     # vncserver -list does not work
@@ -172,25 +192,6 @@ if [ -z ${service_vnc_type} ]; then
     displayErrorMessage "ERROR: vncserver type not found. Supported type are TigerVNC, TurboVNC and KasmVNC"
 fi
 
-# Find an available display port
-minPort=5901
-maxPort=5999
-for port in $(seq ${minPort} ${maxPort} | shuf); do
-    out=$(netstat -aln | grep LISTEN | grep ${port})
-    displayNumber=${port: -2}
-    XdisplayNumber=$(echo ${displayNumber} | sed 's/^0*//')
-    if [ -z "${out}" ] && ! [ -e /tmp/.X11-unix/X${XdisplayNumber} ] && ! [ -e /tmp/.X${XdisplayNumber}-lock ]; then
-        # To prevent multiple users from using the same available port --> Write file to reserve it
-        portFile=/tmp/${port}.port.used
-        if ! [ -f "${portFile}" ]; then
-            touch ${portFile}
-            echo "rm ${portFile}" >> cancel.sh
-            export displayPort=${port}
-            export DISPLAY=:${displayNumber#0}
-            break
-        fi
-    fi
-done
 
 if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
 cat >> ${resource_jobdir}/cancel.sh <<HERE

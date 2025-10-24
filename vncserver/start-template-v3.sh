@@ -347,8 +347,8 @@ elif [[ "${service_vnc_type}" == "SingularityTurboVNC" ]]; then
     # Start service
     mkdir -p ~/.vnc
     echo "${service_vnc_exec} -kill ${DISPLAY}" >> cancel.sh
-    ${singularity_exec} ${resource_jobdir}/vncserver.sh | tee -a vncserver.out &
-    echo "kill $! # singularity run" >> cancel.sh
+    #${singularity_exec} ${resource_jobdir}/vncserver.sh | tee -a vncserver.out &
+    #echo "kill $! # singularity run" >> cancel.sh
 
     cd ${service_novnc_install_dir}
     ./utils/novnc_proxy --vnc ${HOSTNAME}:${displayPort} --listen ${HOSTNAME}:${service_port} </dev/null &
@@ -356,6 +356,8 @@ elif [[ "${service_vnc_type}" == "SingularityTurboVNC" ]]; then
     pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
     echo ${pid} >> ${resource_jobdir}/service.pid
     rm -f ${portFile}
+
+    ${singularity_exec} ${resource_jobdir}/vncserver.sh 
 
 elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     ###########

@@ -181,6 +181,7 @@ export DBUS_SESSION_BUS_ADDRESS="\$addr"
 mkdir -p ${TMPDIR} ${WORKDIR}
 mkdir -p "\$HOME/.config"
 chmod 700 "\$HOME/.config"
+chmod -x /usr/bin/xfce4-screensaver
 startxfce4 --replace
 HERE
     chmod +x ~/.vnc/xstartup.turbovnc

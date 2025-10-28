@@ -152,7 +152,7 @@ if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
         exit 1
     fi
     echo "$(date): vncserver is not installed. Using singularity container..."
-    singularity_binds="--bind /p/home:/p/home --bind /p/app:/p/app --bind /p/work:/p/work --bind /p/global:/p/global --bind /p/archive:/p/archive --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} --bind /opt/cray:/opt/cray"
+    singularity_binds="--bind /p/home:/p/home --bind /p/app:/p/app --bind /p/work:/p/work --bind /p/global:/p/global --bind /p/archive:/p/archive --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} --bind /opt/cray:/opt/cray --bind /var/lib:/var/lib --bind /var/log:/var/log --bind /var/tmp:/var/tmp"
     singularity_exec="singularity exec --writable-tmpfs ${singularity_binds} ${service_vncserver_sif}"
     service_vnc_exec="${singularity_exec} vncserver"
     service_vnc_type="SingularityTurboVNC"

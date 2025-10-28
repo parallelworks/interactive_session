@@ -152,14 +152,39 @@ if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
         exit 1
     fi
     echo "$(date): vncserver is not installed. Using singularity container..."
-    #singularity_binds="--bind /p/home:/p/home --bind /p/app:/p/app --bind /p/work:/p/work --bind /p/global:/p/global --bind /p/archive:/p/archive --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} --bind /opt/cray:/opt/cray --bind /var/lib:/var/lib --bind /var/log:/var/log --bind /var/tmp:/var/tmp"
-    #singularity_exec="singularity exec --writable-tmpfs ${singularity_binds} ${service_vncserver_sif}"
-    export SINGULARITY_BIND="/etc/passwd,/etc/group,/etc/profile.d,/etc/ld.so.conf.d,\
-        /etc/bash.bashrc.local,/etc/cray-pe.d,/etc/machine-id,/p,/app,/opt/cray,\
-        /opt/pbs,/var,/usr/local/lib,/usr/local/lib64,/usr/share/lmod,/opt/cray/pe/modules,\
-        /etc/krb5.conf,/usr/local/bin,/etc/pbs.conf,/pbs,/run,/etc/zprofile,\
-        /etc/zshrc,/etc/zshenv,/usr/share/zsh"
-    singularity_exec="singularity exec --writable-tmpfs ${service_vncserver_sif}"
+    singularity_binds="--bind /p:/p --bind /app:/app --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} --bind /opt/cray:/opt/cray --bind /var/lib:/var/lib --bind /var/log:/var/log --bind /var/tmp:/var/tmp"
+    singularity_binds="--bind /etc/passwd:/etc/passwd/etc/group,/etc/profile.d,/etc/ld.so.conf.d,\
+/etc/bash.bashrc.local,/etc/cray-pe.d,/etc/machine-id,/p,/app,/opt/cray,\
+/opt/pbs,/var,/usr/local/lib,/usr/local/lib64,/usr/share/lmod,/opt/cray/pe/modules,\
+/etc/krb5.conf,/usr/local/bin,/etc/pbs.conf,/pbs,/run,/etc/zprofile,\
+/etc/zshrc,/etc/zshenv,/usr/share/zsh"
+    singularity_binds="
+    --bind /etc/passwd \
+    --bind /etc/group \
+    --bind /etc/profile.d \
+    --bind /etc/ld.so.conf.d \
+    --bind /etc/bash.bashrc.local \
+    --bind /etc/cray-pe.d \
+    --bind /etc/machine-id \
+    --bind /p \
+    --bind /app \
+    --bind /opt/cray \
+    --bind /opt/pbs \
+    --bind /var \
+    --bind /usr/local/lib \
+    --bind /usr/local/lib64 \
+    --bind /usr/share/lmod \
+    --bind /opt/cray/pe/modules \
+    --bind /etc/krb5.conf \
+    --bind /usr/local/bin \
+    --bind /etc/pbs.conf \
+    --bind /pbs \
+    --bind /run \
+    --bind /etc/zprofile \
+    --bind /etc/zshrc \
+    --bind /etc/zshenv \
+    --bind /usr/share/zsh"
+    singularity_exec="singularity exec --writable-tmpfs ${singularity_binds} ${service_vncserver_sif}"
     service_vnc_exec="${singularity_exec} vncserver"
     service_vnc_type="SingularityTurboVNC"
     service_desktop="echo Starting no service desktop on the host"

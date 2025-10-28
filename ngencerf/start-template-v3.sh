@@ -182,7 +182,7 @@ fi
 
 # Make sure permissions are set properly
 #sudo -n chown -R ${USER} ${local_data_dir}
-# sudo -n chmod -R u+rwX ${local_data_dir}
+# sudo -n chmod -R a+rwX ${local_data_dir}
 
 
 # SENT="/var/tmp/chmod_since"
@@ -247,7 +247,7 @@ fi
 #     ! -type l \
 #     \( -newermt "$sent_day 00:00:00" -o -newerct "$sent_day 00:00:00" \) -print0
 
-# } | sudo xargs -0 -r -P"$p" chmod u+rwX && sudo touch "$SENT"
+# } | sudo xargs -0 -r -P"$p" chmod a+rwX && sudo touch "$SENT"
 
 
 #mkdir -p ${local_data_dir}/forecast_forcing_work/esmf_mesh

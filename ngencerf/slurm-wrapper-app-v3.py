@@ -177,7 +177,7 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         script.write(
             f'sudo find -L "{job_dir}" ! -type l '
             f'\\( ! -perm -u+r -o ! -perm -u+w -o \\( -xtype d ! -perm -u+x \\) \\) -print0 '
-            f'| sudo xargs -0 -r -P"$p" chmod u+rwX\n\n'
+            f'| sudo xargs -0 -r -P"$p" chmod a+rwX\n\n'
         )
 
 
@@ -458,7 +458,7 @@ def submit_forecast_job():
 
     if not validation_yaml:
         return log_and_return_error("No validation_yaml provided", status_code=400)
-    
+
     if not realization_file:
         return log_and_return_error("No realization_file provided", status_code=400)
 
@@ -516,7 +516,7 @@ def submit_cold_start_job():
 
     if not validation_yaml:
         return log_and_return_error("No validation_yaml provided", status_code=400)
-    
+
     if not realization_file:
         return log_and_return_error("No realization_file provided", status_code=400)
 

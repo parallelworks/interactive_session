@@ -154,7 +154,7 @@ if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
     echo "$(date): vncserver is not installed. Using singularity container..."
     #singularity_binds="--bind /p:/p --bind /app:/app --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} --bind /opt/cray:/opt/cray --bind /var/lib:/var/lib --bind /var/log:/var/log --bind /var/tmp:/var/tmp"
     singularity_binds="--bind /etc/passwd --bind /etc/group --bind /etc/profile.d --bind /etc/ld.so.conf.d --bind /etc/bash.bashrc.local --bind /etc/cray-pe.d --bind /etc/machine-id --bind /p --bind /app --bind /opt/cray --bind /opt/pbs --bind /var --bind /usr/local/lib --bind /usr/local/lib64 --bind /usr/share/lmod --bind /opt/cray/pe/modules --bind /etc/krb5.conf --bind /usr/local/bin --bind /etc/pbs.conf --bind /pbs --bind /run --bind /etc/zprofile --bind /etc/zshrc --bind /etc/zshenv --bind /usr/share/zsh"
-    singularity_exec="singularity exec --writable-tmpfs ${singularity_binds} --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} ${service_vncserver_sif}"
+    singularity_exec="singularity exec --writable-tmpfs ${singularity_binds} --bind /tmp/.X11-unix:/tmp/.X11-unix ${service_vncserver_sif}"
     service_vnc_exec="${singularity_exec} vncserver"
     service_vnc_type="SingularityTurboVNC"
     service_desktop="echo Starting no service desktop on the host"

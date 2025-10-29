@@ -38,7 +38,7 @@ start_rootless_docker() {
 run_xterm_loop(){
     while true; do
         echo "$(date): Starting xterm"
-        xterm
+        ${service_parent_install_dir}/xterm -fa "DejaVu Sans Mono" -fs 12
         sleep 1
     done
 }
@@ -367,7 +367,7 @@ elif [[ "${service_vnc_type}" == "SingularityTurboVNC" ]]; then
 
     # Run xterm in a loop so that users can access a terminal directly in the main host
     cd
-    run_xterm_loop | tee -a xterm.out &
+    run_xterm_loop | tee -a ${resource_jobdir}/xterm.out &
     echo "kill $! # run_xterm_loop" >> cancel.sh
 
 

@@ -35,6 +35,13 @@ start_rootless_docker() {
     return 0
 }
 
+run_xterm_loop(){
+    while true; do
+        echo "$(date): Starting xterm"
+        xterm
+        sleep 1
+    done
+}
 
 ###################
 # PREPARE CLEANUP #
@@ -357,6 +364,11 @@ elif [[ "${service_vnc_type}" == "SingularityTurboVNC" ]]; then
     pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
     echo ${pid} >> ${resource_jobdir}/service.pid
     rm -f ${portFile}
+
+    # Run xterm in a loop so that users can access a terminal directly in the main host
+    run_xterm_loop | tee -a xterm.out &
+    echo "kill $! # run_xterm_loop" >> cancel.sh
+
 
 elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     ###########

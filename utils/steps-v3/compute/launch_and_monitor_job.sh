@@ -120,5 +120,7 @@ done
 
 echo "Job status: ${job_status}"
 
-$sshcmd scontrol show job ${jobid} -dd
-$sshcmd sacct -j ${jobid}
+if [[ ${jobschedulertype} == "SLURM" ]]; then
+    $sshcmd scontrol show job ${jobid} -dd
+    $sshcmd sacct -j ${jobid}
+fi

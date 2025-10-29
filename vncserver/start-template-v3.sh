@@ -186,11 +186,6 @@ mkdir -p "\$HOME/.config"
 chmod 700 "\$HOME/.config"
 chmod -x /usr/bin/xfce4-screensaver
 
-# Load host environment
-if [ -f /etc/profile ]; then
-  . /etc/profile
-fi
-
 # Optional: Load user bashrc if you want modules, aliases, etc.
 if [ -f ~/.bashrc ]; then
   . ~/.bashrc

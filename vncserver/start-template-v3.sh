@@ -366,6 +366,7 @@ elif [[ "${service_vnc_type}" == "SingularityTurboVNC" ]]; then
     rm -f ${portFile}
 
     # Run xterm in a loop so that users can access a terminal directly in the main host
+    cd
     run_xterm_loop | tee -a xterm.out &
     echo "kill $! # run_xterm_loop" >> cancel.sh
 

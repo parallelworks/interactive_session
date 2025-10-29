@@ -154,7 +154,7 @@ if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
     echo "$(date): vncserver is not installed. Using singularity container..."
     #singularity_binds="--bind /p:/p --bind /app:/app --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} --bind /opt/cray:/opt/cray --bind /var/lib:/var/lib --bind /var/log:/var/log --bind /var/tmp:/var/tmp"
    # singularity_binds="--bind /etc/profile.d --bind /etc/ld.so.conf.d --bind /etc/bash.bashrc.local --bind /etc/cray-pe.d --bind /etc/machine-id --bind /p --bind /app --bind /opt/cray --bind /opt/pbs --bind /var --bind /usr/local/lib --bind /usr/local/lib64 --bind /usr/share/lmod --bind /opt/cray/pe/modules --bind /etc/krb5.conf --bind /usr/local/bin --bind /etc/pbs.conf --bind /pbs"
-    singularity_binds="--bind /etc/profile --bind /etc/passwd --bind /etc/group --bind /etc/profile.d --bind /usr/lib64:/usr/lib64 --bind /p --bind /app --bind /opt/cray --bind /opt/pbs --bind /usr/local/lib --bind /usr/local/lib64 --bind /usr/share/lmod --bind /opt/cray/pe/modules --bind /usr/local/bin --bind /pbs"
+    singularity_binds=" --bind /etc/passwd --bind /etc/group --bind /etc/profile.d --bind /usr/lib64:/usr/lib64 --bind /p --bind /app --bind /opt/cray --bind /opt/pbs --bind /usr/local/lib --bind /usr/local/lib64 --bind /usr/share/lmod --bind /opt/cray/pe/modules --bind /usr/local/bin --bind /pbs"
     #singularity_binds="--bind /p/home:/p/home --bind /p/app:/p/app --bind /p/work:/p/work --bind /p/global:/p/global --bind /p/archive:/p/archive --bind /opt/cray:/opt/cray"
     singularity_exec="singularity exec --writable-tmpfs  --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} ${singularity_binds} ${service_vncserver_sif}"
     service_vnc_exec="${singularity_exec} vncserver"
@@ -186,11 +186,6 @@ mkdir -p ${TMPDIR} ${WORKDIR}
 mkdir -p "\$HOME/.config"
 chmod 700 "\$HOME/.config"
 chmod -x /usr/bin/xfce4-screensaver
-
-# Load host environment
-if [ -f /etc/profile ]; then
-  . /etc/profile
-fi
 
 # Optional: Load user bashrc if you want modules, aliases, etc.
 if [ -f ~/.bashrc ]; then

@@ -628,22 +628,17 @@ def job_status():
         # First, try to get job status using squeue (for pending or running jobs)
         job_status, error = squeue_job_status(last_job_id)
         if error:
-            return log_and_return_error(error, 500)
+            logger.info("Error running squeue: {error}")
+            result = subprocess.run(["sacct", "-X", "--jobs", last_job_id, "--format=State", "--noheader"], capture_output=True, text=True)
+            if result.returncode == 0 and result.stdout.strip():
+                # Parse only the first line from sacct output
+                job_status = result.stdout.strip().splitlines()[0]
+                logger.info(f"The status of {last_job_id} is {job_status} from sacct")
 
         if job_status:
-            logger.info(f"The status of {slurm_job_id} is {job_status} from squeue")
-            return jsonify({"slurm_job_id": slurm_job_id, "status": job_status}), 200
+            logger.info(f"The status of {last_job_id} is {job_status} from squeue")
+            return jsonify({"status": job_status}), 200
 
-        # If squeue doesn't return a status, fall back to sacct for completed/failed jobs
-        result = subprocess.run(["sacct", "--jobs", slurm_job_id, "--format=State", "--noheader"], capture_output=True, text=True)
-
-        if result.returncode == 0 and result.stdout.strip():
-            # Parse only the first line from sacct output
-            job_status = result.stdout.strip().splitlines()[0]
-            logger.info(f"The status of {slurm_job_id} is {job_status} from sacct")
-            return jsonify({"slurm_job_id": slurm_job_id, "status": job_status}), 200
-
-        # If sacct also doesn't return a status, return job not found error
         return log_and_return_error("Job not found", 404)
     except Exception as e:
         return log_and_return_error(str(e), 500)

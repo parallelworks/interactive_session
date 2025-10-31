@@ -1,6 +1,41 @@
 # Make sure no conda environment is activated! 
 # https://github.com/parallelworks/issues/issues/1081
 
+
+start_rootless_docker() {
+    local MAX_RETRIES=20
+    local RETRY_INTERVAL=2
+    local ATTEMPT=1
+
+    export XDG_RUNTIME_DIR=/run/user/$(id -u)
+    dockerd-rootless-setuptool.sh install
+
+    # Run Docker rootless daemon — use screen if available, otherwise run in background
+    if command -v screen >/dev/null 2>&1; then
+        echo "$(date): Starting Docker rootless daemon in a screen session..."
+        screen -dmS docker-rootless bash -c "PATH=/usr/bin:/sbin:/usr/sbin:\$PATH dockerd-rootless.sh --exec-opt native.cgroupdriver=cgroupfs > ~/docker-rootless.log 2>&1"
+    else
+        echo "$(date): 'screen' not found, starting Docker rootless daemon in background..."
+        PATH=/usr/bin:/sbin:/usr/sbin:$PATH dockerd-rootless.sh --exec-opt native.cgroupdriver=cgroupfs > ~/docker-rootless.log 2>&1 &
+    fi
+
+    # Wait for Docker daemon to be ready
+    until docker info > /dev/null 2>&1; do
+        if [ $ATTEMPT -le $MAX_RETRIES ]; then
+            echo "$(date) Attempt $ATTEMPT of $MAX_RETRIES: Waiting for Docker daemon to start..."
+            sleep $RETRY_INTERVAL
+            ((ATTEMPT++))
+        else
+            echo "$(date) ERROR: Docker daemon failed to start after $MAX_RETRIES attempts."
+            return 1
+        fi
+    done
+
+    echo "$(date): Docker daemon is ready!"
+    return 0
+}
+
+
 ###################
 # PREPARE CLEANUP #
 ###################
@@ -16,8 +51,22 @@ echo "scancel ${SLURM_JOB_ID}"  >> ${resource_jobdir}/cancel.sh
 start_gnome_session_with_retries() {
     k=1
     while true; do
-        gnome-session
-        sleep $((k*60))
+        if xset q >/dev/null 2>&1; then
+            echo "(date) X server on $DISPLAY is alive."
+            sleep $((k*10))
+        else
+            echo "(date) X server on $DISPLAY is unresponsive."
+            if [ $k -gt 1 ]; then
+                echo "$(date) Restarting vncserver"
+                ${service_vnc_exec} -kill ${DISPLAY}
+                sleep 3
+                ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${resource_jobdir}/.vncpasswd
+            fi
+            sleep 2
+            echo "$(date) Starting gnome-session"
+            gnome-session --debug
+            sleep $((k*10))
+        fi
         k=$((k+1))
     done
 }
@@ -29,6 +78,10 @@ fi
 
 if [ -z "${service_nginx_sif}" ]; then
     service_nginx_sif=${service_parent_install_dir}/nginx-unprivileged.sif
+fi
+
+if [ -z "${service_vncserver_sif}" ]; then
+    service_vncserver_sif=${service_parent_install_dir}/vncserver.sif
 fi
 
 service_novnc_tgz_stem=$(echo ${service_novnc_tgz_basename} | sed "s|.tar.gz||g" | sed "s|.tgz||g")
@@ -69,10 +122,32 @@ if [ -z "${service_vnc_exec}" ]; then
 fi
 
 if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
-    displayErrorMessage "ERROR: vncserver is not installed"
+    if [[ ${service_download_vncserver_container} != "true" ]]; then
+        echo "$(date) ERROR: No vncserver command found"
+        exit 1
+    fi
+    if ! which singularity > /dev/null 2>&1; then
+        echo "(date) ERROR: No vncserver or singularity command found"
+        exit 1
+    fi
+    echo "$(date): vncserver is not installed. Using singularity container..."
+    service_vnc_exec="singularity exec --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} ${service_vncserver_sif} vncserver"
+    service_vnc_type="TurboVNC"
+    service_desktop="echo Starting no service desktop on the host"
+    mkdir -p /tmp/.X11-unix
+    rm -f ~/.vnc/xstartup.turbovnc
+cat >> ~/.vnc/xstartup.turbovnc <<HERE
+unset SESSION_MANAGER
+unset DBUS_SESSION_BUS_ADDRESS
+startxfce4 &
+HERE
+    chmod +x ~/.vnc/xstartup.turbovnc
 fi
 
-service_vnc_type=$(${service_vnc_exec} -list | grep -oP '(TigerVNC|TurboVNC|KasmVNC)')
+if [ -z ${service_vnc_type} ]; then
+    service_vnc_type=$(${service_vnc_exec} -list | grep -oP '(TigerVNC|TurboVNC|KasmVNC)')
+fi
+
 if [ -z ${service_vnc_type} ]; then
     displayErrorMessage "ERROR: vncserver type not found. Supported type are TigerVNC, TurboVNC and KasmVNC"
 fi
@@ -197,17 +272,21 @@ if [[ "${service_vnc_type}" == "TigerVNC" || "${service_vnc_type}" == "TurboVNC"
         chmod +x ~/.vnc/xstartup
     fi
 
-    # service_vnc_type needs to be an input to the workflow in the XML
+    # service_vnc_type needs to be an input to the workflow in the YAML
     # if vncserver is not tigervnc
+
+    # Set password
+    printf "${password}\n${password}\n\n" | vncpasswd -f > ${resource_jobdir}/.vncpasswd
+    chmod 600 ${resource_jobdir}/.vncpasswd
+
     if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
         # FIXME: Change ~/.vnc/config
         ${service_vnc_exec} ${DISPLAY} &> ${resource_jobdir}/vncserver.log &
         echo $! > ${resource_jobdir}/vncserver.pid
-    elif [[ ${service_vnc_type} == "TurboVNC" ]]; then
+    elif [[ "${service_vnc_type}" == "TigerVNC" ]]; then
+        ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${resource_jobdir}/.vncpasswd
+    elif [[ "${service_vnc_type}" == "TurboVNC" ]]; then
         ${service_vnc_exec} ${DISPLAY} -SecurityTypes None
-    else
-        # tigervnc
-        ${service_vnc_exec} ${DISPLAY} -SecurityTypes=None
     fi
 
     rm -f ${resource_jobdir}/service.pid
@@ -299,6 +378,26 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     # START NGINX WRAPPER #
     #######################
 
+    proxy_port=${kasmvnc_port}
+    proxy_host="127.0.0.1"
+    if which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]]; then
+        if ! dockerd-rootless-setuptool.sh check; then
+            echo "$(date) ERROR: Rootless docker is NOT support on this system"
+            exit 1
+        fi
+        if ! which socat >/dev/null 2>&1; then
+            echo "$(date) ERROR: socat is not installed"
+            exit 1
+        fi
+        start_rootless_docker
+        # Need to run this for the container to be able to access the port on the host's network
+        proxy_port=$(findAvailablePort)
+        proxy_host=$(hostname -I | xargs)
+        
+        socat TCP-LISTEN:${proxy_port},reuseaddr,fork,bind=0.0.0.0 TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
+        pid=$!
+        echo "kill ${pid} #socat" >> cancel.sh
+    fi
     echo "Starting nginx wrapper on service port ${service_port}"
 
     # Write config file
@@ -312,7 +411,7 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
  location / {
-     proxy_pass https://127.0.0.1:${kasmvnc_port};
+     proxy_pass https://${proxy_host}:${proxy_port};
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";
@@ -363,7 +462,25 @@ http {
 }
 HERE
 
-    if sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
+    if which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]]; then
+        container_name="nginx-${service_port}"
+        touch empty
+        touch nginx.logs
+        echo "docker volume rm ${container_name}" >> cancel.sh
+        docker volume create ${container_name}
+        echo "docker stop ${container_name}" >> cancel.sh
+        echo "docker rm ${container_name}" >> cancel.sh
+        chmod 644 ${PWD}/{nginx.conf,config.conf,empty}
+        docker run  -d --name ${container_name} \
+            --add-host=host.docker.internal:host-gateway \
+            -p ${service_port}:${service_port} \
+            -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
+            -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
+            -v $PWD/empty:/etc/nginx/conf.d/default.conf \
+            nginxinc/nginx-unprivileged:1.25.3
+        # Print logs
+        docker logs ${container_name}
+    elif sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
         container_name="nginx-${service_port}"
         # Remove container when job is canceled
         echo "sudo docker stop ${container_name}" >> cancel.sh

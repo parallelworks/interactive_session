@@ -206,6 +206,11 @@ jobs:
         type: string
         default: /ngencerf-app/singularity/nwm-fcst-mgr.sif
         hidden: true
+      nwm_verf_singularity_container_path:
+        label: Path to the nwm-verf singularity container
+        type: string
+        default: /ngencerf-app/singularity/nwm-verf.sif
+        hidden: true
       container_data_dir:
         label: Path to the data directory within the container
         type: string

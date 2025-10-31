@@ -20,6 +20,8 @@ jobs:
           set -e
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
           ./utils/steps-v3/preprocessing/process_inputs_sh.sh
+          password=$(openssl rand -base64 12 | head -c 12)
+          echo "export password=${password}" >> resources/host/inputs.sh
       - name: Transfer Files to Controller
         early-cancel: any-job-failed
         if: ${{ inputs.targetType == 'compute-cluster' }}
@@ -186,7 +188,7 @@ jobs:
         if: ${{ inputs.targetType == 'compute-cluster' }}
         run: |
           source resources/host/inputs.sh
-          slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=headless&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
+          slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
           echo "slug=${slug}"  | tee -a $OUTPUTS
       - name: Expose Port
         early-cancel: any-job-failed

@@ -28,12 +28,15 @@ NWM_CAL_MGR_SINGULARITY_CONTAINER_PATH = os.environ.get('nwm_cal_mgr_singularity
 NGEN_BMI_FORCING_SINGULARITY_CONTAINER_PATH = os.environ.get('ngen_bmi_forcing_singularity_container_path')
 # Path to the singularity container with ngen-forcing
 NWM_FCST_MGR_SINGULARITY_CONTAINER_PATH = os.environ.get('nwm_fcst_mgr_singularity_container_path')
+# Path to the nwm_verf singularity container
+NWM_VERF_SINGULARITY_CONTAINER_PATH = os.environ.get('nwm_verf_singularity_container_path')
 # URL to callback from ngencal to the other services
 NGENCERF_URL = f"http://{CONTROLLER_HOSTNAME}:8000"
 # Command to launch singularity
 SINGULARITY_RUN_NWM_CAL_MGR_CMD = f"/usr/bin/time -v singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} --env NGENCERF_URL={NGENCERF_URL} {NWM_CAL_MGR_SINGULARITY_CONTAINER_PATH}"
 SINGULARITY_RUN_NGEN_BMI_FORCING_CMD = f"/usr/bin/time -v singularity exec -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} --env NGENCERF_URL={NGENCERF_URL} {NGEN_BMI_FORCING_SINGULARITY_CONTAINER_PATH} /ngen-app/bin/run-ngen-forcing.sh"
 SINGULARITY_RUN_NWM_FCST_MGR_CMD = f"/usr/bin/time -v singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} --env NGENCERF_URL={NGENCERF_URL} {NWM_FCST_MGR_SINGULARITY_CONTAINER_PATH}"
+SINGULARITY_RUN_NWM_VERF_CMD = f"/usr/bin/time -v singularity run -B {LOCAL_DATA_DIR}:{CONTAINER_DATA_DIR} --env NGENCERF_URL={NGENCERF_URL} {NWM_VERF_SINGULARITY_CONTAINER_PATH}"
 
 # Slurm job metrics for sacct command
 SLURM_JOB_METRICS = os.environ.get('SLURM_JOB_METRICS')
@@ -551,6 +554,59 @@ def submit_cold_start_job():
     return jsonify({"slurm_job_id": slurm_job_id}), exit_code
 
 
+@app.route('/submit-verification-job', methods=['POST'])
+def submit_verification_job():
+    logging.info("submit-verification-job - Received POST request with the following parameters:")
+    for key, value in request.form.items():
+        logging.info(f"{key}: {value}")
+
+    job_type = 'verification-job'
+    # job id
+    verification_job_id = request.form.get('verification_job_id')
+    # validation yaml
+    verification_config = request.form.get('verification_configl')
+    # Path to the SLURM job log file in the controller node
+    stdout_file = request.form.get('stdout_file')
+    # Path to the SLURM job log file in the controller node
+    auth_token = request.form.get('auth_token')
+
+    if not verification_job_id:
+        return log_and_return_error("No verification_job_id provided", status_code=400)
+
+    if not verification_config:
+        return log_and_return_error("No verification_config provided", status_code=400)
+    
+    if not stdout_file:
+        return log_and_return_error("No stdout_file provided", status_code=400)
+
+    if not auth_token:
+        return log_and_return_error("No auth_token provided", status_code=400)
+
+    singularity_run_cmd = f"{SINGULARITY_RUN_NWM_VERF_CMD} run-ngen-verf.sh verification {verification_config}"
+
+    postprocessing_dir = os.path.join("postprocess", job_type, verification_job_id)
+
+    try:
+        # Get callback
+        callback = get_callback(
+            f'http://{CONTROLLER_HOSTNAME}:8000/calibration/verification_job_slurm_callback/',
+            auth_token,
+            verification_job_id=verification_job_id,
+            job_status="__job_status__"
+        )
+
+        write_callback(postprocessing_dir, callback)
+
+    except Exception as e:
+        return log_and_return_error(str(e), status_code=500)
+
+    slurm_job_id, exit_code = submit_job(verification_config, stdout_file, verification_job_id, job_type, singularity_run_cmd)
+    if exit_code == 500:
+        return jsonify({"error": slurm_job_id}), exit_code
+
+    return jsonify({"slurm_job_id": slurm_job_id}), exit_code
+
+
 @app.route('/job-status', methods=['GET'])
 def job_status():
     # Get job ID from request
@@ -572,22 +628,17 @@ def job_status():
         # First, try to get job status using squeue (for pending or running jobs)
         job_status, error = squeue_job_status(last_job_id)
         if error:
-            return log_and_return_error(error, 500)
+            logger.info("Error running squeue: {error}")
+            result = subprocess.run(["sacct", "-X", "--jobs", last_job_id, "--format=State", "--noheader"], capture_output=True, text=True)
+            if result.returncode == 0 and result.stdout.strip():
+                # Parse only the first line from sacct output
+                job_status = result.stdout.strip().splitlines()[0]
+                logger.info(f"The status of {last_job_id} is {job_status} from sacct")
 
         if job_status:
-            logger.info(f"The status of {slurm_job_id} is {job_status} from squeue")
-            return jsonify({"slurm_job_id": slurm_job_id, "status": job_status}), 200
+            logger.info(f"The status of {last_job_id} is {job_status} from squeue")
+            return jsonify({"status": job_status}), 200
 
-        # If squeue doesn't return a status, fall back to sacct for completed/failed jobs
-        result = subprocess.run(["sacct", "--jobs", slurm_job_id, "--format=State", "--noheader"], capture_output=True, text=True)
-
-        if result.returncode == 0 and result.stdout.strip():
-            # Parse only the first line from sacct output
-            job_status = result.stdout.strip().splitlines()[0]
-            logger.info(f"The status of {slurm_job_id} is {job_status} from sacct")
-            return jsonify({"slurm_job_id": slurm_job_id, "status": job_status}), 200
-
-        # If sacct also doesn't return a status, return job not found error
         return log_and_return_error("Job not found", 404)
     except Exception as e:
         return log_and_return_error(str(e), 500)

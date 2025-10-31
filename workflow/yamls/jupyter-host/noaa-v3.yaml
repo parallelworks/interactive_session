@@ -348,7 +348,7 @@ jobs:
           load_env_tag_existing:
             label: Command to load Jupyter Notebook to the PATH
             type: string
-            default: module load intelpython; export PATH=$PATH:/home/${USER}/.local/bin
+            default: module load python; export PATH=$PATH:/home/${USER}/.local/bin
             hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider ||  inputs.service.use_conda == true }}
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}
@@ -393,6 +393,6 @@ jobs:
           install_command:
             label: Command to install Jupyter
             type: string
-            default: module load intelpython; pip install --upgrade "notebook>=7" --no-warn-script-location
+            default: module load python; pip install --upgrade "notebook>=7" --no-warn-script-location
             hidden: ${{ inputs.service.conda_install == false || 'existing' != inputs.pwrl_host.resource.provider  ||  inputs.service.use_conda == true  }}
             ignore: ${{ .hidden }}

@@ -293,6 +293,38 @@ else
     export MAX_CONFIGURING_WAIT_TIME="9999999999"
 fi
 
+# This script is required to run the callback with retries
+cat >> run_callback.sh <<HERE
+#!/bin/bash
+
+MAX_RETRIES=144
+RETRY_COUNT=0
+DELAY=300  # seconds between retries
+
+callback=\$1
+
+if ! [ -f \${callback} ]; then
+    echo "\$(date) ERROR: callback file \${callback} does not exist!"
+    exit 0
+fi
+
+while true; do
+    http_code=\$(bash \${callback})
+    if [[ "\${http_code}" != "000" ]]; then
+        exit 0
+    fi
+    RETRY_COUNT=\$((RETRY_COUNT + 1))
+    echo "\$(date) HTTP CODE is \${http_code}. Attempt \$RETRY_COUNT of \$MAX_RETRIES."
+    if [ \$RETRY_COUNT -ge \$MAX_RETRIES ]; then
+        echo "\$(date) Max retries reached. Exiting."
+        exit 0
+    fi
+            
+    sleep \${DELAY}
+done
+HERE
+chmod +x run_callback.sh
+
 /usr/local/bin/gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app-v3:app \
   --access-logfile slurm-wrapper-app-v3.log \
   --error-logfile slurm-wrapper-app-v3.log \

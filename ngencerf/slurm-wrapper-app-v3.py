@@ -103,7 +103,7 @@ def get_next_partition(current_partition=None):
 
 
 
-def get_callback(callback_url, auth_token, **kwargs):
+def get_callback(postprocessing_dir, callback_url, auth_token, **kwargs):
     # Prepare the data dictionary excluding the auth_token
     data = {key: value for key, value in kwargs.items()}
 
@@ -111,8 +111,7 @@ def get_callback(callback_url, auth_token, **kwargs):
     json_data = ', '.join([f'\"{key}\": \"{value}\"' for key, value in data.items()])
 
     # Construct the complete curl command string
-    callback_command = f'curl --location "{callback_url}" --header "Content-Type: application/json" --header "Authorization: Bearer {auth_token}" --data \'{{{json_data}}}\''
-
+    callback_command = f'curl -s -o {postprocessing_dir}/callback.json -w "%{{http_code}}" --location "{callback_url}" --header "Content-Type: application/json" --header "Authorization: Bearer {auth_token}" --data \'{{{json_data}}}\''
     return callback_command
 
 
@@ -343,6 +342,7 @@ def submit_calibration_job():
     try:
         # Get callback
         callback = get_callback(
+            postprocessing_dir,
             f'http://{CONTROLLER_HOSTNAME}:8000/calibration/calibration_job_slurm_callback/',
             auth_token,
             calibration_run_id=calibration_run_id,
@@ -421,6 +421,7 @@ def submit_validation_job():
     try:
         # Get callback
         callback = get_callback(
+            postprocessing_dir,
             f'http://{CONTROLLER_HOSTNAME}:8000/calibration/validation_job_slurm_callback/',
             auth_token,
             validation_run_id=validation_run_id,
@@ -478,6 +479,7 @@ def submit_forecast_job():
     try:
         # Get callback
         callback = get_callback(
+            postprocessing_dir,
             f'http://{CONTROLLER_HOSTNAME}:8000/calibration/forecast_job_slurm_callback/',
             auth_token,
             forecast_run_id=forecast_run_id,
@@ -536,6 +538,7 @@ def submit_cold_start_job():
     try:
         # Get callback
         callback = get_callback(
+            postprocessing_dir,
             f'http://{CONTROLLER_HOSTNAME}:8000/calibration/cold_start_job_slurm_callback/',
             auth_token,
             cold_start_run_id=cold_start_run_id,
@@ -589,6 +592,7 @@ def submit_verification_job():
     try:
         # Get callback
         callback = get_callback(
+            postprocessing_dir,
             f'http://{CONTROLLER_HOSTNAME}:8000/calibration/verification_job_slurm_callback/',
             auth_token,
             verification_job_id=verification_job_id,
@@ -824,12 +828,14 @@ def postprocess():
     with open(performance_file_path, 'r') as f:
         performance_file = f.read()
 
-    # Construct the command to run sleep and sacct
+    # Replace job status in callback script
     with open(callback_script, 'r') as f:
         callback = f.read().replace('__job_status__', job_status)
+    with open(callback_script, 'w') as f:
+        f.write(callback)
 
     sacct_cmd = f'sacct -j {slurm_job_id} -o {SLURM_JOB_METRICS} --parsable --units=K > {performance_file}'
-    cmd = f'sleep 5; {sacct_cmd}; {callback} >> {callback_log_path} 2>&1'
+    cmd = f'sleep 5; {sacct_cmd}; ./run_callback.sh {callback_script} >> {callback_log_path} 2>&1'
 
     try:
         # Run the command in the background using subprocess.Popen

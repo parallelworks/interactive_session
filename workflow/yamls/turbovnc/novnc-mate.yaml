@@ -148,7 +148,7 @@ jobs:
 
           # Function to check if server is listening
           check_server() {
-              ${sshcmd} "curl --silent --connect-timeout \"$TIMEOUT\" \"http://${remote_host}:${remote_port}\"" >/dev/null 2>&1
+              ${sshcmd} "unset LD_LIBRARY_PATH && curl --silent --connect-timeout \"$TIMEOUT\" \"http://${remote_host}:${remote_port}\"" >/dev/null 2>&1
               return $?
           }
 

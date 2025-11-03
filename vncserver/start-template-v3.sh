@@ -106,6 +106,7 @@ if ! [ -z "${CONDA_PREFIX}" ]; then
     echo "Deactivating conda environment"
     source ${CONDA_PREFIX}/etc/profile.d/conda.sh
     conda deactivate
+    export LD_LIBRARY_PATH=$(echo "$LD_LIBRARY_PATH" | tr ':' '\n' | grep -v 'conda' | tr '\n' ':' | sed 's/:$//')
 fi
 
 set -x

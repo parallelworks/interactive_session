@@ -115,9 +115,6 @@ if [ ! -f ${service_exec} ]; then
 fi
 
 
-curl -L -o github.copilot-1.388.0.vsix \
-"https://github.gallery.vsassets.io/_apis/public/gallery/publisher/github/extension/copilot/1.388.0/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage"
-
 
 # Copilot extension
 copilot_extension_path=${service_parent_install_dir}/github.copilot-1.388.0.vsix

@@ -55,11 +55,6 @@ MAX_CONFIGURING_WAIT_TIME = int(os.environ.get('MAX_CONFIGURING_WAIT_TIME'))
 # Jobs with CF status
 configuring_jobs = {}
 
-# Pending postprocessing
-os.makedirs('postprocess', exist_ok=True)
-os.makedirs('postprocess/calibration', exist_ok=True)
-os.makedirs('postprocess/validation', exist_ok=True)
-
 app = Flask(__name__)
 
 

@@ -1,8 +1,3 @@
-#service_download_url="https://github.com/coder/code-server/releases/download/v4.92.2/code-server-4.92.2-linux-amd64.tar.gz"
-
-# The URL downloads a different file when using wget/curl than when pasting it in the browser
-# service_copilot_url="https://marketplace.visualstudio.com/_apis/public/gallery/publishers/GitHub/vsextensions/copilot/latest/vspackage"
-service_copilot_usercontainer_path="${pw_job_dir}/${service_name}/GitHub.copilot-latest.vsix"
 
 displayErrorMessage() {
     echo $(date): $1
@@ -31,8 +26,6 @@ install_code_server() {
     # Install code server
     wget -P ${service_parent_install_dir} ${service_download_url}
     tar -zxf ${service_tgz_path} -C ${service_parent_install_dir}
-    #wget -P ${service_parent_install_dir} -O ${service_copilot_vsix_path} ${service_copilot_url}
-    ${service_exec} --install-extension ${service_copilot_vsix_path} --extensions-dir ${HOME}/.local/share/code-server/extensions
 
     # install latest cline
     if ! ${service_exec} --list-extensions | grep -q '^saoudrizwan.claude-dev$'; then
@@ -120,6 +113,30 @@ if [ ! -f ${service_exec} ]; then
     echo "Installing code server"
     install_code_server
 fi
+
+
+curl -L -o github.copilot-1.388.0.vsix \
+"https://github.gallery.vsassets.io/_apis/public/gallery/publisher/github/extension/copilot/1.388.0/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage"
+
+
+# Copilot extension
+copilot_extension_path=${service_parent_install_dir}/github.copilot-1.388.0.vsix
+if [ ! -f ${copilot_extension_path} ]; then
+    echo "Extension ${copilot_extension_path} not found"
+    echo "Downloading and installing extension ${copilot_extension_path}"
+    curl -L -o ${copilot_extension_path} "https://github.gallery.vsassets.io/_apis/public/gallery/publisher/github/extension/copilot/1.388.0/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage"
+    ${service_exec} --install-extension ${copilot_extension_path} --extensions-dir ${HOME}/.local/share/code-server/extensions
+fi
+
+# Copilot chat extension
+copilot_chat_extension_path=${service_parent_install_dir}/github.copilot-chat-0.10.1.vsix
+if [ ! -f ${copilot_chat_extension_path} ]; then
+    echo "Extension ${copilot_chat_extension_path} not found"
+    echo "Downloading and installing extension ${copilot_chat_extension_path}"
+    curl -L -o ${copilot_chat_extension_path} "https://github.gallery.vsassets.io/_apis/public/gallery/publisher/github/extension/copilot-chat/0.10.1/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage"
+    ${service_exec} --install-extension ${copilot_chat_extension_path} --extensions-dir ${HOME}/.local/share/code-server/extensions
+fi
+
 
 if [ ! -f ${service_exec} ]; then
     displayErrorMessage "Error missing ${service_exec}"

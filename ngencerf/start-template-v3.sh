@@ -302,6 +302,7 @@ RETRY_COUNT=0
 DELAY=300  # seconds between retries
 
 callback=\$1
+callback_dir=\$(dirname \${callback})
 
 if ! [ -f \${callback} ]; then
     echo "\$(date) ERROR: callback file \${callback} does not exist!"

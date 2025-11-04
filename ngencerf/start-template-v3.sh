@@ -294,36 +294,7 @@ else
 fi
 
 # This script is required to run the callback with retries
-cat >> run_callback.sh <<HERE
-#!/bin/bash
-
-MAX_RETRIES=144
-RETRY_COUNT=0
-DELAY=300  # seconds between retries
-
-callback=\$1
-callback_dir=\$(dirname \${callback})
-
-if ! [ -f \${callback} ]; then
-    echo "\$(date) ERROR: callback file \${callback} does not exist!"
-    exit 0
-fi
-
-while true; do
-    http_code=\$(bash \${callback})
-    if [[ "\${http_code}" != "000" ]]; then
-        exit 0
-    fi
-    RETRY_COUNT=\$((RETRY_COUNT + 1))
-    echo "\$(date) HTTP CODE is \${http_code}. Attempt \$RETRY_COUNT of \$MAX_RETRIES."
-    if [ \$RETRY_COUNT -ge \$MAX_RETRIES ]; then
-        echo "\$(date) Max retries reached. Exiting."
-        exit 0
-    fi
-            
-    sleep \${DELAY}
-done
-HERE
+sed -i "s|__LOCAL_DATA_DIR__|${local_data_dir}|g" run_callback.sh
 chmod +x run_callback.sh
 
 /usr/local/bin/gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app-v3:app \
@@ -428,6 +399,11 @@ if docker image inspect "${ngencerf_image}" >/dev/null 2>&1; then
 else
   echo "warning: image ${ngencerf_image} not found locally; skipping CLI extract"
 fi
+
+sed -i "s|__LOCAL_DATA_DIR__|${local_data_dir}|g" rerun_callbacks.sh
+bash rerun_callbacks.sh >> rerun_callbacks.log 2>&1 &
+rerun_callbacks_pid=$!
+echo "kill ${rerun_callbacks_pid} #rerun callbacks" >> cancel.sh
 
 # Tail the logs
 docker compose -f production-pw.yaml logs -f

@@ -23,7 +23,7 @@ LOCAL_DATA_DIR = os.environ.get('local_data_dir')  # "/ngencerf-app/data/ngen-ca
 # Path to the data directory within the container
 CONTAINER_DATA_DIR = os.environ.get('container_data_dir')  # "/ngencerf/data/"
 # Callback dir
-CALLBACKS_DIR = os.path.join(LOCAL_DATA_DIR, "slurm-callbacks", "submitted")
+CALLBACKS_DIR = os.path.join(LOCAL_DATA_DIR, "slurm-callbacks", "pending")
 # Path to the singularity container with ngen-cal
 NWM_CAL_MGR_SINGULARITY_CONTAINER_PATH = os.environ.get('nwm_cal_mgr_singularity_container_path')
 # Path to the singularity container with ngen-forcing
@@ -144,6 +144,7 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
     job_script = output_file_local.rsplit('.', 1)[0] + '.slurm.sh'
     job_dir = os.path.dirname(os.path.dirname(input_file_local))
     callbacks_dir = os.path.dirname(CALLBACKS_DIR, job_type, run_id)
+    performance_file = output_file_local.replace('stdout', 'performance')
 
     # We need to change these ownerships to be able to write the SLURM script and its output file
     ensure_file_owned(job_script)
@@ -159,6 +160,11 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         script.write('\n')
 
         script.write('echo Running Job $SLURM_JOB_ID \n\n')
+        # This is only required for the slurm-callback retries if the server is stopped
+        script.write('echo export slurm_job_id=$SLURM_JOB_ID > {callbacks_dir}/postprocess_inputs.sh\n')
+        script.write('echo export performance_file=${performance_file} >> {callbacks_dir}/postprocess_inputs.sh\n')
+        script.write('echo export job_type={job_type} >> {callbacks_dir}/postprocess_inputs.sh\n')
+        script.write('echo export run_id={run_id} >> {callbacks_dir}/postprocess_inputs.sh\n\n')
 
         # Change ownership of the directory to the current user and group
         current_uid = os.getuid()
@@ -204,11 +210,11 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
 
         script.write(f'sed -i "s/__job_status__/${{job_status}}/g" {callbacks_dir}/callback\n')
 
-        create_performance_files_cmd = (
+        postprocess_cmd = (
             f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess '
-            f'-d "slurm_job_id=$SLURM_JOB_ID" -d "job_type={job_type}" -d "run_id={run_id}"\n'
+            f'-d "performance_file=${performance_file}" -d "slurm_job_id=$SLURM_JOB_ID" -d "job_type={job_type}" -d "run_id={run_id}"\n'
         )
-        script.write(create_performance_files_cmd)
+        script.write(postprocess_cmd)
 
     return job_script
 
@@ -279,13 +285,6 @@ def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd, n
             shutil.rmtree(callbacks_dir)
             logger.info(f'Removed {callbacks_dir}')
             return jsonify({"error": error}), 500
-
-        # Performance statistics
-        performance_file_path = os.path.join(postprocessing_dir, 'performance_file')
-        with open(performance_file_path, 'w') as file:
-            file.write(output_file_local.replace('stdout', 'performance'))
-
-        logger.info(f"Added performance file to {performance_file_path}")
 
         # Initialize job
         if PARTITIONS:
@@ -790,7 +789,7 @@ def postprocess():
     slurm_job_id = request.form.get('slurm_job_id')
     job_type = request.form.get('job_type')
     run_id = request.form.get('run_id')
-    job_status = request.form.get('job_status')
+    performance_file = request.form.get('performance_file')
 
     # Validate inputs
     if not slurm_job_id:
@@ -802,35 +801,20 @@ def postprocess():
     if not run_id:
         return log_and_return_error("No job id provided", 400)
 
-    if not job_status:
-        return log_and_return_error("No job status provided", 400)
+    if not performance_file:
+        return log_and_return_error("No performance file path provided", 400)
 
     logger.info(f"Postprocessing {job_type} job with id {run_id} and SLURM job id {slurm_job_id}")
 
-    postprocessing_dir = os.path.join('postprocess', job_type, run_id)
-    callback_script = os.path.join(postprocessing_dir, 'callback')
-    performance_file_path = os.path.join(postprocessing_dir, 'performance_file')
-    callback_log_path = os.path.join(postprocessing_dir, 'callback.log')
+    callbacks_dir = os.path.dirname(CALLBACKS_DIR, job_type, run_id)
+
+    callback_script = os.path.join(callbacks_dir, 'callback')
+    callback_log_path = os.path.join(callbacks_dir, 'callback.log')
 
     if not os.path.exists(callback_script):
         error_msg = f"Callback script ${callback_script} does not exist"
         logger.error(error_msg)
         log_and_return_error(error_msg, 500)
-
-    if not os.path.exists(performance_file_path):
-        error_msg = f"Performance file ${performance_file_path} does not exist"
-        logger.error(error_msg)
-        log_and_return_error(error_msg, 500)
-
-    # Construct the command to run sleep and sacct
-    with open(performance_file_path, 'r') as f:
-        performance_file = f.read()
-
-    # Replace job status in callback script
-    with open(callback_script, 'r') as f:
-        callback = f.read().replace('__job_status__', job_status)
-    with open(callback_script, 'w') as f:
-        f.write(callback)
 
     sacct_cmd = f'sacct -j {slurm_job_id} -o {SLURM_JOB_METRICS} --parsable --units=K > {performance_file}'
     cmd = f'sleep 5; {sacct_cmd}; ./run_callback.sh {callback_script} >> {callback_log_path} 2>&1'

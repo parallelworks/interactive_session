@@ -2,6 +2,8 @@
 local_data_dir=__LOCAL_DATA_DIR__
 pending_callbacks_dir=${local_data_dir}/pending/
 
+echo "$(date) Re-running missing callbacks"
+
 # Sleep some time to give the server time to start up
 sleep 120
 
@@ -12,6 +14,7 @@ find ${pending_callbacks_dir} -name callback | while read -r callback_path; do
     callback_dir=$(dirname "$callback_path")
 
     # Ensure the postprocess_inputs.sh exists before sourcing
+    # - This file is only present if the job already has a status (DONE or FAILED ). See slurm-wrapper-app-v3.py
     if [[ -f "${callback_dir}/postprocess_inputs.sh" ]]; then
         source "${callback_dir}/postprocess_inputs.sh"
     else

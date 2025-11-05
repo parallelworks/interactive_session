@@ -160,11 +160,6 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         script.write('\n')
 
         script.write('echo Running Job $SLURM_JOB_ID \n\n')
-        # This is only required for the slurm-callback retries if the server is stopped
-        script.write('echo export slurm_job_id=$SLURM_JOB_ID > {callbacks_dir}/postprocess_inputs.sh\n')
-        script.write('echo export performance_file=${performance_file} >> {callbacks_dir}/postprocess_inputs.sh\n')
-        script.write('echo export job_type={job_type} >> {callbacks_dir}/postprocess_inputs.sh\n')
-        script.write('echo export run_id={run_id} >> {callbacks_dir}/postprocess_inputs.sh\n\n')
 
         # Change ownership of the directory to the current user and group
         current_uid = os.getuid()
@@ -210,6 +205,12 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
 
         script.write(f'sed -i "s/__job_status__/${{job_status}}/g" {callbacks_dir}/callback\n')
 
+        # This is only required for the slurm-callback retries if the server is stopped
+        script.write('echo export slurm_job_id=$SLURM_JOB_ID > {callbacks_dir}/postprocess_inputs.sh\n')
+        script.write('echo export performance_file=${performance_file} >> {callbacks_dir}/postprocess_inputs.sh\n')
+        script.write('echo export job_type={job_type} >> {callbacks_dir}/postprocess_inputs.sh\n')
+        script.write('echo export run_id={run_id} >> {callbacks_dir}/postprocess_inputs.sh\n\n')
+        
         postprocess_cmd = (
             f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess '
             f'-d "performance_file=${performance_file}" -d "slurm_job_id=$SLURM_JOB_ID" -d "job_type={job_type}" -d "run_id={run_id}"\n'

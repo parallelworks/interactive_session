@@ -126,13 +126,13 @@ if [ ! -f ${copilot_extension_path} ]; then
 fi
 
 # Copilot chat extension
-copilot_chat_extension_path=${service_parent_install_dir}/github.copilot-chat-0.10.1.vsix
-if [ ! -f ${copilot_chat_extension_path} ]; then
-    echo "Extension ${copilot_chat_extension_path} not found"
-    echo "Downloading and installing extension ${copilot_chat_extension_path}"
-    curl -L -o ${copilot_chat_extension_path} "https://github.gallery.vsassets.io/_apis/public/gallery/publisher/github/extension/copilot-chat/0.10.1/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage"
-    ${service_exec} --install-extension ${copilot_chat_extension_path} --extensions-dir ${HOME}/.local/share/code-server/extensions
-fi
+#copilot_chat_extension_path=${service_parent_install_dir}/github.copilot-chat-0.32.2025100703.vsix
+#if [ ! -f ${copilot_chat_extension_path} ]; then
+#    echo "Extension ${copilot_chat_extension_path} not found"
+#    echo "Downloading and installing extension ${copilot_chat_extension_path}"
+#    curl -L -o ${copilot_chat_extension_path} "https://github.gallery.vsassets.io/_apis/public/gallery/publisher/github/extension/copilot-chat/0.32.2025100703/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage"
+#    ${service_exec} --install-extension ${copilot_chat_extension_path} --extensions-dir ${HOME}/.local/share/code-server/extensions
+#fi
 
 
 if [ ! -f ${service_exec} ]; then

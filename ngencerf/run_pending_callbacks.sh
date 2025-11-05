@@ -2,7 +2,13 @@
 local_data_dir=__LOCAL_DATA_DIR__
 pending_callbacks_dir=${local_data_dir}/pending/
 
-echo "$(date) Re-running missing callbacks"
+# Check if the directory exists
+if [ ! -d "${pending_callbacks_dir}" ]; then
+    echo "$(date) No pending callbacks found"
+    exit 0
+fi
+
+echo "$(date) Re-running pending callbacks"
 
 # Sleep some time to give the server time to start up
 sleep 120

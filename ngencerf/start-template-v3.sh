@@ -310,10 +310,10 @@ echo "kill ${slurm_wrapper_pid}" >> cancel.sh
 
 
 # Rerun previous callbacks
-sed -i "s|__LOCAL_DATA_DIR__|${local_data_dir}|g" rerun_callbacks.sh
-bash rerun_callbacks.sh >> rerun_callbacks.log 2>&1 &
-rerun_callbacks_pid=$!
-echo "kill ${rerun_callbacks_pid} #rerun callbacks" >> cancel.sh
+sed -i "s|__LOCAL_DATA_DIR__|${local_data_dir}|g" run_pending_callbacks.sh
+bash run_pending_callbacks.sh >> run_pending_callback.log 2>&1 &
+run_pending_callbacks_pid=$!
+echo "kill ${run_pending_callbacks_pid} #rerun callbacks" >> cancel.sh
 
 ###############
 # NGENCERF-UI #

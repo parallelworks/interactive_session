@@ -390,6 +390,12 @@ echo "ngencerf_image=${ngencerf_image}"
 # clean any previous temp container quietly
 docker rm -f extract >/dev/null 2>&1 || true
 
+# Rerun previous callbacks
+sed -i "s|__LOCAL_DATA_DIR__|${local_data_dir}|g" rerun_callbacks.sh
+bash rerun_callbacks.sh >> rerun_callbacks.log 2>&1 &
+rerun_callbacks_pid=$!
+echo "kill ${rerun_callbacks_pid} #rerun callbacks" >> cancel.sh
+
 # only attempt extract if the image exists locally
 if docker image inspect "${ngencerf_image}" >/dev/null 2>&1; then
   docker create --name extract "${ngencerf_image}" >/dev/null
@@ -399,11 +405,6 @@ if docker image inspect "${ngencerf_image}" >/dev/null 2>&1; then
 else
   echo "warning: image ${ngencerf_image} not found locally; skipping CLI extract"
 fi
-
-sed -i "s|__LOCAL_DATA_DIR__|${local_data_dir}|g" rerun_callbacks.sh
-bash rerun_callbacks.sh >> rerun_callbacks.log 2>&1 &
-rerun_callbacks_pid=$!
-echo "kill ${rerun_callbacks_pid} #rerun callbacks" >> cancel.sh
 
 # Tail the logs
 docker compose -f production-pw.yaml logs -f

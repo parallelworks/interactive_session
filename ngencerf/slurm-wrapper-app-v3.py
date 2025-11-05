@@ -143,7 +143,7 @@ def ensure_file_owned(file_path: str):
 def write_slurm_script(run_id, job_type, input_file_local, output_file_local, singularity_run_cmd, nprocs = 1):
     job_script = output_file_local.rsplit('.', 1)[0] + '.slurm.sh'
     job_dir = os.path.dirname(os.path.dirname(input_file_local))
-    callbacks_dir = os.path.dirname(CALLBACKS_DIR, job_type, run_id)
+    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, run_id)
     performance_file = output_file_local.replace('stdout', 'performance')
 
     # We need to change these ownerships to be able to write the SLURM script and its output file
@@ -335,7 +335,7 @@ def submit_calibration_job():
 
     singularity_run_cmd = f"{SINGULARITY_RUN_NWM_CAL_MGR_CMD} calibration {input_file}"
 
-    callbacks_dir = os.path.dirname(CALLBACKS_DIR, job_type, calibration_run_id)
+    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, calibration_run_id)
 
     try:
         # Get callback
@@ -414,7 +414,7 @@ def submit_validation_job():
     else:
         return log_and_return_error("Invalid validation_type provided; must be one of 'valid_control', 'valid_best', or 'valid_iteration'", status_code = 400)
     
-    callbacks_dir = os.path.dirname(CALLBACKS_DIR, job_type, validation_run_id)
+    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, validation_run_id)
 
     try:
         # Get callback
@@ -472,7 +472,7 @@ def submit_forecast_job():
 
     singularity_run_cmd = f"{SINGULARITY_RUN_NWM_FCST_MGR_CMD} forecast {validation_yaml} {realization_file}"
 
-    callbacks_dir = os.path.dirname(CALLBACKS_DIR, job_type, forecast_run_id)
+    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, forecast_run_id)
 
     try:
         # Get callback
@@ -531,7 +531,7 @@ def submit_cold_start_job():
 
     singularity_run_cmd = f"{SINGULARITY_RUN_NWM_FCST_MGR_CMD} cold_start {validation_yaml} {realization_file}"
 
-    callbacks_dir = os.path.dirname(CALLBACKS_DIR, job_type, cold_start_run_id)
+    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, cold_start_run_id)
 
     try:
         # Get callback
@@ -585,7 +585,7 @@ def submit_verification_job():
 
     singularity_run_cmd = f"{SINGULARITY_RUN_NWM_VERF_CMD} run-ngen-verf.sh verification {verification_config}"
 
-    callbacks_dir = os.path.dirname(CALLBACKS_DIR, job_type, verification_job_id)
+    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, verification_job_id)
 
     try:
         # Get callback
@@ -760,7 +760,7 @@ def job_start():
     if not run_id:
         return log_and_return_error("No job id provided", 400)
 
-    callbacks_dir = os.path.dirname(CALLBACKS_DIR, job_type, run_id)
+    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, run_id)
     callback_script = os.path.join(callbacks_dir, 'callback')
 
     if not os.path.exists(callback_script):
@@ -807,7 +807,7 @@ def postprocess():
 
     logger.info(f"Postprocessing {job_type} job with id {run_id} and SLURM job id {slurm_job_id}")
 
-    callbacks_dir = os.path.dirname(CALLBACKS_DIR, job_type, run_id)
+    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, run_id)
 
     callback_script = os.path.join(callbacks_dir, 'callback')
     callback_log_path = os.path.join(callbacks_dir, 'callback.log')

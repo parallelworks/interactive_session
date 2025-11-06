@@ -189,11 +189,11 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         script.write(notify_job_start_cmd)
         
         # This is only required for the slurm-callback retries if the server is stopped
-        script.write('echo export slurm_job_id=$SLURM_JOB_ID > {callbacks_dir}/callback-inputs.sh\n')
-        script.write('echo export performance_file=${performance_file} >> {callbacks_dir}/callback-inputs.sh\n')
-        script.write('echo export job_type={job_type} >> {callbacks_dir}/callback-inputs.sh\n')
-        script.write('echo export run_id={run_id} >> {callbacks_dir}/callback-inputs.sh\n')
-        script.write('echo export job_status=STARTING >> {callbacks_dir}/callback-inputs.sh\n\n')
+        script.write(f'echo export slurm_job_id=$SLURM_JOB_ID > {callbacks_dir}/callback-inputs.sh\n')
+        script.write(f'echo export performance_file=${performance_file} >> {callbacks_dir}/callback-inputs.sh\n')
+        script.write(f'echo export job_type={job_type} >> {callbacks_dir}/callback-inputs.sh\n')
+        script.write(f'echo export run_id={run_id} >> {callbacks_dir}/callback-inputs.sh\n')
+        script.write(f'echo export job_status=STARTING >> {callbacks_dir}/callback-inputs.sh\n\n')
 
         # Execute the singularity command
         script.write(f'{singularity_run_cmd}\n')
@@ -209,7 +209,7 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         # Print a message indicating the job completion
         script.write('echo Job Completed with status $job_status\n')
         script.write('echo\n\n')
-        script.write('echo export job_status=${{job_status}} >> {callbacks_dir}/callback-inputs.sh\n\n')
+        script.write(f'echo export job_status=${{job_status}} >> {callbacks_dir}/callback-inputs.sh\n\n')
         
         postprocess_cmd = (
             f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess '

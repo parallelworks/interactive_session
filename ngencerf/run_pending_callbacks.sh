@@ -1,5 +1,5 @@
 #!/bin/bash
-local_data_dir=__LOCAL_DATA_DIR__
+local_data_dir=__LOCAL_DATA_DIR__/slurm-callbacks
 pending_callbacks_dir=${local_data_dir}/pending/
 
 # Check if the directory exists

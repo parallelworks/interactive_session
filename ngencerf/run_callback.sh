@@ -3,7 +3,7 @@ MAX_RETRIES=60 # 1hr
 RETRY_COUNT=0
 DELAY=60  # seconds between retries
 
-local_data_dir=__LOCAL_DATA_DIR__
+local_data_dir=__LOCAL_DATA_DIR__/slurm-callbacks
 callback_dir=$1
 callback_template=${callback_dir}/callback
 source ${callback_dir}/callback-inputs.sh

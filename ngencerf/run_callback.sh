@@ -9,7 +9,9 @@ callback_template=${callback_dir}/callback
 callback_inputs=${callback_dir}/callback-inputs.sh
 
 SECONDS=0
-while [ ! -f "${callback_inputs}" ] && [ $SECONDS -lt 20 ]; do
+while [ ! -f "${callback_inputs}" ] && [ $SECONDS -lt 60 ]; do
+    echo "$(date) Waiting for callback input file ${callback_inputs}"
+    ls -lat ${callback_dir}
     sleep 1
 done
 

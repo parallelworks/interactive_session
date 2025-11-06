@@ -285,7 +285,7 @@ chmod +x update_configuring_jobs.sh
 
 if [ "${PARTITION_COUNT}" -gt 1 ]; then
     echo "ACTIVATING JOB RESUBMISSION"
-    export MAX_CONFIGURING_WAIT_TIME="600"
+    export MAX_CONFIGURING_WAIT_TIME="720"
     ./update_configuring_jobs.sh > update_configuring_jobs.log 2>&1 &
     echo "kill $!" >> cancel.sh
 else

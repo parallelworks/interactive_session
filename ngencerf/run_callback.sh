@@ -3,13 +3,13 @@ MAX_RETRIES=60 # 1hr
 RETRY_COUNT=0
 DELAY=60  # seconds between retries
 
-local_data_dir=__LOCAL_DATA_DIR__/slurm-callbacks
+local_data_dir=__LOCAL_DATA_DIR__
 callback_dir=$1
 callback_template=${callback_dir}/callback
 source ${callback_dir}/callback-inputs.sh
 
-pending_callbacks_run_id_dir=${local_data_dir}/pending/${job_type}/${run_id}
-completed_callbacks_dir=${local_data_dir}/completed/${job_type}/
+pending_callbacks_run_id_dir=${local_data_dir}/slurm-callbacks/pending/${job_type}/${run_id}
+completed_callbacks_dir=${local_data_dir}/slurm-callbacks/completed/${job_type}/
 
 echo "$(date) Updating job status to ${job_status}"
 

@@ -15,25 +15,36 @@ sleep 120
 
 # Loop through all 'callback' files found under 'pending'
 find ${pending_callbacks_dir} -name callback | while read -r callback_path; do
-    echo "$(date) Re-running ${callback_path}"
-
     callback_dir=$(dirname "$callback_path")
+    echo "$(date) Checking ${callback_dir} for pending callbacks"
 
-    # Ensure the postprocess_inputs.sh exists before sourcing
-    # - This file is only present if the job already has a status (DONE or FAILED ). See slurm-wrapper-app-v3.py
-    if [[ -f "${callback_dir}/postprocess_inputs.sh" ]]; then
-        source "${callback_dir}/postprocess_inputs.sh"
+
+    # Ensure the callback-inputs.sh exists before sourcing
+    # - This file is only present if the job already has a status (STARTING, DONE or FAILED). See slurm-wrapper-app-v3.py
+    if [[ -f "${callback_dir}/callback-inputs.sh" ]]; then
+        source "${callback_dir}/callback-inputs.sh"
     else
-        echo "$(date) Warning: ${callback_dir}/postprocess_inputs.sh not found, skipping."
+        echo "$(date) Warning: ${callback_dir}/callback-inputs.sh not found, skipping."
         continue
     fi
+    echo "$(date) Job status is ${job_status}"
 
-    # Perform the POST request
-    curl -X POST "http://${HOSTNAME}:5000/postprocess" \
-         -d "performance_file=${performance_file}" \
-         -d "slurm_job_id=${SLURM_JOB_ID}" \
-         -d "job_type=${job_type}" \
-         -d "run_id=${run_id}"
-
+    if [[ "${job_status}" == "STARTING" ]]; then
+        if ! [[ -f "${callback_dir}/STARTED" ]]; then
+            echo "$(date) Starting job callback is pending, resubmitting callback"
+            curl -X POST "http://${HOSTNAME}:5000/job-start" \
+                -d "job_type=${job_type}" \
+                -d "run_id=${run_id}" 
+        fi
+    else
+        if ! [[ -f "${callback_dir}/ENDED" ]]; then
+            echo "$(date) Ending job callback is pending, resubmitting callback"
+            curl -X POST "http://${HOSTNAME}:5000/postprocess" \
+                -d "performance_file=${performance_file}" \
+                -d "slurm_job_id=${SLURM_JOB_ID}" \
+                -d "job_type=${job_type}" \
+                -d "run_id=${run_id}"
+        fi
+    fi
     sleep 2
 done

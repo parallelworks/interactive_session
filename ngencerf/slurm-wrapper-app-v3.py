@@ -187,6 +187,13 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
             f'-d "job_type={job_type}" -d "run_id={run_id}"\n'
         )
         script.write(notify_job_start_cmd)
+        
+        # This is only required for the slurm-callback retries if the server is stopped
+        script.write('echo export slurm_job_id=$SLURM_JOB_ID > {callbacks_dir}/callback-inputs.sh\n')
+        script.write('echo export performance_file=${performance_file} >> {callbacks_dir}/callback-inputs.sh\n')
+        script.write('echo export job_type={job_type} >> {callbacks_dir}/callback-inputs.sh\n')
+        script.write('echo export run_id={run_id} >> {callbacks_dir}/callback-inputs.sh\n')
+        script.write('echo export job_status=STARTING >> {callbacks_dir}/callback-inputs.sh\n\n')
 
         # Execute the singularity command
         script.write(f'{singularity_run_cmd}\n')
@@ -202,14 +209,7 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         # Print a message indicating the job completion
         script.write('echo Job Completed with status $job_status\n')
         script.write('echo\n\n')
-
-        script.write(f'sed -i "s/__job_status__/${{job_status}}/g" {callbacks_dir}/callback\n')
-
-        # This is only required for the slurm-callback retries if the server is stopped
-        script.write('echo export slurm_job_id=$SLURM_JOB_ID > {callbacks_dir}/postprocess_inputs.sh\n')
-        script.write('echo export performance_file=${performance_file} >> {callbacks_dir}/postprocess_inputs.sh\n')
-        script.write('echo export job_type={job_type} >> {callbacks_dir}/postprocess_inputs.sh\n')
-        script.write('echo export run_id={run_id} >> {callbacks_dir}/postprocess_inputs.sh\n\n')
+        script.write('echo export job_status=${{job_status}} >> {callbacks_dir}/callback-inputs.sh\n\n')
         
         postprocess_cmd = (
             f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess '
@@ -761,21 +761,13 @@ def job_start():
         return log_and_return_error("No job id provided", 400)
 
     callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, run_id)
-    callback_script = os.path.join(callbacks_dir, 'callback')
-
-    if not os.path.exists(callback_script):
-        error_msg = f"Callback script ${callback_script} does not exist"
-        logger.error(error_msg)
-        log_and_return_error(error_msg, 500)
-
-    # Construct the command to run sleep and sacct
-    with open(callback_script, 'r') as f:
-        callback = f.read().replace('__job_status__', 'STARTING')
+    callback_log_path = os.path.join(callbacks_dir, 'starting-callback.log')
+    cmd = f'./run_callback.sh {callbacks_dir} >> {callback_log_path} 2>&1'
 
     try:
         # Run the command in the background using subprocess.Popen
-        logger.info(f"Running: {callback}")
-        subprocess.Popen(callback, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        logger.info(f"Running: {cmd}")
+        subprocess.Popen(cmd, shell=True)
 
         # Return an immediate response while the command runs in the background
         return jsonify({"success": True, "message": "Starting callback was submitted"}), 200
@@ -808,17 +800,14 @@ def postprocess():
     logger.info(f"Postprocessing {job_type} job with id {run_id} and SLURM job id {slurm_job_id}")
 
     callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, run_id)
+    callback_log_path = os.path.join(callbacks_dir, 'ending-callback.log')
 
-    callback_script = os.path.join(callbacks_dir, 'callback')
-    callback_log_path = os.path.join(callbacks_dir, 'callback.log')
-
-    if not os.path.exists(callback_script):
-        error_msg = f"Callback script ${callback_script} does not exist"
-        logger.error(error_msg)
-        log_and_return_error(error_msg, 500)
+    # Update slurm_job_id
+    if slurm_job_id in configuring_jobs:
+        slurm_job_id = configuring_jobs[slurm_job_id]['ids'][-1]
 
     sacct_cmd = f'sacct -j {slurm_job_id} -o {SLURM_JOB_METRICS} --parsable --units=K > {performance_file}'
-    cmd = f'sleep 5; {sacct_cmd}; ./run_callback.sh {callback_script} >> {callback_log_path} 2>&1'
+    cmd = f'sleep 5; {sacct_cmd}; ./run_callback.sh {callbacks_dir} >> {callback_log_path} 2>&1'
 
     try:
         # Run the command in the background using subprocess.Popen

@@ -45,6 +45,7 @@ while true; do
     if [[ "${http_code}" != "000" ]]; then
         if [[ "${job_status}" == "STARTING" ]]; then
             touch ${pending_callbacks_run_id_dir}/STARTED
+            exit 0
         else
             touch ${pending_callbacks_run_id_dir}/ENDED
             mkdir -p ${completed_callbacks_dir}

@@ -8,6 +8,10 @@ callback_dir=$1
 callback_template=${callback_dir}/callback
 callback_inputs=${callback_dir}/callback-inputs.sh
 
+SECONDS=0
+while [ ! -f "${callback_inputs}" ] && [ $SECONDS -lt 20 ]; do
+    sleep 1
+done
 
 if ! [ -f ${callback_inputs} ]; then
     echo "$(date) ERROR: callback input file ${callback_inputs} does not exist!"

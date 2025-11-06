@@ -213,7 +213,7 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         
         postprocess_cmd = (
             f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess '
-            f'-d "performance_file=${performance_file}" -d "slurm_job_id=$SLURM_JOB_ID" -d "job_type={job_type}" -d "run_id={run_id}"\n'
+            f'-d "performance_file={performance_file}" -d "slurm_job_id=$SLURM_JOB_ID" -d "job_type={job_type}" -d "run_id={run_id}"\n'
         )
         script.write(postprocess_cmd)
 

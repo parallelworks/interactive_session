@@ -6,7 +6,15 @@ DELAY=60  # seconds between retries
 local_data_dir=__LOCAL_DATA_DIR__
 callback_dir=$1
 callback_template=${callback_dir}/callback
-source ${callback_dir}/callback-inputs.sh
+callback_inputs=${callback_dir}/callback-inputs.sh
+
+
+if ! [ -f ${callback_inputs} ]; then
+    echo "$(date) ERROR: callback input file ${callback_inputs} does not exist!"
+    exit 0
+fi
+source ${callback_inputs}
+
 
 pending_callbacks_run_id_dir=${local_data_dir}/slurm-callbacks/pending/${job_type}/${run_id}
 completed_callbacks_dir=${local_data_dir}/slurm-callbacks/completed/${job_type}/

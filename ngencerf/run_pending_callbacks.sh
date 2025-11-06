@@ -41,7 +41,7 @@ find ${pending_callbacks_dir} -name callback | while read -r callback_path; do
             echo "$(date) Ending job callback is pending, resubmitting callback"
             curl -X POST "http://${HOSTNAME}:5000/postprocess" \
                 -d "performance_file=${performance_file}" \
-                -d "slurm_job_id=${SLURM_JOB_ID}" \
+                -d "slurm_job_id=${slurm_job_id}" \
                 -d "job_type=${job_type}" \
                 -d "run_id=${run_id}"
         fi

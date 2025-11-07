@@ -1,6 +1,20 @@
 # Runs via ssh + sbatch
 set -x
 
+
+if [ -z "${service_load_env}" ]; then
+    service_conda_sh=${service_parent_install_dir}/${service_conda_install_dir}/etc/profile.d/conda.sh
+    service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
+fi
+
+if [[ "${service_conda_install}" == "true" ]]; then
+    source ${service_conda_sh}
+    eval "conda activate ${service_conda_env}"
+else
+    eval "${service_load_env}"
+fi
+
+
 # JUICE https://docs.juicelabs.co/docs/juice/intro
 if [[ "${juice_use_juice}" == "true" ]]; then
     echo "INFO: Enabling Juice for remote GPU access"

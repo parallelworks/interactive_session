@@ -40,9 +40,9 @@ fi
 
 
 if ! [ -z "${service_script}" ]; then
-    ${juice_cmd} marimo ${service_mode} ${service_script} --port ${service_port} --host ${HOSTNAME} --no-token
+    ${juice_cmd} marimo ${service_mode} ${service_script} --port ${service_port} --host 0.0.0.0 --no-token
 else
-    ${juice_cmd} marimo tutorial intro --port ${service_port} --no-token --host ${HOSTNAME}
+    ${juice_cmd} marimo tutorial intro --port ${service_port} --no-token --host 0.0.0.0
 fi
 
 sleep inf

@@ -176,10 +176,6 @@ jobs:
         run: |
           local_port=$(pw agent open-port)
           echo "local_port=${local_port}"  | tee -a $OUTPUTS
-      - name: Set URL SLUG
-        early-cancel: any-job-failed
-        run: |
-          echo "slug=lab"  | tee -a $OUTPUTS
       - name: Expose Port
         early-cancel: any-job-failed
         uses: parallelworks/update-session

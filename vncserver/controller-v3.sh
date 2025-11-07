@@ -49,7 +49,7 @@ download_singularity_container() {
     #git checkout download-dependencies
 
     # 3. Initialize sparse-checkout
-    git sparse-checkout init
+    git sparse-checkout init --no-cone
 
     # 4. Configure sparse-checkout to include only the desired file
     echo downloads/jupyter/nginx-unprivileged.sif > .git/info/sparse-checkout

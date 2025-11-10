@@ -176,11 +176,6 @@ jobs:
         run: |
           local_port=$(pw agent open-port)
           echo "local_port=${local_port}"  | tee -a $OUTPUTS
-      - name: Set URL SLUG
-        early-cancel: any-job-failed
-        run: |
-          source resources/host/inputs.sh
-          echo "slug=?folder=${service_directory}"  | tee -a $OUTPUTS
       - name: Expose Port
         early-cancel: any-job-failed
         uses: parallelworks/update-session
@@ -188,7 +183,6 @@ jobs:
           remotePort: '${{ needs.create_session.outputs.remote_port }}'
           localPort: '${{ needs.create_session.outputs.local_port }}'
           remoteHost: '${{ needs.create_session.outputs.target_hostname }}'
-          slug: '${{ needs.create_session.outputs.slug }}'
           target: ${{ inputs.pwrl_host.resource.id }}
           name: ${{ sessions.session }}
 
@@ -306,28 +300,77 @@ jobs:
         collapsed: false
       service:
         type: group
-        label: VS Code Settings
+        label: Marimo Lab Settings
         items:
           name:
             type: string
             hidden: true
-            default: openvscode
-          download_url:
-            label: Download URL
+            default: marimo-host
+          mode:
+            label: Notebook Mode
+            tooltip: Choose whether to edit or run the Marimo notebook.
+            type: dropdown
+            default: edit
+            options:
+              - value: edit
+                label: Edit
+              - value: run
+                label: Run
+          script:
+            label: Marimo Script Path
+            tooltip: "Path to the Marimo notebook (.py) file to open or run. If left empty, Marimo will launch the default tutorial notebook: marimo tutorial intro"
             type: string
-            default: https://github.com/coder/code-server/releases/download/v4.105.1/code-server-4.105.1-linux-amd64.tar.gz
-            tooltip: Downloads or uses the code-server server version specified in the URL
-          password:
-            label: Password for IDE session
-            type: password
-            optional: true
-            tooltip: Enter password or leave blank for no password
-          directory:
-            label: Directory to open in VS Code
+            optional: ${{ inputs.service.mode == edit }}
+          conda_install:
+            label: Install miniconda environment if not there?
+            type: boolean
+            default: true
+            tooltip: Select Yes to install Marimo in Miniconda environment and No to load an existing python environment
+          parent_install_dir:
+            label: Parent Install Directory
             type: string
-            default: __HOME__
-            tooltip: Directory to open in VS code
-          github_token:
-            label: GitHub authentication token
+            default: __HOME__/pw/software
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
+            tooltip: Software dependencies are installed in this directory. Ensure the directory has sufficient space!
+          conda_install_dir:
+            label: Name of the Conda Installation Directory
             type: string
-            optional: true
+            default: .miniconda3-marimo
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
+            tooltip: Ensure the directory has sufficient space for Conda and its packages.
+          conda_env:
+            label: Conda environment
+            type: string
+            default: base
+            hidden: '${{ inputs.service.conda_install == false }}'
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Environment to active. The base environment enables changing kernel to other environments!
+          load_env:
+            label: Command to load Marimo to the PATH
+            type: string
+            default: source __HOME__/pw/.miniconda3-marimo/etc/profile.d/conda.sh; conda activate base
+            hidden: ${{ inputs.service.conda_install == true }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Use a bash command
+          install_instructions:
+            label: Select Marimo Lab Installation
+            type: dropdown
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
+            default: latest
+            options:
+              - value: latest
+                label: Latest versions of Marimo and Miniconda
+              - value: nov2025
+                label: November 2025
+          yaml:
+            label: Paste Conda Environment Defition YAML
+            type: editor
+            hidden: ${{ inputs.service.install_instructions != yaml ||  inputs.service.conda_install == false }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Copy and paste a custom Conda environment definition YAML file

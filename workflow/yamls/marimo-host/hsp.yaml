@@ -217,6 +217,13 @@ jobs:
             tooltip: Job will be submitted using SSH, sbatch or qsub, respectively
           _sch__dd_account_e__tag_existing:
             label: SLURM account
+            type: string
+            tooltip: Account to submit the interactive job
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' != inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
+          _sch__dd_account_e__tag_existing:
+            label: SLURM account
             type: slurm-accounts
             resource: ${{ inputs.pwrl_host.resource }}
             tooltip: Account to submit the interactive job

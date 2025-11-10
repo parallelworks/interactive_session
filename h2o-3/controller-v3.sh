@@ -20,6 +20,7 @@ if [ -f "${service_bin}" ]; then
     exit 0
 fi
 
+mkdir -p ${service_parent_install_dir}
 cd ${service_parent_install_dir}
 rm -rf ${service_rel_install_dir}
 wget ${service_download_url}

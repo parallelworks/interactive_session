@@ -327,7 +327,4 @@ jobs:
             type: string
             default: __HOME__
             tooltip: Directory to open in VS code
-          github_token:
-            label: GitHub authentication token
-            type: string
-            optional: true
+

@@ -339,8 +339,7 @@ jobs:
                     env:
                       - name: PASSWORD
                         value: ${{ inputs.service_k8s.password }}
-                      - name: GITHUB_TOKEN
-                        value: ${{ inputs.service_k8s.github_token }}
+
                     args:
                       - --auth
                       - password
@@ -620,10 +619,6 @@ jobs:
             type: string
             default: __HOME__
             tooltip: Directory to open in VS code
-          github_token:
-            label: GitHub authentication token
-            type: string
-            optional: true
       k8s:
         type: group
         label: Kubernetes Settings
@@ -784,10 +779,7 @@ jobs:
             optional: ${{ inputs.targetType != 'kubernetes-cluster' }}
             type: password
             tooltip: Type in a password
-          github_token:
-            label: GitHub Authentication Token
-            type: password
-            optional: true
+
       juice:
         type: group
         label: Attached GPU Settings

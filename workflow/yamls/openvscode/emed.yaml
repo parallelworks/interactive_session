@@ -279,7 +279,3 @@ jobs:
             type: string
             default: /gs/gsfs0/users/__USER__/pw/
             tooltip: Directory to open in VS code
-          github_token:
-            label: GitHub authentication token
-            type: string
-            optional: true

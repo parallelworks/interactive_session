@@ -95,7 +95,7 @@ jobs:
             echo "Waiting for target hostname..."
 
             # Check if the service.port file exists and read its contents
-            target_hostname=$(${sshcmd} "if [ -f ${resource_jobdir}/target.hostname ]; then cat ${resource_jobdir}/target.hostname; fi")
+            target_hostname=$(${sshcmd} "bash -c \"if [ -f ${resource_jobdir}/target.hostname ]; then cat ${resource_jobdir}/target.hostname; fi\"")
 
             # Exit the loop if file was found and read
             if [ -n "${target_hostname}" ]; then

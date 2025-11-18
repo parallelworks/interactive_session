@@ -4,6 +4,8 @@ sessions:
   session:
     useTLS: false
     redirect: true
+    useCustomDomain: true
+
 
 jobs:
   preprocessing:

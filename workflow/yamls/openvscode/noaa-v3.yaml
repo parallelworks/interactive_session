@@ -86,7 +86,7 @@ jobs:
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
       - name: Get Compute Hostname
         early-cancel: any-job-failed
-        if: ${{ 'SLURM' == inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'SLURM' == inputs.pwrl_host.jobschedulertype || 'PBS' == inputs.pwrl_host.jobschedulertype }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -97,7 +97,7 @@ jobs:
             echo "Waiting for target hostname..."
 
             # Check if the service.port file exists and read its contents
-            target_hostname=$(${sshcmd} "bash -c \"if [ -f ${resource_jobdir}/target.hostname ]; then cat ${resource_jobdir}/target.hostname; fi\"")
+            target_hostname=$(${sshcmd} "if [ -f ${resource_jobdir}/target.hostname ]; then cat ${resource_jobdir}/target.hostname; fi")
 
             # Exit the loop if file was found and read
             if [ -n "${target_hostname}" ]; then
@@ -108,12 +108,14 @@ jobs:
             # Wait before the next check
             sleep 5
           done
-          job_id=$(${sshcmd} cat ${resource_jobdir}/job.id)
-          if [ -z "${job_id}" ]; then
-            echo "Error: SLURM job ID is empty!" >&2
-            exit 1
+          if [[ "${{ inputs.pwrl_host.jobschedulertype }}" == "SLURM" ]]; then
+            job_id=$(${sshcmd} cat ${resource_jobdir}/job.id)
+            if [ -z "${job_id}" ]; then
+              echo "Error: SLURM job ID is empty!" >&2
+              exit 1
+            fi
+            target_hostname=$(${sshcmd} squeue -j "${job_id}" --noheader --format="%N")
           fi
-          target_hostname=$(${sshcmd} squeue -j "${job_id}" --noheader --format="%N")
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
 
       - name: Get Remote Port

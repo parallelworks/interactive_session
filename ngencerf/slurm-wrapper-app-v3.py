@@ -22,6 +22,8 @@ CONTROLLER_HOSTNAME = socket.gethostname()
 LOCAL_DATA_DIR = os.environ.get('local_data_dir')  # "/ngencerf-app/data/ngen-cal-data/"
 # Path to the data directory within the container
 CONTAINER_DATA_DIR = os.environ.get('container_data_dir')  # "/ngencerf/data/"
+# Callback dir
+CALLBACKS_DIR = os.path.join(LOCAL_DATA_DIR, "slurm-callbacks", "pending")
 # Path to the singularity container with ngen-cal
 NWM_CAL_MGR_SINGULARITY_CONTAINER_PATH = os.environ.get('nwm_cal_mgr_singularity_container_path')
 # Path to the singularity container with ngen-forcing
@@ -54,11 +56,6 @@ MAX_CONFIGURING_WAIT_TIME = int(os.environ.get('MAX_CONFIGURING_WAIT_TIME'))
 
 # Jobs with CF status
 configuring_jobs = {}
-
-# Pending postprocessing
-os.makedirs('postprocess', exist_ok=True)
-os.makedirs('postprocess/calibration', exist_ok=True)
-os.makedirs('postprocess/validation', exist_ok=True)
 
 app = Flask(__name__)
 
@@ -103,7 +100,7 @@ def get_next_partition(current_partition=None):
 
 
 
-def get_callback(callback_url, auth_token, **kwargs):
+def get_callback(callbacks_dir, callback_url, auth_token, **kwargs):
     # Prepare the data dictionary excluding the auth_token
     data = {key: value for key, value in kwargs.items()}
 
@@ -111,14 +108,13 @@ def get_callback(callback_url, auth_token, **kwargs):
     json_data = ', '.join([f'\"{key}\": \"{value}\"' for key, value in data.items()])
 
     # Construct the complete curl command string
-    callback_command = f'curl --location "{callback_url}" --header "Content-Type: application/json" --header "Authorization: Bearer {auth_token}" --data \'{{{json_data}}}\''
-
+    callback_command = f'curl -s -o {callbacks_dir}/callback.json -w "%{{http_code}}" --location "{callback_url}" --header "Content-Type: application/json" --header "Authorization: Bearer {auth_token}" --data \'{{{json_data}}}\''
     return callback_command
 
 
-def write_callback(postprocessing_dir, callback_command):
-    os.makedirs(postprocessing_dir, exist_ok=True)
-    callback_file_path = os.path.join(postprocessing_dir, 'callback')
+def write_callback(callbacks_dir, callback_command):
+    os.makedirs(callbacks_dir, exist_ok=True)
+    callback_file_path = os.path.join(callbacks_dir, 'callback')
     with open(callback_file_path, 'w') as file:
         file.write(callback_command)
 
@@ -147,6 +143,8 @@ def ensure_file_owned(file_path: str):
 def write_slurm_script(run_id, job_type, input_file_local, output_file_local, singularity_run_cmd, nprocs = 1):
     job_script = output_file_local.rsplit('.', 1)[0] + '.slurm.sh'
     job_dir = os.path.dirname(os.path.dirname(input_file_local))
+    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, run_id)
+    performance_file = output_file_local.replace('stdout', 'performance')
 
     # We need to change these ownerships to be able to write the SLURM script and its output file
     ensure_file_owned(job_script)
@@ -189,6 +187,13 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
             f'-d "job_type={job_type}" -d "run_id={run_id}"\n'
         )
         script.write(notify_job_start_cmd)
+        
+        # This is only required for the slurm-callback retries if the server is stopped
+        script.write(f'echo export slurm_job_id=$SLURM_JOB_ID > {callbacks_dir}/callback-inputs.sh\n')
+        script.write(f'echo export performance_file={performance_file} >> {callbacks_dir}/callback-inputs.sh\n')
+        script.write(f'echo export job_type={job_type} >> {callbacks_dir}/callback-inputs.sh\n')
+        script.write(f'echo export run_id={run_id} >> {callbacks_dir}/callback-inputs.sh\n')
+        script.write(f'echo export job_status=STARTING >> {callbacks_dir}/callback-inputs.sh\n\n')
 
         # Execute the singularity command
         script.write(f'{singularity_run_cmd}\n')
@@ -204,13 +209,13 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         # Print a message indicating the job completion
         script.write('echo Job Completed with status $job_status\n')
         script.write('echo\n\n')
-
-        create_performance_files_cmd = (
+        script.write(f'echo export job_status=${{job_status}} >> {callbacks_dir}/callback-inputs.sh\n\n')
+        
+        postprocess_cmd = (
             f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess '
-            f'-d "job_status=$job_status" -d "slurm_job_id=$SLURM_JOB_ID" '
-            f'-d "job_type={job_type}" -d "run_id={run_id}"\n'
+            f'-d "performance_file={performance_file}" -d "slurm_job_id=$SLURM_JOB_ID" -d "job_type={job_type}" -d "run_id={run_id}"\n'
         )
-        script.write(create_performance_files_cmd)
+        script.write(postprocess_cmd)
 
     return job_script
 
@@ -264,7 +269,7 @@ def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd, n
     # Path to the input file on the shared file system
     input_file_local = input_file.replace(CONTAINER_DATA_DIR, LOCAL_DATA_DIR)
     output_file_local = output_file.replace(CONTAINER_DATA_DIR, LOCAL_DATA_DIR)
-    postprocessing_dir = os.path.join("postprocess", job_type, run_id)
+    callbacks_dir = os.path.join("postprocess", job_type, run_id)
     if not os.path.exists(input_file_local):
         error_msg = f"File path '{input_file_local}' does not exist on the shared filesystem under {LOCAL_DATA_DIR}."
         logger.exception(error_msg)
@@ -278,17 +283,9 @@ def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd, n
         # Submit the job and retrieve SLURM job ID
         slurm_job_id, error = submit_slurm_job(job_script)
         if error:
-            shutil.rmtree(postprocessing_dir)
-            logger.info(f'Removed {postprocessing_dir}')
+            shutil.rmtree(callbacks_dir)
+            logger.info(f'Removed {callbacks_dir}')
             return jsonify({"error": error}), 500
-
-        # Performance statistics
-        os.makedirs(postprocessing_dir, exist_ok=True)
-        performance_file_path = os.path.join(postprocessing_dir, 'performance_file')
-        with open(performance_file_path, 'w') as file:
-            file.write(output_file_local.replace('stdout', 'performance'))
-
-        logger.info(f"Added performance file to {performance_file_path}")
 
         # Initialize job
         if PARTITIONS:
@@ -338,18 +335,19 @@ def submit_calibration_job():
 
     singularity_run_cmd = f"{SINGULARITY_RUN_NWM_CAL_MGR_CMD} calibration {input_file}"
 
-    postprocessing_dir = os.path.join("postprocess", job_type, calibration_run_id)
+    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, calibration_run_id)
 
     try:
         # Get callback
         callback = get_callback(
+            callbacks_dir,
             f'http://{CONTROLLER_HOSTNAME}:8000/calibration/calibration_job_slurm_callback/',
             auth_token,
             calibration_run_id=calibration_run_id,
             job_status="__job_status__"
         )
 
-        write_callback(postprocessing_dir, callback)
+        write_callback(callbacks_dir, callback)
 
     except Exception as e:
         return log_and_return_error(str(e), 500)
@@ -415,19 +413,20 @@ def submit_validation_job():
         singularity_run_cmd = f"{SINGULARITY_RUN_NWM_CAL_MGR_CMD} validation_iteration {input_file} {worker_name} {iteration}"
     else:
         return log_and_return_error("Invalid validation_type provided; must be one of 'valid_control', 'valid_best', or 'valid_iteration'", status_code = 400)
-
-    postprocessing_dir = os.path.join("postprocess", job_type, validation_run_id)
+    
+    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, validation_run_id)
 
     try:
         # Get callback
         callback = get_callback(
+            callbacks_dir,
             f'http://{CONTROLLER_HOSTNAME}:8000/calibration/validation_job_slurm_callback/',
             auth_token,
             validation_run_id=validation_run_id,
             job_status="__job_status__"
         )
 
-        write_callback(postprocessing_dir, callback)
+        write_callback(callbacks_dir, callback)
 
     except Exception as e:
         return log_and_return_error(str(e), status_code=500)
@@ -473,18 +472,19 @@ def submit_forecast_job():
 
     singularity_run_cmd = f"{SINGULARITY_RUN_NWM_FCST_MGR_CMD} forecast {validation_yaml} {realization_file}"
 
-    postprocessing_dir = os.path.join("postprocess", job_type, forecast_run_id)
+    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, forecast_run_id)
 
     try:
         # Get callback
         callback = get_callback(
+            callbacks_dir,
             f'http://{CONTROLLER_HOSTNAME}:8000/calibration/forecast_job_slurm_callback/',
             auth_token,
             forecast_run_id=forecast_run_id,
             job_status="__job_status__"
         )
 
-        write_callback(postprocessing_dir, callback)
+        write_callback(callbacks_dir, callback)
 
     except Exception as e:
         return log_and_return_error(str(e), status_code=500)
@@ -531,18 +531,19 @@ def submit_cold_start_job():
 
     singularity_run_cmd = f"{SINGULARITY_RUN_NWM_FCST_MGR_CMD} cold_start {validation_yaml} {realization_file}"
 
-    postprocessing_dir = os.path.join("postprocess", job_type, cold_start_run_id)
+    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, cold_start_run_id)
 
     try:
         # Get callback
         callback = get_callback(
+            callbacks_dir,
             f'http://{CONTROLLER_HOSTNAME}:8000/calibration/cold_start_job_slurm_callback/',
             auth_token,
             cold_start_run_id=cold_start_run_id,
             job_status="__job_status__"
         )
 
-        write_callback(postprocessing_dir, callback)
+        write_callback(callbacks_dir, callback)
 
     except Exception as e:
         return log_and_return_error(str(e), status_code=500)
@@ -584,18 +585,19 @@ def submit_verification_job():
 
     singularity_run_cmd = f"{SINGULARITY_RUN_NWM_VERF_CMD} run-ngen-verf.sh verification {verification_config}"
 
-    postprocessing_dir = os.path.join("postprocess", job_type, verification_job_id)
+    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, verification_job_id)
 
     try:
         # Get callback
         callback = get_callback(
+            callbacks_dir,
             f'http://{CONTROLLER_HOSTNAME}:8000/calibration/verification_job_slurm_callback/',
             auth_token,
             verification_job_id=verification_job_id,
             job_status="__job_status__"
         )
 
-        write_callback(postprocessing_dir, callback)
+        write_callback(callbacks_dir, callback)
 
     except Exception as e:
         return log_and_return_error(str(e), status_code=500)
@@ -758,22 +760,14 @@ def job_start():
     if not run_id:
         return log_and_return_error("No job id provided", 400)
 
-    postprocessing_dir = os.path.join('postprocess', job_type, run_id)
-    callback_script = os.path.join(postprocessing_dir, 'callback')
-
-    if not os.path.exists(callback_script):
-        error_msg = f"Callback script ${callback_script} does not exist"
-        logger.error(error_msg)
-        log_and_return_error(error_msg, 500)
-
-    # Construct the command to run sleep and sacct
-    with open(callback_script, 'r') as f:
-        callback = f.read().replace('__job_status__', 'STARTING')
+    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, run_id)
+    callback_log_path = os.path.join(callbacks_dir, 'starting-callback.log')
+    cmd = f'./run_callback.sh {callbacks_dir} >> {callback_log_path} 2>&1'
 
     try:
         # Run the command in the background using subprocess.Popen
-        logger.info(f"Running: {callback}")
-        subprocess.Popen(callback, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        logger.info(f"Running: {cmd}")
+        subprocess.Popen(cmd, shell=True)
 
         # Return an immediate response while the command runs in the background
         return jsonify({"success": True, "message": "Starting callback was submitted"}), 200
@@ -788,7 +782,7 @@ def postprocess():
     slurm_job_id = request.form.get('slurm_job_id')
     job_type = request.form.get('job_type')
     run_id = request.form.get('run_id')
-    job_status = request.form.get('job_status')
+    performance_file = request.form.get('performance_file')
 
     # Validate inputs
     if not slurm_job_id:
@@ -800,36 +794,20 @@ def postprocess():
     if not run_id:
         return log_and_return_error("No job id provided", 400)
 
-    if not job_status:
-        return log_and_return_error("No job status provided", 400)
+    if not performance_file:
+        return log_and_return_error("No performance file path provided", 400)
 
     logger.info(f"Postprocessing {job_type} job with id {run_id} and SLURM job id {slurm_job_id}")
 
-    postprocessing_dir = os.path.join('postprocess', job_type, run_id)
-    callback_script = os.path.join(postprocessing_dir, 'callback')
-    performance_file_path = os.path.join(postprocessing_dir, 'performance_file')
-    callback_log_path = os.path.join(postprocessing_dir, 'callback.log')
+    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, run_id)
+    callback_log_path = os.path.join(callbacks_dir, 'ending-callback.log')
 
-    if not os.path.exists(callback_script):
-        error_msg = f"Callback script ${callback_script} does not exist"
-        logger.error(error_msg)
-        log_and_return_error(error_msg, 500)
-
-    if not os.path.exists(performance_file_path):
-        error_msg = f"Performance file ${performance_file_path} does not exist"
-        logger.error(error_msg)
-        log_and_return_error(error_msg, 500)
-
-    # Construct the command to run sleep and sacct
-    with open(performance_file_path, 'r') as f:
-        performance_file = f.read()
-
-    # Construct the command to run sleep and sacct
-    with open(callback_script, 'r') as f:
-        callback = f.read().replace('__job_status__', job_status)
+    # Update slurm_job_id
+    if slurm_job_id in configuring_jobs:
+        slurm_job_id = configuring_jobs[slurm_job_id]['ids'][-1]
 
     sacct_cmd = f'sacct -j {slurm_job_id} -o {SLURM_JOB_METRICS} --parsable --units=K > {performance_file}'
-    cmd = f'sleep 5; {sacct_cmd}; {callback} >> {callback_log_path} 2>&1'
+    cmd = f'sleep 5; {sacct_cmd}; ./run_callback.sh {callbacks_dir} >> {callback_log_path} 2>&1'
 
     try:
         # Run the command in the background using subprocess.Popen

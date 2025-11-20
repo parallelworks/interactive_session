@@ -35,6 +35,13 @@ start_rootless_docker() {
     return 0
 }
 
+run_xterm_loop(){
+    while true; do
+        echo "$(date): Starting xterm"
+        ${service_parent_install_dir}/xterm -fa "DejaVu Sans Mono" -fs 12
+        sleep 1
+    done
+}
 
 ###################
 # PREPARE CLEANUP #
@@ -43,8 +50,9 @@ start_rootless_docker() {
 echo '#!/bin/bash' > ${resource_jobdir}/cancel.sh
 chmod +x ${resource_jobdir}/cancel.sh
 echo "mv ${resource_jobdir}/cancel.sh ${resource_jobdir}/cancel.sh.executed" >> ${resource_jobdir}/cancel.sh
-echo "scancel ${SLURM_JOB_ID}"  >> ${resource_jobdir}/cancel.sh
-
+if ![ -z "${SLURM_JOB_ID}" ]; then
+    echo "scancel ${SLURM_JOB_ID}"  >> ${resource_jobdir}/cancel.sh
+fi
 ###################
 ###################
 
@@ -102,6 +110,26 @@ fi
 
 set -x
 
+# Find an available display port
+minPort=5901
+maxPort=5999
+for port in $(seq ${minPort} ${maxPort} | shuf); do
+    out=$(netstat -aln | grep LISTEN | grep ${port})
+    displayNumber=${port: -2}
+    XdisplayNumber=$(echo ${displayNumber} | sed 's/^0*//')
+    if [ -z "${out}" ] && ! [ -e /tmp/.X11-unix/X${XdisplayNumber} ] && ! [ -e /tmp/.X${XdisplayNumber}-lock ]; then
+        # To prevent multiple users from using the same available port --> Write file to reserve it
+        portFile=/tmp/${port}.port.used
+        if ! [ -f "${portFile}" ]; then
+            touch ${portFile}
+            echo "rm ${portFile}" >> cancel.sh
+            export displayPort=${port}
+            export DISPLAY=:${displayNumber#0}
+            break
+        fi
+    fi
+done
+
 if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
     export service_vnc_exec=/usr/lib/vncserver
     # vncserver -list does not work
@@ -131,17 +159,40 @@ if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
         exit 1
     fi
     echo "$(date): vncserver is not installed. Using singularity container..."
-    service_vnc_exec="singularity exec --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} ${service_vncserver_sif} vncserver"
-    service_vnc_type="TurboVNC"
+    singularity_exec="singularity run --writable-tmpfs --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} ${service_vncserver_sif}"
+    service_vnc_exec="${singularity_exec} vncserver"
+    service_vnc_type="SingularityTurboVNC"
     service_desktop="echo Starting no service desktop on the host"
     mkdir -p /tmp/.X11-unix
     rm -f ~/.vnc/xstartup.turbovnc
 cat >> ~/.vnc/xstartup.turbovnc <<HERE
+#!/bin/sh
 unset SESSION_MANAGER
 unset DBUS_SESSION_BUS_ADDRESS
-startxfce4 &
+HERE
+cat >> ${resource_jobdir}/vncserver.sh <<HERE
+#!/bin/bash
+set -x
+vncserver -kill ${DISPLAY}
+vncserver ${DISPLAY} -SecurityTypes None
+mkdir -p /run/user/\$(id -u)
+chown "\$(id -u):\$(id -g)" /run/user/\$(id -u)
+export XDG_RUNTIME_DIR=/run/user/\$(id -u)
+export DISPLAY=${DISPLAY}
+export XAUTHORITY="\$HOME/.Xauthority"
+mkdir -p \$HOME/.run
+export XDG_RUNTIME_DIR=\$HOME/.run
+chmod 700 \$HOME/.run
+addr=\$(dbus-daemon --session --fork --print-address)
+export DBUS_SESSION_BUS_ADDRESS="\$addr"
+mkdir -p ${TMPDIR} ${WORKDIR}
+mkdir -p "\$HOME/.config"
+chmod 700 "\$HOME/.config"
+chmod -x /usr/bin/xfce4-screensaver
+startxfce4 --replace
 HERE
     chmod +x ~/.vnc/xstartup.turbovnc
+    chmod +x ${resource_jobdir}/vncserver.sh
 fi
 
 if [ -z ${service_vnc_type} ]; then
@@ -152,25 +203,6 @@ if [ -z ${service_vnc_type} ]; then
     displayErrorMessage "ERROR: vncserver type not found. Supported type are TigerVNC, TurboVNC and KasmVNC"
 fi
 
-# Find an available display port
-minPort=5901
-maxPort=5999
-for port in $(seq ${minPort} ${maxPort} | shuf); do
-    out=$(netstat -aln | grep LISTEN | grep ${port})
-    displayNumber=${port: -2}
-    XdisplayNumber=$(echo ${displayNumber} | sed 's/^0*//')
-    if [ -z "${out}" ] && ! [ -e /tmp/.X11-unix/X${XdisplayNumber} ] && ! [ -e /tmp/.X${XdisplayNumber}-lock ]; then
-        # To prevent multiple users from using the same available port --> Write file to reserve it
-        portFile=/tmp/${port}.port.used
-        if ! [ -f "${portFile}" ]; then
-            touch ${portFile}
-            echo "rm ${portFile}" >> cancel.sh
-            export displayPort=${port}
-            export DISPLAY=:${displayNumber#0}
-            break
-        fi
-    fi
-done
 
 if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
 cat >> ${resource_jobdir}/cancel.sh <<HERE
@@ -218,7 +250,7 @@ HERE
 fi
 
 
-if [[ "${service_vnc_type}" == "TigerVNC" || "${service_vnc_type}" == "TurboVNC" ]]; then
+if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
     #########
     # NoVNC #
     #########
@@ -253,6 +285,7 @@ if [[ "${service_vnc_type}" == "TigerVNC" || "${service_vnc_type}" == "TurboVNC"
     # Start service
     mkdir -p ~/.vnc
     ${service_vnc_exec} -kill ${DISPLAY}
+    echo "${service_vnc_exec} -kill ${DISPLAY}" >> cancel.sh
 
     # To prevent the process from being killed at startime    
     if [ -f "${HOME}/.vnc/xstartup" ]; then
@@ -283,10 +316,8 @@ if [[ "${service_vnc_type}" == "TigerVNC" || "${service_vnc_type}" == "TurboVNC"
         # FIXME: Change ~/.vnc/config
         ${service_vnc_exec} ${DISPLAY} &> ${resource_jobdir}/vncserver.log &
         echo $! > ${resource_jobdir}/vncserver.pid
-    elif [[ "${service_vnc_type}" == "TigerVNC" ]]; then
+    else
         ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${resource_jobdir}/.vncpasswd
-    elif [[ "${service_vnc_type}" == "TurboVNC" ]]; then
-        ${service_vnc_exec} ${DISPLAY} -SecurityTypes None
     fi
 
     rm -f ${resource_jobdir}/service.pid
@@ -315,13 +346,31 @@ if [[ "${service_vnc_type}" == "TigerVNC" || "${service_vnc_type}" == "TurboVNC"
     echo "${service_desktop_pid}" >> ${resource_jobdir}/service.pid
 
     cd ${service_novnc_install_dir}
-    
-    echo "Running ./utils/novnc_proxy --vnc ${HOSTNAME}:${displayPort} --listen ${HOSTNAME}:${service_port}"
     ./utils/novnc_proxy --vnc ${HOSTNAME}:${displayPort} --listen ${HOSTNAME}:${service_port} </dev/null &
     echo $! >> ${resource_jobdir}/service.pid
     pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
     echo ${pid} >> ${resource_jobdir}/service.pid
     rm -f ${portFile}
+elif [[ "${service_vnc_type}" == "SingularityTurboVNC" ]]; then
+    # Start service
+    mkdir -p ~/.vnc
+    echo "${service_vnc_exec} -kill ${DISPLAY}" >> cancel.sh
+    ${singularity_exec} ${resource_jobdir}/vncserver.sh | tee -a vncserver.out &
+    #echo "kill $! # singularity run" >> cancel.sh
+
+    cd ${service_novnc_install_dir}
+    ./utils/novnc_proxy --vnc ${HOSTNAME}:${displayPort} --listen ${HOSTNAME}:${service_port} </dev/null &
+    echo "kill $! # novnc_proxy" >> cancel.sh
+    pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
+    echo ${pid} >> ${resource_jobdir}/service.pid
+    rm -f ${portFile}
+
+    # Run xterm in a loop so that users can access a terminal directly in the main host
+    cd
+    run_xterm_loop | tee -a ${resource_jobdir}/xterm.out &
+    echo "kill $! # run_xterm_loop" >> cancel.sh
+
+
 elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     ###########
     # KasmVNC #
@@ -338,7 +387,7 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
 
 
     ${service_vnc_exec} -kill ${DISPLAY}
-    echo "${service_vnc_exec} -kill ${DISPLAY}" >> cancel.sh.sh
+    echo "${service_vnc_exec} -kill ${DISPLAY}" >> cancel.sh
 
     MAX_RETRIES=5
     RETRY_DELAY=5

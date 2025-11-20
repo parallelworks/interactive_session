@@ -80,10 +80,10 @@ server {
   client_max_body_size 0; # Remove upload size limit by setting to 0
 
   # timeouts (shorter to notice app hangs)
-  proxy_connect_timeout 5s;
-  proxy_send_timeout    120s;
-  proxy_read_timeout    120s;
-  send_timeout          120s;
+  proxy_connect_timeout 10s;
+  proxy_send_timeout    600s;
+  proxy_read_timeout    600s;
+  send_timeout          600s;
 
   # CORS (minimal)
   add_header Access-Control-Allow-Origin  \$http_origin always;
@@ -285,13 +285,17 @@ chmod +x update_configuring_jobs.sh
 
 if [ "${PARTITION_COUNT}" -gt 1 ]; then
     echo "ACTIVATING JOB RESUBMISSION"
-    export MAX_CONFIGURING_WAIT_TIME="600"
+    export MAX_CONFIGURING_WAIT_TIME="840"
     ./update_configuring_jobs.sh > update_configuring_jobs.log 2>&1 &
     echo "kill $!" >> cancel.sh
 else
     export PARTITIONS=""
     export MAX_CONFIGURING_WAIT_TIME="9999999999"
 fi
+
+# This script is required to run the callback with retries
+sed -i "s|__LOCAL_DATA_DIR__|${local_data_dir}|g" run_callback.sh
+chmod +x run_callback.sh
 
 /usr/local/bin/gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app-v3:app \
   --access-logfile slurm-wrapper-app-v3.log \
@@ -304,6 +308,12 @@ fi
 slurm_wrapper_pid=$!
 echo "kill ${slurm_wrapper_pid}" >> cancel.sh
 
+
+# Rerun previous callbacks
+sed -i "s|__LOCAL_DATA_DIR__|${local_data_dir}|g" run_pending_callbacks.sh
+bash run_pending_callbacks.sh >> run_pending_callback.log 2>&1 &
+run_pending_callbacks_pid=$!
+echo "kill ${run_pending_callbacks_pid} #rerun callbacks" >> cancel.sh
 
 ###############
 # NGENCERF-UI #

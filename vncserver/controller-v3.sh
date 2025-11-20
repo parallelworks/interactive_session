@@ -117,4 +117,10 @@ if [[ ${service_download_vncserver_container} == "true" ]]; then
         exit 1
     fi
     chmod +x ${service_vncserver_sif}
+
+    xterm_path=$(which xterm)
+    if ! [ -z ${xterm_path} ]; then
+        cp ${xterm_path} ${service_parent_install_dir}/xterm
+        chmod +x ${service_parent_install_dir}/xterm
+    fi
 fi

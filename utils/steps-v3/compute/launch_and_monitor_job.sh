@@ -20,6 +20,7 @@ if [[ ${jobschedulertype} == "SLURM" ]]; then
     jobid=$($sshcmd ${submit_cmd} ${resource_jobdir}/session-${job_number}.sh | tail -1 | awk -F ' ' '{print $4}')
 elif [[ ${jobschedulertype} == "PBS" ]]; then
     jobid=$($sshcmd ${submit_cmd} ${resource_jobdir}/session-${job_number}.sh)
+    jobid=$(echo "$jobid" | cut -d'.' -f1)
 fi
 
 if [[ "${jobid}" == "" ]];then
@@ -119,5 +120,7 @@ done
 
 echo "Job status: ${job_status}"
 
-$sshcmd scontrol show job ${jobid} -dd
-$sshcmd sacct -j ${jobid}
+if [[ ${jobschedulertype} == "SLURM" ]]; then
+    $sshcmd scontrol show job ${jobid} -dd
+    $sshcmd sacct -j ${jobid}
+fi

@@ -80,10 +80,10 @@ server {
   client_max_body_size 0; # Remove upload size limit by setting to 0
 
   # timeouts (shorter to notice app hangs)
-  proxy_connect_timeout 5s;
-  proxy_send_timeout    120s;
-  proxy_read_timeout    120s;
-  send_timeout          120s;
+  proxy_connect_timeout 10s;
+  proxy_send_timeout    600s;
+  proxy_read_timeout    600s;
+  send_timeout          600s;
 
   # CORS (minimal)
   add_header Access-Control-Allow-Origin  \$http_origin always;

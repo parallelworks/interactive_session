@@ -192,7 +192,8 @@ jobs:
     inputs:
       pwrl_host:
         type: group
-        label: Desktop Host
+        label: Jupyter Lab Host
+        collapsed: false
         items:
           resource:
             type: compute-clusters
@@ -200,6 +201,16 @@ jobs:
             include-workspace: false
             autoselect: true
             tooltip: Resource to host the service
+          slurm_options:
+            type: dropdown
+            label: Sample Dropdown
+            optional: true
+            default: ''
+            options:
+              - value: ''
+                label: Default
+              - value: -M hpc4
+                label: HPC4
           nports:
             type: number
             label: Number of Ports to Reserve
@@ -213,18 +224,46 @@ jobs:
             hidden: true
             ignore: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
             optional: ${{ .ignore}}
-          _sch__dd_partition_e__tag_existing:
+          _sch__dd_partition_e__tag_default:
             type: slurm-partitions
             label: SLURM partition
             optional: true
             tooltip: Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.
             resource: ${{ inputs.pwrl_host.resource }}
-            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider || '-M hpc4' == inputs.pwrl_host.slurm_options }}
             ignore: ${{ .hidden }}
-          _sch__dd_gres_e_gpu_colon__tag_existing:
+          _sch__dd_partition_e__tag_hpc4:
+            type: dropdown
+            label: SLURM partition
+            optional: true
+            tooltip: Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider || '-M hpc4' != inputs.pwrl_host.slurm_options }}
+            ignore: ${{ .hidden }}
+            default: normal
+            options:
+              - normal
+              - gpu
+              - gpu-h200
+              - gpu-quick
+              - ht
+              - large-mem
+              - quick
+              - test
+              - unlimited
+          _sch__dd_gres_e_gpu_colon__tag_default:
             type: number
             label: Number of GPUs
-            hidden: ${{ inputs.pwrl_host._sch__dd_partition_e__tag_existing != 'gpu' && inputs.pwrl_host._sch__dd_partition_e__tag_existing != 'gpu-quick' || 'existing' != inputs.pwrl_host.resource.provider  }}
+            hidden: ${{ inputs.pwrl_host._sch__dd_partition_e__tag_default != 'gpu' && inputs.pwrl_host._sch__dd_partition_e__tag_default != 'gpu-quick' || 'existing' != inputs.pwrl_host.resource.provider  }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
+            min: 1
+            max: 4
+            default: 1
+            tooltip: '--gres=gpu:X slurm directive'
+          _sch__dd_gres_e_gpu_colon__tag_hpc4:
+            type: number
+            label: Number of GPUs
+            hidden: ${{ inputs.pwrl_host._sch__dd_partition_e__tag_hpc4 != 'gpu' && inputs.pwrl_host._sch__dd_partition_e__tag_hpc4 != 'gpu-quick' && inputs.pwrl_host._sch__dd_partition_e__tag_hpc4 != 'gpu-h200' || 'existing' != inputs.pwrl_host.resource.provider  }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
             min: 1

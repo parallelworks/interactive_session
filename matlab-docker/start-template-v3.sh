@@ -80,7 +80,9 @@ echo "sudo docker stop ${container_name}" >> cancel.sh
 echo "sudo docker rm ${container_name}" >> cancel.sh
 # Start container
 sudo service docker start
-touch empty
+touch 
+sudo chown 101:101 nginx.conf config.conf empty nginx.logs  
+sudo chmod 644 *.conf
 sudo docker run  -d --name ${container_name} \
     -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
     -v ${PWD}/empty:/etc/nginx/conf.d/default.conf \

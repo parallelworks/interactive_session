@@ -1,0 +1,23 @@
+app: 
+jobs:
+  main:
+    ssh:
+      remoteHost: ${{ inputs.clust.ip || localhost }}
+    steps:
+      - name: Pass
+        run: echo "${{ inputs.hello }}"
+      - name: Cancel
+        run: sleep 5000
+      - name: Fail
+        run: cd fail
+        if: ${{ always }}
+'on':
+  execute:
+    inputs:
+      hello:
+        label: o
+        type: string
+        default: o
+      clust:
+        type: compute-clusters
+        optional: true

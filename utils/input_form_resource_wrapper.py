@@ -265,10 +265,15 @@ def complete_resource_information(inputs_dict):
                 inputs_dict['_sch__dd_ntasks_d_per_d_node_e_'] = workers_per_node_to_tasks_per_node(max_workers_per_node, cpus_per_node)
 
             inputs_dict['submit_cmd'] = "sbatch"
-            if 'qos' in inputs_dict:
-                inputs_dict['submit_cmd'] = inputs_dict['submit_cmd']  + ' --qos ' + inputs_dict['qos']
             inputs_dict['cancel_cmd'] = "scancel"
-            inputs_dict['status_cmd'] = "squeue" 
+            inputs_dict['status_cmd'] = "squeue"
+            if 'slurm_options' in inputs_dict:
+                inputs_dict['submit_cmd'] = inputs_dict['submit_cmd'] + inputs_dict['slurm_options']
+                inputs_dict['cancel_cmd'] = inputs_dict['cancel_cmd'] + inputs_dict['slurm_options']
+                inputs_dict['status_cmd'] = inputs_dict['status_cmd'] + inputs_dict['slurm_options']
+            if 'qos' in inputs_dict:
+                inputs_dict['submit_cmd'] = inputs_dict['submit_cmd'] + ' --qos ' + inputs_dict['qos']
+
 
         elif inputs_dict['jobschedulertype'] == 'PBS':
             inputs_dict['submit_cmd'] = "qsub"

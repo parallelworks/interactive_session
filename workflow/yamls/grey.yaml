@@ -20,4 +20,4 @@ jobs:
         default: o
       clust:
         type: compute-clusters
-        optional: false
+        optional: true

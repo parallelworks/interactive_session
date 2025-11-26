@@ -1,10 +1,3 @@
-permissions:
-  - '*'
-sessions:
-  session:
-    useTLS: false
-    redirect: true
-
 jobs:
   preprocessing:
     steps:
@@ -26,47 +19,38 @@ jobs:
       - name: Initialize Cancel Script
         early-cancel: any-job-failed
         run: ./utils/steps-v3/preprocessing/initialize_cancel_script.sh
-
   controller_job:
     needs:
       - preprocessing
     steps:
       - name: Create Controller Session Script
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/controller/create_session_script.sh
       - name: Launch and Monitor Controller Job
-        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/controller/launch_and_monitor_job.sh
-        cleanup: |
-          if [[ "${{ inputs.pwrl_host.jobschedulertype }}" == "CONTROLLER" ]]; then
-            ./kill.sh
-          fi
+        cleanup: ./kill.sh
       - name: Clean and Exit
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/clean_and_exit.sh
-
   compute_job:
     needs:
       - preprocessing
     steps:
       - name: Create Compute Session Script
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'existing' == inputs.pwrl_host.resource.provider || 'CONTROLLER' != inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/compute/create_session_script.sh
       - name: Launch and Monitor Compute Job
-        if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'existing' == inputs.pwrl_host.resource.provider || 'CONTROLLER' != inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/compute/launch_and_monitor_job.sh
-        cleanup: |
-          if [[ "${{ inputs.pwrl_host.jobschedulertype }}" != "CONTROLLER" ]]; then
-            ./kill.sh
-          fi
+        cleanup: ./kill.sh
       - name: Clean and Exit
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'existing' == inputs.pwrl_host.resource.provider || 'CONTROLLER' != inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/clean_and_exit.sh
-
   create_session:
     needs:
       - preprocessing
@@ -78,7 +62,7 @@ jobs:
           echo "session_name=${session_name}" | tee -a $OUTPUTS
       - name: Get Controller Hostname
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }} 
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -86,7 +70,7 @@ jobs:
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
       - name: Get Compute Hostname
         early-cancel: any-job-failed
-        if: ${{ 'SLURM' == inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'SLURM' == inputs.pwrl_host.jobschedulertype_tag_existing || 'SLURM' == inputs.pwrl_host.jobschedulertype_tag_cloud }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -115,7 +99,6 @@ jobs:
           fi
           target_hostname=$(${sshcmd} squeue -j "${job_id}" --noheader --format="%N")
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
-
       - name: Get Remote Port
         early-cancel: any-job-failed
         env:
@@ -160,6 +143,8 @@ jobs:
               echo "Attempt $attempt: Checking if server is listening on ${remote_host}:${remote_port}..."
               
               if check_server; then
+                  # Sleep to wait for jupyterlab after nginx connects
+                  sleep 20
                   echo "Success: Server is listening on ${remote_host}:${remote_port}!"
                   exit 0
               else

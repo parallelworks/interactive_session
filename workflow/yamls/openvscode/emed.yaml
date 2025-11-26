@@ -82,6 +82,7 @@ jobs:
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
+          set -x
           source utils/load-env.sh
           source resources/host/inputs.sh
           while true; do

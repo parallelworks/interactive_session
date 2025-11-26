@@ -105,7 +105,7 @@ jobs:
             echo "Error: SLURM job ID is empty!" >&2
             exit 1
           fi
-          target_hostname=$(${sshcmd} squeue -j "${job_id}" --noheader --format="%N")
+          target_hostname=$(${sshcmd} squeue ${inputs.pwrl_host.slurm_options} -j "${job_id}" --noheader --format="%N")
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
       - name: Get Remote Port
         early-cancel: any-job-failed
@@ -161,11 +161,6 @@ jobs:
                   ((attempt++))
               fi
           done
-      - name: Select Local Port
-        early-cancel: any-job-failed
-        run: |
-          local_port=$(pw agent open-port)
-          echo "local_port=${local_port}"  | tee -a $OUTPUTS
       - name: Set URL SLUG
         early-cancel: any-job-failed
         run: |

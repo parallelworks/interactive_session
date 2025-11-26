@@ -72,6 +72,22 @@ download_singularity_container() {
     rm -rf interactive_session    
 }
 
+download_oras(){
+    VER="1.2.0"   # example — replace with newest                                                                                    
+    wget https://github.com/oras-project/oras/releases/download/v${VER}/oras_${VER}_linux_amd64.tar.gz
+    mkdir -p ${service_parent_install_dir}/oras
+    tar -xvf oras_${VER}_linux_amd64.tar.gz -C ${service_parent_install_dir}/oras
+    rm oras_${VER}_linux_amd64.tar.gz
+}
+
+oras_pull_file(){
+    repo=$1
+    repo_path=$2
+    host_path=$3
+    ${service_parent_install_dir}/oras/oras pull ${repo}
+    mv ${repo_path} ${host_path}
+}
+
 displayErrorMessage() {
     echo $(date): $1
 }
@@ -111,6 +127,12 @@ fi
 if [[ ${service_download_vncserver_container} == "true" ]]; then
     if [ ! -s ${service_vncserver_sif} ]; then
         wget -O ${service_vncserver_sif} https://github.com/parallelworks/interactive_session/raw/main/downloads/vnc/vncserver.sif
+    fi
+    if [ ! -s ${service_vncserver_sif} ]; then
+        echo "$(date) WARNING: Failed to download file ${service_vncserver_sif} from GitHub repository"
+        echo "$(date)          Using GitHub registry to download file"
+        download_oras
+        oras_pull_file ghcr.io/avidalto/vncserver-sif:1.0 downloads/vnc/vncserver.sif ${service_parent_install_dir}/vncserver.sif
     fi
     if [ ! -s ${service_vncserver_sif} ]; then
         echo "$(date) ERROR: Failed to download file ${service_vncserver_sif}"

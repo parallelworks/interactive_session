@@ -280,7 +280,7 @@ sed -i "s|^.*c\.ServerApp\.root_dir.*|c.ServerApp.root_dir = '${service_notebook
 # This one is the only one that sets the base_url when you tunnel to laptop
 sed -i "s|^.*c\.ServerApp\.base_url.*|c.ServerApp.base_url = '${basepath}/'|" jupyter_notebook_config.py
 #sed -i "s|^.*c\.ServerApp\.base_url.*|c.ServerApp.base_url = '${basepath}/'|" jupyter_notebook_config.py
-
+date
 jupyter-notebook --port=${jupyterserver_port} --no-browser --config=${PWD}/jupyter_notebook_config.py
 
 fi

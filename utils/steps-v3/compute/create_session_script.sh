@@ -45,6 +45,8 @@ echo "Exit code: \$?"
 echo "Starting session..."
 
 rm -f \${portFile}
+
+date
 HERE
 
 # Add application-specific code

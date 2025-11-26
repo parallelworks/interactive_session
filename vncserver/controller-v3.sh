@@ -110,7 +110,7 @@ fi
 # - Some compute nodes don't have access to the internet
 if [[ ${service_download_vncserver_container} == "true" ]]; then
     if [ ! -s ${service_vncserver_sif} ]; then
-        wget -O ${service_vncserver_sif} https://github.com/parallelworks/interactive_session/raw/main/downloads/vnc/vncserver.sif
+        wget -O ${service_vncserver_sif}  https://raw.githubusercontent.com/parallelworks/interactive_session/main/downloads/vnc/vncserver.sif
     fi
     if [ ! -s ${service_vncserver_sif} ]; then
         echo "$(date) ERROR: Failed to download file ${service_vncserver_sif}"

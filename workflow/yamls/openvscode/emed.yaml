@@ -1,3 +1,11 @@
+permissions:
+  - '*'
+sessions:
+  session:
+    useTLS: false
+    redirect: true
+
+
 jobs:
   preprocessing:
     steps:

@@ -5,6 +5,7 @@ sessions:
     useTLS: false
     redirect: true
 
+
 jobs:
   preprocessing:
     steps:
@@ -17,8 +18,6 @@ jobs:
           set -e
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
           ./utils/steps-v3/preprocessing/process_inputs_sh.sh
-          password=$(openssl rand -base64 12 | head -c 12)
-          echo "export password=${password}" >> resources/host/inputs.sh
       - name: Transfer Files to Controller
         early-cancel: any-job-failed
         run: ./utils/steps-v3/preprocessing/transfer_files_to_controller.sh
@@ -28,7 +27,6 @@ jobs:
       - name: Initialize Cancel Script
         early-cancel: any-job-failed
         run: ./utils/steps-v3/preprocessing/initialize_cancel_script.sh
-
   controller_job:
     needs:
       - preprocessing
@@ -45,7 +43,6 @@ jobs:
         early-cancel: any-job-failed
         if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/clean_and_exit.sh
-
   compute_job:
     needs:
       - preprocessing
@@ -62,7 +59,6 @@ jobs:
         early-cancel: any-job-failed
         if: ${{ 'existing' == inputs.pwrl_host.resource.provider || 'CONTROLLER' != inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/clean_and_exit.sh
-
   create_session:
     needs:
       - preprocessing
@@ -74,7 +70,7 @@ jobs:
           echo "session_name=${session_name}" | tee -a $OUTPUTS
       - name: Get Controller Hostname
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }} 
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -111,7 +107,6 @@ jobs:
           fi
           target_hostname=$(${sshcmd} squeue -j "${job_id}" --noheader --format="%N")
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
-
       - name: Get Remote Port
         early-cancel: any-job-failed
         env:
@@ -152,11 +147,12 @@ jobs:
 
           # Main loop
           attempt=1
-          sleep 30
           while true; do
               echo "Attempt $attempt: Checking if server is listening on ${remote_host}:${remote_port}..."
               
               if check_server; then
+                  # Sleep to wait for jupyterlab after nginx connects
+                  sleep 20
                   echo "Success: Server is listening on ${remote_host}:${remote_port}!"
                   exit 0
               else

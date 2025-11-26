@@ -43,6 +43,7 @@ echo
 echo
 echo "STARTING SERVICE"
 echo
+date
 HERE
 
 

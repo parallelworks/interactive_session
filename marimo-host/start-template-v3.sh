@@ -38,6 +38,7 @@ if [[ "${juice_use_juice}" == "true" ]]; then
     }
 fi
 
+date
 
 if ! [ -z "${service_script}" ]; then
     ${juice_cmd} marimo ${service_mode} ${service_script} --port ${service_port} --host ${HOSTNAME} --no-token

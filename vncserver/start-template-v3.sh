@@ -131,6 +131,8 @@ for port in $(seq ${minPort} ${maxPort} | shuf); do
     fi
 done
 
+date
+
 if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
     export service_vnc_exec=/usr/lib/vncserver
     # vncserver -list does not work
@@ -250,6 +252,7 @@ rm /tmp/.X11-unix/X${XdisplayNumber}
 HERE
 fi
 
+date
 
 if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
     #########
@@ -568,6 +571,8 @@ fi
 
 
 sleep 6 # Need this specially in controller node or second software won't show up!
+
+date
 
 # Reload env in case it was deactivated in the step above (e.g.: conda activate)
 eval "${service_load_env}"

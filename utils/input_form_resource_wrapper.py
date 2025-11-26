@@ -268,9 +268,9 @@ def complete_resource_information(inputs_dict):
             inputs_dict['cancel_cmd'] = "scancel"
             inputs_dict['status_cmd'] = "squeue"
             if 'slurm_options' in inputs_dict:
-                inputs_dict['submit_cmd'] = inputs_dict['submit_cmd'] + inputs_dict['slurm_options']
-                inputs_dict['cancel_cmd'] = inputs_dict['cancel_cmd'] + inputs_dict['slurm_options']
-                inputs_dict['status_cmd'] = inputs_dict['status_cmd'] + inputs_dict['slurm_options']
+                inputs_dict['submit_cmd'] = inputs_dict['submit_cmd'] + ' ' + inputs_dict['slurm_options']
+                inputs_dict['cancel_cmd'] = inputs_dict['cancel_cmd'] + ' ' + inputs_dict['slurm_options']
+                inputs_dict['status_cmd'] = inputs_dict['status_cmd'] + ' ' + inputs_dict['slurm_options']
             if 'qos' in inputs_dict:
                 inputs_dict['submit_cmd'] = inputs_dict['submit_cmd'] + ' --qos ' + inputs_dict['qos']
 

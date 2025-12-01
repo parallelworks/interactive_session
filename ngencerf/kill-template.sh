@@ -1,2 +1,2 @@
 # Runs in the controller node:
-bash ${resource_jobdir}/cancel.sh
+bash "${resource_jobdir}/cancel.sh"

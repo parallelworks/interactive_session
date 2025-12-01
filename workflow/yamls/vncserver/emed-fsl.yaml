@@ -119,7 +119,6 @@ jobs:
           fi
           target_hostname=$(${sshcmd} squeue -j "${job_id}" --noheader --format="%N")
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
-
       - name: Get Remote Port
         early-cancel: any-job-failed
         env:
@@ -173,6 +172,7 @@ jobs:
                   ((attempt++))
               fi
           done
+          sleep 20
       - name: Select Local Port
         early-cancel: any-job-failed
         run: |

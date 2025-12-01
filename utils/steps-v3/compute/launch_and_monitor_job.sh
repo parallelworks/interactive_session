@@ -27,7 +27,7 @@ if [[ "${jobid}" == "" ]];then
     displayErrorMessage "ERROR submitting job - exiting the workflow"
 fi
 
-echo ${cancel_cmd} ${jobid} >> ${kill_ssh}
+sed -i "/set -x/a ${cancel_cmd} ${jobid}" ${kill_ssh}
 
 echo
 echo "Submitted job: ${jobid}"

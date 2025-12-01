@@ -47,11 +47,11 @@ run_xterm_loop(){
 # PREPARE CLEANUP #
 ###################
 
-echo '#!/bin/bash' > ${resource_jobdir}/cancel.sh
-chmod +x ${resource_jobdir}/cancel.sh
-echo "mv ${resource_jobdir}/cancel.sh ${resource_jobdir}/cancel.sh.executed" >> ${resource_jobdir}/cancel.sh
+echo '#!/bin/bash' > "${resource_jobdir}/cancel.sh"
+chmod +x "${resource_jobdir}/cancel.sh"
+echo "mv "${resource_jobdir}/cancel.sh" "${resource_jobdir}/cancel.sh".executed" >> "${resource_jobdir}/cancel.sh"
 if ![ -z "${SLURM_JOB_ID}" ]; then
-    echo "scancel ${SLURM_JOB_ID}"  >> ${resource_jobdir}/cancel.sh
+    echo "scancel ${SLURM_JOB_ID}"  >> "${resource_jobdir}/cancel.sh"
 fi
 ###################
 ###################
@@ -208,7 +208,7 @@ fi
 
 
 if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
-cat >> ${resource_jobdir}/cancel.sh <<HERE
+cat >> "${resource_jobdir}/cancel.sh" <<HERE
 service_pid=\$(cat ${resource_jobdir}/service.pid)
 if [ -z \"\${service_pid}\" ]; then
     echo "ERROR: No service pid was found!"
@@ -229,7 +229,7 @@ kill \${vnc_pid}
 HERE
 
 else
-cat >> ${resource_jobdir}/cancel.sh <<HERE
+cat >> "${resource_jobdir}/cancel.sh" <<HERE
 service_pid=\$(cat ${resource_jobdir}/service.pid)
 if [ -z \${service_pid} ]; then
     echo "ERROR: No service pid was found!"

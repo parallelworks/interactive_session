@@ -196,7 +196,7 @@ jobs:
             tooltip: Resource to host the service
           slurm_options:
             type: dropdown
-            label: Sample Dropdown
+            label: Select Cluster
             optional: true
             default: ''
             options:

@@ -189,7 +189,7 @@ jobs:
     inputs:
       pwrl_host:
         type: group
-        label: Jupyter Lab Host
+        label: Host
         collapsed: false
         items:
           resource:
@@ -200,7 +200,7 @@ jobs:
             tooltip: Resource to host the service
           slurm_options:
             type: dropdown
-            label: Sample Dropdown
+            label: Select Cluster
             optional: true
             default: ''
             options:

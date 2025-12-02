@@ -157,6 +157,9 @@ if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
         echo "$(date) ERROR: No vncserver command found"
         exit 1
     fi
+fi
+
+if [[ ${service_download_vncserver_container} != "true" ]]; then
     if ! which singularity > /dev/null 2>&1; then
         echo "(date) ERROR: No vncserver or singularity command found"
         exit 1

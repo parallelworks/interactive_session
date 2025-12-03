@@ -1,6 +1,8 @@
 # Initialize cancel script
 set -x
 
+echo whoami ": $(whoami)"
+
 PORT=5000
 if lsof -i :$PORT >/dev/null 2>&1; then
     echo
@@ -41,23 +43,25 @@ if [[ "${service_only_connect}" == "true" ]]; then
     sleep infinity
 fi
 
-
 if ! [ -f "${service_nginx_sif}" ]; then
    displayErrorMessage "NGINX proxy singularity container was not found ${service_nginx_sif}"
 fi
 
-if ! [ -f "${ngen_cal_singularity_container_path}" ]; then
-   displayErrorMessage "NGEN-CAL singularity container was not found ${ngen_cal_singularity_container_path}"
+if ! [ -f "${nwm_cal_mgr_singularity_container_path}" ]; then
+   displayErrorMessage "nwm-cal-mgr singularity container was not found ${nwm_cal_mgr_singularity_container_path}"
 fi
 
-if ! [ -f "${ngen_forcing_singularity_container_path}" ]; then
-   displayErrorMessage "NGEN-FORCING singularity container was not found ${ngen_forcing_singularity_container_path}"
+if ! [ -f "${ngen_bmi_forcing_singularity_container_path}" ]; then
+   displayErrorMessage "ngen-bmi-forcing singularity container was not found ${ngen_bmi_forcing_singularity_container_path}"
 fi
 
-if ! [ -f "${ngen_fcst_singularity_container_path}" ]; then
-   displayErrorMessage "NGEN-FCST singularity container was not found ${ngen_fcst_singularity_container_path}"
+if ! [ -f "${nwm_fcst_mgr_singularity_container_path}" ]; then
+   displayErrorMessage "nwm-fcst-mgr singularity container was not found ${nwm_fcst_mgr_singularity_container_path}"
 fi
 
+if ! [ -f "${nwm_verf_singularity_container_path}" ]; then
+   displayErrorMessage "nwm-verf singularity container was not found ${nwm_verf_singularity_container_path}"
+fi
 
 #################
 # NGINX WRAPPER #
@@ -67,50 +71,59 @@ echo "Starting nginx wrapper on service port ${service_port}"
 
 # Write config file
 cat >> config.conf <<HERE
+map \$http_upgrade \$connection_upgrade { default upgrade; '' close; }
+
 server {
- listen ${service_port};
- server_name _;
- index index.html index.htm index.php;
- add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
- add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
- add_header X-Frame-Options "ALLOWALL";
- client_max_body_size 0;  # Remove upload size limit by setting to 0
+  listen ${service_port};
+  server_name _;
+  index index.html index.htm index.php;
+  client_max_body_size 0; # Remove upload size limit by setting to 0
 
- # Timeout settings
- proxy_connect_timeout 3600s;   # Time to establish connection with backend
- proxy_send_timeout 3600s;      # Time to send request to backend
- proxy_read_timeout 86400s;     # Time to wait for a response from the backend (increased to 1 day)
- send_timeout 3600s;            # Time to wait for the client to receive the response
+  # timeouts (shorter to notice app hangs)
+  proxy_connect_timeout 10s;
+  proxy_send_timeout    600s;
+  proxy_read_timeout    600s;
+  send_timeout          600s;
 
- # Buffers for large responses
- proxy_buffers 16 16k;
- proxy_buffer_size 32k;
+  # CORS (minimal)
+  add_header Access-Control-Allow-Origin  \$http_origin always;
+  add_header Vary                         Origin always;
+  add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
+  add_header Access-Control-Allow-Headers "Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since" always;
 
- # Keep-alive settings
- keepalive_timeout 65;          # Timeout for keeping the connection open with the backend
+  location / {
+    proxy_pass http://127.0.0.1:${ngencerf_port}${basepath}/;
+    proxy_http_version 1.1;
 
- location / {
-     proxy_pass http://127.0.0.1:${ngencerf_port}${basepath}/;
-     proxy_http_version 1.1;
-       proxy_set_header Upgrade \$http_upgrade;
-       proxy_set_header Connection "upgrade";
-       proxy_set_header X-Real-IP \$remote_addr;
-       proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-       proxy_set_header Host \$http_host;
-       proxy_set_header X-NginX-Proxy true;
- }
+    # only upgrade when client asked for it
+    proxy_set_header   Upgrade    \$http_upgrade;
+    proxy_set_header   Connection \$connection_upgrade;
 
- location /api/ {
-     proxy_pass http://127.0.0.1:8000/;
-     proxy_http_version 1.1;
-       proxy_set_header Upgrade \$http_upgrade;
-       proxy_set_header Connection "upgrade";
-       proxy_set_header X-Real-IP \$remote_addr;
-       proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-       proxy_set_header Host \$http_host;
-       proxy_set_header X-NginX-Proxy true;
+    proxy_set_header   X-Real-IP         \$remote_addr;
+    proxy_set_header   X-Forwarded-For   \$proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto \$scheme;
+    proxy_set_header   X-Forwarded-Host  \$host;
+    proxy_set_header   Host              \$host;
 
- }
+    # quick response to CORS preflight
+    if (\$request_method = OPTIONS) { return 204; }
+  }
+
+  location /api/ {
+    proxy_pass http://127.0.0.1:8000/;
+    proxy_http_version 1.1;
+
+    proxy_set_header   Upgrade    \$http_upgrade;
+    proxy_set_header   Connection \$connection_upgrade;
+
+    proxy_set_header   X-Real-IP         \$remote_addr;
+    proxy_set_header   X-Forwarded-For   \$proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto \$scheme;
+    proxy_set_header   X-Forwarded-Host  \$host;
+    proxy_set_header   Host              \$host;
+
+    if (\$request_method = OPTIONS) { return 204; }
+  }
 }
 HERE
 
@@ -124,7 +137,6 @@ pid        /tmp/nginx.pid;
 events {
     worker_connections  1024;
 }
-
 
 http {
     proxy_temp_path /tmp/proxy_temp;
@@ -154,7 +166,7 @@ http {
 HERE
 
 echo "Running singularity container ${service_nginx_sif}"
-# We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
+# We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid
 # and other users cannot use the node. Was not able to change this in the config.conf.
 mkdir -p ./tmp
 # Need to overwrite default configuration!
@@ -173,8 +185,74 @@ fi
 
 # Make sure permissions are set properly
 #sudo -n chown -R ${USER} ${local_data_dir}
-#sudo -n chmod -R u+rw ${local_data_dir}
-sudo find "$local_data_dir" ! -perm -u+rw -print0 | sudo parallel -0 chmod u+rw
+# sudo -n chmod -R a+rwX ${local_data_dir}
+
+
+# SENT="/var/tmp/chmod_since"
+# sudo test -f "$SENT" || sudo touch -t 197001010000 "$SENT"
+
+# p="$(command -v nproc >/dev/null 2>&1 && nproc || echo 8)"
+# base_dir="${local_data_dir%/}/run-logs"
+# [ -d "$base_dir" ] || exit 0
+
+# # sent markers
+# sent_epoch="$(sudo stat -c %Y "$SENT")"
+# sent_day="$(date -d "@$sent_epoch" +%F)"   # YYYY-MM-DD
+
+# emit_newer_in_dir() {
+#   local d="$1"
+#   find -L "$d" -xdev \
+#     ! -type l \
+#     \( -newer "$SENT" -o -cnewer "$SENT" \) -print0
+# }
+
+# {
+#   # 1) ngen_cal_YYYY-MM-DDThh:mm:ss.xxx directories
+#   find "${base_dir%/}" -maxdepth 1 -type d -name 'ngen_cal_*' -print0 |
+#   while IFS= read -r -d '' d; do
+#     name="$(basename "$d")"                 # ngen_cal_2025-09-02T17:38:54.386
+#     ts="${name#ngen_cal_}"                  # 2025-09-02T17:38:54.386
+#     ts_nomsec="${ts%%.*}"                   # 2025-09-02T17:38:54
+#     dir_day="$(date -d "$ts_nomsec" +%F 2>/dev/null)" || continue
+#     [ "$dir_day" \< "$sent_day" ] && continue
+#     emit_newer_in_dir "$d"
+#   done
+
+#   # 2) YYYY-MM-DD date directories
+#   find "${base_dir%/}" -maxdepth 1 -type d -regextype posix-extended \
+#        -regex '.*/[0-9]{4}-[0-9]{2}-[0-9]{2}$' -print0 |
+#   while IFS= read -r -d '' d; do
+#     dir_day="$(basename "$d")"              # e.g., 2025-09-02
+#     [ "$dir_day" \< "$sent_day" ] && continue
+#     emit_newer_in_dir "$d"
+#   done
+
+#   # 3) mswm/YYYYMMDDThhmmss.log files (nested dir)
+#   mswm_dir="${base_dir%/}/mswm"
+#   if [ -d "$mswm_dir" ]; then
+#     find "${mswm_dir%/}" -maxdepth 1 -type f -regextype posix-extended \
+#          -regex '.*/[0-9]{8}T[0-9]{6}\.log$' -print0 |
+#     while IFS= read -r -d '' f; do
+#       fname="$(basename "$f")"              # 20250923T215414.log
+#       stamp="${fname%.log}"                 # 20250923T215414
+#       iso="${stamp:0:4}-${stamp:4:2}-${stamp:6:2}T${stamp:9:2}:${stamp:11:2}:${stamp:13:2}"
+#       file_epoch="$(date -d "$iso" +%s 2>/dev/null || echo '')"
+#       [ -n "$file_epoch" ] || continue
+#       # same moment or newer than SENT
+#       if [ "$file_epoch" -ge "$sent_epoch" ]; then
+#         printf '%s\0' "$f"
+#       fi
+#     done
+#   fi
+
+#   # 4) run_calib subtree (mtime/ctime day >= sent_day)
+#   find -L "/ngencerf-app/data/ngen-cal-data/ngen-cal-work/run_calib" -xdev \
+#     ! -type l \
+#     \( -newermt "$sent_day 00:00:00" -o -newerct "$sent_day 00:00:00" \) -print0
+
+# } | sudo xargs -0 -r -P"$p" chmod a+rwX && sudo touch "$SENT"
+
+
 #mkdir -p ${local_data_dir}/forecast_forcing_work/esmf_mesh
 #mkdir -p ${local_data_dir}/forecast_forcing_work/raw_input/HRRR
 #mkdir -p ${local_data_dir}/forecast_forcing_work/raw_input/RAP
@@ -207,7 +285,7 @@ chmod +x update_configuring_jobs.sh
 
 if [ "${PARTITION_COUNT}" -gt 1 ]; then
     echo "ACTIVATING JOB RESUBMISSION"
-    export MAX_CONFIGURING_WAIT_TIME="600"
+    export MAX_CONFIGURING_WAIT_TIME="840"
     ./update_configuring_jobs.sh > update_configuring_jobs.log 2>&1 &
     echo "kill $!" >> cancel.sh
 else
@@ -215,31 +293,39 @@ else
     export MAX_CONFIGURING_WAIT_TIME="9999999999"
 fi
 
+# This script is required to run the callback with retries
+sed -i "s|__LOCAL_DATA_DIR__|${local_data_dir}|g" run_callback.sh
+chmod +x run_callback.sh
 
 /usr/local/bin/gunicorn -w ${service_slurm_app_workers} -b 0.0.0.0:5000 slurm-wrapper-app-v3:app \
   --access-logfile slurm-wrapper-app-v3.log \
   --error-logfile slurm-wrapper-app-v3.log \
   --capture-output \
   --enable-stdio-inheritance > slurm-wrapper-app-v3.log 2>&1 &
-  
+
 #python3.8 slurm-wrapper-app-v3.py > slurm-wrapper-app-v3.log 2>&1 &
 
 slurm_wrapper_pid=$!
 echo "kill ${slurm_wrapper_pid}" >> cancel.sh
 
 
+# Rerun previous callbacks
+sed -i "s|__LOCAL_DATA_DIR__|${local_data_dir}|g" run_pending_callbacks.sh
+bash run_pending_callbacks.sh >> run_pending_callback.log 2>&1 &
+run_pending_callbacks_pid=$!
+echo "kill ${run_pending_callbacks_pid} #rerun callbacks" >> cancel.sh
 
 ###############
 # NGENCERF-UI #
-############### 
-# service_ngencerf_ui_dir=/ngencerf-app/nextgen_ui/compose.yaml
+###############
+# service_ngencerf_ui_dir=/ngencerf-app/ngencerf-ui/compose.yaml
 cat > ${service_ngencerf_ui_dir}/production-pw.yaml <<HERE
 
 name: ngencerf-ui
 
 services:
   ngencerf-app:
-    build: 
+    build:
       context: .
       dockerfile: ./Dockerfile.production-pw
       args:
@@ -272,20 +358,53 @@ cd ${service_ngencerf_docker_dir}
 #  ngencerf-ui -c "npm run generate && npx --yes serve .output/public/"
 # TODO: How about yeah, just run docker compose up from /ngencerf-app/ngencerf-docker/ folder?
 
-#docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui 
+#docker compose run --rm --service-ports --entrypoint bash --name ${container_name} ngencerf-ui
 
-if [[ "${service_build}" == "true" ]]; then
-    CACHE_BUST=$(date +%s) docker compose -f production-pw.yaml up --build -d
+# ensure buildx uses the docker driver (not the docker-container helper)
+# TODO: add this to PW start script
+if docker buildx ls | grep -qE 'localdocker.+docker.+\*'; then
+  : # already selected
+elif docker buildx ls | grep -q 'localdocker'; then
+  docker buildx use localdocker
 else
-    docker compose -f production-pw.yaml up -d
+  docker buildx create --name localdocker --driver docker --use
 fi
 
-ngencerf_image=$(docker compose -f production-pw.yaml config | awk '/ngencerf-server/{flag=1} flag && /image:/{print $2; exit}')
+
+if [[ "${service_build}" == "true" ]]; then
+  # build locally and start ngencerf-server
+  CACHE_BUST=$(date +%s) docker compose -f production-pw.yaml up -d --build ngencerf-services
+
+  # build locally and start ngencerf-ui
+  docker compose -f production-pw.yaml up -d --build --no-deps ngencerf-ui
+
+else
+  # pull ngencerf-server from registry
+  CACHE_BUST=$(date +%s) docker compose -f production-pw.yaml pull ngencerf-services
+
+  # start ngencerf-server
+  CACHE_BUST=$(date +%s) docker compose -f production-pw.yaml up -d --no-build ngencerf-services
+
+  # build locally and start ngencerf-ui
+  # TODO: pull from registry
+  docker compose -f production-pw.yaml up -d --build --no-deps ngencerf-ui
+fi
+
+ngencerf_image="$(docker compose -f production-pw.yaml config | awk '/ngencerf-server/{flag=1} flag && /image:/{print $2; exit}')"
 echo "ngencerf_image=${ngencerf_image}"
-docker create --name extract "$ngencerf_image"
-sudo docker cp extract:/ngencerf/ngencerf-server/cli/dist/ngencerf /usr/local/bin/ngencerf
-docker rm extract
-sudo chmod +x /usr/local/bin/ngencerf
+
+# clean any previous temp container quietly
+docker rm -f extract >/dev/null 2>&1 || true
+
+# only attempt extract if the image exists locally
+if docker image inspect "${ngencerf_image}" >/dev/null 2>&1; then
+  docker create --name extract "${ngencerf_image}" >/dev/null
+  sudo docker cp extract:/ngencerf/ngencerf-server/cli/dist/ngencerf /usr/local/bin/ngencerf
+  docker rm extract >/dev/null
+  sudo chmod +x /usr/local/bin/ngencerf
+else
+  echo "warning: image ${ngencerf_image} not found locally; skipping CLI extract"
+fi
 
 # Tail the logs
 docker compose -f production-pw.yaml logs -f

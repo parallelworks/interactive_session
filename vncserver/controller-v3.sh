@@ -134,12 +134,12 @@ if [[ ${service_download_vncserver_container} == "true" ]]; then
         echo "$(date)          Using GitHub registry to download file"
         download_oras
         oras_pull_file ghcr.io/avidalto/vncserver:2.0 vncserver.tgz ${service_vncserver_singularity_tgz}
+        if [ ! -s ${service_vncserver_singularity_tgz} ]; then
+            echo "$(date) ERROR: Failed to download file ${service_vncserver_singularity_tgz}"
+            exit 1
+        fi
+        tar -xzf ${service_vncserver_singularity_tgz} -C $(dirname ${service_vncserver_singularity_dir})
     fi
-    if ! [ -d "${service_vncserver_singularity_dir}" ]; then
-        echo "$(date) ERROR: Failed to download file ${service_vncserver_singularity_tgz}"
-        exit 1
-    fi
-    tar -xzf ${service_vncserver_singularity_tgz} -C $(dirname ${service_vncserver_singularity_dir})
 
     xterm_path=$(which xterm)
     if ! [ -z ${xterm_path} ]; then

@@ -133,7 +133,7 @@ if [[ ${service_download_vncserver_container} == "true" ]]; then
         echo "$(date) WARNING: Failed to download file ${service_vncserver_singularity_tgz} from GitHub repository"
         echo "$(date)          Using GitHub registry to download file"
         download_oras
-        oras_pull_file ghcr.io/avidalto/vncserver-sif:2.0 vncserver.tgz ${service_vncserver_singularity_tgz}
+        oras_pull_file ghcr.io/avidalto/vncserver:2.0 vncserver.tgz ${service_vncserver_singularity_tgz}
     fi
     if ! [ -d "${service_vncserver_singularity_dir}" ]; then
         echo "$(date) ERROR: Failed to download file ${service_vncserver_singularity_tgz}"

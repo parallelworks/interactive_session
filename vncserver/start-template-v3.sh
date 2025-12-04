@@ -88,8 +88,8 @@ if [ -z "${service_nginx_sif}" ]; then
     service_nginx_sif=${service_parent_install_dir}/nginx-unprivileged.sif
 fi
 
-if [ -z "${service_vncserver_sif}" ]; then
-    service_vncserver_sif=${service_parent_install_dir}/vncserver.sif
+if [ -z "${service_vncserver_singularity_dir}" ]; then
+    service_vncserver_singularity_dir=${service_parent_install_dir}/vncserver_singularity
 fi
 
 service_novnc_tgz_stem=$(echo ${service_novnc_tgz_basename} | sed "s|.tar.gz||g" | sed "s|.tgz||g")
@@ -165,7 +165,7 @@ if [[ ${service_download_vncserver_container} == "true" ]]; then
         exit 1
     fi
     echo "$(date): vncserver is not installed. Using singularity container..."
-    singularity_exec="singularity run --writable-tmpfs --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} ${service_vncserver_sif}"
+    singularity_exec="singularity run --writable-tmpfs --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} ${service_parent_install_dir}"
     service_vnc_exec="${singularity_exec} vncserver"
     service_vnc_type="SingularityTurboVNC"
     service_desktop="echo Starting no service desktop on the host"
@@ -362,6 +362,8 @@ elif [[ "${service_vnc_type}" == "SingularityTurboVNC" ]]; then
     # Start service
     mkdir -p ~/.vnc
     echo "${service_vnc_exec} -kill ${DISPLAY}" >> cancel.sh
+    export TMPDIR=${PWD}/tmp
+    mkdir -p $TMPDIR
     ${singularity_exec} ${resource_jobdir}/vncserver.sh | tee -a vncserver.out &
     #echo "kill $! # singularity run" >> cancel.sh
 

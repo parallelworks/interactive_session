@@ -20,13 +20,6 @@ if [ -z ${service_directory} ]; then
     service_directory=~/
 fi
 
-if [ -z ${service_github_token} ]; then
-    gh_flag=""
-else
-    export GITHUB_TOKEN=${service_github_token}
-    gh_flag="--github-auth"
-fi
-
 if [ -z ${service_password} ]; then
     password_flag="--auth=none"
 else
@@ -77,7 +70,7 @@ if [[ "${juice_use_juice}" == "true" ]]; then
 fi
 
 # START SERVICE
-echo ${juice_cmd} ${service_exec} --bind-addr=${HOSTNAME}:${service_port} ${gh_flag} ${password_flag} ${service_directory}
+echo ${juice_cmd} ${service_exec} --bind-addr=${HOSTNAME}:${service_port} ${password_flag} ${service_directory}
 
 ${juice_cmd} ${service_exec} \
     --bind-addr=${HOSTNAME}:${service_port} \

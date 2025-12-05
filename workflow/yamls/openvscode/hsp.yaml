@@ -98,7 +98,7 @@ jobs:
             echo "Waiting for target hostname..."
 
             # Check if the service.port file exists and read its contents
-            target_hostname=$(${sshcmd} "if [ -f ${resource_jobdir}/target.hostname ]; then cat ${resource_jobdir}/target.hostname; fi")
+            target_hostname=$(${sshcmd} "bash -c \"if [ -f ${resource_jobdir}/target.hostname ]; then cat ${resource_jobdir}/target.hostname; fi\"")
 
             # Exit the loop if file was found and read
             if [ -n "${target_hostname}" ]; then
@@ -153,7 +153,7 @@ jobs:
 
           # Function to check if server is listening
           check_server() {
-              ${sshcmd} "curl --silent --connect-timeout \"$TIMEOUT\" \"http://${remote_host}:${remote_port}\"" >/dev/null 2>&1
+              ${sshcmd} "unset LD_LIBRARY_PATH && curl --silent --connect-timeout \"$TIMEOUT\" \"http://${remote_host}:${remote_port}\"" >/dev/null 2>&1
               return $?
           }
 
@@ -223,7 +223,8 @@ jobs:
             tooltip: Job will be submitted using SSH, sbatch or qsub, respectively
           _sch__dd_account_e__tag_existing:
             label: SLURM account
-            type: string
+            type: slurm-accounts
+            resource: ${{ inputs.pwrl_host.resource }}
             tooltip: Account to submit the interactive job
             hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype  || 'existing' != inputs.pwrl_host.resource.provider }}
             ignore: ${{ .hidden }}
@@ -314,7 +315,7 @@ jobs:
           download_url:
             label: Download URL
             type: string
-            default: https://github.com/coder/code-server/releases/download/v4.92.2/code-server-4.92.2-linux-amd64.tar.gz
+            default: https://github.com/coder/code-server/releases/download/v4.105.1/code-server-4.105.1-linux-amd64.tar.gz
             tooltip: Downloads or uses the code-server server version specified in the URL
           password:
             label: Password for IDE session
@@ -326,7 +327,4 @@ jobs:
             type: string
             default: __HOME__
             tooltip: Directory to open in VS code
-          github_token:
-            label: GitHub authentication token
-            type: string
-            optional: true
+

@@ -47,11 +47,11 @@ run_xterm_loop(){
 # PREPARE CLEANUP #
 ###################
 
-echo '#!/bin/bash' > ${resource_jobdir}/cancel.sh
-chmod +x ${resource_jobdir}/cancel.sh
-echo "mv ${resource_jobdir}/cancel.sh ${resource_jobdir}/cancel.sh.executed" >> ${resource_jobdir}/cancel.sh
+echo '#!/bin/bash' > "${resource_jobdir}/cancel.sh"
+chmod +x "${resource_jobdir}/cancel.sh"
+echo "mv "${resource_jobdir}/cancel.sh" "${resource_jobdir}/cancel.sh".executed" >> "${resource_jobdir}/cancel.sh"
 if ![ -z "${SLURM_JOB_ID}" ]; then
-    echo "scancel ${SLURM_JOB_ID}"  >> ${resource_jobdir}/cancel.sh
+    echo "scancel ${SLURM_JOB_ID}"  >> "${resource_jobdir}/cancel.sh"
 fi
 ###################
 ###################
@@ -106,6 +106,7 @@ if ! [ -z "${CONDA_PREFIX}" ]; then
     echo "Deactivating conda environment"
     source ${CONDA_PREFIX}/etc/profile.d/conda.sh
     conda deactivate
+    export LD_LIBRARY_PATH=$(echo "$LD_LIBRARY_PATH" | tr ':' '\n' | grep -v 'conda' | tr '\n' ':' | sed 's/:$//')
 fi
 
 set -x
@@ -129,6 +130,8 @@ for port in $(seq ${minPort} ${maxPort} | shuf); do
         fi
     fi
 done
+
+date
 
 if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
     export service_vnc_exec=/usr/lib/vncserver
@@ -205,7 +208,7 @@ fi
 
 
 if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
-cat >> ${resource_jobdir}/cancel.sh <<HERE
+cat >> "${resource_jobdir}/cancel.sh" <<HERE
 service_pid=\$(cat ${resource_jobdir}/service.pid)
 if [ -z \"\${service_pid}\" ]; then
     echo "ERROR: No service pid was found!"
@@ -226,7 +229,7 @@ kill \${vnc_pid}
 HERE
 
 else
-cat >> ${resource_jobdir}/cancel.sh <<HERE
+cat >> "${resource_jobdir}/cancel.sh" <<HERE
 service_pid=\$(cat ${resource_jobdir}/service.pid)
 if [ -z \${service_pid} ]; then
     echo "ERROR: No service pid was found!"
@@ -249,6 +252,7 @@ rm /tmp/.X11-unix/X${XdisplayNumber}
 HERE
 fi
 
+date
 
 if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
     #########
@@ -539,7 +543,8 @@ HERE
         touch empty
         touch nginx.logs
         # change ownership to nginx user
-        sudo chown 101:101 nginx.logs  # change ownership to nginx user
+        sudo chown 101:101 nginx.conf config.conf empty nginx.logs  
+        sudo chmod 644 *.conf
         sudo docker run  -d --name ${container_name} \
             -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
             -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
@@ -566,6 +571,8 @@ fi
 
 
 sleep 6 # Need this specially in controller node or second software won't show up!
+
+date
 
 # Reload env in case it was deactivated in the step above (e.g.: conda activate)
 eval "${service_load_env}"

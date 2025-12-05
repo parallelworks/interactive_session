@@ -5,6 +5,7 @@ sessions:
     useTLS: false
     redirect: true
 
+
 jobs:
   preprocessing:
     steps:
@@ -16,6 +17,7 @@ jobs:
         run: |
           set -e
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
+          echo "module load singularity" >> resources/host/inputs.sh
           ./utils/steps-v3/preprocessing/process_inputs_sh.sh
       - name: Transfer Files to Controller
         early-cancel: any-job-failed
@@ -32,18 +34,15 @@ jobs:
     steps:
       - name: Create Controller Session Script
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/controller/create_session_script.sh
       - name: Launch and Monitor Controller Job
-        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/controller/launch_and_monitor_job.sh
-        cleanup: |
-          if [[ "${{ inputs.pwrl_host.jobschedulertype }}" == "CONTROLLER" ]]; then
-            ./kill.sh
-          fi
+        cleanup: ./kill.sh
       - name: Clean and Exit
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/clean_and_exit.sh
   compute_job:
     needs:
@@ -51,18 +50,15 @@ jobs:
     steps:
       - name: Create Compute Session Script
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'existing' == inputs.pwrl_host.resource.provider || 'CONTROLLER' != inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/compute/create_session_script.sh
       - name: Launch and Monitor Compute Job
-        if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'existing' == inputs.pwrl_host.resource.provider || 'CONTROLLER' != inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/compute/launch_and_monitor_job.sh
-        cleanup: |
-          if [[ "${{ inputs.pwrl_host.jobschedulertype }}" != "CONTROLLER" ]]; then
-            ./kill.sh
-          fi
+        cleanup: ./kill.sh
       - name: Clean and Exit
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' != inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'existing' == inputs.pwrl_host.resource.provider || 'CONTROLLER' != inputs.pwrl_host.jobschedulertype_tag_cloud }}
         run: ./utils/steps-v3/clean_and_exit.sh
   create_session:
     needs:
@@ -75,16 +71,15 @@ jobs:
           echo "session_name=${session_name}" | tee -a $OUTPUTS
       - name: Get Controller Hostname
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }} 
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
           target_hostname=$(${sshcmd} hostname)
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
-
       - name: Get Compute Hostname
         early-cancel: any-job-failed
-        if: ${{ 'SLURM' == inputs.pwrl_host.jobschedulertype || 'PBS' == inputs.pwrl_host.jobschedulertype }}
+        if: ${{ 'SLURM' == inputs.pwrl_host.jobschedulertype_tag_existing || 'SLURM' == inputs.pwrl_host.jobschedulertype_tag_cloud }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -95,7 +90,7 @@ jobs:
             echo "Waiting for target hostname..."
 
             # Check if the service.port file exists and read its contents
-            target_hostname=$(${sshcmd} "if [ -f ${resource_jobdir}/target.hostname ]; then cat ${resource_jobdir}/target.hostname; fi")
+            target_hostname=$(${sshcmd} "bash -c \"if [ -f ${resource_jobdir}/target.hostname ]; then cat ${resource_jobdir}/target.hostname; fi\"")
 
             # Exit the loop if file was found and read
             if [ -n "${target_hostname}" ]; then
@@ -106,16 +101,13 @@ jobs:
             # Wait before the next check
             sleep 5
           done
-          if [[ "${{ inputs.pwrl_host.jobschedulertype }}" == "SLURM" ]]; then
-            job_id=$(${sshcmd} cat ${resource_jobdir}/job.id)
-            if [ -z "${job_id}" ]; then
-              echo "Error: SLURM job ID is empty!" >&2
-              exit 1
-            fi
-            target_hostname=$(${sshcmd} squeue -j "${job_id}" --noheader --format="%N")
+          job_id=$(${sshcmd} cat ${resource_jobdir}/job.id)
+          if [ -z "${job_id}" ]; then
+            echo "Error: SLURM job ID is empty!" >&2
+            exit 1
           fi
+          target_hostname=$(${sshcmd} squeue ${{ inputs.pwrl_host.slurm_options }} -j "${job_id}" --noheader --format="%N")
           echo "target_hostname=${target_hostname}"  | tee -a $OUTPUTS
-
       - name: Get Remote Port
         early-cancel: any-job-failed
         env:
@@ -150,7 +142,7 @@ jobs:
 
           # Function to check if server is listening
           check_server() {
-              ${sshcmd} "curl --silent --connect-timeout \"$TIMEOUT\" \"http://${remote_host}:${remote_port}\"" >/dev/null 2>&1
+              ${sshcmd} "unset LD_LIBRARY_PATH && curl --silent --connect-timeout \"$TIMEOUT\" \"http://${remote_host}:${remote_port}\"" >/dev/null 2>&1
               return $?
           }
 
@@ -160,7 +152,7 @@ jobs:
               echo "Attempt $attempt: Checking if server is listening on ${remote_host}:${remote_port}..."
               
               if check_server; then
-                  # Sleep to wait for jupyter after nginx connects
+                  # Sleep to wait for jupyterlab after nginx connects
                   sleep 20
                   echo "Success: Server is listening on ${remote_host}:${remote_port}!"
                   exit 0
@@ -194,68 +186,155 @@ jobs:
     inputs:
       pwrl_host:
         type: group
-        label: Jupyter Server Host
+        label: Jupyter Lab Host
+        collapsed: false
         items:
           resource:
             type: compute-clusters
             label: Service host
             include-workspace: false
-            provider:
-              - existing
             autoselect: true
             tooltip: Resource to host the service
+          slurm_options:
+            type: dropdown
+            label: Select Cluster
+            optional: true
+            default: ''
+            options:
+              - value: ''
+                label: Default
+              - value: -M hpc4
+                label: HPC4
           nports:
             type: number
             label: Number of Ports to Reserve
             hidden: true
             default: 1
             optional: true
-          jobschedulertype:
+          jobschedulertype_tag_existing:
             type: string
             label: Select Controller, SLURM Partition or PBS Queue
             default: SLURM
             hidden: true
-          _sch__dd_partition_e_:
+            ignore: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
+            optional: ${{ .ignore}}
+          _sch__dd_partition_e__tag_default:
             type: slurm-partitions
             label: SLURM partition
             optional: true
             tooltip: Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.
             resource: ${{ inputs.pwrl_host.resource }}
-          _sch__dd_gres_e_gpu_colon_:
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider || '-M hpc4' == inputs.pwrl_host.slurm_options }}
+            ignore: ${{ .hidden }}
+          _sch__dd_partition_e__tag_hpc4:
+            type: dropdown
+            label: SLURM partition
+            optional: true
+            tooltip: Partition to submit the interactive job. Leave empty to let SLURM pick the optimal option.
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider || '-M hpc4' != inputs.pwrl_host.slurm_options }}
+            ignore: ${{ .hidden }}
+            default: normal
+            options:
+              - normal
+              - gpu
+              - gpu-h200
+              - gpu-quick
+              - ht
+              - large-mem
+              - quick
+              - test
+              - unlimited
+          _sch__dd_gres_e_gpu_colon__tag_default:
             type: number
             label: Number of GPUs
-            hidden: ${{ inputs.pwrl_host._sch__dd_partition_e_ != 'gpu' && inputs.pwrl_host._sch__dd_partition_e_ != 'gpu-quick' }}
+            hidden: ${{ inputs.pwrl_host._sch__dd_partition_e__tag_default != 'gpu' && inputs.pwrl_host._sch__dd_partition_e__tag_default != 'gpu-quick' || 'existing' != inputs.pwrl_host.resource.provider  }}
             ignore: ${{ .hidden }}
             optional: ${{ .hidden }}
             min: 1
             max: 4
             default: 1
             tooltip: '--gres=gpu:X slurm directive'
-          _sch__dd_cpus_d_per_d_task_e_:
+          _sch__dd_gres_e_gpu_colon__tag_hpc4:
+            type: number
+            label: Number of GPUs
+            hidden: ${{ inputs.pwrl_host._sch__dd_partition_e__tag_hpc4 != 'gpu' && inputs.pwrl_host._sch__dd_partition_e__tag_hpc4 != 'gpu-quick' && inputs.pwrl_host._sch__dd_partition_e__tag_hpc4 != 'gpu-h200' || 'existing' != inputs.pwrl_host.resource.provider  }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
+            min: 1
+            max: 4
+            default: 1
+            tooltip: '--gres=gpu:X slurm directive'
+          _sch__dd_cpus_d_per_d_task_e__tag_existing:
             type: number
             label: CPUs per task
             min: 1
             max: 32
             default: 1
-            tooltip: --cpus-per-task=value slurm directive
-          _sch__dd_mem_e_:
+            tooltip: '--cpus-per-task=value slurm directive'
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+          _sch__dd_mem_e__tag_existing:
             type: string
             label: Minimum total memory required
             default: 8GB
-            tooltip: --mem=value slurm directive
+            tooltip: '--mem=value slurm directive'
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
             optional: true
-          _sch__dd_time_e_:
+          _sch__dd_time_e__tag_existing:
             type: string
             label: Walltime
-            default: 01:00:00
+            default: '01:00:00'
             tooltip: e.g. 01:00:00 - Amount of time slurm will honor the interactive session.
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
             optional: true
-          scheduler_directives:
+          scheduler_directives_tag_existing:
             type: string
             label: Scheduler directives
-            optional: true
             tooltip: e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ; to separate parameters. Do not include the SBATCH keyword.
-        collapsed: false
+            hidden: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            optional: true
+          jobschedulertype_tag_cloud:
+            type: dropdown
+            label: Select Controller or SLURM Partition
+            default: CONTROLLER
+            options:
+              - value: CONTROLLER
+                label: Controller
+              - value: SLURM
+                label: SLURM Partition
+            tooltip: Job will be submitted using SSH or sbatch, respectively
+            hidden: ${{ 'existing' == inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            optional: ${{ .hidden }}
+          _sch__dd_partition_e__tag_cloud:
+            type: slurm-partitions
+            label: SLURM partition
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype_tag_cloud  || 'existing' == inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            optional: true
+            tooltip: >-
+              Partition to submit the interactive job. Leave empty to let SLURM
+              pick the optimal option.
+            resource: ${{ inputs.pwrl_host.resource }}
+          _sch__dd_time_e__tag_cloud:
+            label: Walltime
+            type: string
+            default: 01:00:00
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype_tag_cloud  || 'existing' == inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            tooltip: e.g. 01:00:00 - Amount of time slurm will honor the interactive session.
+          scheduler_directives_tag_cloud:
+            type: string
+            label: Scheduler directives
+            hidden: ${{ 'SLURM' != inputs.pwrl_host.jobschedulertype_tag_cloud  || 'existing' == inputs.pwrl_host.resource.provider }}
+            ignore: ${{ .hidden }}
+            optional: true
+            tooltip: >-
+              e.g. --mem=1000;--gpus-per-node=1 - Use the semicolon character ;
+              to separate parameters. Do not include the SBATCH keyword.
       service:
         type: group
         label: Jupyter Notebook Settings

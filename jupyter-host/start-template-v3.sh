@@ -180,7 +180,8 @@ if sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
     touch empty
     touch nginx.logs
     # change ownership to nginx user
-    sudo chown 101:101 nginx.logs  # change ownership to nginx user
+    sudo chown 101:101 nginx.conf config.conf empty nginx.logs  
+    sudo chmod 644 *.conf
     sudo docker run  -d --name ${container_name} \
          -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
          -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
@@ -279,7 +280,7 @@ sed -i "s|^.*c\.ServerApp\.root_dir.*|c.ServerApp.root_dir = '${service_notebook
 # This one is the only one that sets the base_url when you tunnel to laptop
 sed -i "s|^.*c\.ServerApp\.base_url.*|c.ServerApp.base_url = '${basepath}/'|" jupyter_notebook_config.py
 #sed -i "s|^.*c\.ServerApp\.base_url.*|c.ServerApp.base_url = '${basepath}/'|" jupyter_notebook_config.py
-
+date
 jupyter-notebook --port=${jupyterserver_port} --no-browser --config=${PWD}/jupyter_notebook_config.py
 
 fi

@@ -155,6 +155,7 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         script.write('#!/bin/bash\n')
         script.write(f'#SBATCH --job-name={job_type}-{run_id}\n')
         script.write('#SBATCH --nodes=1\n')
+        script.write('#SBATCH --no-requeue\n')
         script.write(f'#SBATCH --ntasks-per-node={nprocs}\n')
         script.write(f'#SBATCH --output={output_file_local}\n')
         script.write('\n')
@@ -180,19 +181,19 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
             f'\\( ! -perm -u+r -o ! -perm -u+w -o \\( -xtype d ! -perm -u+x \\) \\) -print0 '
             f'| sudo xargs -0 -r -P"$p" chmod a+rwX\n\n'
         )
-        
+
         # This is only required for the slurm-callback retries if the server is stopped
         script.write(f'echo export job_status=STARTING > {callbacks_dir}/callback-inputs.sh\n\n')
         script.write(f'echo export slurm_job_id=$SLURM_JOB_ID >> {callbacks_dir}/callback-inputs.sh\n')
         script.write(f'echo export performance_file={performance_file} >> {callbacks_dir}/callback-inputs.sh\n')
         script.write(f'echo export job_type={job_type} >> {callbacks_dir}/callback-inputs.sh\n')
         script.write(f'echo export run_id={run_id} >> {callbacks_dir}/callback-inputs.sh\n')
-        
+
         notify_job_start_cmd = (
             f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/job-start '
             f'-d "job_type={job_type}" -d "run_id={run_id}"\n'
         )
-        
+
         script.write(notify_job_start_cmd)
         # Execute the singularity command
         script.write(f'{singularity_run_cmd}\n')
@@ -209,7 +210,7 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         script.write('echo Job Completed with status $job_status\n')
         script.write('echo\n\n')
         script.write(f'echo export job_status=${{job_status}} >> {callbacks_dir}/callback-inputs.sh\n\n')
-        
+
         postprocess_cmd = (
             f'curl -X POST http://{CONTROLLER_HOSTNAME}:5000/postprocess '
             f'-d "performance_file={performance_file}" -d "slurm_job_id=$SLURM_JOB_ID" -d "job_type={job_type}" -d "run_id={run_id}"\n'
@@ -412,7 +413,7 @@ def submit_validation_job():
         singularity_run_cmd = f"{SINGULARITY_RUN_NWM_CAL_MGR_CMD} validation_iteration {input_file} {worker_name} {iteration}"
     else:
         return log_and_return_error("Invalid validation_type provided; must be one of 'valid_control', 'valid_best', or 'valid_iteration'", status_code = 400)
-    
+
     callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, validation_run_id)
 
     try:
@@ -575,7 +576,7 @@ def submit_verification_job():
 
     if not verification_config:
         return log_and_return_error("No verification_config provided", status_code=400)
-    
+
     if not stdout_file:
         return log_and_return_error("No stdout_file provided", status_code=400)
 

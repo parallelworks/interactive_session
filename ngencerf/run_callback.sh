@@ -33,8 +33,16 @@ if ! [ -f ${callback_template} ]; then
 fi
 
 if [[ "${job_status}" == "STARTING" ]]; then
+    if [[ -f "${pending_callbacks_run_id_dir}/STARTED" ]]; then
+        echo "$(date) WARNING: Starting callback was already submitted. Exiting..."
+        exit 0
+    fi
     callback=${pending_callbacks_run_id_dir}/starting-callback
 else
+    if [[ -f "${pending_callbacks_run_id_dir}/ENDED" ]]; then
+        echo "$(date) WARNING: Ending callback was already submitted. Exiting..."
+        exit 0
+    fi
     callback=${pending_callbacks_run_id_dir}/ending-callback
 fi
 sed "s|__job_status__|${job_status}|g" ${callback_template} > ${callback}
@@ -60,6 +68,6 @@ while true; do
         echo "$(date) Max retries reached. Exiting."
         exit 0
     fi
-            
+
     sleep ${DELAY}
 done

@@ -155,6 +155,7 @@ def write_slurm_script(run_id, job_type, input_file_local, output_file_local, si
         script.write('#!/bin/bash\n')
         script.write(f'#SBATCH --job-name={job_type}-{run_id}\n')
         script.write('#SBATCH --nodes=1\n')
+        script.write('#SBATCH --no-requeue\n')
         script.write(f'#SBATCH --ntasks-per-node={nprocs}\n')
         script.write(f'#SBATCH --output={output_file_local}\n')
         script.write('\n')

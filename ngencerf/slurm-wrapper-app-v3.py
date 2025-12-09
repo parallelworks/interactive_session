@@ -211,7 +211,7 @@ def squeue_job_status(slurm_job_id):
     return result.stdout.strip(), None
 
 
-def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd, nprocs = 1):
+def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd, nprocs = 1, parition = None):
     logger.info(f"Starting job submission for job run ID: {run_id}")
     # Check the file exists on the shared file system
     # Path to the input file on the shared file system
@@ -229,7 +229,7 @@ def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd, n
         logger.info(f"Job script written to: {job_script}")
 
         # Submit the job and retrieve SLURM job ID
-        slurm_job_id, error = submit_slurm_job(job_script)
+        slurm_job_id, error = submit_slurm_job(job_script, partition=parition)
         if error:
             shutil.rmtree(callbacks_dir)
             logger.info(f'Removed {callbacks_dir}')
@@ -259,6 +259,8 @@ def submit_calibration_job():
     auth_token = request.form.get('auth_token')
     # Number of MPI proc
     nprocs = request.form.get('nprocs', '1')
+    # Node type / Partition name
+    node_type = request.form.get('node_type')
 
     if not calibration_run_id:
         return log_and_return_error("No calibration_run_id provided", status_code=400)
@@ -271,6 +273,9 @@ def submit_calibration_job():
 
     if not auth_token:
         return log_and_return_error("No auth_token provided", status_code=400)
+
+    if not node_type:
+        return log_and_return_error("No node_type provided", status_code=400)
 
     singularity_run_cmd = f"{SINGULARITY_RUN_NWM_CAL_MGR_CMD} calibration {input_file}"
 
@@ -291,7 +296,7 @@ def submit_calibration_job():
     except Exception as e:
         return log_and_return_error(str(e), 500)
 
-    slurm_job_id, exit_code = submit_job(input_file, output_file, calibration_run_id, job_type, singularity_run_cmd, nprocs = nprocs)
+    slurm_job_id, exit_code = submit_job(input_file, output_file, calibration_run_id, job_type, singularity_run_cmd, nprocs = nprocs, partition = node_type)
     if exit_code == 500:
         return jsonify({"error": slurm_job_id}), exit_code
 

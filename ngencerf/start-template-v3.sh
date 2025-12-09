@@ -270,28 +270,6 @@ sudo -n pip3.8 install gunicorn
 #echo "sudo kill ${slurm_wrapper_pid}" >> cancel.sh
 
 export PARTITIONS=$(scontrol show partition | awk -F '=' '/^PartitionName=/ {printf "%s,", $2}' | sed 's/,$//')
-PARTITION_COUNT=$(echo "${PARTITIONS}" | tr ',' '\n' | wc -l)
-
-# Write config file
-cat >> update_configuring_jobs.sh <<HERE
-#!/bin/bash
-while true; do
-    sleep 60
-    curl -s -X POST http://0.0.0.0:5000/update-configuring-jobs
-done
-HERE
-chmod +x update_configuring_jobs.sh
-
-
-if [ "${PARTITION_COUNT}" -gt 1 ]; then
-    echo "ACTIVATING JOB RESUBMISSION"
-    export MAX_CONFIGURING_WAIT_TIME="840"
-    ./update_configuring_jobs.sh > update_configuring_jobs.log 2>&1 &
-    echo "kill $!" >> cancel.sh
-else
-    export PARTITIONS=""
-    export MAX_CONFIGURING_WAIT_TIME="9999999999"
-fi
 
 # This script is required to run the callback with retries
 sed -i "s|__LOCAL_DATA_DIR__|${local_data_dir}|g" run_callback.sh

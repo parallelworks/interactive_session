@@ -8,7 +8,6 @@ cat >> docker-compose.yml <<HERE
 services:
   n8n:
     image: ${service_docker_repo}
-    container_name: n8n
     restart: unless-stopped
     ports:
       - "${service_port}:8989"

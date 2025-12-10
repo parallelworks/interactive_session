@@ -328,6 +328,8 @@ def submit_validation_job():
     worker_name = request.form.get('worker_name')
     # Iteration
     iteration = request.form.get('iteration')
+    # Node type / Partition name
+    node_type = request.form.get('node_type', None)
     # Number of MPI proc
     nprocs = request.form.get('nprocs', '1')
 
@@ -342,6 +344,10 @@ def submit_validation_job():
 
     if not auth_token:
         return log_and_return_error("No auth_token provided", status_code=400)
+
+    if node_type:
+        if node_type not in PARTITIONS:
+            return log_and_return_error(f"node_type {node_type} provided does not match any partitions {PARTITIONS_STR}", status_code=400)
 
     # Validate job type and inputs specific to `valid_iteration`
     if validation_type == 'valid_iteration':
@@ -379,7 +385,7 @@ def submit_validation_job():
     except Exception as e:
         return log_and_return_error(str(e), status_code=500)
 
-    slurm_job_id, exit_code = submit_job(input_file, output_file, validation_run_id, job_type, singularity_run_cmd, nprocs=nprocs)
+    slurm_job_id, exit_code = submit_job(input_file, output_file, validation_run_id, job_type, singularity_run_cmd, nprocs=nprocs, partition = node_type)
     if exit_code == 500:
         return jsonify({"error": slurm_job_id}), exit_code
     return jsonify({"slurm_job_id": slurm_job_id}), exit_code

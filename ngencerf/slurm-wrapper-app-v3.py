@@ -43,6 +43,9 @@ SINGULARITY_RUN_NWM_VERF_CMD = f"/usr/bin/time -v singularity run -B {LOCAL_DATA
 # Slurm job metrics for sacct command
 SLURM_JOB_METRICS = os.environ.get('SLURM_JOB_METRICS')
 
+PARTITIONS_STR = os.environ.get('PARTITIONS')
+PARTITIONS = PARTITIONS_STR.split(',')
+
 app = Flask(__name__)
 
 
@@ -260,7 +263,7 @@ def submit_calibration_job():
     # Number of MPI proc
     nprocs = request.form.get('nprocs', '1')
     # Node type / Partition name
-    node_type = request.form.get('node_type')
+    node_type = request.form.get('node_type', None)
 
     if not calibration_run_id:
         return log_and_return_error("No calibration_run_id provided", status_code=400)
@@ -274,8 +277,9 @@ def submit_calibration_job():
     if not auth_token:
         return log_and_return_error("No auth_token provided", status_code=400)
 
-    if not node_type:
-        return log_and_return_error("No node_type provided", status_code=400)
+    if node_type:
+        if node_type not in PARTITIONS:
+            return log_and_return_error(f"node_type {node_type} provided does not match any partitions {PARTITIONS_STR}", status_code=400)
 
     singularity_run_cmd = f"{SINGULARITY_RUN_NWM_CAL_MGR_CMD} calibration {input_file}"
 

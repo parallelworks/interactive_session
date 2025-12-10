@@ -16,9 +16,9 @@ services:
       - N8N_HOST=localhost
       - N8N_PORT=8989
       - N8N_PROTOCOL=http
-      - N8N_PATH=${basepath}
-      - N8N_EDITOR_BASE_URL=https://${pw_platform_host}${basepath}
-      - WEBHOOK_URL=https://${pw_platform_host}${basepath}
+      - N8N_PATH=${basepath}/
+      - N8N_EDITOR_BASE_URL=https://${pw_platform_host}${basepath}/
+      - WEBHOOK_URL=https://${pw_platform_host}${basepath}/
     volumes:
       - ./n8n_data:/home/node/.n8n
 

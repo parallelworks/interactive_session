@@ -187,7 +187,7 @@ def submit_slurm_job(job_script, partition=None):
         command.append(job_script)
 
         # Use subprocess to run sbatch and capture the output
-        logger.info(f'Running command: {command}')
+        logger.info('Running command: ' + ' '.join(command))
         result = subprocess.run(command, capture_output=True, text=True)
 
         if result.returncode != 0:

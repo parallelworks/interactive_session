@@ -214,7 +214,7 @@ def squeue_job_status(slurm_job_id):
     return result.stdout.strip(), None
 
 
-def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd, nprocs = 1, parition = None):
+def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd, nprocs = 1, partition = None):
     logger.info(f"Starting job submission for job run ID: {run_id}")
     # Check the file exists on the shared file system
     # Path to the input file on the shared file system
@@ -232,7 +232,7 @@ def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd, n
         logger.info(f"Job script written to: {job_script}")
 
         # Submit the job and retrieve SLURM job ID
-        slurm_job_id, error = submit_slurm_job(job_script, partition=parition)
+        slurm_job_id, error = submit_slurm_job(job_script, partition=partition)
         if error:
             shutil.rmtree(callbacks_dir)
             logger.info(f'Removed {callbacks_dir}')

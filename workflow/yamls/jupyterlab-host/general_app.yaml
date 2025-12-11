@@ -1,15 +1,12 @@
 app:
 jobs:
-  main:
+  job1:
     steps:
-      - name: Hello world
-        run: echo ${{inputs.hello}}
+      - name: echo on remote host
+        run: echo ${{ inputs.hello }}
 'on':
   execute:
     inputs:
-      pwrl_host:
-        type: compute-cluster
-        label: Target
       hello:
         type: string
         label: Hello message

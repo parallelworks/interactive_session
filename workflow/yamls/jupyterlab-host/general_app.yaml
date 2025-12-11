@@ -10,4 +10,5 @@ jobs:
       hello:
         type: string
         label: Hello message
+        default: "Hello from remote JupyterLab host!"
         

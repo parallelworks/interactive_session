@@ -5,7 +5,10 @@ sessions:
     useTLS: ${{ inputs.targetType == 'kubernetes-cluster' }}
     redirect: true
     useCustomDomain: true
+    prompt-for-name:
+      default: 'desktop'
 
+      
 jobs:
   preprocessing:
     steps:

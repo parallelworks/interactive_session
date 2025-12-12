@@ -192,7 +192,9 @@ jobs:
         if: ${{ inputs.targetType == 'compute-cluster' }}
         run: |
           source resources/host/inputs.sh
-          slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
+          echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
+          HOST=${PW_USER}-${{ sessions.session }}.activate.pw
+          slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${HOST}/&dt=0"
           echo "slug=${slug}"  | tee -a $OUTPUTS
       - name: Expose Port
         early-cancel: any-job-failed

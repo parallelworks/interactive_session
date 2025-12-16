@@ -2,10 +2,8 @@ import subprocess
 import os, shutil
 from flask import Flask, request, jsonify
 import socket
-import copy
 import logging
 from logging.handlers import RotatingFileHandler
-import time
 
 log_file_path = os.environ.get("LOG_FILE_PATH", "app.log")
 file_handler = RotatingFileHandler(log_file_path, maxBytes=10*1024*1024, backupCount=100)  # 10MB per file
@@ -593,6 +591,21 @@ def job_status():
     except Exception as e:
         return log_and_return_error(str(e), 500)
 
+
+@app.route('/is-active', methods=['GET'])
+def is_active():
+    # Get job ID from request
+    slurm_job_id = request.args.get('slurm_job_id')
+
+    if not slurm_job_id:
+        return log_and_return_error("is-active: No SLURM job ID provided", 400)
+    
+    job_status, error = squeue_job_status(slurm_job_id)
+    if job_status:
+        jsonify({"respose": True}), 200
+    else:
+        jsonify({"respose": False}), 200
+        
 
 @app.route('/cancel-job', methods=['POST'])
 def cancel_job():

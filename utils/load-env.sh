@@ -1,8 +1,8 @@
-
+#!/usr/bin/env bash
 # These lines should not really be necessary but they are needed on some platforms for some reason
 source /etc/profile.d/parallelworks.sh
 source /etc/profile.d/parallelworks-env.sh
-alias python="$(which python3)"
+
 echod() {
     echo $(date): $@
 }

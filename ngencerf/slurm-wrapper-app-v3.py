@@ -602,9 +602,9 @@ def is_active():
     
     job_status, error = squeue_job_status(slurm_job_id)
     if job_status:
-        return jsonify({"respose": True}), 200
+        return jsonify({"response": True}), 200
     else:
-        return jsonify({"respose": False}), 200
+        return jsonify({"response": False}), 200
         
 
 @app.route('/cancel-job', methods=['POST'])

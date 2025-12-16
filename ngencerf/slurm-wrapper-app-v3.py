@@ -574,37 +574,30 @@ def job_status():
 
     try:
         # First, try to get job status using squeue (for pending or running jobs)
-        job_status, error = squeue_job_status(slurm_job_id)
+        squeue_status, error = squeue_job_status(slurm_job_id)
         if error:
-            logger.info("Error running squeue: {error}")
-            result = subprocess.run(["sacct", "-X", "--jobs", slurm_job_id, "--format=State", "--noheader"], capture_output=True, text=True)
-            if result.returncode == 0 and result.stdout.strip():
-                # Parse only the first line from sacct output
-                job_status = result.stdout.strip().splitlines()[0]
-                logger.info(f"The status of {slurm_job_id} is {job_status} from sacct")
+            logger.info("Error running squeue for job {slurm_job_id}: {error}")
+        else:
+            logger.info("Status from squeue for job {slurm_job_id} is {squeue_status}")
 
-        if job_status:
-            logger.info(f"The status of {slurm_job_id} is {job_status} from squeue")
-            return jsonify({"status": job_status}), 200
+        result = subprocess.run(["sacct", "-X", "--jobs", slurm_job_id, "--format=State", "--noheader"], capture_output=True, text=True)
+        if result.returncode == 0 and result.stdout.strip():
+            # Parse only the first line from sacct output
+            sacct_status = result.stdout.strip().splitlines()[0]
+            logger.info("Status from sacct for job {slurm_job_id} is {sacct_status}")
+        else:
+            sacct_status = None
+            logger.info("Error running sacct for job {slurm_job_id}")
+
+
+        if sacct_status:
+            return jsonify({"squeue": squeue_status, "sacct": sacct_status}), 200
 
         return log_and_return_error("Job not found", 404)
     except Exception as e:
         return log_and_return_error(str(e), 500)
 
 
-@app.route('/is-active', methods=['GET'])
-def is_active():
-    # Get job ID from request
-    slurm_job_id = request.args.get('slurm_job_id')
-
-    if not slurm_job_id:
-        return log_and_return_error("is-active: No SLURM job ID provided", 400)
-    
-    job_status, error = squeue_job_status(slurm_job_id)
-    if job_status:
-        return jsonify({"response": True}), 200
-    else:
-        return jsonify({"response": False}), 200
         
 
 @app.route('/cancel-job', methods=['POST'])

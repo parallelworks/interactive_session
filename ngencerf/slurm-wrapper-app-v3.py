@@ -210,7 +210,8 @@ def squeue_job_status(slurm_job_id):
         logger.error(error_msg)
         return None, error_msg
 
-    return result.stdout.strip(), None
+    squeue_status = result.stdout.strip() or None
+    return squeue_status, None
 
 
 def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd, nprocs = 1, partition = None):
@@ -576,28 +577,25 @@ def job_status():
         # First, try to get job status using squeue (for pending or running jobs)
         squeue_status, error = squeue_job_status(slurm_job_id)
         if error:
-            logger.info("Error running squeue for job {slurm_job_id}: {error}")
+            logger.info(f"Error running squeue for job {slurm_job_id}: {error}")
         else:
-            logger.info("Status from squeue for job {slurm_job_id} is {squeue_status}")
+            logger.info(f"Status from squeue for job {slurm_job_id} is {squeue_status}")
 
         result = subprocess.run(["sacct", "-X", "--jobs", slurm_job_id, "--format=State", "--noheader"], capture_output=True, text=True)
         if result.returncode == 0 and result.stdout.strip():
             # Parse only the first line from sacct output
-            sacct_status = result.stdout.strip().splitlines()[0]
-            logger.info("Status from sacct for job {slurm_job_id} is {sacct_status}")
+            sacct_status = result.stdout.strip().splitlines()[0] or None
+            logger.info(f"Status from sacct for job {slurm_job_id} is {sacct_status}")
         else:
             sacct_status = None
-            logger.info("Error running sacct for job {slurm_job_id}")
+            logger.info(f"Error running sacct for job {slurm_job_id}")
 
-
-        if sacct_status:
+        if squeue_status or sacct_status:
             return jsonify({"squeue": squeue_status, "sacct": sacct_status}), 200
 
         return log_and_return_error("Job not found", 404)
     except Exception as e:
         return log_and_return_error(str(e), 500)
-
-
         
 
 @app.route('/cancel-job', methods=['POST'])

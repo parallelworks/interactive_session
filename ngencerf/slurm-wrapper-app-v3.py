@@ -520,7 +520,7 @@ def submit_verification_job():
     # job id
     verification_run_id = request.form.get('verification_run_id')
     # validation yaml
-    verification_config = request.form.get('verification_configl')
+    verification_config = request.form.get('verification_config')
     # Path to the SLURM job log file in the controller node
     stdout_file = request.form.get('stdout_file')
     # Path to the SLURM job log file in the controller node

@@ -162,7 +162,7 @@ jobs:
                   ((attempt++))
               fi
           done
-          sleep 20
+          sleep 60
       - name: Select Local Port
         early-cancel: any-job-failed
         run: |

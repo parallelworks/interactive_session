@@ -538,7 +538,7 @@ def submit_verification_job():
     if not auth_token:
         return log_and_return_error("No auth_token provided", status_code=400)
 
-    singularity_run_cmd = f"{SINGULARITY_RUN_NWM_VERF_CMD} run-ngen-verf.sh verification {verification_config}"
+    singularity_run_cmd = f"{SINGULARITY_RUN_NWM_VERF_CMD} verification {verification_config}"
 
     callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, verification_run_id)
 

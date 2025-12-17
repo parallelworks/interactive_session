@@ -7,8 +7,12 @@ if [ -z "${service_nginx_sif}" ]; then
     service_nginx_sif=${service_parent_install_dir}/nginx-unprivileged.sif
 fi
 
-if [ -z "${service_vncserver_sif}" ]; then
-    service_vncserver_sif=${service_parent_install_dir}/vncserver.sif
+if [ -z "${service_vncserver_singularity_dir}" ]; then
+    service_vncserver_singularity_dir=${service_parent_install_dir}/vncserver_singularity
+fi
+
+if [ -z "${service_vncserver_singularity_tgz}" ]; then
+    service_vncserver_singularity_tgz=${service_parent_install_dir}/vncserver.tgz
 fi
 
 
@@ -125,20 +129,17 @@ fi
 # - vncserver can be installed in the compute nodes but not in the controlle nodes
 # - Some compute nodes don't have access to the internet
 if [[ ${service_download_vncserver_container} == "true" ]]; then
-    if [ ! -s ${service_vncserver_sif} ]; then
-        wget -O ${service_vncserver_sif} https://github.com/parallelworks/interactive_session/raw/main/downloads/vnc/vncserver.sif
-    fi
-    if [ ! -s ${service_vncserver_sif} ]; then
-        echo "$(date) WARNING: Failed to download file ${service_vncserver_sif} from GitHub repository"
+    if ! [ -d "${service_vncserver_singularity_dir}" ]; then
+        echo "$(date) WARNING: Failed to download file ${service_vncserver_singularity_tgz} from GitHub repository"
         echo "$(date)          Using GitHub registry to download file"
         download_oras
-        oras_pull_file ghcr.io/avidalto/vncserver-sif:1.0 downloads/vnc/vncserver.sif ${service_parent_install_dir}/vncserver.sif
+        oras_pull_file ghcr.io/avidalto/vncserver:2.0 vncserver.tgz ${service_vncserver_singularity_tgz}
+        if [ ! -s ${service_vncserver_singularity_tgz} ]; then
+            echo "$(date) ERROR: Failed to download file ${service_vncserver_singularity_tgz}"
+            exit 1
+        fi
+        tar -xzf ${service_vncserver_singularity_tgz} -C $(dirname ${service_vncserver_singularity_dir})
     fi
-    if [ ! -s ${service_vncserver_sif} ]; then
-        echo "$(date) ERROR: Failed to download file ${service_vncserver_sif}"
-        exit 1
-    fi
-    chmod +x ${service_vncserver_sif}
 
     xterm_path=$(which xterm)
     if ! [ -z ${xterm_path} ]; then

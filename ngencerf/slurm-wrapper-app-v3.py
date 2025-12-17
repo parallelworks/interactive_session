@@ -518,16 +518,16 @@ def submit_verification_job():
 
     job_type = 'verification-job'
     # job id
-    verification_job_id = request.form.get('verification_job_id')
+    verification_run_id = request.form.get('verification_run_id')
     # validation yaml
-    verification_config = request.form.get('verification_configl')
+    verification_config = request.form.get('verification_config')
     # Path to the SLURM job log file in the controller node
     stdout_file = request.form.get('stdout_file')
     # Path to the SLURM job log file in the controller node
     auth_token = request.form.get('auth_token')
 
-    if not verification_job_id:
-        return log_and_return_error("No verification_job_id provided", status_code=400)
+    if not verification_run_id:
+        return log_and_return_error("No verification_run_id provided", status_code=400)
 
     if not verification_config:
         return log_and_return_error("No verification_config provided", status_code=400)
@@ -538,9 +538,9 @@ def submit_verification_job():
     if not auth_token:
         return log_and_return_error("No auth_token provided", status_code=400)
 
-    singularity_run_cmd = f"{SINGULARITY_RUN_NWM_VERF_CMD} run-ngen-verf.sh verification {verification_config}"
+    singularity_run_cmd = f"{SINGULARITY_RUN_NWM_VERF_CMD} verification {verification_config}"
 
-    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, verification_job_id)
+    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, verification_run_id)
 
     try:
         # Get callback
@@ -548,7 +548,7 @@ def submit_verification_job():
             callbacks_dir,
             f'http://{CONTROLLER_HOSTNAME}:8000/calibration/verification_job_slurm_callback/',
             auth_token,
-            verification_job_id=verification_job_id,
+            verification_run_id=verification_run_id,
             job_status="__job_status__"
         )
 
@@ -557,7 +557,7 @@ def submit_verification_job():
     except Exception as e:
         return log_and_return_error(str(e), status_code=500)
 
-    slurm_job_id, exit_code = submit_job(verification_config, stdout_file, verification_job_id, job_type, singularity_run_cmd)
+    slurm_job_id, exit_code = submit_job(verification_config, stdout_file, verification_run_id, job_type, singularity_run_cmd)
     if exit_code == 500:
         return jsonify({"error": slurm_job_id}), exit_code
 

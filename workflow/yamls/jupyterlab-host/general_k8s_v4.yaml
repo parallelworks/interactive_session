@@ -20,6 +20,7 @@ jobs:
             branch: v4
         - name: Create Inputs
           run: |
+            set -x
             # Write PW variables
             env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
             # Write input form variables and ensure the pw agent is in the PATH
@@ -46,6 +47,7 @@ jobs:
             sed -i 's/^/export /' inputs.sh
         - name: Controller Preprocessing
           run: |
+            set -x
             # ONLY REQUIRED FOR TRANSITION
             cp ${{ inputs.service.name }}/*.yaml .
             # This script prepares the target host and always runs in the controller node

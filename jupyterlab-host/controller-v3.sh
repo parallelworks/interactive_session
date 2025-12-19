@@ -1,3 +1,4 @@
+set -x
 if [ -z ${resource_jobdir} ]; then
     cd ${resource_jobdir}
 fi

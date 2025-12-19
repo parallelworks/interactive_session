@@ -99,18 +99,19 @@ jobs:
           script_path: "${PW_PARENT_JOB_DIR}/start-service.sh"
           scheduler: ${{ inputs.scheduler }}
           slurm:
-            is_disabled: ${{ inputs.slurm.is_disabled }}
-            partition: ${{ inputs.slurm.partition }}
-            scheduler_directives: ${{ inputs.slurm.scheduler_directives }}
-            time: ${{ inputs.slurm.time }}
+            is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
+            partition: ${{ inputs.cluster.slurm.partition }}
+            scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+            time: ${{ inputs.cluster.slurm.time }}
           pbs:
-            is_disabled: ${{ inputs.pbs.is_disabled }}
-            scheduler_directives: ${{ inputs.pbs.scheduler_directives }}
+            is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
+            scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
       - name: Notify job ended
         early-cancel: any-job-failed
         run: |
           set -x
           touch job.ended
+          ls -lat job.ended
 
 
   wait_for_job_start:
@@ -152,7 +153,7 @@ jobs:
       remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
       - name: Controller cleanup
-        if: ${{ inputs.slurm.is_disabled && inputs.pbs.is_disabled && inputs.targetType == 'compute-cluster'}}
+        if: ${{ inputs.cluster.slurm.is_disabled && inputs.cluster.pbs.is_disabled && inputs.targetType == 'compute-cluster'}}
         run: echo "Cleaning up..."
         cleanup: |
           set -x
@@ -160,7 +161,7 @@ jobs:
             bash cancel.sh
           fi
       - name: Compute cleanup
-        if: ${{ (inputs.slurm.is_disabled == false || inputs.pbs.is_disabled == false) && inputs.targetType == 'compute-cluster' }}
+        if: ${{ (inputs.cluster.slurm.is_disabled == false || inputs.cluster.pbs.is_disabled == false) && inputs.targetType == 'compute-cluster' }}
         run: echo "Cleaning up..."
         cleanup: |
           set -x

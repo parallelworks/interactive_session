@@ -151,7 +151,7 @@ jobs:
   cleanup:
     if: ${{ always }}
     needs:
-      - wait_for_job_start
+      - session_runner
     ssh:
       remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:

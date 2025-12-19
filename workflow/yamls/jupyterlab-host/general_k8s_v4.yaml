@@ -56,6 +56,8 @@ jobs:
           run: |
             # This script starts the service
             cp inputs.sh start-service.sh
+            # TRANSITION CODE
+            echo resource_jobdir=${PW_PARENT_JOB_DIR} >> start-service.sh
             # Write code common to all services
             cat <<'EOF' >> start-service.sh
 
@@ -86,8 +88,6 @@ jobs:
             cat ${{ inputs.service.name }}/start-template-v3.sh >> start-service.sh
             # TRANSITION CODE
             sed -i 's/findAvailablePort/pw agent open-port/' start-service.sh
-            echo resource_jobdir=${PW_PARENT_JOB_DIR} >> start-service.sh
-
 
   session_runner:
     if: ${{ inputs.targetType == 'compute-cluster' }}

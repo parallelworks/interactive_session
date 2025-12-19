@@ -90,7 +90,7 @@ jobs:
     needs:
       - preprocessing
     steps:
-      - uses: marketplace/script_submitter/v3.2
+      - uses: marketplace/script_submitter/v3.3
         with:
           resource: ${{ inputs.cluster.resource }}
           shebang: '#!/bin/bash'

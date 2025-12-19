@@ -1,5 +1,6 @@
-cd ${resource_jobdir}
-
+if [ -z ${resource_jobdir} ]; then
+    cd ${resource_jobdir}
+fi
 
 if [ -z ${service_parent_install_dir} ]; then
     service_parent_install_dir=${HOME}/pw/software

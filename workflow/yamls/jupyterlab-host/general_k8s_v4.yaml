@@ -26,7 +26,7 @@ jobs:
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH
             ignored=${{ inputs.ignored }}
-            service_notebook_dir=${{ inputs.service.notebook_dir }}}}
+            service_notebook_dir=${{ inputs.service.notebook_dir }}
             service_conda_install=${{ inputs.service.conda_install }}
             service_parent_install_dir=${{ inputs.service.parent_install_dir }}
             service_conda_install_dir=${{ inputs.service.conda_install_dir }}

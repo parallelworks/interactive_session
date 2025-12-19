@@ -110,6 +110,7 @@ jobs:
         early-cancel: any-job-failed
         run: |
           set -x
+          pwd
           touch job.ended
           ls -lat job.ended
 

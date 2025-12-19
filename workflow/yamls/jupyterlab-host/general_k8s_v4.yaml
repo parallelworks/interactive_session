@@ -46,6 +46,8 @@ jobs:
             sed -i 's/^/export /' inputs.sh
         - name: Controller Preprocessing
           run: |
+            # Only for jupyterlab
+            cp ${{ inputs.service.name }}/*.yaml .
             # This script prepares the target host and always runs in the controller node
             cp inputs.sh controller-preprocessing.sh
             cat ${{ inputs.service.name }}/controller-v3.sh >> controller-preprocessing.sh

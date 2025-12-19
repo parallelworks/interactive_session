@@ -1,5 +1,5 @@
 set -x
-if [ -z ${resource_jobdir} ]; then
+if ! [ -z ${resource_jobdir} ]; then
     cd ${resource_jobdir}
 fi
 

@@ -1,0 +1,23 @@
+sessions:
+  test123: 
+jobs:
+  main:
+    steps:
+      - name: Expose port
+        uses: parallelworks/update-session
+        with:
+          remotePort: ${{ inputs.port }}
+          name: ${{ sessions.test123 }}
+          status: running
+          target: ${{ inputs.resource.id }}
+      - name: Echo my string
+        run: |
+          echo "${{ inputs.mystring }}"
+          sleep 1000
+'on':
+  execute:
+    inputs:
+      resource:
+        type: compute-clusters
+      port:
+        type: number

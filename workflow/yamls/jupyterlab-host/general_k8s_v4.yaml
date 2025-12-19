@@ -235,7 +235,6 @@ jobs:
           name: '${{ sessions.session }}'
           slug: 'lab'
           remoteHost: '${{ needs.wait_for_job_start.outputs.HOSTNAME }}'
-          localPort: '${{ inputs.localport }}'
 
   auth_k8s:
     steps:

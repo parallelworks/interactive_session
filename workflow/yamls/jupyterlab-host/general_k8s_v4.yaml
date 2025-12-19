@@ -232,11 +232,12 @@ jobs:
       - name: Update Session
         uses: parallelworks/update-session
         with:
-          remotePort: '${{ needs.create_session.outputs.SESSION_PORT }}'
           target: '${{ inputs.resource.id }}'
           name: '${{ sessions.session }}'
           slug: 'lab'
           remoteHost: '${{ needs.wait_for_job_start.outputs.HOSTNAME }}'
+          remotePort: '${{ needs.create_session.outputs.SESSION_PORT }}'
+
 
   auth_k8s:
     steps:

@@ -103,7 +103,7 @@ jobs:
           rundir: ${PW_PARENT_JOB_DIR}
           use_existing_script: true
           script_path: "${PW_PARENT_JOB_DIR}/start-service.sh"
-          scheduler: ${{ inputs.scheduler }}
+          scheduler: ${{ inputs.cluster.scheduler }}
           slurm:
             is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
             partition: ${{ inputs.cluster.slurm.partition }}
@@ -609,17 +609,17 @@ jobs:
           slurm:
             type: group
             label: SLURM Directives
-            hidden: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false  || inputs.targetType != 'compute-cluster' }}
+            hidden: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  || inputs.targetType != 'compute-cluster' }}
             items:
               is_disabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false || inputs.targetType != 'compute-cluster' }}
+                default: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
                 label: Is SLURM disabled?
               partition:
                 type: slurm-partitions
                 label: SLURM partition
-                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false || inputs.targetType != 'compute-cluster' }}
+                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
                 optional: true
                 resource: ${{ inputs.cluster.resource }}
                 tooltip: Select a partition from the drop down menu.
@@ -627,29 +627,29 @@ jobs:
                 label: Walltime
                 type: string
                 default: '01:00:00'
-                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false || inputs.targetType != 'compute-cluster' }}
+                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
                 tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
               scheduler_directives:
                 type: editor
-                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false || inputs.targetType != 'compute-cluster' }}
+                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
                 optional: true
                 tooltip: |
                   Type in additional scheduler directives. 
           pbs:
             type: group
             label: PBS Directives
-            hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.scheduler == false || inputs.targetType != 'compute-cluster' }}
+            hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
             items:
               is_disabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.scheduler == false || inputs.targetType != 'compute-cluster' }}
+                default: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
                 label: Is PBS disabled?
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
                 tooltip: Type the PBS scheduler directives
-                hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.scheduler == false || inputs.targetType != 'compute-cluster' }}
+                hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
 
 
       service:

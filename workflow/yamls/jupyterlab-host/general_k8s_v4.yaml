@@ -92,7 +92,7 @@ jobs:
     ssh:
         remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
-      - uses: marketplace/script_submitter/v3.3
+      - uses: marketplace/scriptsubmitterdev
         with:
           resource: ${{ inputs.cluster.resource }}
           shebang: '#!/bin/bash'

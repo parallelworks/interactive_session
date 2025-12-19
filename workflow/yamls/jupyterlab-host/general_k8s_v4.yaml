@@ -654,7 +654,7 @@ jobs:
           notebook_dir:
             label: Directory to start Jupyter Lab GUI
             type: string
-            default: __HOME__
+            default: ${HOME}
             tooltip: This is the directory that you start with when the Jupyter graphical user interface starts. The default value here is your home directory.
           conda_install:
             label: Install miniconda environment if not there?
@@ -664,7 +664,7 @@ jobs:
           parent_install_dir:
             label: Parent Install Directory
             type: string
-            default: __HOME__/pw/software
+            default: ${HOME}/pw/software
             hidden: ${{ inputs.service.conda_install == false }}
             ignore: ${{ .hidden }}
             tooltip: Software dependencies are installed in this directory. Ensure the directory has sufficient space!
@@ -686,7 +686,7 @@ jobs:
           load_env:
             label: Command to load Jupyter Notebook to the PATH
             type: string
-            default: source __HOME__/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base
+            default: source ${HOME}/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base
             hidden: ${{ inputs.service.conda_install == true }}
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}

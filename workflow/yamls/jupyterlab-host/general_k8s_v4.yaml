@@ -89,6 +89,8 @@ jobs:
     if: ${{ inputs.targetType == 'compute-cluster' }}
     needs:
       - preprocessing
+    ssh:
+        remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
       - uses: marketplace/script_submitter/v3.3
         with:

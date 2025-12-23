@@ -150,6 +150,8 @@ if [[ "${service_conda_install}" == "true" ]]; then
         printf "%b" "${service_yaml}" > conda.yaml
         cat conda.yaml
         f_set_up_conda_from_yaml ${service_parent_install_dir}/${service_conda_install_dir} ${service_conda_env} conda.yaml
+        # Update service_load_env to use the correct path after installation
+        service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
     elif [[ "${service_install_instructions}" == "latest" ]]; then
         echo "Installing latest"
         {

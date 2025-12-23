@@ -5,7 +5,6 @@ sessions:
     redirect: true
     useCustomDomain: true
 
-
 jobs:
   auth_k8s:
     steps:
@@ -191,7 +190,7 @@ jobs:
       - name: Apply PVC
         run: kubectl apply -f pvc.yaml
         cleanup: |
-          set -x
+          [[ "${DEBUG:-}" == "true" ]] && set -x
           if [[ "${{ inputs.k8s.volumes.pvc_persist }}" == "false" ]]; then
             MAX_ATTEMPTS=5
             ATTEMPT=1
@@ -214,7 +213,7 @@ jobs:
         early-cancel: any-job-failed
         run: kubectl apply -f app.yaml
         cleanup: |
-          set -x
+          [[ "${DEBUG:-}" == "true" ]] && set -x
           MAX_ATTEMPTS=5
           ATTEMPT=1
           while true; do
@@ -261,7 +260,7 @@ jobs:
           log &
           log_pid=$!
           trap "kill ${log_pid}" EXIT SIGINT SIGTERM
-          set -x
+          [[ "${DEBUG:-}" == "true" ]] && set -x
           kubectl wait --for=condition=available --timeout=600s deployment/${app_name} -n ${namespace}
           exit_code=$?
           kubectl get deployment ${app_name} -n ${namespace} -o wide

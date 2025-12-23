@@ -5,7 +5,6 @@ sessions:
     useTLS: false
     redirect: true
 
-
 jobs:
   preprocessing:
     steps:
@@ -71,7 +70,7 @@ jobs:
           echo "session_name=${session_name}" | tee -a $OUTPUTS
       - name: Get Controller Hostname
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }} 
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
@@ -83,7 +82,7 @@ jobs:
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |
-          set -x
+          [[ "${DEBUG:-}" == "true" ]] && set -x
           source utils/load-env.sh
           source resources/host/inputs.sh
           while true; do

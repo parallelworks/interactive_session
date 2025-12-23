@@ -1,5 +1,5 @@
 # Runs via ssh + sbatch
-set -x
+[[ "${DEBUG:-}" == "true" ]] && set -x
 
 start_rootless_docker() {
     local MAX_RETRIES=20

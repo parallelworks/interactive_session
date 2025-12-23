@@ -1,5 +1,5 @@
 # Runs via ssh + sbatch
-set -x
+[[ "${DEBUG:-}" == "true" ]] && set -x
 
 
 if [ -z "${service_load_env}" ]; then

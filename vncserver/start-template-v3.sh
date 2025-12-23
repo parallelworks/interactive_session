@@ -109,7 +109,7 @@ if ! [ -z "${CONDA_PREFIX}" ]; then
     export LD_LIBRARY_PATH=$(echo "$LD_LIBRARY_PATH" | tr ':' '\n' | grep -v 'conda' | tr '\n' ':' | sed 's/:$//')
 fi
 
-set -x
+[[ "${DEBUG:-}" == "true" ]] && set -x
 
 # Find an available display port
 minPort=5901
@@ -178,7 +178,7 @@ unset DBUS_SESSION_BUS_ADDRESS
 HERE
 cat >> ${resource_jobdir}/vncserver.sh <<HERE
 #!/bin/bash
-set -x
+[[ "${DEBUG:-}" == "true" ]] && set -x
 vncserver -kill ${DISPLAY}
 vncserver ${DISPLAY} -SecurityTypes None
 mkdir -p /run/user/\$(id -u)

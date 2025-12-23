@@ -114,7 +114,7 @@ fi
 MWI_BASE_URL="${basepath}/"
 
 # Docker supports mounting directories that do not exist (singularity does not)
-set -x
+[[ "${DEBUG:-}" == "true" ]] && set -x
 
 sudo docker pull  ${service_docker_repo} 
 

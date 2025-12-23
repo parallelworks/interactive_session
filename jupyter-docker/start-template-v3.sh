@@ -1,5 +1,5 @@
 # Runs via ssh + sbatch
-set -x
+[[ "${DEBUG:-}" == "true" ]] && set -x
 
 # Initialize cancel script
 echo '#!/bin/bash' > cancel.sh

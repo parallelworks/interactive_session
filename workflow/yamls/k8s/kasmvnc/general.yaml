@@ -6,7 +6,6 @@ sessions:
     useCustomDomain: true
     useTLS: true
 
-
 jobs:
   auth_k8s:
     steps:
@@ -77,7 +76,7 @@ jobs:
       - name: Creating Deployment and Service YAML
         early-cancel: any-job-failed
         run: |
-          set -x
+          [[ "${DEBUG:-}" == "true" ]] && set -x
           if [[ "${{ inputs.k8s.resources.limits.select_gpu }}" == "Custom" ]]; then
             gpu_limits="${{ inputs.k8s.resources.limits.gpu_resource_key }}: ${{ inputs.k8s.resources.limits.number_of_gpus }}"
           elif [[ "${{ inputs.k8s.resources.limits.select_gpu }}" != "None" ]]; then
@@ -187,7 +186,7 @@ jobs:
       - name: Apply PVC
         run: kubectl apply -f pvc.yaml
         cleanup: |
-          set -x
+          [[ "${DEBUG:-}" == "true" ]] && set -x
           if [[ "${{ inputs.k8s.volumes.pvc_persist }}" == "false" ]]; then
             MAX_ATTEMPTS=5
             ATTEMPT=1
@@ -209,7 +208,7 @@ jobs:
       - name: Apply Deployment and Service
         run: kubectl apply -f app.yaml
         cleanup: |
-          set -x
+          [[ "${DEBUG:-}" == "true" ]] && set -x
           MAX_ATTEMPTS=5
           ATTEMPT=1
           while true; do
@@ -256,7 +255,7 @@ jobs:
           log &
           log_pid=$!
           trap "kill ${log_pid}" EXIT SIGINT SIGTERM
-          set -x
+          [[ "${DEBUG:-}" == "true" ]] && set -x
           kubectl wait --for=condition=available --timeout=600s deployment/${app_name} -n ${namespace}
           exit_code=$?
           kubectl get deployment ${app_name} -n ${namespace} -o wide

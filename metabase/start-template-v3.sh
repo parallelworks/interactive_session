@@ -17,7 +17,7 @@ if ! sudo -v >/dev/null 2>&1; then
     displayErrorMessage "You do not have sudo access. Exiting."
 fi
 
-set -x
+[[ "${DEBUG:-}" == "true" ]] && set -x
 sudo systemctl start docker
 
 #######################

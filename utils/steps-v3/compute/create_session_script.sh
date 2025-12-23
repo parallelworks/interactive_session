@@ -32,7 +32,7 @@ findAvailablePort() {
 }
 
 cd ${resource_jobdir}
-set -x
+[[ "${DEBUG:-}" == "true" ]] && set -x
 
 # Find an available service_port. Could be anywhere in the form (<section_name>_service_port)
 service_port=$(env | grep service_port | cut -d'=' -f2)

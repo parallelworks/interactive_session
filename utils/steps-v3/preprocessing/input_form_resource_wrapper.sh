@@ -3,7 +3,7 @@ source utils/load-env.sh
 sed -i 's|\\\\|\\|g' inputs.sh
 source inputs.sh
 
-set -x
+[[ "${DEBUG:-}" == "true" ]] && set -x
 
 python3 ./utils/input_form_resource_wrapper.py $1
 

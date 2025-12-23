@@ -1,5 +1,5 @@
 # Initialize cancel script
-set -x
+[[ "${DEBUG:-}" == "true" ]] && set -x
 
 PORT=5000
 if lsof -i :$PORT >/dev/null 2>&1; then

@@ -1,5 +1,5 @@
 # Runs via ssh + sbatch
-set -x
+[[ "${DEBUG:-}" == "true" ]] && set -x
 
 mkdir -p n8n_data
 chmod 777 n8n_data -Rf

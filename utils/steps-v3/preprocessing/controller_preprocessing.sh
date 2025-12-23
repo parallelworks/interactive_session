@@ -4,7 +4,7 @@
 source utils/load-env.sh
 source resources/host/inputs.sh
 
-set -x
+[[ "${DEBUG:-}" == "true" ]] && set -x
 
 if [ -f "${service_name}/controller-v3.sh" ]; then
     echo; echo; echo "RUNNING PREPROCESSING STEP"

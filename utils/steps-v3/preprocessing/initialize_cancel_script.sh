@@ -2,7 +2,7 @@
 source utils/load-env.sh
 source resources/host/inputs.sh
 
-set -x
+[[ "${DEBUG:-}" == "true" ]] && set -x
 
 # CREATE KILL FILE:
 # - NEEDS TO BE MADE BEFORE RUNNING SESSION SCRIPT!

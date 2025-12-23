@@ -1,10 +1,9 @@
 # Runs via ssh + sbatch
 [[ "${DEBUG:-}" == "true" ]] && set -x
 
-# Always compute the correct conda paths based on install directories
-service_conda_sh=${service_parent_install_dir}/${service_conda_install_dir}/etc/profile.d/conda.sh
-# Always set service_load_env to use the correct path (override any pre-set value)
-if [[ "${service_conda_install}" == "true" ]]; then
+
+if [ -z "${service_load_env}" ]; then
+    service_conda_sh=${service_parent_install_dir}/${service_conda_install_dir}/etc/profile.d/conda.sh
     service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
 fi
 

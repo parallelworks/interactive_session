@@ -128,10 +128,13 @@ if [[ "${service_conda_install}" == "true" ]]; then
     else
         echo "Installing conda environment ${service_install_instructions}.yaml"
         f_set_up_conda_from_yaml ${service_parent_install_dir}/${service_conda_install_dir} ${service_conda_env} ${service_install_instructions}.yaml
-    fi
-    if [ -z ${service_load_env} ]; then
+        # Update service_load_env to use the correct path after installation
         service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
     fi
+fi
+# Always set service_load_env to use the correct conda path if conda was installed
+if [[ "${service_conda_install}" == "true" ]]; then
+    service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
 fi
 eval "${service_load_env}"
 

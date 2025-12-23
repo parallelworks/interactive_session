@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
 cd ${resource_jobdir}
 
 displayErrorMessage() {

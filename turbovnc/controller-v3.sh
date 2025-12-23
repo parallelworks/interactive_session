@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
 if [ -z ${service_novnc_parent_install_dir} ]; then
     service_novnc_parent_install_dir=${HOME}/pw/software
 fi

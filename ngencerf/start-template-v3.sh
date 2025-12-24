@@ -327,7 +327,7 @@ chmod a+w ${service_ngencerf_ui_dir}/production-pw.yaml
 #container_name="ngencerf-ui-ngencerf-app-${service_port}"
 #echo "sudo docker stop ${container_name}" >> cancel.sh
 echo "cd ${service_ngencerf_docker_dir}" >> cancel.sh
-echo "docker compose -f production-pw.yaml down --remove-orphans" >> cancel.sh
+echo "docker compose --env-file /ngencerf-app/ngencerf-server/docker.env -f production-pw.yaml down --remove-orphans" >> cancel.sh
 
 cd ${service_ngencerf_docker_dir}
 

@@ -30,6 +30,7 @@ f_install_miniconda() {
     mkdir -p $(dirname ${install_dir})
     nohup bash /tmp/miniconda-${ID}.sh -b -p ${install_dir} 2>&1 > /tmp/miniconda_sh-${ID}.out
     source ${install_dir}/etc/profile.d/conda.sh
+    conda install -n base -y -c anaconda conda-anaconda-tos
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
 }

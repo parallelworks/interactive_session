@@ -327,7 +327,7 @@ chmod a+w ${service_ngencerf_ui_dir}/production-pw.yaml
 #container_name="ngencerf-ui-ngencerf-app-${service_port}"
 #echo "sudo docker stop ${container_name}" >> cancel.sh
 echo "cd ${service_ngencerf_docker_dir}" >> cancel.sh
-echo "docker compose -f production-pw.yaml down --remove-orphans" >> cancel.sh
+echo "docker compose --env-file /ngencerf-app/ngencerf-server/docker.env -f production-pw.yaml down --remove-orphans" >> cancel.sh
 
 cd ${service_ngencerf_docker_dir}
 
@@ -351,24 +351,26 @@ fi
 
 if [[ "${service_build}" == "true" ]]; then
   # build locally and start ngencerf-server
-  CACHE_BUST=$(date +%s) docker compose -f production-pw.yaml up -d --build ngencerf-services
+  CACHE_BUST=$(date +%s) docker compose --env-file /ngencerf-app/ngencerf-server/docker.env -f production-pw.yaml up -d --build ngencerf-services
 
   # build locally and start ngencerf-ui
   docker compose -f production-pw.yaml up -d --build --no-deps ngencerf-ui
 
 else
   # pull ngencerf-server from registry
-  CACHE_BUST=$(date +%s) docker compose -f production-pw.yaml pull ngencerf-services
+  CACHE_BUST=$(date +%s) docker compose --env-file /ngencerf-app/ngencerf-server/docker.env -f production-pw.yaml pull ngencerf-services
+
 
   # start ngencerf-server
-  CACHE_BUST=$(date +%s) docker compose -f production-pw.yaml up -d --no-build ngencerf-services
+  CACHE_BUST=$(date +%s) docker compose --env-file /ngencerf-app/ngencerf-server/docker.env -f production-pw.yaml up -d --no-build ngencerf-services
+
 
   # build locally and start ngencerf-ui
   # TODO: pull from registry
   docker compose -f production-pw.yaml up -d --build --no-deps ngencerf-ui
 fi
 
-ngencerf_image="$(docker compose -f production-pw.yaml config | awk '/ngencerf-server/{flag=1} flag && /image:/{print $2; exit}')"
+ngencerf_image="$(docker compose --env-file /ngencerf-app/ngencerf-server/docker.env -f production-pw.yaml config | awk '/ngencerf-server/{flag=1} flag && /image:/{print $2; exit}')"
 echo "ngencerf_image=${ngencerf_image}"
 
 # clean any previous temp container quietly
@@ -385,6 +387,7 @@ else
 fi
 
 # Tail the logs
-docker compose -f production-pw.yaml logs -f
+docker compose --env-file /ngencerf-app/ngencerf-server/docker.env -f production-pw.yaml logs -f
+
 
 sleep infinity

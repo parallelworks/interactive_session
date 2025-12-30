@@ -402,7 +402,33 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     RETRY_DELAY=5
     RETRY_COUNT=0
 
-    vncserver_cmd="${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} -select-de cinnamon -websocketPort ${kasmvnc_port} -rfbport ${displayPort}"
+    detect_desktop_env() {
+        if command -v cinnamon-session >/dev/null 2>&1; then
+            echo "cinnamon"
+        elif command -v mate-session >/dev/null 2>&1; then
+            echo "mate"
+        elif command -v startlxde >/dev/null 2>&1; then
+            echo "lxde"
+        elif command -v gnome-session >/dev/null 2>&1; then
+            echo "gnome"
+        elif command -v lxqt-session >/dev/null 2>&1; then
+            echo "lxqt"
+        elif command -v startplasma-x11 >/dev/null 2>&1 || command -v plasmashell >/dev/null 2>&1; then
+            echo "kde"
+        else
+            echo "none"
+        fi
+    }
+
+   desktop_env="$(detect_desktop_env)"
+
+    if [ "$desktop_env" = "none" ]; then
+        echo "No supported desktop environment found" >&2
+        exit 1
+    fi
+
+    vncserver_cmd="${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} -select-de ${desktop_env} -websocketPort ${kasmvnc_port} -rfbport ${displayPort}"
+    
     echo Running:
     echo ${vncserver_cmd}
     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do

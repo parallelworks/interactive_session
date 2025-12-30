@@ -401,7 +401,7 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     RETRY_DELAY=5
     RETRY_COUNT=0
 
-    XSTARTUP_PATH="~/.vnc/kasm-xstartup"
+    XSTARTUP_PATH="$HOME/.vnc/kasm-xstartup"
 
 cat << 'EOF' | tee "${XSTARTUP_PATH}" >/dev/null
     #!/bin/sh

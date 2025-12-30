@@ -394,7 +394,6 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     #expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "'"${service_password}"'\r"; expect "Verify:"; send "'"${service_password}"'\r"; expect eof'
     printf "%s\n%s\n" "$service_password" "$service_password" | vncpasswd -u "$USER" -w -r
 
-
     ${service_vnc_exec} -kill ${DISPLAY}
     echo "${service_vnc_exec} -kill ${DISPLAY}" >> cancel.sh
 
@@ -402,67 +401,74 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     RETRY_DELAY=5
     RETRY_COUNT=0
 
-    detect_desktop_env() {
-        if command -v cinnamon-session >/dev/null 2>&1; then
-            echo "cinnamon"
-        elif command -v mate-session >/dev/null 2>&1; then
-            echo "mate"
-        elif command -v startlxde >/dev/null 2>&1; then
-            echo "lxde"
-        elif command -v gnome-session >/dev/null 2>&1; then
-            echo "gnome"
-        elif command -v lxqt-session >/dev/null 2>&1; then
-            echo "lxqt"
-        elif command -v startplasma-x11 >/dev/null 2>&1 || command -v plasmashell >/dev/null 2>&1; then
-            echo "kde"
-        else
-            echo "none"
-        fi
-    }
+    XSTARTUP_PATH="~/.vnc/kasm-xstartup"
 
-    cleanup_for_de() {
-        case "$1" in
-            cinnamon)
-                # Muffin/Clutter based, most prone to VNC restart issues
-                killall -q cinnamon cinnamon-session cinnamon-panel muffin nemo nemo-desktop || true
-                # VNC stability for Cinnamon
-                export LIBGL_ALWAYS_SOFTWARE=1
-                export CLUTTER_BACKEND=x11
-                ;;
-            mate)
-                killall -q mate-session marco mate-panel caja caja-desktop || true
-                ;;
-            lxde)
-                killall -q lxsession openbox lxpanel pcmanfm pcmanfm-desktop || true
-                ;;
-            gnome)
-                # GNOME is usually fine, but these leftovers can interfere across reused sessions
-                # killall -q gnome-session gnome-shell gnome-panel gsd-xsettings gsd-media-keys gsd-power || true
-                ;;
-            lxqt)
-                killall -q lxqt-session openbox xfwm4 lxqt-panel pcmanfm-qt || true
-                ;;
-            kde)
-                # Plasma can leave multiple background daemons that collide on restart
-                # killall -q startplasma-x11 plasmashell kwin_x11 kglobalaccel5 kglobalaccel6 kded5 kded6 || true
-                ;;
-            *)
-                ;;
-        esac
-    }
+cat << 'EOF' | sudo tee "${XSTARTUP_PATH}" >/dev/null
+    #!/bin/sh
+    set -eu
 
-   desktop_env="$(detect_desktop_env)"
+    # Desktop environment selected by the Kasm launcher
+    de="${KASM_SELECTED_DE:-}"
 
-    if [ "$desktop_env" = "none" ]; then
-        echo "No supported desktop environment found" >&2
-        exit 1
-    fi
-    cleanup_for_de "$desktop_env"
+    case "$de" in
+    cinnamon)
+        # Clean up stale Cinnamon processes that break restarts under VNC
+        killall -q cinnamon cinnamon-session cinnamon-panel muffin nemo nemo-desktop || true
 
-    vncserver_cmd="${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} -select-de ${desktop_env} -websocketPort ${kasmvnc_port} -rfbport ${displayPort}" -autokill
-    
+        # VNC stability for Cinnamon (prevents blank desktop on second start)
+        export LIBGL_ALWAYS_SOFTWARE=1
+        export CLUTTER_BACKEND=x11
+        export GDK_BACKEND=x11
+        export QT_QPA_PLATFORM=xcb
+        export MOZ_ENABLE_WAYLAND=0
+
+        # Start Cinnamon with a scoped D-Bus session
+        exec dbus-run-session -- cinnamon-session
+        ;;
+
+    mate)
+        exec mate-session
+        ;;
+
+    lxde)
+        exec startlxde
+        ;;
+
+    gnome)
+        exec gnome-session --session=gnome
+        ;;
+
+    lxqt)
+        exec lxqt-session
+        ;;
+
+    kde)
+        exec startplasma-x11
+        ;;
+
+    *)
+        # Safe fallback if nothing matches
+        exec startlxde
+        ;;
+    esac
+EOF
+
+    sudo chmod 0755 "${XSTARTUP_PATH}"
+
+    echo "Kasm xstartup wrapper installed at ${XSTARTUP_PATH}"
+
+    desktop_env="$(detect_desktop_env)"
+
+    vncserver_cmd="KASM_SELECTED_DE=${desktop_env} \
+        ${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} \
+        -select-de ${desktop_env} \
+        -xstartup ${XSTARTUP_PATH} \
+        -websocketPort ${kasmvnc_port} \
+        -rfbport ${displayPort}"
+
     echo Running:
     echo ${vncserver_cmd}
+
     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
         ${vncserver_cmd}
         if [ $? -eq 0 ]; then

@@ -405,15 +405,21 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     detect_desktop_env() {
         if command -v cinnamon-session >/dev/null 2>&1; then
             echo "cinnamon"
+            # pre-cleanup + software rendering
             killall -q cinnamon cinnamon-session cinnamon-panel muffin nemo-desktop || true
+            export LIBGL_ALWAYS_SOFTWARE=1
+            export CLUTTER_BACKEND=x11
         elif command -v mate-session >/dev/null 2>&1; then
             echo "mate"
+            killall -q mate-session marco mate-panel caja caja-desktop || true
         elif command -v startlxde >/dev/null 2>&1; then
             echo "lxde"
+            killall -q lxsession openbox lxpanel pcmanfm pcmanfm-desktop || true
         elif command -v gnome-session >/dev/null 2>&1; then
             echo "gnome"
         elif command -v lxqt-session >/dev/null 2>&1; then
             echo "lxqt"
+            killall -q lxqt-session openbox xfwm4 lxqt-panel pcmanfm-qt || true
         elif command -v startplasma-x11 >/dev/null 2>&1 || command -v plasmashell >/dev/null 2>&1; then
             echo "kde"
         else

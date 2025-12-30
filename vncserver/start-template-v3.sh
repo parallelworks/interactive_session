@@ -403,7 +403,7 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
 
     XSTARTUP_PATH="~/.vnc/kasm-xstartup"
 
-cat << 'EOF' | sudo tee "${XSTARTUP_PATH}" >/dev/null
+cat << 'EOF' | tee "${XSTARTUP_PATH}" >/dev/null
     #!/bin/sh
     set -eu
 
@@ -472,7 +472,7 @@ detect_desktop_env() {
     esac
 EOF
 
-    sudo chmod 0755 "${XSTARTUP_PATH}"
+    chmod 0755 "${XSTARTUP_PATH}"
 
     echo "Kasm xstartup wrapper installed at ${XSTARTUP_PATH}"
 

@@ -407,8 +407,27 @@ cat << 'EOF' | sudo tee "${XSTARTUP_PATH}" >/dev/null
     #!/bin/sh
     set -eu
 
+detect_desktop_env() {
+    if command -v cinnamon-session >/dev/null 2>&1; then
+        echo "cinnamon"
+    elif command -v mate-session >/dev/null 2>&1; then
+        echo "mate"
+    elif command -v startlxde >/dev/null 2>&1; then
+        echo "lxde"
+    elif command -v gnome-session >/dev/null 2>&1; then
+        echo "gnome"
+    elif command -v lxqt-session >/dev/null 2>&1; then
+        echo "lxqt"
+    elif command -v startplasma-x11 >/dev/null 2>&1 || command -v plasmashell >/dev/null 2>&1; then
+        echo "kde"
+    else
+        echo "none"
+    fi
+}
+
     # Desktop environment selected by the Kasm launcher
-    de="${KASM_SELECTED_DE:-}"
+    de="$(detect_desktop_env)"
+    echo "*** running $de desktop ***"
 
     case "$de" in
     cinnamon)
@@ -457,29 +476,7 @@ EOF
 
     echo "Kasm xstartup wrapper installed at ${XSTARTUP_PATH}"
 
-detect_desktop_env() {
-    if command -v cinnamon-session >/dev/null 2>&1; then
-        echo "cinnamon"
-    elif command -v mate-session >/dev/null 2>&1; then
-        echo "mate"
-    elif command -v startlxde >/dev/null 2>&1; then
-        echo "lxde"
-    elif command -v gnome-session >/dev/null 2>&1; then
-        echo "gnome"
-    elif command -v lxqt-session >/dev/null 2>&1; then
-        echo "lxqt"
-    elif command -v startplasma-x11 >/dev/null 2>&1 || command -v plasmashell >/dev/null 2>&1; then
-        echo "kde"
-    else
-        echo "none"
-    fi
-}
-
-    desktop_env="$(detect_desktop_env)"
-
-    vncserver_cmd="KASM_SELECTED_DE=${desktop_env} \
-        ${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} \
-        -select-de ${desktop_env} \
+    vncserver_cmd="${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} \
         -xstartup ${XSTARTUP_PATH} \
         -websocketPort ${kasmvnc_port} \
         -rfbport ${displayPort}"

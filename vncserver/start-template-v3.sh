@@ -50,8 +50,8 @@ run_xterm_loop(){
 echo '#!/bin/bash' > "${resource_jobdir}/cancel.sh"
 chmod +x "${resource_jobdir}/cancel.sh"
 echo "mv "${resource_jobdir}/cancel.sh" "${resource_jobdir}/cancel.sh".executed" >> "${resource_jobdir}/cancel.sh"
-if ![ -z "${SLURM_JOB_ID}" ]; then
-    echo "scancel ${SLURM_JOB_ID}"  >> "${resource_jobdir}/cancel.sh"
+if [ -n "${SLURM_JOB_ID:-}" ]; then
+    printf 'scancel %q\n' "${SLURM_JOB_ID}" >> "${resource_jobdir}/cancel.sh"
 fi
 ###################
 ###################

@@ -405,6 +405,7 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     detect_desktop_env() {
         if command -v cinnamon-session >/dev/null 2>&1; then
             echo "cinnamon"
+            killall -q cinnamon cinnamon-session cinnamon-panel muffin nemo-desktop || true
         elif command -v mate-session >/dev/null 2>&1; then
             echo "mate"
         elif command -v startlxde >/dev/null 2>&1; then

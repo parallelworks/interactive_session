@@ -457,7 +457,7 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
         echo "No supported desktop environment found" >&2
         exit 1
     fi
-    # cleanup_for_de "$desktop_env"
+    cleanup_for_de "$desktop_env"
 
     vncserver_cmd="${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} -select-de ${desktop_env} -websocketPort ${kasmvnc_port} -rfbport ${displayPort}" -autokill
     

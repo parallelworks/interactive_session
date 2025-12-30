@@ -5,7 +5,6 @@ sessions:
     useTLS: false
     redirect: true
 
-
 jobs:
   preprocessing:
     steps:
@@ -17,7 +16,11 @@ jobs:
         run: |
           set -e
           echo "export basepath=/me/session/${PW_USER}/${{ sessions.session }}"  >> resources/host/inputs.sh
-          echo "module load singularity" >> resources/host/inputs.sh
+          cat >> resources/host/inputs.sh <<'EOF'
+          if type module >/dev/null 2>&1; then
+            module load singularity
+          fi
+          EOF
           ./utils/steps-v3/preprocessing/process_inputs_sh.sh
       - name: Transfer Files to Controller
         early-cancel: any-job-failed
@@ -71,7 +74,7 @@ jobs:
           echo "session_name=${session_name}" | tee -a $OUTPUTS
       - name: Get Controller Hostname
         early-cancel: any-job-failed
-        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }} 
+        if: ${{ 'CONTROLLER' == inputs.pwrl_host.jobschedulertype_tag_cloud }}
         env:
           sshcmd: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ inputs.pwrl_host.resource.ip }}
         run: |

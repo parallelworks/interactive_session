@@ -457,6 +457,24 @@ EOF
 
     echo "Kasm xstartup wrapper installed at ${XSTARTUP_PATH}"
 
+detect_desktop_env() {
+    if command -v cinnamon-session >/dev/null 2>&1; then
+        echo "cinnamon"
+    elif command -v mate-session >/dev/null 2>&1; then
+        echo "mate"
+    elif command -v startlxde >/dev/null 2>&1; then
+        echo "lxde"
+    elif command -v gnome-session >/dev/null 2>&1; then
+        echo "gnome"
+    elif command -v lxqt-session >/dev/null 2>&1; then
+        echo "lxqt"
+    elif command -v startplasma-x11 >/dev/null 2>&1 || command -v plasmashell >/dev/null 2>&1; then
+        echo "kde"
+    else
+        echo "none"
+    fi
+}
+
     desktop_env="$(detect_desktop_env)"
 
     vncserver_cmd="KASM_SELECTED_DE=${desktop_env} \

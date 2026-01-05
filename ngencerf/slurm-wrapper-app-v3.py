@@ -2,10 +2,8 @@ import subprocess
 import os, shutil
 from flask import Flask, request, jsonify
 import socket
-import copy
 import logging
 from logging.handlers import RotatingFileHandler
-import time
 
 log_file_path = os.environ.get("LOG_FILE_PATH", "app.log")
 file_handler = RotatingFileHandler(log_file_path, maxBytes=10*1024*1024, backupCount=100)  # 10MB per file
@@ -212,7 +210,8 @@ def squeue_job_status(slurm_job_id):
         logger.error(error_msg)
         return None, error_msg
 
-    return result.stdout.strip(), None
+    squeue_status = result.stdout.strip() or None
+    return squeue_status, None
 
 
 def submit_job(input_file, output_file, run_id, job_type, singularity_run_cmd, nprocs = 1, partition = None):
@@ -518,16 +517,16 @@ def submit_verification_job():
 
     job_type = 'verification-job'
     # job id
-    verification_run_id = request.form.get('verification_run_id')
+    verification_job_id = request.form.get('verification_job_id')
     # validation yaml
-    verification_config = request.form.get('verification_config')
+    verification_config = request.form.get('verification_configl')
     # Path to the SLURM job log file in the controller node
     stdout_file = request.form.get('stdout_file')
     # Path to the SLURM job log file in the controller node
     auth_token = request.form.get('auth_token')
 
-    if not verification_run_id:
-        return log_and_return_error("No verification_run_id provided", status_code=400)
+    if not verification_job_id:
+        return log_and_return_error("No verification_job_id provided", status_code=400)
 
     if not verification_config:
         return log_and_return_error("No verification_config provided", status_code=400)
@@ -538,9 +537,9 @@ def submit_verification_job():
     if not auth_token:
         return log_and_return_error("No auth_token provided", status_code=400)
 
-    singularity_run_cmd = f"{SINGULARITY_RUN_NWM_VERF_CMD} verification {verification_config}"
+    singularity_run_cmd = f"{SINGULARITY_RUN_NWM_VERF_CMD} run-ngen-verf.sh verification {verification_config}"
 
-    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, verification_run_id)
+    callbacks_dir = os.path.join(CALLBACKS_DIR, job_type, verification_job_id)
 
     try:
         # Get callback
@@ -548,7 +547,7 @@ def submit_verification_job():
             callbacks_dir,
             f'http://{CONTROLLER_HOSTNAME}:8000/calibration/verification_job_slurm_callback/',
             auth_token,
-            verification_run_id=verification_run_id,
+            verification_job_id=verification_job_id,
             job_status="__job_status__"
         )
 
@@ -557,7 +556,7 @@ def submit_verification_job():
     except Exception as e:
         return log_and_return_error(str(e), status_code=500)
 
-    slurm_job_id, exit_code = submit_job(verification_config, stdout_file, verification_run_id, job_type, singularity_run_cmd)
+    slurm_job_id, exit_code = submit_job(verification_config, stdout_file, verification_job_id, job_type, singularity_run_cmd)
     if exit_code == 500:
         return jsonify({"error": slurm_job_id}), exit_code
 
@@ -576,23 +575,28 @@ def job_status():
 
     try:
         # First, try to get job status using squeue (for pending or running jobs)
-        job_status, error = squeue_job_status(slurm_job_id)
+        squeue_status, error = squeue_job_status(slurm_job_id)
         if error:
-            logger.info("Error running squeue: {error}")
-            result = subprocess.run(["sacct", "-X", "--jobs", slurm_job_id, "--format=State", "--noheader"], capture_output=True, text=True)
-            if result.returncode == 0 and result.stdout.strip():
-                # Parse only the first line from sacct output
-                job_status = result.stdout.strip().splitlines()[0]
-                logger.info(f"The status of {slurm_job_id} is {job_status} from sacct")
+            logger.info(f"Error running squeue for job {slurm_job_id}: {error}")
+        else:
+            logger.info(f"Status from squeue for job {slurm_job_id} is {squeue_status}")
 
-        if job_status:
-            logger.info(f"The status of {slurm_job_id} is {job_status} from squeue")
-            return jsonify({"status": job_status}), 200
+        result = subprocess.run(["sacct", "-X", "--jobs", slurm_job_id, "--format=State", "--noheader"], capture_output=True, text=True)
+        if result.returncode == 0 and result.stdout.strip():
+            # Parse only the first line from sacct output
+            sacct_status = result.stdout.strip().splitlines()[0] or None
+            logger.info(f"Status from sacct for job {slurm_job_id} is {sacct_status}")
+        else:
+            sacct_status = None
+            logger.info(f"Error running sacct for job {slurm_job_id}")
+
+        if squeue_status or sacct_status:
+            return jsonify({"squeue": squeue_status, "sacct": sacct_status}), 200
 
         return log_and_return_error("Job not found", 404)
     except Exception as e:
         return log_and_return_error(str(e), 500)
-
+        
 
 @app.route('/cancel-job', methods=['POST'])
 def cancel_job():

@@ -16,9 +16,7 @@ jobs:
             repo: https://github.com/parallelworks/interactive_session.git
             branch: v4
             sparse_checkout:
-              - utils
-              - platforms
-              - jupyterlab-host
+              - ${{ inputs.service.name }}
         - name: Create Inputs
           run: |
             set -x

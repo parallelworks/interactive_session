@@ -235,7 +235,7 @@ jobs:
       - name: Update Session
         uses: parallelworks/update-session
         with:
-          target: '${{ inputs.resource.id }}'
+          target: '${{ inputs.cluster.resource.id }}'
           name: '${{ sessions.session }}'
           slug: 'lab'
           remoteHost: '${{ needs.wait_for_job_start.outputs.HOSTNAME }}'

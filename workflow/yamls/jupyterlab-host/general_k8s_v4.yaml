@@ -162,6 +162,7 @@ jobs:
     if: ${{ always }}
     needs:
       - session_runner
+      - wait_for_job_start
     ssh:
       remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:

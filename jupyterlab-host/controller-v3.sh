@@ -1,4 +1,6 @@
-set -x
+#!/usr/bin/env bash
+set -eo pipefail
+
 if ! [ -z ${resource_jobdir} ]; then
     cd ${resource_jobdir}
 fi

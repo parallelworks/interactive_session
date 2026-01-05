@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-set -eo pipefail
-set -x
+set -o pipefail
 
 if [ -z ${service_parent_install_dir} ]; then
     service_parent_install_dir=${HOME}/pw/software

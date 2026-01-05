@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# set -eo pipefail
+# set -o pipefail
 
 # Runs the <service-name>/controller-v3.sh script in the controller node which is
 # used to install software or run other speficic steps in the controller

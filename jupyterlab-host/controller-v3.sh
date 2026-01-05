@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -eo pipefail
+set -o pipefail
 
 if ! [ -z ${resource_jobdir} ]; then
     cd ${resource_jobdir}

@@ -29,6 +29,7 @@ jobs:
             env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
+            basepath=/me/session/${PW_USER}/${{ sessions.session }}
             PATH=$HOME/pw:$PATH
             service_notebook_dir="${{ inputs.service.notebook_dir }}"
             service_conda_install="${{ inputs.service.conda_install }}"

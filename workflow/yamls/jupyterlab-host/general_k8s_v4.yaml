@@ -30,19 +30,19 @@ jobs:
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH
-            ignored=${{ inputs.ignored }}
-            service_notebook_dir=${{ inputs.service.notebook_dir }}
-            service_conda_install=${{ inputs.service.conda_install }}
-            service_parent_install_dir=${{ inputs.service.parent_install_dir }}
-            service_conda_install_dir=${{ inputs.service.conda_install_dir }}
-            service_conda_env=${{ inputs.service.conda_env }}
-            service_load_env=${{ inputs.service.load_env }}
-            service_password=${{ inputs.service.password }}
-            service_install_instructions=${{ inputs.service.install_instructions }}
-            service_yaml=${{ inputs.service.yaml }}
-            service_install_kernels=${{ inputs.service.install_kernels }}
+            ignored="${{ inputs.ignored }}"
+            service_notebook_dir="${{ inputs.service.notebook_dir }}"
+            service_conda_install="${{ inputs.service.conda_install }}"
+            service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
+            service_conda_install_dir="${{ inputs.service.conda_install_dir }}"
+            service_conda_env="${{ inputs.service.conda_env }}"
+            service_load_env="${{ inputs.service.load_env }}"
+            service_password="${{ inputs.service.password }}"
+            service_install_instructions="${{ inputs.service.install_instructions }}"
+            service_yaml="${{ inputs.service.yaml }}"
+            service_install_kernels="${{ inputs.service.install_kernels }}"
             EOF
-            if ! [ -z ${{ org.JUICE_TOKEN }} ]; then
+            if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
               echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
             fi
             # Remove empty variables

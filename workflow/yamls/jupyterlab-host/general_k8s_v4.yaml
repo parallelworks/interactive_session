@@ -249,18 +249,19 @@ jobs:
 
 
   auth_k8s:
+    if: ${{ inputs.targetType == 'kubernetes-cluster' }}
     steps:
       - name: Authenticate kubectl
         early-cancel: any-job-failed
-        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         run: pw kube auth ${{ inputs.k8s.cluster }}
   prepare_k8s_pvc:
+    if: ${{ inputs.targetType == 'kubernetes-cluster' }}
     needs:
       - auth_k8s
     steps:
       - name: Creating New PVC YAML
         early-cancel: any-job-failed
-        if: ${{ inputs.targetType == 'kubernetes-cluster' && inputs.k8s.volumes.pvc == New  }}
+        if: ${{ inputs.k8s.volumes.pvc == New  }}
         run: |
           if [[ ${{ inputs.k8s.volumes.pvc_persist }} == "true" ]]; then
             pvc_name="${{ inputs.k8s.volumes.pvc_name }}"
@@ -301,18 +302,17 @@ jobs:
           cat pvc.yaml
       - name: Dry Run PVC
         early-cancel: any-job-failed
-        if: ${{ inputs.targetType == 'kubernetes-cluster' && inputs.k8s.volumes.pvc == New  }}
+        if: ${{ inputs.k8s.volumes.pvc == New  }}
         run: |
           echo "Performing dry run..."
           kubectl apply -f pvc.yaml --dry-run=client
   prepare_k8s_deployment:
-    if: ${{ always }}
+    if: ${{ inputs.targetType == 'kubernetes-cluster' }}
     needs:
       - prepare_k8s_pvc
     steps:
       - name: Defining App Name
         early-cancel: any-job-failed
-        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         run: |
           job_number=$(pwd | rev | cut -d "/" -f1 | rev)
           workflow_name=$(pwd | rev | cut -d "/" -f2 | rev)
@@ -320,7 +320,6 @@ jobs:
           echo "app_name=${app_name}" | tee -a $OUTPUTS | tee -a OUTPUTS
       - name: Creating Deployment and Service YAML
         early-cancel: any-job-failed
-        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         run: |
           if [[ "${{ inputs.k8s.resources.limits.select_gpu }}" == "Custom" ]]; then
             gpu_limits="${{ inputs.k8s.resources.limits.gpu_resource_key }}: ${{ inputs.k8s.resources.limits.number_of_gpus }}"
@@ -428,7 +427,6 @@ jobs:
           EOF
       - name: Dry Run Deployment
         early-cancel: any-job-failed
-        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         run: |
           echo "Performing dry run..."
           kubectl apply -f app.yaml --dry-run=client
@@ -438,10 +436,9 @@ jobs:
     steps:
       - name: Load outputs
         early-cancel: any-job-failed
-        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         run: cat OUTPUTS >> $OUTPUTS
       - name: Apply PVC
-        if: ${{  inputs.targetType == 'kubernetes-cluster' && inputs.k8s.volumes.pvc == New }}
+        if: ${{ inputs.k8s.volumes.pvc == New }}
         run: kubectl apply -f pvc.yaml
         cleanup: |
           set -x
@@ -465,7 +462,6 @@ jobs:
           fi
       - name: Apply Deployment and Service
         run: kubectl apply -f app.yaml
-        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         cleanup: |
           set -x
           MAX_ATTEMPTS=5
@@ -486,7 +482,6 @@ jobs:
           done
       - name: Wait for Deployment to be Ready
         early-cancel: any-job-failed
-        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         env:
           app_name: ${{ needs.apply_k8s_deployment.outputs.app_name }}
           namespace: ${{ inputs.k8s.namespace }}
@@ -523,7 +518,6 @@ jobs:
           exit ${exit_code}
       - name: Wait for Pod to be Ready
         early-cancel: any-job-failed
-        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         env:
           app_name: ${{ needs.apply_k8s_deployment.outputs.app_name }}
           namespace: ${{ inputs.k8s.namespace }}
@@ -535,15 +529,14 @@ jobs:
           touch pod.running
       - name: Stream Logs
         early-cancel: any-job-failed
-        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         run: kubectl logs -f deployment/${{ needs.apply_k8s_deployment.outputs.app_name }} -n ${{ inputs.k8s.namespace }}
   create_k8s_session:
+    if: ${{ inputs.targetType == 'kubernetes-cluster' }}
     needs:
       - prepare_k8s_deployment
     steps:
       - name: Wait until the Kubernetes deployment reaches its final stage
         early-cancel: any-job-failed
-        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         run: |
           while true; do
             if [ -f "app.deleted" ]; then
@@ -557,13 +550,11 @@ jobs:
           done
       - name: Get Service Name
         early-cancel: any-job-failed
-        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         run: |
           source OUTPUTS
           echo "service_name=${app_name}-lb" | tee -a $OUTPUTS
       - name: Get SLUG
         early-cancel: any-job-failed
-        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         run: |
           source OUTPUTS
           if [ -z "${token}" ]; then
@@ -574,7 +565,6 @@ jobs:
           echo "slug=${slug}" | tee -a $OUTPUTS
       - name: Expose port
         early-cancel: any-job-failed
-        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         uses: parallelworks/update-session
         with:
           remotePort: ${{ inputs.service_k8s.image_port }}

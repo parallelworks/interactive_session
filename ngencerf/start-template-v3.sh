@@ -354,7 +354,7 @@ if [[ "${service_build}" == "true" ]]; then
   CACHE_BUST=$(date +%s) docker compose --env-file /ngencerf-app/ngencerf-server/docker.env -f production-pw.yaml up -d --build ngencerf-services
 
   # build locally and start ngencerf-ui
-  docker compose -f production-pw.yaml up -d --build --no-deps ngencerf-ui
+  docker compose --env-file /ngencerf-app/ngencerf-server/docker.env -f production-pw.yaml up -d --build --no-deps ngencerf-ui
 
 else
   # pull ngencerf-server from registry
@@ -367,7 +367,7 @@ else
 
   # build locally and start ngencerf-ui
   # TODO: pull from registry
-  docker compose -f production-pw.yaml up -d --build --no-deps ngencerf-ui
+  docker compose -f production-pw.yaml up --env-file /ngencerf-app/ngencerf-server/docker.env -d --build --no-deps ngencerf-ui
 fi
 
 ngencerf_image="$(docker compose --env-file /ngencerf-app/ngencerf-server/docker.env -f production-pw.yaml config | awk '/ngencerf-server/{flag=1} flag && /image:/{print $2; exit}')"

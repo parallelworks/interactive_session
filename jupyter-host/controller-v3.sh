@@ -1,4 +1,4 @@
-set -x
+[[ "${DEBUG:-}" == "true" ]] && set -x
 
 cd ${resource_jobdir}
 

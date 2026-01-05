@@ -6,7 +6,6 @@ sessions:
     redirect: true
     useCustomDomain: true
 
-
 jobs:
   auth_k8s:
     steps:
@@ -238,7 +237,7 @@ jobs:
         if: ${{ inputs.k8s.volumes.pvc == New }}
         run: kubectl apply -f pvc.yaml
         cleanup: |
-          set -x
+          [[ "${DEBUG:-}" == "true" ]] && set -x
           if [[ "${{ inputs.k8s.volumes.pvc_persist }}" == "false" ]]; then
             MAX_ATTEMPTS=5
             ATTEMPT=1
@@ -260,7 +259,7 @@ jobs:
       - name: Apply Deployment and Service
         run: kubectl apply -f app.yaml
         cleanup: |
-          set -x
+          [[ "${DEBUG:-}" == "true" ]] && set -x
           MAX_ATTEMPTS=5
           ATTEMPT=1
           while true; do
@@ -307,7 +306,7 @@ jobs:
           log &
           log_pid=$!
           trap "kill ${log_pid}" EXIT
-          set -x
+          [[ "${DEBUG:-}" == "true" ]] && set -x
           kubectl wait --for=condition=available --timeout=600s deployment/${app_name} -n ${namespace}
           exit_code=$?
           kubectl get deployment ${app_name} -n ${namespace} -o wide
@@ -330,7 +329,7 @@ jobs:
           pod_name: ${{ needs.apply_k8s_deployment.outputs.pod }}
           namespace: ${{ inputs.k8s.namespace }}
         run: |
-          set -x
+          [[ "${DEBUG:-}" == "true" ]] && set -x
           kubectl -n $namespace exec $pod_name -- /bin/sh -c "ollama pull llama3 && ollama pull mistral && ollama pull phi3" &
       - name: Stream Ollama Logs
         run: |

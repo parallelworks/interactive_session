@@ -2,7 +2,7 @@
 source utils/load-env.sh
 source resources/host/inputs.sh
 
-set -x
+[[ "${DEBUG:-}" == "true" ]] && set -x
 
 
 export sshcmd="ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${resource_publicIp}"

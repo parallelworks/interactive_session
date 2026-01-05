@@ -1,5 +1,5 @@
 # Runs via ssh + sbatch
-set -x
+[[ "${DEBUG:-}" == "true" ]] && set -x
 
 if [ -z ${service_parent_install_dir} ]; then
     service_parent_install_dir=${HOME}/pw/software
@@ -9,8 +9,10 @@ if [ -z "${service_nginx_sif}" ]; then
     service_nginx_sif=${service_parent_install_dir}/nginx-unprivileged.sif
 fi
 
-if [ -z "${service_load_env}" ]; then
-    service_conda_sh=${service_parent_install_dir}/${service_conda_install_dir}/etc/profile.d/conda.sh
+# Always compute the correct conda paths based on install directories
+service_conda_sh=${service_parent_install_dir}/${service_conda_install_dir}/etc/profile.d/conda.sh
+# Always set service_load_env to use the correct path (override any pre-set value)
+if [[ "${service_conda_install}" == "true" ]]; then
     service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
 fi
 

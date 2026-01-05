@@ -115,8 +115,8 @@ def encode_string_to_base64(text):
     return encoded_string
 
 RESOURCES_DIR: str = 'resources'
-SUPPORTED_RESOURCE_TYPES: list = ['gclusterv2', 'pclusterv2', 'azclusterv2', 'slurmshv2', 'existing', 'aws-slurm', 'google-slurm', 'azure-slurm']
-ONPREM_RESOURCE_TYPES: list = ['slurmshv2', 'existing']
+SUPPORTED_RESOURCE_TYPES: list = ['existing', 'aws-slurm', 'google-slurm', 'azure-slurm']
+ONPREM_RESOURCE_TYPES: list = ['existing']
 SSH_CMD: str = 'ssh  -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null '
 
 
@@ -220,7 +220,35 @@ def workers_per_node_to_tasks_per_node(max_workers_per_node, cpus_per_node):
     else:
         return truncated + 1
 
+
+def normalize_resource_fields(resource_dict):
+    """
+    Normalize resource dictionary fields to support both old and new formats.
+    
+    Old format: publicIp, privateIp, username
+    New format: ip, user
+    
+    This function ensures backward compatibility by mapping new field names
+    to old field names that the rest of the code expects.
+    """
+    # Map 'ip' to 'publicIp' if 'publicIp' is not present
+    if 'publicIp' not in resource_dict and 'ip' in resource_dict:
+        resource_dict['publicIp'] = resource_dict['ip']
+    
+    # Map 'user' to 'username' if 'username' is not present
+    if 'username' not in resource_dict and 'user' in resource_dict:
+        resource_dict['username'] = resource_dict['user']
+    
+    # Ensure privateIp exists (may not be present in new format)
+    if 'privateIp' not in resource_dict:
+        resource_dict['privateIp'] = resource_dict.get('publicIp', '')
+    
+    return resource_dict
+
+
 def complete_resource_information(inputs_dict):
+    # Normalize resource fields to support both old and new formats
+    inputs_dict['resource'] = normalize_resource_fields(inputs_dict['resource'])
     
     if not inputs_dict['resource']['publicIp']:
         if not inputs_dict['resource']['privateIp']:

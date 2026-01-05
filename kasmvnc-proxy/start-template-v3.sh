@@ -16,7 +16,7 @@ echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
 # Runs via ssh + sbatch
-set -x
+[[ "${DEBUG:-}" == "true" ]] && set -x
 
 if [ -z ${service_parent_install_dir} ]; then
     service_parent_install_dir=${HOME}/pw/software

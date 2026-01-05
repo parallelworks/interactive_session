@@ -33,7 +33,7 @@ if ! [ -z "${CONDA_PREFIX}" ]; then
     conda deactivate
 fi
 
-set -x
+[[ "${DEBUG:-}" == "true" ]] && set -x
 
 # Runs via ssh + sbatch
 vnc_bin=vncserver

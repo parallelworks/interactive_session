@@ -180,6 +180,10 @@ jobs:
         cleanup: |
           set -x
           remote_host="${{ needs.wait_for_job_start.outputs.HOSTNAME }}"
+          if [ -z "${remote_host}" ]; then
+            echo "(date) WARNING: Compute node's hostname is missing. Exiting step."
+            exit 0
+          fi
           sshcmd="ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${remote_host}"
           if [ -f cancel.sh ]; then
             ${sshcmd} 'bash -s' < ${PWD}/cancel.sh

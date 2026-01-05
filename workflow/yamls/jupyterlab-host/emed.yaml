@@ -299,7 +299,7 @@ jobs:
           jobschedulertype_tag_cloud:
             type: dropdown
             label: Select Controller or SLURM Partition
-            default: SLURM
+            default: CONTROLLER
             options:
               - value: CONTROLLER
                 label: Controller

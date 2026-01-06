@@ -44,10 +44,9 @@ run_xterm_loop(){
 }
 
 run_desktop_kasmvnc_loop(){
-    ssh localhost "DISPLAY=${DISPLAY} ${XSTARTUP_PATH}"
     while true; do
-        echo "$(date): Running bash ${XSTARTUP_PATH}"
-        bash ${XSTARTUP_PATH}
+        echo "$(date) Running: ssh localhost \"DISPLAY=${DISPLAY} ${XSTARTUP_PATH}\""
+        ssh localhost "DISPLAY=${DISPLAY} ${XSTARTUP_PATH}"
         sleep 60
     done
 }

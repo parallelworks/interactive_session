@@ -21,7 +21,14 @@ fi
 
 screen_name=webterm${service_port}
 cat >> service-kill-${job_number}-main.sh <<HERE
-screen -S ${screen_name} -X quit
+service_pid=\$(cat ${PWD}/service.pid)
+if [ -z \${service_pid} ]; then
+    echo "ERROR: No service pid was found!"
+else
+    echo "$(hostname) - Killing process: ${service_pid}"
+    pkill -P \${service_pid}
+    kill \${service_pid}
+fi
 HERE
 
 cd ~/
@@ -51,10 +58,12 @@ if [[ "${juice_use_juice}" == "true" ]]; then
     }
 fi
 
-#${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p $service_port -s 2 bash &
-#${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p "$service_port" -s 2 screen -DR webterm &
-${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p "$service_port" -s 2 bash -lc "screen -S ${screen_name} -x || screen -S ${screen_name}"
-
-#echo $! >> ${PWD}/service.pid
+if screen -v >/dev/null 2>&1; then
+    ${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p "$service_port" -s 2 bash -lc "screen -S ${screen_name} -x || screen -S ${screen_name}"
+    echo "screen -S ${screen_name} -X quit" > ${PWD}/service-kill-${job_number}-main.sh
+else
+    ${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p $service_port -s 2 bash &
+    echo $! >> ${PWD}/service.pid
+fi
 
 sleep inf

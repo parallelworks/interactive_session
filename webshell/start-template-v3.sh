@@ -57,14 +57,8 @@ if [[ "${juice_use_juice}" == "true" ]]; then
     }
 fi
 
-# Create persistent screen session if it does not exist (non-interactive safe)
-screen -list | grep -q "\.web" || screen -DmS web /bin/bash
-
-# Attach using reattach semantics (required for ttyd)
-${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 \
-  -p $service_port -s 2 \
-  screen -Rd web &
-
+#${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p $service_port -s 2 bash &
+${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p "$service_port" -s 2 screen -DR webterm &
 
 echo $! >> ${PWD}/service.pid
 

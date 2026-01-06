@@ -45,6 +45,7 @@ run_xterm_loop(){
 
 run_desktop_kasmvnc_loop(){
     while true; do
+        echo "$(date): Running bash ${XSTARTUP_PATH}"
         bash ${XSTARTUP_PATH}
         sleep 60
     done
@@ -504,7 +505,7 @@ EOF
         
         RETRY_COUNT=$((RETRY_COUNT + 1))
     done
-    run_desktop_kasmvnc_loop &
+    run_desktop_kasmvnc_loop &> run_desktop_kasmvnc_loop.log &
     echo "$! # run_desktop_kasmvnc_loop" >> cancel.sh  
 
     rm -rf ${portFile}

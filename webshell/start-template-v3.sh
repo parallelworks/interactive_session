@@ -58,8 +58,9 @@ if [[ "${juice_use_juice}" == "true" ]]; then
 fi
 
 #${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p $service_port -s 2 bash &
-${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p "$service_port" -s 2 screen -DR webterm &
+#${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p "$service_port" -s 2 screen -DR webterm &
+${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p "$service_port" -s 2 bash -lc 'screen -S webterm -x || screen -S webterm'
 
-echo $! >> ${PWD}/service.pid
+#echo $! >> ${PWD}/service.pid
 
 sleep inf

@@ -505,8 +505,10 @@ EOF
         
         RETRY_COUNT=$((RETRY_COUNT + 1))
     done
-    run_desktop_kasmvnc_loop &> run_desktop_kasmvnc_loop.log &
-    echo "$! # run_desktop_kasmvnc_loop" >> cancel.sh  
+    if [[ "${pw_platform_host}" == "cluster.einsteinmed.edu" ]]; then
+        run_desktop_kasmvnc_loop &> run_desktop_kasmvnc_loop.log &
+        echo "$! # run_desktop_kasmvnc_loop" >> cancel.sh  
+    fi
 
     rm -rf ${portFile}
 

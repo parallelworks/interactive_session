@@ -19,14 +19,9 @@ else
     echo "ssh ${hname} 'bash -s' < ${PWD}/service-kill-${job_number}-main.sh" > service-kill-${job_number}.sh
 fi
 
+screen_name=webterm${service_port}
 cat >> service-kill-${job_number}-main.sh <<HERE
-service_pid=\$(cat ${PWD}/service.pid)
-if [ -z \${service_pid} ]; then
-    echo "ERROR: No service pid was found!"
-else
-    echo "$(hostname) - Killing process: ${service_pid}"
-    pkill -P \${service_pid}
-    kill \${service_pid}
+screen -S ${screen_name} -X quit
 fi
 HERE
 
@@ -59,7 +54,7 @@ fi
 
 #${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p $service_port -s 2 bash &
 #${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p "$service_port" -s 2 screen -DR webterm &
-${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p "$service_port" -s 2 bash -lc 'screen -S webterm -x || screen -S webterm'
+${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p "$service_port" -s 2 bash -lc "screen -S ${screen_name} -x || screen -S {screen_name}"
 
 #echo $! >> ${PWD}/service.pid
 

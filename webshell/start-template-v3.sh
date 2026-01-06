@@ -22,7 +22,6 @@ fi
 screen_name=webterm${service_port}
 cat >> service-kill-${job_number}-main.sh <<HERE
 screen -S ${screen_name} -X quit
-fi
 HERE
 
 cd ~/

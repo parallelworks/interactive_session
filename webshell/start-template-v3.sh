@@ -19,6 +19,7 @@ else
     echo "ssh ${hname} 'bash -s' < ${PWD}/service-kill-${job_number}-main.sh" > service-kill-${job_number}.sh
 fi
 
+screen_name=webterm${service_port}
 cat >> service-kill-${job_number}-main.sh <<HERE
 service_pid=\$(cat ${PWD}/service.pid)
 if [ -z \${service_pid} ]; then
@@ -57,7 +58,12 @@ if [[ "${juice_use_juice}" == "true" ]]; then
     }
 fi
 
-${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p $service_port -s 2 bash &
-echo $! >> ${PWD}/service.pid
+if screen -v >/dev/null 2>&1; then
+    ${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p "$service_port" -s 2 bash -lc "screen -S ${screen_name} -x || screen -S ${screen_name}"
+    echo "screen -S ${screen_name} -X quit" > ${PWD}/service-kill-${job_number}-main.sh
+else
+    ${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p $service_port -s 2 bash &
+    echo $! >> ${PWD}/service.pid
+fi
 
-sleep 99999
+sleep inf

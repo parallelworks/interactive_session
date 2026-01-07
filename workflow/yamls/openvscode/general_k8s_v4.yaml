@@ -16,7 +16,7 @@ jobs:
           uses: parallelworks/checkout
           with:
             repo: https://github.com/parallelworks/interactive_session.git
-            branch: v4
+            branch: v4-2026
             sparse_checkout:
               - ${{ inputs.service.name }}
         - name: Create Inputs

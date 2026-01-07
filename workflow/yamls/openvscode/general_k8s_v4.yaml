@@ -43,6 +43,8 @@ jobs:
             sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
+            # Create slug
+            echo "slug=?folder=${{ inputs.service.directory }}" | tee -a $OUTPUTS
         - name: Controller Preprocessing
           run: |
             set -x
@@ -183,6 +185,7 @@ jobs:
     if: ${{ inputs.targetType == 'compute-cluster' }}
     needs:
       - wait_for_job_start
+      - preprocessing
     ssh:
       remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
@@ -228,16 +231,12 @@ jobs:
                   ((attempt++))
               fi
           done
-      - name: Expand Slug
-        early-cancel: any-job-failed
-        run: |
-          echo "slug=?folder=${{ inputs.service.directory }}" | tee -a $OUTPUTS
       - name: Update Session
         uses: parallelworks/update-session
         with:
           target: '${{ inputs.cluster.resource.id }}'
           name: '${{ sessions.session }}'
-          slug: '${{ needs.create_session.outputs.slug }}'
+          slug: '${{ needs.preprocessing.outputs.slug }}'
           remoteHost: '${{ needs.wait_for_job_start.outputs.HOSTNAME }}'
           remotePort: '${{ needs.create_session.outputs.SESSION_PORT }}'
 

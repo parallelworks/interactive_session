@@ -657,7 +657,7 @@ jobs:
           directory:
             label: Directory to open in VS Code
             type: string
-            default: ${HOME}
+            default: __HOME__
             tooltip: Directory to open in VS code
       k8s:
         type: group

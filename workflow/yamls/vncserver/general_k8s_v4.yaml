@@ -2,7 +2,7 @@ permissions:
   - '*'
 sessions:
   session:
-    useTLS: false
+    useTLS: ${{ inputs.targetType == 'kubernetes-cluster' }}
     redirect: true
     useCustomDomain: ${{ inputs.targetType == 'kubernetes-cluster' }}
 
@@ -24,18 +24,18 @@ jobs:
             set -x
             # Write PW variables
             env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+            # Password
+            password=$(openssl rand -base64 12 | head -c 12)
+            # basepath
+            basepath=/me/session/${PW_USER}/${{ sessions.session }}
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH
-            service_download_url="${{ inputs.service.download_url }}"
-            service_password="${{ inputs.service.password }}"
-            service_directory="${{ inputs.service.directory }}"
-            juice_use_juice="${{ inputs.juice.use_juice }}"
-            juice_pool_ids="${{ inputs.juice.pool_ids }}"
-            juice_vram="${{ inputs.juice.vram }}"
-            juice_cmd_args="${{ inputs.juice.cmd_args }}"
-            JUICE_TOKEN="${{ org.JUICE_TOKEN }}"
+            service_novnc_parent_install_dir="${{ inputs.service.novnc_parent_install_dir }}"
+            service_novnc_tgz_basename="${{ inputs.service.novnc_tgz_basename }}"
             EOF
+            echo basepath=${basepath} >> inputs.sh
+            echo password=${password} >> inputs.sh
             if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
               echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
             fi
@@ -44,7 +44,8 @@ jobs:
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
             # Create slug
-            echo "slug=?folder=${{ inputs.service.directory }}" | tee -a $OUTPUTS
+            slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
+            echo "slug=${slug}"  | tee -a $OUTPUTS
         - name: Controller Preprocessing
           run: |
             set -x
@@ -241,19 +242,18 @@ jobs:
           remotePort: '${{ needs.create_session.outputs.SESSION_PORT }}'
 
   auth_k8s:
-    if: ${{ inputs.targetType == 'kubernetes-cluster' }}
     steps:
       - name: Authenticate kubectl
         early-cancel: any-job-failed
+        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         run: pw kube auth ${{ inputs.k8s.cluster }}
   prepare_k8s_pvc:
-    if: ${{ inputs.targetType == 'kubernetes-cluster' }}
     needs:
       - auth_k8s
     steps:
       - name: Creating New PVC YAML
         early-cancel: any-job-failed
-        if: ${{ inputs.k8s.volumes.pvc == New  }}
+        if: ${{ inputs.targetType == 'kubernetes-cluster' && inputs.k8s.volumes.pvc == New  }}
         run: |
           if [[ ${{ inputs.k8s.volumes.pvc_persist }} == "true" ]]; then
             pvc_name="${{ inputs.k8s.volumes.pvc_name }}"
@@ -298,6 +298,7 @@ jobs:
         run: |
           echo "Performing dry run..."
           kubectl apply -f pvc.yaml --dry-run=client
+
   prepare_k8s_deployment:
     if: ${{ always }}
     needs:
@@ -310,7 +311,7 @@ jobs:
           job_number=$(pwd | rev | cut -d "/" -f1 | rev)
           workflow_name=$(pwd | rev | cut -d "/" -f2 | rev)
           app_name=$(echo "${PW_USER}${workflow_name}${job_number}" | sed 's|_||g' | sed 's|\.||g' | tr '[:upper:]' '[:lower:]' | tail -c 56)
-          echo "app_name=${app_name}"  | tee -a $OUTPUTS | tee -a OUTPUTS
+          echo "app_name=${app_name}" | tee -a $OUTPUTS | tee -a OUTPUTS
       - name: Creating Deployment and Service YAML
         early-cancel: any-job-failed
         if: ${{ inputs.targetType == 'kubernetes-cluster' }}
@@ -375,15 +376,11 @@ jobs:
                     ports:
                       - containerPort: ${{ inputs.service_k8s.image_port }}
                     env:
-                      - name: PASSWORD
+                      - name: VNC_PW
                         value: ${{ inputs.service_k8s.password }}
-
-                    args:
-                      - --auth
-                      - password
-                      - --bind-addr
-                      - 0.0.0.0:8080
-                      - --disable-telemetry
+                    securityContext:
+                      capabilities:
+                        add: ["NET_ADMIN"]  # Might be required depending on kasmvnc container usage
                     resources:
                       requests:
                         memory: "${{ inputs.k8s.resources.requests.memory }}"
@@ -421,12 +418,12 @@ jobs:
           echo "Performing dry run..."
           kubectl apply -f app.yaml --dry-run=client
   apply_k8s_deployment:
-    if: ${{ inputs.targetType == 'kubernetes-cluster' }}
     needs:
       - prepare_k8s_deployment
     steps:
       - name: Load outputs
         early-cancel: any-job-failed
+        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         run: cat OUTPUTS >> $OUTPUTS
       - name: Apply PVC
         if: ${{  inputs.targetType == 'kubernetes-cluster' && inputs.k8s.volumes.pvc == New }}
@@ -452,6 +449,7 @@ jobs:
             done
           fi
       - name: Apply Deployment and Service
+        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         run: kubectl apply -f app.yaml
         cleanup: |
           [[ "${DEBUG:-}" == "true" ]] && set -x
@@ -473,6 +471,7 @@ jobs:
           done
       - name: Wait for Deployment to be Ready
         early-cancel: any-job-failed
+        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         env:
           app_name: ${{ needs.apply_k8s_deployment.outputs.app_name }}
           namespace: ${{ inputs.k8s.namespace }}
@@ -509,6 +508,7 @@ jobs:
           exit ${exit_code}
       - name: Wait for Pod to be Ready
         early-cancel: any-job-failed
+        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         env:
           app_name: ${{ needs.apply_k8s_deployment.outputs.app_name }}
           namespace: ${{ inputs.k8s.namespace }}
@@ -520,14 +520,15 @@ jobs:
           touch pod.running
       - name: Stream Logs
         early-cancel: any-job-failed
+        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         run: kubectl logs -f deployment/${{ needs.apply_k8s_deployment.outputs.app_name }} -n ${{ inputs.k8s.namespace }}
   create_k8s_session:
-    if: ${{ inputs.targetType == 'kubernetes-cluster' }}
     needs:
       - prepare_k8s_deployment
     steps:
       - name: Wait until the Kubernetes deployment reaches its final stage
         early-cancel: any-job-failed
+        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         run: |
           while true; do
             if [ -f "app.deleted" ]; then
@@ -541,11 +542,13 @@ jobs:
           done
       - name: Get Service Name
         early-cancel: any-job-failed
+        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         run: |
           source OUTPUTS
           echo "service_name=${app_name}-lb" | tee -a $OUTPUTS
       - name: Expose port
         early-cancel: any-job-failed
+        if: ${{ inputs.targetType == 'kubernetes-cluster' }}
         uses: parallelworks/update-session
         with:
           remotePort: ${{ inputs.service_k8s.image_port }}
@@ -555,6 +558,7 @@ jobs:
             namespace: ${{ inputs.k8s.namespace }}
             resourceType: services
             resourceName: ${{ needs.create_k8s_session.outputs.service_name }}
+
 'on':
   execute:
     inputs:
@@ -634,29 +638,24 @@ jobs:
 
       service:
         type: group
-        label: VS Code Settings
-        collapsed: true
-        hidden: ${{ inputs.targetType != 'compute-cluster' }}
+        label: Service
+        hidden: true
         items:
-          name:
+          novnc_parent_install_dir:
+            label: noVNC installation directory
             type: string
             hidden: true
-            default: openvscode
-          download_url:
-            label: Download URL
+            default: __HOME__/pw/software
+          novnc_tgz_basename:
+            label: Basename of the novnc tgz file
             type: string
-            default: https://github.com/coder/code-server/releases/download/v4.105.1/code-server-4.105.1-linux-amd64.tar.gz
-            tooltip: Downloads or uses the code-server server version specified in the URL
-          password:
-            label: Password for IDE session
-            type: password
-            optional: true
-            tooltip: Enter password or leave blank for no password
-          directory:
-            label: Directory to open in VS Code
+            hidden: true
+            default: noVNC-1.5.0.tgz
+          name:
             type: string
-            default: ${HOME}
-            tooltip: Directory to open in VS code
+            label: Select remote display protocol
+            hidden: true
+            default: vncserver
       k8s:
         type: group
         label: Kubernetes Settings
@@ -739,12 +738,12 @@ jobs:
                   memory:
                     label: Memory
                     type: string
-                    default: 512Mi
+                    default: 2Gi
                     tooltip: Specify the minimum memory required for the pod (e.g., 512Mi, 1Gi).
                   cpu:
                     label: CPU
                     type: string
-                    default: '1'
+                    default: '2'
                     tooltip: Specify the minimum CPU required for the pod (e.g., 0.5, 1, 100m). Use decimal values for partial CPUs or "m" for millicores (e.g., 100m = 0.1 CPU).
               limits:
                 type: group
@@ -753,12 +752,12 @@ jobs:
                   memory:
                     label: Memory
                     type: string
-                    default: 1Gi
+                    default: 4Gi
                     tooltip: Set the maximum memory the pod can use (e.g., 1Gi, 2Gi).
                   cpu:
                     label: CPU
                     type: string
-                    default: '2'
+                    default: '4'
                     tooltip: Set the maximum CPU the pod can use (e.g., 1, 2, 500m).
                   select_gpu:
                     label: Select GPU Device
@@ -803,50 +802,17 @@ jobs:
         hidden: ${{ inputs.targetType != 'kubernetes-cluster' }}
         items:
           image:
-            label: Code Server Image
+            label: KasmVNC Image
             type: string
-            default: codercom/code-server:latest
-            tooltip: Sample container from https://hub.docker.com/r/codercom/code-server
+            default: kasmweb/desktop:1.16.0
+            tooltip: Sample container from https://hub.docker.com/r/kasmweb/desktop
           image_port:
-            label: Code Server Port
+            label: KasmVNC Port
             type: number
-            default: 8080
-            tooltip: Define the port on which the Code Server runs inside the container. Default is 8080.
+            default: 6901
+            tooltip: Define the port on which the KasmVNC runs inside the container. Default is 6901.
           password:
             label: Password
-            optional: ${{ inputs.targetType != 'kubernetes-cluster' }}
             type: password
-            tooltip: Type in a password
-
-      juice:
-        type: group
-        label: Attached GPU Settings
-        collapsed: true
-        hidden: ${{ org.JUICE_TOKEN == "" || inputs.targetType != 'compute-cluster' }}
-        items:
-          use_juice:
-            label: Enable Juice?
-            type: boolean
-            default: false
-            tooltip: Enable Juice to access and share remote GPUs over a network for your workload.
-          pool_ids:
-            label: Pool IDs
-            type: string
-            hidden: ${{ inputs.juice.use_juice == false }}
-            ignore: ${{ .hidden }}
-            optional: true
-            tooltip: Comma separated list of pool ids from which to allocate the session resources, when empty any available pool you have access to is used
-          vram:
-            label: VRAM
-            type: string
-            hidden: ${{ inputs.juice.use_juice == false }}
-            ignore: ${{ .hidden }}
-            optional: true
-            tooltip: Amount of VRAM requested in gibibytes. Can return a session with fewer bytes if there is not enough space on the device. Suffixes can be provided for convenience. E.g. 4 GiB (default "0")
-          cmd_args:
-            label: Juice Run Command Arguments
-            type: string
-            hidden: ${{ inputs.juice.use_juice == false }}
-            ignore: ${{ .hidden }}
-            optional: true
-            tooltip: Optional arguments for the juice run command to customize workload execution, e.g., "--gpu-ids string".
+            tooltip: Type in a password for user kasm_user
+            optional: ${{ inputs.targetType != 'kubernetes-cluster' }}

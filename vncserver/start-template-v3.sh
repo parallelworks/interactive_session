@@ -1,6 +1,5 @@
 # Make sure no conda environment is activated! 
 # https://github.com/parallelworks/issues/issues/1081
-set -x
 
 start_rootless_docker() {
     local MAX_RETRIES=20

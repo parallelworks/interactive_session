@@ -211,6 +211,7 @@ fi
 
 if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
 cat >> "${resource_jobdir}/cancel.sh" <<HERE
+${service_vnc_exec} -kill ${DISPLAY}
 service_pid=\$(cat ${resource_jobdir}/service.pid)
 if [ -z \"\${service_pid}\" ]; then
     echo "ERROR: No service pid was found!"
@@ -232,6 +233,7 @@ HERE
 
 else
 cat >> "${resource_jobdir}/cancel.sh" <<HERE
+${service_vnc_exec} -kill ${DISPLAY}
 service_pid=\$(cat ${resource_jobdir}/service.pid)
 if [ -z \${service_pid} ]; then
     echo "ERROR: No service pid was found!"
@@ -291,8 +293,6 @@ if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
     # Start service
     mkdir -p ~/.vnc
     ${service_vnc_exec} -kill ${DISPLAY}
-    echo "${service_vnc_exec} -kill ${DISPLAY}" >> cancel.sh
-
     # To prevent the process from being killed at startime    
     if [ -f "${HOME}/.vnc/xstartup" ]; then
         sed -i '/vncserver -kill $DISPLAY/ s/^#*/#/' ~/.vnc/xstartup
@@ -360,7 +360,6 @@ if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
 elif [[ "${service_vnc_type}" == "SingularityTurboVNC" ]]; then
     # Start service
     mkdir -p ~/.vnc
-    echo "${service_vnc_exec} -kill ${DISPLAY}" >> cancel.sh
     export TMPDIR=${PWD}/tmp
     mkdir -p $TMPDIR
     ${singularity_exec} ${resource_jobdir}/vncserver.sh | tee -a vncserver.out &
@@ -394,7 +393,6 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     printf "%s\n%s\n" "$service_password" "$service_password" | vncpasswd -u "$USER" -w -r
 
     ${service_vnc_exec} -kill ${DISPLAY}
-    echo "${service_vnc_exec} -kill ${DISPLAY}" >> cancel.sh
 
     MAX_RETRIES=5
     RETRY_DELAY=5

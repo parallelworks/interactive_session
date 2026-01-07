@@ -233,7 +233,7 @@ jobs:
         with:
           target: '${{ inputs.cluster.resource.id }}'
           name: '${{ sessions.session }}'
-          slug: 'lab'
+          slug: '?folder=${service.directory}'
           remoteHost: '${{ needs.wait_for_job_start.outputs.HOSTNAME }}'
           remotePort: '${{ needs.create_session.outputs.SESSION_PORT }}'
 
@@ -657,7 +657,7 @@ jobs:
           directory:
             label: Directory to open in VS Code
             type: string
-            default: __HOME__
+            default: ${HOME}
             tooltip: Directory to open in VS code
       k8s:
         type: group

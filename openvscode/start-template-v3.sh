@@ -27,6 +27,7 @@ else
     password_flag="--auth=password"
 fi
 
+# ---- REMOVE THIS IN V4 -----
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
 # - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
@@ -44,6 +45,7 @@ service_pid=\$(ps -x | grep ${server_bin} | grep ${service_port} | awk '{print \
 kill \${service_pid}
 pkill \${service_pid}
 HERE
+# ---- REMOVE THIS IN V4 -----
 
 
 # JUICE https://docs.juicelabs.co/docs/juice/intro

@@ -212,6 +212,8 @@ fi
 if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
 cat >> "${resource_jobdir}/cancel.sh" <<HERE
 ${service_vnc_exec} -kill ${DISPLAY}
+echo "${resource_jobdir}/vncserver.log:"
+cat ${resource_jobdir}/vncserver.log
 service_pid=\$(cat ${resource_jobdir}/service.pid)
 if [ -z \"\${service_pid}\" ]; then
     echo "ERROR: No service pid was found!"
@@ -222,17 +224,12 @@ else
     done
     kill \${service_pid}
 fi
-echo "${resource_jobdir}/vncserver.pid:"
-cat ${resource_jobdir}/vncserver.pid
-echo "${resource_jobdir}/vncserver.log:"
-cat ${resource_jobdir}/vncserver.log
-vnc_pid=\$(${resource_jobdir}/vncserver.pid)
-pkill -P \${vnc_pid}
-kill \${vnc_pid}
 HERE
 
 else
 cat >> "${resource_jobdir}/cancel.sh" <<HERE
+echo "~/.vnc/\${HOSTNAME}${DISPLAY}.log:"
+cat ~/.vnc/\${HOSTNAME}${DISPLAY}.log
 ${service_vnc_exec} -kill ${DISPLAY}
 service_pid=\$(cat ${resource_jobdir}/service.pid)
 if [ -z \${service_pid} ]; then
@@ -244,12 +241,6 @@ else
     done
     kill \${service_pid}
 fi
-echo "~/.vnc/\${HOSTNAME}${DISPLAY}.pid:"
-cat ~/.vnc/\${HOSTNAME}${DISPLAY}.pid
-echo "~/.vnc/\${HOSTNAME}${DISPLAY}.log:"
-cat ~/.vnc/\${HOSTNAME}${DISPLAY}.log
-vnc_pid=\$(cat ~/.vnc/\${HOSTNAME}${DISPLAY}.pid)
-pkill -P \${vnc_pid}
 kill \${vnc_pid}
 rm ~/.vnc/\${HOSTNAME}${DISPLAY}.*
 rm /tmp/.X11-unix/X${XdisplayNumber}

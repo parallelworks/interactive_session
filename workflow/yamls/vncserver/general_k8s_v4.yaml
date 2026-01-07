@@ -31,11 +31,11 @@ jobs:
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH
-            basepath=${basepath}
-            password=${password}
             service_novnc_parent_install_dir="${{ inputs.service.novnc_parent_install_dir }}"
             service_novnc_tgz_basename="${{ inputs.service.novnc_tgz_basename }}"
             EOF
+            echo basepath=${basepath} >> inputs.sh
+            echo password=${password} >> inputs.sh
             if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
               echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
             fi
@@ -44,7 +44,8 @@ jobs:
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
             # Create slug
-            echo "slug=vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0" | tee -a $OUTPUTS
+            slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
+            echo "slug=${slug}"  | tee -a $OUTPUTS
         - name: Controller Preprocessing
           run: |
             set -x

@@ -1,7 +1,6 @@
 # Make sure no conda environment is activated! 
 # https://github.com/parallelworks/issues/issues/1081
 
-
 start_rootless_docker() {
     local MAX_RETRIES=20
     local RETRY_INTERVAL=2
@@ -40,14 +39,6 @@ run_xterm_loop(){
         echo "$(date): Starting xterm"
         ${service_parent_install_dir}/xterm -fa "DejaVu Sans Mono" -fs 12
         sleep 1
-    done
-}
-
-run_desktop_kasmvnc_loop(){
-    while true; do
-        echo "$(date) Running: ssh localhost \"DISPLAY=${DISPLAY} ${XSTARTUP_PATH}\""
-        ssh localhost "DISPLAY=${DISPLAY} ${XSTARTUP_PATH}"
-        sleep 60
     done
 }
 
@@ -462,8 +453,13 @@ detect_desktop_env() {
         ;;
 
     gnome)
-        exec gnome-session --session=gnome
-        ;;
+        export XDG_CURRENT_DESKTOP=GNOME
+        export XDG_SESSION_TYPE=x11
+        export GDK_BACKEND=x11
+        export QT_QPA_PLATFORM=xcb
+        export MOZ_ENABLE_WAYLAND=0
+
+        exec dbus-run-session -- gnome-session --session=gnome        ;;
 
     lxqt)
         exec lxqt-session
@@ -505,10 +501,6 @@ EOF
         
         RETRY_COUNT=$((RETRY_COUNT + 1))
     done
-    if [[ "${pw_platform_host}" == "cluster.einsteinmed.edu" ]]; then
-        run_desktop_kasmvnc_loop &> run_desktop_kasmvnc_loop.log &
-        echo "$! # run_desktop_kasmvnc_loop" >> cancel.sh  
-    fi
 
     rm -rf ${portFile}
 

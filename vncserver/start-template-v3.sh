@@ -241,9 +241,8 @@ else
     done
     kill \${service_pid}
 fi
-kill \${vnc_pid}
-rm ~/.vnc/\${HOSTNAME}${DISPLAY}.*
-rm /tmp/.X11-unix/X${XdisplayNumber}
+rm -f ~/.vnc/\${HOSTNAME}${DISPLAY}.*
+rm -f /tmp/.X11-unix/X${XdisplayNumber}
 HERE
 fi
 

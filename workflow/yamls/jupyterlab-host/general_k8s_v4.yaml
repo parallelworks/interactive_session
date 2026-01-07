@@ -138,10 +138,10 @@ jobs:
           set -x
           while [ ! -f job.started ]; do
             if [ -f job.ended ]; then
-              echo "Job ended before it started. Exiting."
+              echo "(date) Job ended before it started. Exiting."
               exit 1
             fi
-            echo "Waiting for job to start..."
+            echo "$(date) Waiting for job to start..."
             sleep 5
           done
       - name: Get Hostname
@@ -166,7 +166,7 @@ jobs:
     steps:
       - name: Controller cleanup
         if: ${{ inputs.cluster.slurm.is_disabled && inputs.cluster.pbs.is_disabled && inputs.targetType == 'compute-cluster'}}
-        run: echo "Cleaning up..."
+        run: echo "(date) Cleaning up..."
         cleanup: |
           set -x
           if [ -f cancel.sh ]; then

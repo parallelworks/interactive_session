@@ -44,7 +44,7 @@ jobs:
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
             # Create slug
-            echo "slug=vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"" | tee -a $OUTPUTS
+            echo "slug=vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0" | tee -a $OUTPUTS
         - name: Controller Preprocessing
           run: |
             set -x

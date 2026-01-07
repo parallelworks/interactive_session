@@ -43,14 +43,6 @@ run_xterm_loop(){
     done
 }
 
-run_desktop_kasmvnc_loop(){
-    while true; do
-        echo "$(date) Running: ssh localhost \"DISPLAY=${DISPLAY} ${XSTARTUP_PATH}\""
-        ssh localhost "DISPLAY=${DISPLAY} ${XSTARTUP_PATH}"
-        sleep 60
-    done
-}
-
 ###################
 # PREPARE CLEANUP #
 ###################
@@ -462,8 +454,13 @@ detect_desktop_env() {
         ;;
 
     gnome)
-        exec gnome-session --session=gnome
-        ;;
+        export XDG_CURRENT_DESKTOP=GNOME
+        export XDG_SESSION_TYPE=x11
+        export GDK_BACKEND=x11
+        export QT_QPA_PLATFORM=xcb
+        export MOZ_ENABLE_WAYLAND=0
+
+        exec dbus-run-session -- gnome-session --session=gnome        ;;
 
     lxqt)
         exec lxqt-session
@@ -505,10 +502,6 @@ EOF
         
         RETRY_COUNT=$((RETRY_COUNT + 1))
     done
-    if [[ "${pw_platform_host}" == "cluster.einsteinmed.edu" ]]; then
-        run_desktop_kasmvnc_loop &> run_desktop_kasmvnc_loop.log &
-        echo "$! # run_desktop_kasmvnc_loop" >> cancel.sh  
-    fi
 
     rm -rf ${portFile}
 

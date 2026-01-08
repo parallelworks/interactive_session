@@ -2,7 +2,6 @@ permissions:
   - '*'
 sessions:
   session:
-    useTLS: false
     redirect: true
 
 jobs:
@@ -14,7 +13,7 @@ jobs:
           uses: parallelworks/checkout
           with:
             repo: https://github.com/parallelworks/interactive_session.git
-            branch: main
+            branch: v4-2026
             sparse_checkout:
               - ${{ inputs.service.name }}
         - name: Create Inputs
@@ -25,14 +24,12 @@ jobs:
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH
-            service_download_url="${{ inputs.service.download_url }}"
-            service_password="${{ inputs.service.password }}"
-            service_directory="${{ inputs.service.directory }}"
+            service_novnc_parent_install_dir="${{ inputs.service.novnc_parent_install_dir }}"
+            service_novnc_tgz_basename="${{ inputs.service.novnc_tgz_basename }}"
             juice_use_juice="${{ inputs.juice.use_juice }}"
             juice_pool_ids="${{ inputs.juice.pool_ids }}"
             juice_vram="${{ inputs.juice.vram }}"
             juice_cmd_args="${{ inputs.juice.cmd_args }}"
-            JUICE_TOKEN="${{ org.JUICE_TOKEN }}"
             EOF
             if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
               echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
@@ -41,8 +38,6 @@ jobs:
             sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
-            # Create slug
-            echo "slug=?folder=${{ inputs.service.directory }}" | tee -a $OUTPUTS
         - name: Controller Preprocessing
           run: |
             set -x
@@ -181,7 +176,6 @@ jobs:
   create_session:
     needs:
       - wait_for_job_start
-      - preprocessing
     ssh:
       remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
@@ -232,13 +226,22 @@ jobs:
         with:
           target: '${{ inputs.cluster.resource.id }}'
           name: '${{ sessions.session }}'
-          slug: '${{ needs.create_session.outputs.slug }}'
           remoteHost: '${{ needs.wait_for_job_start.outputs.HOSTNAME }}'
           remotePort: '${{ needs.create_session.outputs.SESSION_PORT }}'
+
 
 'on':
   execute:
     inputs:
+      targetType:
+        label: Target Type
+        type: dropdown
+        default: compute-cluster
+        options:
+          - label: Compute Cluster
+            value: compute-cluster
+          - label: Kubernetes Cluster
+            value: kubernetes-cluster
       cluster:
         type: group
         label: Compute Cluster Settings
@@ -265,7 +268,7 @@ jobs:
               is_disabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
+                default: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
                 label: Is SLURM disabled?
               partition:
                 type: slurm-partitions
@@ -278,11 +281,11 @@ jobs:
                 label: Walltime
                 type: string
                 default: '01:00:00'
-                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
+                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
                 tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
               scheduler_directives:
                 type: editor
-                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
+                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
                 optional: true
                 tooltip: |
                   Type in additional scheduler directives. 
@@ -294,39 +297,32 @@ jobs:
               is_disabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false  }}
+                default: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
                 label: Is PBS disabled?
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
                 tooltip: Type the PBS scheduler directives
-                hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false  }}
-
+                hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
       service:
         type: group
-        label: VS Code Settings
-        collapsed: true
+        hidden: true
+        label: Webshell
         items:
           name:
             type: string
             hidden: true
-            default: openvscode
-          download_url:
-            label: Download URL
+            default: webshell
+          novnc_parent_install_dir:
+            label: noVNC installation directory
             type: string
-            default: https://github.com/coder/code-server/releases/download/v4.105.1/code-server-4.105.1-linux-amd64.tar.gz
-            tooltip: Downloads or uses the code-server server version specified in the URL
-          password:
-            label: Password for IDE session
-            type: password
-            optional: true
-            tooltip: Enter password or leave blank for no password
-          directory:
-            label: Directory to open in VS Code
+            hidden: true
+            default: __HOME__/pw/software
+          novnc_tgz_basename:
+            label: Basename of the novnc tgz file
             type: string
-            default: ${HOME}
-            tooltip: Directory to open in VS code
-
+            hidden: true
+            default: noVNC-1.3.0.tgz
       juice:
         type: group
         label: Attached GPU Settings

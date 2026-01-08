@@ -1,3 +1,5 @@
+
+
 permissions:
   - '*'
 sessions:
@@ -24,15 +26,18 @@ jobs:
             env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
+            basepath=/me/session/${PW_USER}/${{ sessions.session }}
             PATH=$HOME/pw:$PATH
-            service_download_url="${{ inputs.service.download_url }}"
+            service_notebook_dir="${{ inputs.service.notebook_dir }}"
+            service_conda_install="${{ inputs.service.conda_install }}"
+            service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
+            service_conda_install_dir="${{ inputs.service.conda_install_dir }}"
+            service_conda_env="${{ inputs.service.conda_env }}"
+            service_load_env="${{ inputs.service.load_env }}"
             service_password="${{ inputs.service.password }}"
-            service_directory="${{ inputs.service.directory }}"
-            juice_use_juice="${{ inputs.juice.use_juice }}"
-            juice_pool_ids="${{ inputs.juice.pool_ids }}"
-            juice_vram="${{ inputs.juice.vram }}"
-            juice_cmd_args="${{ inputs.juice.cmd_args }}"
-            JUICE_TOKEN="${{ org.JUICE_TOKEN }}"
+            service_install_instructions="${{ inputs.service.install_instructions }}"
+            service_yaml="${{ inputs.service.yaml }}"
+            service_install_kernels="${{ inputs.service.install_kernels }}"
             EOF
             if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
               echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
@@ -41,11 +46,11 @@ jobs:
             sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
-            # Create slug
-            echo "slug=?folder=${{ inputs.service.directory }}" | tee -a $OUTPUTS
         - name: Controller Preprocessing
           run: |
             set -x
+            # ONLY REQUIRED FOR TRANSITION
+            cp ${{ inputs.service.name }}/*.yaml .
             # This script prepares the target host and always runs in the controller node
             cp inputs.sh controller-preprocessing.sh
             cat ${{ inputs.service.name }}/controller-v3.sh >> controller-preprocessing.sh
@@ -84,6 +89,8 @@ jobs:
             touch job.started
             EOF
             cat ${{ inputs.service.name }}/start-template-v3.sh >> start-service.sh
+            # TRANSITION CODE
+            sed -i 's/findAvailablePort/pw agent open-port/' start-service.sh
 
   session_runner:
     needs:
@@ -129,10 +136,10 @@ jobs:
           set -x
           while [ ! -f job.started ]; do
             if [ -f job.ended ]; then
-              echo "(date) Job ended before it started. Exiting."
+              echo "$(date) ERROR: Job ended before it started. Exiting."
               exit 1
             fi
-            echo "$(date) Waiting for job to start..."
+            echo "(date) Waiting for job to start..."
             sleep 5
           done
       - name: Get Hostname
@@ -157,14 +164,14 @@ jobs:
     steps:
       - name: Controller cleanup
         if: ${{ inputs.cluster.slurm.is_disabled && inputs.cluster.pbs.is_disabled }}
-        run: echo "(date) Cleaning up..."
+        run: echo "$(date) Cleaning up..."
         cleanup: |
           set -x
           if [ -f cancel.sh ]; then
             bash cancel.sh
           fi
       - name: Compute cleanup
-        if: ${{ inputs.cluster.slurm.is_disabled == false || inputs.cluster.pbs.is_disabled == false }}
+        if: ${{ (inputs.cluster.slurm.is_disabled == false || inputs.cluster.pbs.is_disabled == false) }}
         run: echo "Cleaning up..."
         cleanup: |
           set -x
@@ -181,7 +188,6 @@ jobs:
   create_session:
     needs:
       - wait_for_job_start
-      - preprocessing
     ssh:
       remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
@@ -232,7 +238,7 @@ jobs:
         with:
           target: '${{ inputs.cluster.resource.id }}'
           name: '${{ sessions.session }}'
-          slug: '${{ needs.create_session.outputs.slug }}'
+          slug: 'tree?dt=0'
           remoteHost: '${{ needs.wait_for_job_start.outputs.HOSTNAME }}'
           remotePort: '${{ needs.create_session.outputs.SESSION_PORT }}'
 
@@ -260,12 +266,12 @@ jobs:
           slurm:
             type: group
             label: SLURM Directives
-            hidden: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
+            hidden: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
             items:
               is_disabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
+                default: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
                 label: Is SLURM disabled?
               partition:
                 type: slurm-partitions
@@ -278,11 +284,11 @@ jobs:
                 label: Walltime
                 type: string
                 default: '01:00:00'
-                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
+                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
                 tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
               scheduler_directives:
                 type: editor
-                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
+                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
                 optional: true
                 tooltip: |
                   Type in additional scheduler directives. 
@@ -294,68 +300,96 @@ jobs:
               is_disabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false  }}
+                default: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
                 label: Is PBS disabled?
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
                 tooltip: Type the PBS scheduler directives
-                hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false  }}
-
+                hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
       service:
         type: group
-        label: VS Code Settings
-        collapsed: true
+        label: Jupyter Notebook Settings
         items:
           name:
             type: string
             hidden: true
-            default: openvscode
-          download_url:
-            label: Download URL
-            type: string
-            default: https://github.com/coder/code-server/releases/download/v4.105.1/code-server-4.105.1-linux-amd64.tar.gz
-            tooltip: Downloads or uses the code-server server version specified in the URL
-          password:
-            label: Password for IDE session
-            type: password
-            optional: true
-            tooltip: Enter password or leave blank for no password
-          directory:
-            label: Directory to open in VS Code
+            default: jupyter-host
+          notebook_dir:
+            label: Directory to start Jupyter Notebook GUI
             type: string
             default: ${HOME}
-            tooltip: Directory to open in VS code
-
-      juice:
-        type: group
-        label: Attached GPU Settings
-        collapsed: true
-        hidden: ${{ org.JUICE_TOKEN == "" }}
-        items:
-          use_juice:
-            label: Enable Juice?
+            tooltip: This is the directory that you start with when the Jupyter graphical user interface starts. The default value here is your home directory.
+          conda_install:
+            label: Install miniconda environment if not there?
             type: boolean
-            default: false
-            tooltip: Enable Juice to access and share remote GPUs over a network for your workload.
-          pool_ids:
-            label: Pool IDs
+            default: true
+            tooltip: Select Yes to install Jupyter in miniconda environment and No to load an existing python environment
+          parent_install_dir:
+            label: Parent Install Directory
             type: string
-            hidden: ${{ inputs.juice.use_juice == false }}
+            default: ${HOME}/pw/software
+            hidden: ${{ inputs.service.conda_install == false }}
             ignore: ${{ .hidden }}
-            optional: true
-            tooltip: Comma separated list of pool ids from which to allocate the session resources, when empty any available pool you have access to is used
-          vram:
-            label: VRAM
+            tooltip: Software dependencies are installed in this directory. Ensure the directory has sufficient space!
+          conda_install_dir:
+            label: Name of the Conda Installation Directory
             type: string
-            hidden: ${{ inputs.juice.use_juice == false }}
+            default: .miniconda3c
+            hidden: ${{ inputs.service.conda_install == false }}
             ignore: ${{ .hidden }}
-            optional: true
-            tooltip: Amount of VRAM requested in gibibytes. Can return a session with fewer bytes if there is not enough space on the device. Suffixes can be provided for convenience. E.g. 4 GiB (default "0")
-          cmd_args:
-            label: Juice Run Command Arguments
+            tooltip: Ensure the directory has sufficient space for Conda and its packages.
+          conda_env:
+            label: Conda environment
             type: string
-            hidden: ${{ inputs.juice.use_juice == false }}
+            default: base
+            hidden: '${{ inputs.service.conda_install == false }}'
+            optional: ${{ .hidden }}
             ignore: ${{ .hidden }}
+            tooltip: Environment to active. The base environment enables changing kernel to other environments!
+          load_env:
+            label: Command to load Jupyter Notebook to the PATH
+            type: string
+            default: source ${HOME}/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base
+            hidden: ${{ inputs.service.conda_install == true }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Use a bash command
+          password:
+            label: Password for notebook session
+            type: password
             optional: true
-            tooltip: Optional arguments for the juice run command to customize workload execution, e.g., "--gpu-ids string".
+            hidden: true
+            ignore: true
+            tooltip: Enter password or leave blank for no password
+          install_instructions:
+            label: Select Jupyter Lab Installation
+            type: dropdown
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
+            default: latest
+            options:
+              - value: latest
+                label: Latest default versions of Jupyter Notebook and Python (not thoroughly tested)
+              - value: notebook7.2.2-python3.12.2
+                label: Jupyter Notebook 7.2.2 with Python version 3.12.2
+              - value: yaml
+                label: Provide custom Conda environment YAML file
+          yaml:
+            label: Paste Conda Environment Defition YAML
+            type: editor
+            hidden: ${{ inputs.service.install_instructions != yaml ||  inputs.service.conda_install == false }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Copy and paste a custom Conda environment definition YAML file
+          install_kernels:
+            label: Select additional kernels to install
+            type: multi-dropdown
+            optional: true
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
+            options:
+              - value: julia-kernel
+                label: Julia Kernel
+              - value: R-kernel
+                label: R Kernel

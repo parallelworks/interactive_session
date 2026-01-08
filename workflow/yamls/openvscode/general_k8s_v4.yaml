@@ -95,6 +95,7 @@ jobs:
         remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
       - uses: marketplace/script_submitter/v3.5
+        early-cancel: any-job-failed
         with:
           resource: ${{ inputs.cluster.resource }}
           shebang: '#!/bin/bash'

@@ -762,6 +762,7 @@ jobs:
                   select_gpu:
                     label: Select GPU Device
                     type: dropdown
+                    default: None
                     tooltip: Choose the type of GPU device for the deployment, if needed. Select "None" for CPU-only workloads or "Custom" to specify a custom GPU resource key.
                     options:
                       - value: None

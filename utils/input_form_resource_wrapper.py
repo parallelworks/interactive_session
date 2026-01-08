@@ -236,8 +236,14 @@ def normalize_resource_fields(resource_dict):
         resource_dict['publicIp'] = resource_dict['ip']
     
     # Map 'user' to 'username' if 'username' is not present
+    # Skip this mapping for cloud clusters where 'user' is the resource owner,
+    # otherwise this would try to set 'username' to the resource owner instead of the actual username.
+    cloud_cluster_types = ['aws-slurm', 'azure-slurm', 'google-slurm']
+    resource_type = resource_dict.get('type', '')
+    
     if 'username' not in resource_dict and 'user' in resource_dict:
-        resource_dict['username'] = resource_dict['user']
+        if resource_type not in cloud_cluster_types:
+            resource_dict['username'] = resource_dict['user']
     
     # Ensure privateIp exists (may not be present in new format)
     if 'privateIp' not in resource_dict:

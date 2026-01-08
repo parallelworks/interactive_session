@@ -573,7 +573,6 @@ jobs:
             value: kubernetes-cluster
       cluster:
         hidden: ${{ inputs.targetType != 'compute-cluster' }}
-        ignore: ${{ inputs.targetType != 'compute-cluster' }}
         type: group
         label: Compute Cluster Settings
         items:
@@ -581,12 +580,13 @@ jobs:
             type: compute-clusters
             label: Service host
             include-workspace: false
+            optional: ${{ inputs.targetType != 'compute-cluster' }}
             tooltip: Resource to host the service
           scheduler:
             type: boolean
             default: false
             label: Schedule Job?
-            hidden: ${{ inputs.cluster.resource.schedulerType == '' }}
+            hidden: ${{ inputs.cluster.resource.schedulerType == '' || inputs.targetType != 'compute-cluster' }}
             ignore: ${{ .hidden }}
             tooltip: |
               Yes → Job is submitted to the scheduler using sbatch, qsub, etc
@@ -594,17 +594,17 @@ jobs:
           slurm:
             type: group
             label: SLURM Directives
-            hidden: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            hidden: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  || inputs.targetType != 'compute-cluster' }}
             items:
               is_disabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                default: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
                 label: Is SLURM disabled?
               partition:
                 type: slurm-partitions
                 label: SLURM partition
-                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
                 optional: true
                 resource: ${{ inputs.cluster.resource }}
                 tooltip: Select a partition from the drop down menu.
@@ -612,35 +612,34 @@ jobs:
                 label: Walltime
                 type: string
                 default: '01:00:00'
-                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
                 tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
               scheduler_directives:
                 type: editor
-                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
                 optional: true
                 tooltip: |
                   Type in additional scheduler directives. 
           pbs:
             type: group
             label: PBS Directives
-            hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
             items:
               is_disabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+                default: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
                 label: Is PBS disabled?
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
                 tooltip: Type the PBS scheduler directives
-                hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+                hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
 
       service:
         type: group
         label: Service
         hidden: true
-        ignore: ${{ inputs.targetType != 'compute-cluster'}}
         items:
           novnc_parent_install_dir:
             label: noVNC installation directory
@@ -660,16 +659,17 @@ jobs:
       k8s:
         type: group
         label: Kubernetes Settings
-        ignore: ${{ inputs.targetType != 'kubernetes-cluster' }}
         hidden: ${{ inputs.targetType != 'kubernetes-cluster' }}
         items:
           cluster:
             label: Kubernetes cluster
             type: kubernetes-clusters
+            optional: ${{ inputs.targetType != 'kubernetes-cluster' }}
           namespace:
             label: Namespace
             type: kubernetes-namespaces
             clusterName: ${{ inputs.k8s.cluster }}
+            optional: ${{ inputs.targetType != 'kubernetes-cluster' }}
           volumes:
             type: group
             label: Volumes
@@ -762,7 +762,6 @@ jobs:
                   select_gpu:
                     label: Select GPU Device
                     type: dropdown
-                    default: None
                     tooltip: Choose the type of GPU device for the deployment, if needed. Select "None" for CPU-only workloads or "Custom" to specify a custom GPU resource key.
                     options:
                       - value: None
@@ -800,7 +799,6 @@ jobs:
       service_k8s:
         type: group
         label: Service Settings
-        ignore: ${{ inputs.targetType != 'kubernetes-cluster' }}
         hidden: ${{ inputs.targetType != 'kubernetes-cluster' }}
         items:
           image:
@@ -817,3 +815,4 @@ jobs:
             label: Password
             type: password
             tooltip: Type in a password for user kasm_user
+            optional: ${{ inputs.targetType != 'kubernetes-cluster' }}

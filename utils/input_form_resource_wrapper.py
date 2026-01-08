@@ -265,7 +265,9 @@ def complete_resource_information(inputs_dict):
         else:
             inputs_dict['resource']['publicIp'] = inputs_dict['resource']['privateIp']
 
-    inputs_dict['resource']['publicIp'] = inputs_dict['resource']['username'] + '@' + inputs_dict['resource']['publicIp']
+    # Only prepend username if it exists (cloud clusters may not have username set)
+    if 'username' in inputs_dict['resource'] and inputs_dict['resource']['username']:
+        inputs_dict['resource']['publicIp'] = inputs_dict['resource']['username'] + '@' + inputs_dict['resource']['publicIp']
     
     command_to_get_home_directory = f"{SSH_CMD} {inputs_dict['resource']['publicIp']} pwd"
     inputs_dict['resource']['home'] = get_command_output(command_to_get_home_directory)

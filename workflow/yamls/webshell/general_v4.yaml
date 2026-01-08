@@ -21,10 +21,6 @@ jobs:
             set -x
             # Write PW variables
             env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
-            # Password
-            password=$(openssl rand -base64 12 | head -c 12)
-            # basepath
-            basepath=/me/session/${PW_USER}/${{ sessions.session }}
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH
@@ -35,8 +31,6 @@ jobs:
             juice_vram="${{ inputs.juice.vram }}"
             juice_cmd_args="${{ inputs.juice.cmd_args }}"
             EOF
-            echo basepath=${basepath} >> inputs.sh
-            echo password=${password} >> inputs.sh
             if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
               echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
             fi

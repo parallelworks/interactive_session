@@ -7,6 +7,7 @@ fi
 service_novnc_tgz_stem=$(echo ${service_novnc_tgz_basename} | sed "s|.tar.gz||g" | sed "s|.tgz||g")
 service_novnc_install_dir=${service_parent_install_dir}/${service_novnc_tgz_stem}
 
+# ----- REMOVE AFTER V4 IS RELEASED EVERYWHERE ----- #
 # Prepare kill service script
 # - Needs to be here because we need the hostname of the compute node.
 # - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
@@ -30,6 +31,7 @@ else
     kill \${service_pid}
 fi
 HERE
+# ----- REMOVE AFTER V4 IS RELEASED EVERYWHERE ----- #
 
 cd ~/
 
@@ -59,11 +61,14 @@ if [[ "${juice_use_juice}" == "true" ]]; then
 fi
 
 if command -v screen >/dev/null 2>&1; then
+    echo "screen -S ${screen_name} -X quit" > ${resource_jobdir}/cancel.sh
     ${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p "$service_port" -s 2 bash -lc "screen -S ${screen_name} -x || screen -S ${screen_name}"
-    echo "screen -S ${screen_name} -X quit" > ${PWD}/service-kill-${job_number}-main.sh
+    echo "screen -S ${screen_name} -X quit" > ${resource_jobdir}/service-kill-${job_number}-main.sh
 else
     ${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p $service_port -s 2 bash &
-    echo $! >> ${PWD}/service.pid
+    pid="$!"
+    echo $pid >> ${resource_jobdir}/service.pid
+    echo $! >> ${resource_jobdir}/service.pid
 fi
 
 sleep inf

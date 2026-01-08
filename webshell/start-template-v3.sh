@@ -63,8 +63,8 @@ fi
 set -x
 if command -v screen >/dev/null 2>&1; then
     echo "screen -S ${screen_name} -X quit" > ${resource_jobdir}/cancel.sh
-    ${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p "$service_port" -s 2 bash -lc "screen -S ${screen_name} -x || screen -S ${screen_name}"
     echo "screen -S ${screen_name} -X quit" > ${resource_jobdir}/service-kill-${job_number}-main.sh
+    ${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p "$service_port" -s 2 bash -lc "screen -S ${screen_name} -x || screen -S ${screen_name}"
 else
     ${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p $service_port -s 2 bash &
     pid="$!"

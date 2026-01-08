@@ -245,6 +245,10 @@ def normalize_resource_fields(resource_dict):
         if resource_type not in cloud_cluster_types:
             resource_dict['username'] = resource_dict['user']
     
+    # Default to PW_USER if username is still not set (e.g., for cloud clusters)
+    if 'username' not in resource_dict:
+        resource_dict['username'] = os.environ.get('PW_USER', '')
+    
     # Ensure privateIp exists (may not be present in new format)
     if 'privateIp' not in resource_dict:
         resource_dict['privateIp'] = resource_dict.get('publicIp', '')
@@ -265,7 +269,9 @@ def complete_resource_information(inputs_dict):
         else:
             inputs_dict['resource']['publicIp'] = inputs_dict['resource']['privateIp']
 
-    inputs_dict['resource']['publicIp'] = inputs_dict['resource']['username'] + '@' + inputs_dict['resource']['publicIp']
+    # Only prepend username if it exists (cloud clusters may not have username set)
+    if 'username' in inputs_dict['resource'] and inputs_dict['resource']['username']:
+        inputs_dict['resource']['publicIp'] = inputs_dict['resource']['username'] + '@' + inputs_dict['resource']['publicIp']
     
     command_to_get_home_directory = f"{SSH_CMD} {inputs_dict['resource']['publicIp']} pwd"
     inputs_dict['resource']['home'] = get_command_output(command_to_get_home_directory)
@@ -329,8 +335,6 @@ def complete_resource_information(inputs_dict):
             '__WORKDIR__': inputs_dict['resource']['workdir'],
 	        '__user__': inputs_dict['resource']['username'],
             '__USER__': inputs_dict['resource']['username'],
-            '__user__': os.environ['PW_USER'],
-            '__USER__': os.environ['PW_USER'],
             '__pw_user__': os.environ['PW_USER'],
             '__PW_USER__': os.environ['PW_USER']
         }

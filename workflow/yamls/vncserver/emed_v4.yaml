@@ -232,6 +232,7 @@ jobs:
               
               if check_server; then
                   echo "$(date) Success: Server is listening on ${remote_host}:${remote_port}!"
+                  sleep 40
                   exit 0
               elif [ -f job.ended ]; then
                   echo "$(date) Job was completed. Exiting... "

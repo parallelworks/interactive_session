@@ -34,6 +34,9 @@ jobs:
             service_novnc_parent_install_dir="${{ inputs.service.novnc_parent_install_dir }}"
             service_novnc_tgz_basename="${{ inputs.service.novnc_tgz_basename }}"
             service_nginx_sif="${{ inputs.service.nginx_sif_tag_existing }}"
+            service_load_env="${{ inputs.service.load_env_tag_cloud }}"
+            service_load_env="${{ inputs.service.load_env_tag_existing }}"
+            service_bin="${{ inputs.service.bin }}"
             EOF
             echo basepath=${basepath} >> inputs.sh
             echo password=${password} >> inputs.sh
@@ -392,22 +395,42 @@ jobs:
       service:
         type: group
         label: Service
-        hidden: true
         items:
           novnc_parent_install_dir:
             label: noVNC installation directory
             type: string
+            hidden: true
             default: ${HOME}/pw/software
           novnc_tgz_basename:
             label: Basename of the novnc tgz file
             type: string
+            hidden: true
             default: noVNC-1.5.0.tgz
           name:
             type: string
             label: Select remote display protocol
+            hidden: true
             default: vncserver
           nginx_sif_tag_existing:
             type: string
             default: /public/apps/pw/nginx-unprivileged.sif
-             ignore: ${{ 'existing' != inputs.cluster.resource.provider }}
+            hidden: true
+            ignore: ${{ 'existing' != inputs.cluster.resource.provider }}
             optional: ${{ .ignore }}
+          load_env_tag_cloud:
+            label: Command to load RStudio
+            type: string
+            optional: true
+            hidden: ${{ 'existing' == inputs.cluster.resource.provider }}
+            ignore: ${{ .hidden }}
+          load_env_tag_existing:
+            label: Command to load RStudio
+            type: string
+            default: module load rstudio
+            hidden: ${{ 'existing' != inputs.cluster.resource.provider }}
+            ignore: ${{ .hidden }}
+          bin:
+            label: Service Binary
+            type: string
+            hidden: true
+            default: rstudio

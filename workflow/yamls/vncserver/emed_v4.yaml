@@ -409,5 +409,5 @@ jobs:
           nginx_sif_tag_existing:
             type: string
             default: /public/apps/pw/nginx-unprivileged.sif
-             ignore: ${{ 'existing' != inputs.cluster.resource.provider }}
+            ignore: ${{ 'existing' != inputs.cluster.resource.provider }}
             optional: ${{ .ignore }}

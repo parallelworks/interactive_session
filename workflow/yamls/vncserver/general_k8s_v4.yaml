@@ -24,6 +24,8 @@ jobs:
             set -x
             # Write PW variables
             env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+            # Encase values between quotes
+            sed -i 's/=\(.*\)/="\1"/' inputs.sh
             # Password
             password=$(openssl rand -base64 12 | head -c 12)
             # basepath

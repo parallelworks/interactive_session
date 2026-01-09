@@ -59,10 +59,10 @@ start_gnome_session_with_retries() {
     k=1
     while true; do
         if xset q >/dev/null 2>&1; then
-            echo "(date) X server on $DISPLAY is alive."
+            echo "$(date) X server on $DISPLAY is alive."
             sleep $((k*10))
         else
-            echo "(date) X server on $DISPLAY is unresponsive."
+            echo "$(date) X server on $DISPLAY is unresponsive."
             if [ $k -gt 1 ]; then
                 echo "$(date) Restarting vncserver"
                 ${service_vnc_exec} -kill ${DISPLAY}
@@ -160,7 +160,7 @@ fi
 
 if [[ ${service_download_vncserver_container} == "true" ]]; then
     if ! which singularity > /dev/null 2>&1; then
-        echo "(date) ERROR: No vncserver or singularity command found"
+        echo "$(date) ERROR: No vncserver or singularity command found"
         exit 1
     fi
     echo "$(date): vncserver is not installed. Using singularity container..."

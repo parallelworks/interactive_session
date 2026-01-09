@@ -291,7 +291,7 @@ jobs:
               partition_default:
                 type: slurm-partitions
                 label: SLURM partition
-                ignore: ${{ '-M hpc4' == inputs.slurm.slurm_options }}
+                ignore: ${{ '-M hpc4' == inputs.cluster.slurm.slurm_options }}
                 hidden: ${{ .ignore }}
                 optional: true
                 resource: ${{ inputs.cluster.resource }}
@@ -301,7 +301,7 @@ jobs:
                 label: SLURM partition
                 optional: true
                 tooltip: Select a partition from the drop down menu. Leave empty to let SLURM pick a partition.
-                ignore: ${{ '-M hpc4' != inputs.slurm.slurm_options }}
+                ignore: ${{ '-M hpc4' != inputs.cluster.slurm.slurm_options }}
                 hidden: ${{ .ignore }}
                 default: normal
                 options:
@@ -334,7 +334,7 @@ jobs:
               gres_gpu_default:
                 type: number
                 label: Number of GPUs
-                ignore: ${{ ( inputs.slurm.partition_default != 'gpu' && inputs.slurm.partition_default != 'gpu-quick' ) || 'existing' != inputs.cluster.resource.provider  }}
+                ignore: ${{ ( inputs.cluster.slurm.partition_default != 'gpu' && inputs.cluster.slurm.partition_default != 'gpu-quick' ) || 'existing' != inputs.cluster.resource.provider  }}
                 hidden: ${{ .ignore }}
                 min: 1
                 max: 4
@@ -343,7 +343,7 @@ jobs:
               gres_gpu_hpc4:
                 type: number
                 label: Number of GPUs
-                hidden: ${{ ( inputs.slurm.partition_hpc4 != 'gpu' && inputs.slurm.partition_hpc4 != 'gpu-quick' && inputs.slurm.partition_hpc4 != 'gpu-h200' ) || 'existing' != inputs.cluster.resource.provider  }}
+                hidden: ${{ ( inputs.cluster.slurm.partition_hpc4 != 'gpu' && inputs.cluster.slurm.partition_hpc4 != 'gpu-quick' && inputs.cluster.slurm.partition_hpc4 != 'gpu-h200' ) || 'existing' != inputs.cluster.resource.provider  }}
                 ignore: ${{ .hidden }}
                 optional: ${{ .hidden }}
                 min: 1

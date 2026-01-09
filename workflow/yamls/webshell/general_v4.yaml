@@ -38,6 +38,7 @@ jobs:
             fi
             # Remove empty variables
             sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+            sed -i '/=""/d' inputs.sh # remove var=""
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
         - name: Controller Preprocessing

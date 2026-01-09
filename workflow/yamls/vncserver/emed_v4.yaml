@@ -149,7 +149,7 @@ jobs:
               echo "$(date) ERROR: Job ended before it started. Exiting."
               exit 1
             fi
-            echo "(date) Waiting for job to start..."
+            echo "$(date) Waiting for job to start..."
             sleep 5
           done
       - name: Get Hostname
@@ -188,7 +188,7 @@ jobs:
           set -x
           remote_host="${{ needs.wait_for_job_start.outputs.HOSTNAME }}"
           if [ -z "${remote_host}" ]; then
-            echo "(date) WARNING: Compute node's hostname is missing. Exiting step."
+            echo "$(date) WARNING: Compute node's hostname is missing. Exiting step."
             exit 0
           fi
           sshcmd="ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${remote_host}"

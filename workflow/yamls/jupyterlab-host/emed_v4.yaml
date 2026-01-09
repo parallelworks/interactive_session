@@ -28,17 +28,17 @@ jobs:
             cat <<'EOF' >> inputs.sh
             basepath=/me/session/${PW_USER}/${{ sessions.session }}
             PATH=$HOME/pw:$PATH
-            nginx_sif_tag_existing="${{ inputs.service.nginx_sif_tag_existing }}"
-            notebook_dir_tag_existing="${{ inputs.service.notebook_dir_tag_existing }}"
-            load_env_tag_existing="${{ inputs.service.load_env_tag_existing }}"
-            conda_install_tag_cloud="${{ inputs.service.conda_install_tag_cloud }}"
-            parent_install_dir_tag_cloud="${{ inputs.service.parent_install_dir_tag_cloud }}"
-            conda_install_dir_tag_cloud="${{ inputs.service.conda_install_dir_tag_cloud }}"
-            conda_env_tag_cloud="${{ inputs.service.conda_env_tag_cloud }}" 
-            load_env_tag_cloud="${{ inputs.service.load_env_tag_cloud }}"
-            install_instructions_tag_cloud="${{ inputs.service.install_instructions_tag_cloud }}"
-            yaml_tag_cloud="${{ inputs.service.yaml_tag_cloud }}"
-            install_kernels_tag_cloud="${{ inputs.service.install_kernels_tag_cloud }}"
+            nginx_sif="${{ inputs.service.nginx_sif_tag_existing }}"
+            notebook_dir="${{ inputs.service.notebook_dir_tag_existing }}"
+            load_env="${{ inputs.service.load_env_tag_existing }}"
+            conda_install="${{ inputs.service.conda_install_tag_cloud }}"
+            parent_install_dir="${{ inputs.service.parent_install_dir_tag_cloud }}"
+            conda_install_dir="${{ inputs.service.conda_install_dir_tag_cloud }}"
+            conda_env="${{ inputs.service.conda_env_tag_cloud }}" 
+            load_env="${{ inputs.service.load_env_tag_cloud }}"
+            install_instructions="${{ inputs.service.install_instructions_tag_cloud }}"
+            yaml="${{ inputs.service.yaml_tag_cloud }}"
+            install_kernels="${{ inputs.service.install_kernels_tag_cloud }}"
             EOF
             if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
               echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh

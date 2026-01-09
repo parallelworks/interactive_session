@@ -414,7 +414,7 @@ jobs:
           nginx_sif_tag_existing:
             type: string
             default: /public/apps/pw/nginx-unprivileged.sif
-            hidden: ${{ 'existing' != inputs.cluster.resource.provider }}
+            hidden: true
             ignore: ${{ 'existing' != inputs.cluster.resource.provider }}
             optional: ${{ .ignore }}
           load_env_tag_cloud:

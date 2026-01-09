@@ -24,6 +24,8 @@ jobs:
             set -x
             # Write PW variables
             env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+            # Encase values between quotes
+            sed -i 's/=\(.*\)/="\1"/' inputs.sh
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH
@@ -41,6 +43,7 @@ jobs:
             fi
             # Remove empty variables
             sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+            sed -i '/=""/d' inputs.sh # remove var=""
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
             # Create slug

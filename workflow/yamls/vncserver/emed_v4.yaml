@@ -34,9 +34,6 @@ jobs:
             service_novnc_parent_install_dir="${{ inputs.service.novnc_parent_install_dir }}"
             service_novnc_tgz_basename="${{ inputs.service.novnc_tgz_basename }}"
             service_nginx_sif="${{ inputs.service.nginx_sif_tag_existing }}"
-            service_load_env_tag_cloud="${{ inputs.service.load_env_tag_cloud }}"
-            service_load_env_tag_existing="${{ inputs.service.load_env_tag_existing }}"
-            service_bin="${{ inputs.service.bin }}"
             EOF
             echo basepath=${basepath} >> inputs.sh
             echo password=${password} >> inputs.sh

@@ -243,6 +243,7 @@ jobs:
                   ((attempt++))
               fi
           done
+          sleep 5
       - name: Update Session
         uses: parallelworks/update-session
         with:

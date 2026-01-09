@@ -270,8 +270,8 @@ jobs:
           slurm:
             type: group
             label: SLURM Directives
-            hidden: ${{ inputs.clusters.resource.provider == 'existing' && inputs.clusters.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
-            ignore: ${{ inputs.clusters.resource.provider == 'existing' && inputs.clusters.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+            hidden: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+            ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
             items:
               slurm_options:
                 type: dropdown
@@ -286,7 +286,7 @@ jobs:
               is_disabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.clusters.resource.provider == 'existing' && inputs.clusters.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+                default: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
                 label: Is SLURM disabled?
               partition_default:
                 type: slurm-partitions
@@ -294,7 +294,7 @@ jobs:
                 ignore: ${{ '-M hpc4' == inputs.slurm.slurm_options }}
                 hidden: ${{ .ignore }}
                 optional: true
-                resource: ${{ inputs.clusters.resource }}
+                resource: ${{ inputs.cluster.resource }}
                 tooltip: Select a partition from the drop down menu. Leave empty to let SLURM pick a partition.
               partition_hpc4:
                 type: dropdown
@@ -321,20 +321,20 @@ jobs:
                 max: 32
                 default: 1
                 tooltip: '--cpus-per-task=value slurm directive'
-                ignore: ${{ 'existing' != inputs.clusters.resource.provider }}
+                ignore: ${{ 'existing' != inputs.cluster.resource.provider }}
                 hidden: ${{ .ignore }}
               mem:
                 type: string
                 label: Minimum total memory required
                 default: 8GB
                 tooltip: '--mem=value slurm directive'
-                hidden: ${{ 'existing' != inputs.clusters.resource.provider }}
+                hidden: ${{ 'existing' != inputs.cluster.resource.provider }}
                 ignore: ${{ .hidden }}
                 optional: true
               gres_gpu_default:
                 type: number
                 label: Number of GPUs
-                ignore: ${{ ( inputs.slurm.partition_default != 'gpu' && inputs.slurm.partition_default != 'gpu-quick' ) || 'existing' != inputs.clusters.resource.provider  }}
+                ignore: ${{ ( inputs.slurm.partition_default != 'gpu' && inputs.slurm.partition_default != 'gpu-quick' ) || 'existing' != inputs.cluster.resource.provider  }}
                 hidden: ${{ .ignore }}
                 min: 1
                 max: 4
@@ -343,7 +343,7 @@ jobs:
               gres_gpu_hpc4:
                 type: number
                 label: Number of GPUs
-                hidden: ${{ ( inputs.slurm.partition_hpc4 != 'gpu' && inputs.slurm.partition_hpc4 != 'gpu-quick' && inputs.slurm.partition_hpc4 != 'gpu-h200' ) || 'existing' != inputs.clusters.resource.provider  }}
+                hidden: ${{ ( inputs.slurm.partition_hpc4 != 'gpu' && inputs.slurm.partition_hpc4 != 'gpu-quick' && inputs.slurm.partition_hpc4 != 'gpu-h200' ) || 'existing' != inputs.cluster.resource.provider  }}
                 ignore: ${{ .hidden }}
                 optional: ${{ .hidden }}
                 min: 1
@@ -363,13 +363,13 @@ jobs:
           pbs:
             type: group
             label: PBS Directives
-            hidden: ${{ inputs.clusters.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
-            ignore: ${{ inputs.clusters.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+            hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+            ignore: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
             items:
               is_disabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.clusters.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+                default: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
                 label: Is PBS disabled?
               scheduler_directives:
                 label: Scheduler Directives

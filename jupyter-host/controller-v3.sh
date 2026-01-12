@@ -139,14 +139,14 @@ if [[ "${service_conda_install}" == "true" ]]; then
     fi
 fi
 
-# eval "${service_load_env}"
-IFS=';'
-for cmd in $service_load_env; do
-    cmd="${cmd#"${cmd%%[![:space:]]*}"}"   # trim leading whitespace
-    cmd="${cmd%"${cmd##*[![:space:]]}"}"   # trim trailing whitespace
-    [ -n "$cmd" ] && eval "$cmd"
-done
-unset IFS cmd
+eval "${service_load_env}"
+#IFS=';'
+#for cmd in $service_load_env; do
+#    cmd="${cmd#"${cmd%%[![:space:]]*}"}"   # trim leading whitespace
+#    cmd="${cmd%"${cmd##*[![:space:]]}"}"   # trim trailing whitespace
+#    [ -n "$cmd" ] && eval "$cmd"
+#done
+#unset IFS cmd
 
 
 if [ -z $(which jupyter-notebook 2> /dev/null) ]; then

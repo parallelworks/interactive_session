@@ -1,0 +1,409 @@
+permissions:
+  - '*'
+sessions:
+  session:
+    useTLS: false
+    redirect: true
+
+jobs:
+  preprocessing:
+      ssh:
+        remoteHost: ${{ inputs.cluster.resource.ip }}
+      steps:
+        - name: Checkout
+          uses: parallelworks/checkout
+          with:
+            repo: https://github.com/parallelworks/interactive_session.git
+            branch: main
+            sparse_checkout:
+              - ${{ inputs.service.name }}
+        - name: Create Inputs
+          run: |
+            set -x
+            # Write PW variables
+            env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+            # Encase values between quotes
+            sed -i 's/=\(.*\)/="\1"/' inputs.sh
+            # Write input form variables and ensure the pw agent is in the PATH
+            cat <<'EOF' >> inputs.sh
+            basepath=/me/session/${PW_USER}/${{ sessions.session }}
+            PATH=$HOME/pw:$PATH
+            service_nginx_sif="${{ inputs.service.nginx_sif }}"
+            service_notebook_dir="${{ inputs.service.notebook_dir }}"
+            service_load_env="${{ inputs.service.load_env }}"
+            service_password="${{ inputs.service.password }}"
+            EOF
+            if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
+              echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
+            fi
+            # Remove empty variables
+            sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+            sed -i '/=""/d' inputs.sh # var=""
+            # Add export= to all lines
+            sed -i 's/^/export /' inputs.sh
+        - name: Controller Preprocessing
+          run: |
+            set -x
+            # ONLY REQUIRED FOR TRANSITION
+            cp ${{ inputs.service.name }}/*.yaml .
+            # This script prepares the target host and always runs in the controller node
+            cp inputs.sh controller-preprocessing.sh
+            cat ${{ inputs.service.name }}/controller-v3.sh >> controller-preprocessing.sh
+            bash controller-preprocessing.sh
+        - name: Create Service Script
+          run: |
+            # This script starts the service
+            cp inputs.sh start-service.sh
+            # TRANSITION CODE
+            echo resource_jobdir=${PW_PARENT_JOB_DIR} >> start-service.sh
+            # Write code common to all services
+            cat <<'EOF' >> start-service.sh
+
+            if [ -z "${service_port}" ]; then
+              service_port=$(pw agent open-port)
+            fi
+
+            if [ -z "${service_port}" ]; then
+              echo "$(date) ERROR: No service port found"
+              exit 1            
+            fi
+            echo ${service_port} > SESSION_PORT
+            hostname > HOSTNAME
+
+            cleanup() {
+                echo "$(date) Cleaning up..."
+                kill -- -$$
+            }
+
+            trap cleanup EXIT INT TERM
+
+            echo
+            echo
+            echo "$(date) STARTING SERVICE"
+            echo
+            touch job.started
+            EOF
+            cat ${{ inputs.service.name }}/start-template-v3.sh >> start-service.sh
+            # TRANSITION CODE
+            sed -i 's/findAvailablePort/pw agent open-port/' start-service.sh
+
+  session_runner:
+    needs:
+      - preprocessing
+    ssh:
+        remoteHost: ${{ inputs.cluster.resource.ip }}
+    steps:
+      - uses: marketplace/script_submitter/v3.5
+        early-cancel: any-job-failed
+        with:
+          resource: ${{ inputs.cluster.resource }}
+          shebang: '#!/bin/bash'
+          rundir: ${PW_PARENT_JOB_DIR}
+          use_existing_script: true
+          script_path: "${PW_PARENT_JOB_DIR}/start-service.sh"
+          scheduler: ${{ inputs.cluster.scheduler }}
+          slurm:
+            is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
+            slurm_options: ${{ inputs.cluster.slurm.slurm_options }}
+            partition_default: ${{ inputs.cluster.slurm.partition_default }}
+            partition_hpc4: ${{ inputs.cluster.slurm.partition_hpc4
+            cpus_per_task: ${{ inputs.cluster.slurm.cpus_per_task }}
+            mem: ${{ inputs.cluster.slurm.mem }}
+            gres_gpu_default: ${{ inputs.cluster.slurm.gres_gpu_default }}
+            gres_gpu_hpc4: ${{ inputs.cluster.slurm.gres_gpu_hpc4 }}
+            time: ${{ inputs.cluster.slurm.time }}
+            scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+          pbs:
+            is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
+            scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+      - name: Notify job ended
+        early-cancel: any-job-failed
+        run: |
+          set -x
+          pwd
+          touch job.ended
+          ls -lat job.ended
+
+
+  wait_for_job_start:
+    needs:
+      - preprocessing
+    ssh:
+      remoteHost: ${{ inputs.cluster.resource.ip }}
+    steps:
+      - name: Wait for job to start
+        early-cancel: any-job-failed
+        run: |
+          set -x
+          while [ ! -f job.started ]; do
+            if [ -f job.ended ]; then
+              echo "$(date) ERROR: Job ended before it started. Exiting."
+              exit 1
+            fi
+            echo "$(date) Waiting for job to start..."
+            sleep 5
+          done
+      - name: Get Hostname
+        early-cancel: any-job-failed
+        run: |
+          set -x
+          HOSTNAME=$(cat HOSTNAME | cut -d'.' -f1)
+          echo "HOSTNAME=${HOSTNAME}" | tee -a $OUTPUTS
+
+          if [ -z "${HOSTNAME}" ]; then
+            echo "$(date) Failed to get target hostname"
+            exit 1
+          fi
+          sleep 5
+
+  cleanup:
+    if: ${{ always }}
+    needs:
+      - session_runner
+      - wait_for_job_start
+    ssh:
+      remoteHost: ${{ inputs.cluster.resource.ip }}
+    steps:
+      - name: Controller cleanup
+        if: ${{ inputs.cluster.slurm.is_disabled && inputs.cluster.pbs.is_disabled }}
+        run: echo "$(date) Cleaning up..."
+        cleanup: |
+          set -x
+          if [ -f cancel.sh ]; then
+            bash cancel.sh
+          fi
+      - name: Compute cleanup
+        if: ${{ (inputs.cluster.slurm.is_disabled == false || inputs.cluster.pbs.is_disabled == false) }}
+        run: echo "Cleaning up..."
+        cleanup: |
+          set -x
+          remote_host="${{ needs.wait_for_job_start.outputs.HOSTNAME }}"
+          if [ -z "${remote_host}" ]; then
+            echo "$(date) WARNING: Compute node's hostname is missing. Exiting step."
+            exit 0
+          fi
+          sshcmd="ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${remote_host}"
+          if [ -f cancel.sh ]; then
+            ${sshcmd} 'bash -s' < ${PWD}/cancel.sh
+          fi
+
+  create_session:
+    needs:
+      - wait_for_job_start
+    ssh:
+      remoteHost: ${{ inputs.cluster.resource.ip }}
+    steps:
+      - name: Get Session Port
+        early-cancel: any-job-failed
+        run: |
+          set -x
+          SESSION_PORT=$(cat SESSION_PORT)
+          echo "SESSION_PORT=${SESSION_PORT}" | tee -a $OUTPUTS
+
+          if [ -z "${SESSION_PORT}" ]; then
+            echo "$(date) Failed to get target session's port"
+            exit 1
+          fi
+          sleep 5
+      - name: Wait for Server To Start
+        early-cancel: any-job-failed
+        run: |
+          TIMEOUT=5
+          RETRY_INTERVAL=3
+          remote_host="${{ needs.wait_for_job_start.outputs.HOSTNAME }}"
+          remote_port="${{ needs.create_session.outputs.SESSION_PORT }}"
+
+          # Function to check if server is listening
+          check_server() {
+              curl --silent --connect-timeout "$TIMEOUT" "http://${remote_host}:${remote_port}" >/dev/null 2>&1
+              return $?
+          }
+
+          # Main loop
+          attempt=1
+          while true; do
+              echo "$(date) Attempt $attempt: Checking if server is listening on ${remote_host}:${remote_port}..."
+              
+              if check_server; then
+                  echo "$(date) Success: Server is listening on ${remote_host}:${remote_port}!"
+                  exit 0
+              elif [ -f job.ended ]; then
+                  echo "$(date) Job was completed. Exiting... "
+                  exit 0
+              else
+                  echo "$(date) Server not responding. Retrying in ${RETRY_INTERVAL} seconds..."
+                  sleep "$RETRY_INTERVAL"
+                  ((attempt++))
+              fi
+          done
+          sleep 5
+      - name: Update Session
+        uses: parallelworks/update-session
+        with:
+          target: '${{ inputs.cluster.resource.id }}'
+          name: '${{ sessions.session }}'
+          slug: 'tree?dt=0'
+          remoteHost: '${{ needs.wait_for_job_start.outputs.HOSTNAME }}'
+          remotePort: '${{ needs.create_session.outputs.SESSION_PORT }}'
+
+'on':
+  execute:
+    inputs:
+      cluster:
+        type: group
+        label: Compute Cluster Settings
+        items:
+          resource:
+            type: compute-clusters
+            label: Service host
+            include-workspace: false
+            tooltip: Resource to host the service
+            autoselect: true
+            provider:
+              - existing
+          scheduler:
+            type: boolean
+            default: true
+            label: Schedule Job?
+            hidden: true
+            tooltip: |
+              Yes → Job is submitted to the scheduler using sbatch, qsub, etc
+              No  → Job is executed in the controller or login node instead
+          slurm:
+            type: group
+            label: SLURM Directives
+            hidden: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+            ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+            items:
+              slurm_options:
+                type: dropdown
+                label: Select Cluster
+                optional: true
+                default: ''
+                options:
+                  - value: ''
+                    label: Default
+                  - value: '-M hpc4'
+                    label: HPC4
+              is_disabled:
+                type: boolean
+                hidden: true
+                default: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+                label: Is SLURM disabled?
+              partition_default:
+                type: slurm-partitions
+                label: SLURM partition
+                ignore: ${{ '-M hpc4' == inputs.cluster.slurm.slurm_options }}
+                hidden: ${{ .ignore }}
+                optional: true
+                resource: ${{ inputs.cluster.resource }}
+                tooltip: Select a partition from the drop down menu. Leave empty to let SLURM pick a partition.
+              partition_hpc4:
+                type: dropdown
+                label: SLURM partition
+                optional: true
+                tooltip: Select a partition from the drop down menu. Leave empty to let SLURM pick a partition.
+                ignore: ${{ '-M hpc4' != inputs.cluster.slurm.slurm_options }}
+                hidden: ${{ .ignore }}
+                default: normal
+                options:
+                  - normal
+                  - gpu
+                  - gpu-h200
+                  - gpu-quick
+                  - ht
+                  - large-mem
+                  - quick
+                  - test
+                  - unlimited
+              cpus_per_task:
+                type: number
+                label: CPUs per task
+                min: 1
+                max: 32
+                default: 1
+                tooltip: '--cpus-per-task=value slurm directive'
+                ignore: ${{ 'existing' != inputs.cluster.resource.provider }}
+                hidden: ${{ .ignore }}
+              mem:
+                type: string
+                label: Minimum total memory required
+                default: 8GB
+                tooltip: '--mem=value slurm directive'
+                hidden: ${{ 'existing' != inputs.cluster.resource.provider }}
+                ignore: ${{ .hidden }}
+                optional: true
+              gres_gpu_default:
+                type: number
+                label: Number of GPUs
+                ignore: ${{ ( inputs.cluster.slurm.partition_default != 'gpu' && inputs.cluster.slurm.partition_default != 'gpu-quick' ) || 'existing' != inputs.cluster.resource.provider  }}
+                hidden: ${{ .ignore }}
+                min: 1
+                max: 4
+                default: 1
+                tooltip: '--gres=gpu:X slurm directive'
+              gres_gpu_hpc4:
+                type: number
+                label: Number of GPUs
+                hidden: ${{ ( inputs.cluster.slurm.partition_hpc4 != 'gpu' && inputs.cluster.slurm.partition_hpc4 != 'gpu-quick' && inputs.cluster.slurm.partition_hpc4 != 'gpu-h200' ) || 'existing' != inputs.cluster.resource.provider  }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
+                min: 1
+                max: 4
+                default: 1
+                tooltip: '--gres=gpu:X slurm directive'
+              time:
+                label: Walltime
+                type: string
+                default: '01:00:00'
+                tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
+              scheduler_directives:
+                type: editor
+                optional: true
+                tooltip: |
+                  Type in additional scheduler directives. 
+          pbs:
+            type: group
+            label: PBS Directives
+            hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+            ignore: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+            items:
+              is_disabled:
+                type: boolean
+                hidden: true
+                default: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+                label: Is PBS disabled?
+              scheduler_directives:
+                label: Scheduler Directives
+                type: editor
+                tooltip: Type the PBS scheduler directives
+
+      service:
+        type: group
+        label: Jupyter Notebook Settings
+        items:
+          name:
+            type: string
+            hidden: true
+            default: jupyter-host
+          nginx_sif:
+            type: string
+            hidden: true
+            default: /public/apps/pw/nginx-unprivileged.sif
+          notebook_dir:
+            label: Directory to start Jupyter Notebook GUI
+            type: string
+            default: /gs/gsfs0/users/${USER}/pw/
+            tooltip: This is the directory that you start with when the Jupyter graphical user interface starts. The default value here is your home directory.
+          load_env:
+            label: Command to load Jupyter Notebook to the PATH
+            type: string
+            default: source /gs/gsfs0/hpc01/rhel8/apps/conda3/etc/profile.d/conda.sh; conda activate base; module load cuda
+            tooltip: Use a bash command
+          password:
+            label: Password for notebook session
+            type: password
+            optional: true
+            hidden: true
+            ignore: true
+            tooltip: Enter password or leave blank for no password

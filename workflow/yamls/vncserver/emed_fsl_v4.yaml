@@ -62,7 +62,6 @@ jobs:
             cp inputs.sh controller-preprocessing.sh
             cat ${{ inputs.service.name }}/controller-v3.sh >> controller-preprocessing.sh
             bash controller-preprocessing.sh
-            sleep 5
         - name: Create Service Script
           run: |
             # This script starts the service

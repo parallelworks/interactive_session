@@ -393,7 +393,7 @@ jobs:
           notebook_dir:
             label: Directory to start Jupyter Notebook GUI
             type: string
-            default: /gs/gsfs0/users/__USER__/pw/
+            default: /gs/gsfs0/users/${USER}/pw/
             tooltip: This is the directory that you start with when the Jupyter graphical user interface starts. The default value here is your home directory.
           load_env:
             label: Command to load Jupyter Notebook to the PATH

@@ -1,7 +1,6 @@
 #[[ "${DEBUG:-}" == "true" ]] && set -x
 
 cd ${resource_jobdir}
-set -x
 
 
 if [ -z ${service_parent_install_dir} ]; then

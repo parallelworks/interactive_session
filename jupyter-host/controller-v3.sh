@@ -1,4 +1,4 @@
-[[ "${DEBUG:-}" == "true" ]] && set -x
+#[[ "${DEBUG:-}" == "true" ]] && set -x
 
 cd ${resource_jobdir}
 
@@ -133,11 +133,20 @@ if [[ "${service_conda_install}" == "true" ]]; then
         echo "Installing conda environment ${service_install_instructions}.yaml"
         f_set_up_conda_from_yaml ${service_parent_install_dir}/${service_conda_install_dir} ${service_conda_env} ${service_install_instructions}.yaml
     fi
-    if [ -z ${service_load_env} ]; then
+    if [ -z "${service_load_env}" ]; then
         service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
     fi
 fi
+
 eval "${service_load_env}"
+#IFS=';'
+#for cmd in $service_load_env; do
+#    cmd="${cmd#"${cmd%%[![:space:]]*}"}"   # trim leading whitespace
+#    cmd="${cmd%"${cmd##*[![:space:]]}"}"   # trim trailing whitespace
+#    [ -n "$cmd" ] && eval "$cmd"
+#done
+#unset IFS cmd
+
 
 if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
     displayErrorMessage "jupyter-notebook command not found"

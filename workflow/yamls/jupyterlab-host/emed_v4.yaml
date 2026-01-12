@@ -265,7 +265,6 @@ jobs:
             label: Service host
             include-workspace: false
             tooltip: Resource to host the service
-            include-workspace: false
             autoselect: true
           scheduler:
             type: boolean

@@ -11,7 +11,7 @@ jobs:
   preprocessing:
       if: ${{ inputs.resource.type != 'kubernetes' }}
       ssh:
-        remoteHost: ${{ inputs.cluster.resource.ip }}
+        remoteHost: ${{ inputs.resource.ip }}
       steps:
         - name: Checkout
           uses: parallelworks/checkout
@@ -101,12 +101,12 @@ jobs:
     needs:
       - preprocessing
     ssh:
-        remoteHost: ${{ inputs.cluster.resource.ip }}
+        remoteHost: ${{ inputs.resource.ip }}
     steps:
       - uses: marketplace/script_submitter/v3.5
         early-cancel: any-job-failed
         with:
-          resource: ${{ inputs.cluster.resource }}
+          resource: ${{ inputs.resource }}
           shebang: '#!/bin/bash'
           rundir: ${PW_PARENT_JOB_DIR}
           use_existing_script: true
@@ -134,7 +134,7 @@ jobs:
     needs:
       - preprocessing
     ssh:
-      remoteHost: ${{ inputs.cluster.resource.ip }}
+      remoteHost: ${{ inputs.resource.ip }}
     steps:
       - name: Wait for job to start
         early-cancel: any-job-failed
@@ -166,7 +166,7 @@ jobs:
       - session_runner
       - wait_for_job_start
     ssh:
-      remoteHost: ${{ inputs.cluster.resource.ip }}
+      remoteHost: ${{ inputs.resource.ip }}
     steps:
       - name: Controller cleanup
         if: ${{ inputs.cluster.slurm.is_disabled && inputs.cluster.pbs.is_disabled && inputs.resource.type != 'kubernetes'}}
@@ -196,7 +196,7 @@ jobs:
     needs:
       - wait_for_job_start
     ssh:
-      remoteHost: ${{ inputs.cluster.resource.ip }}
+      remoteHost: ${{ inputs.resource.ip }}
     steps:
       - name: Get Session Port
         early-cancel: any-job-failed
@@ -243,7 +243,7 @@ jobs:
       - name: Update Session
         uses: parallelworks/update-session
         with:
-          target: '${{ inputs.cluster.resource.id }}'
+          target: '${{ inputs.resource.id }}'
           name: '${{ sessions.session }}'
           slug: 'lab'
           remoteHost: '${{ needs.wait_for_job_start.outputs.HOSTNAME }}'
@@ -255,7 +255,7 @@ jobs:
     steps:
       - name: Authenticate kubectl
         early-cancel: any-job-failed
-        run: pw kube auth ${{ inputs.k8s.cluster }}
+        run: pw kube auth ${{ inputs.resource.name }}
   prepare_k8s_pvc:
     if: ${{ inputs.resource.type == 'kubernetes' }}
     needs:
@@ -573,7 +573,7 @@ jobs:
           name: ${{ sessions.session }}
           slug: ${{ needs.create_k8s_session.outputs.slug }}
           targetInfo:
-            name: ${{ inputs.k8s.cluster }}
+            name: ${{ inputs.resource.name }}
             namespace: ${{ inputs.k8s.namespace }}
             resourceType: services
             resourceName: ${{ needs.create_k8s_session.outputs.service_name }}

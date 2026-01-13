@@ -658,8 +658,8 @@ jobs:
       k8s:
         type: group
         label: Kubernetes Settings
-        hidden: ${{ inputs.resource.type == 'kubernetes' }}
-        ignore: ${{ inputs.resource.type == 'kubernetes' }}
+        hidden: ${{ inputs.resource.type != 'kubernetes' }}
+        ignore: ${{ inputs.resource.type != 'kubernetes' }}
         items:
           namespace:
             label: Namespace

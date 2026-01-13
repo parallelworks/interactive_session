@@ -433,6 +433,7 @@ jobs:
           echo "Performing dry run..."
           kubectl apply -f app.yaml --dry-run=client
   apply_k8s_deployment:
+    if: ${{ inputs.resource.type == 'kubernetes' }}
     needs:
       - prepare_k8s_deployment
     steps:

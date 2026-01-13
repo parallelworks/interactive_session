@@ -4,12 +4,12 @@ sessions:
   session:
     useTLS: false
     redirect: true
-    useCustomDomain: ${{ inputs.targetType == 'kubernetes-cluster' }}
+    useCustomDomain: ${{ inputs.resource.type == 'kubernetes' }}
 
 
 jobs:
   preprocessing:
-      if: ${{ inputs.targetType == 'compute-cluster' }}
+      if: ${{ inputs.resource.type != 'kubernetes' }}
       ssh:
         remoteHost: ${{ inputs.cluster.resource.ip }}
       steps:
@@ -97,7 +97,7 @@ jobs:
             sed -i 's/findAvailablePort/pw agent open-port/' start-service.sh
 
   session_runner:
-    if: ${{ inputs.targetType == 'compute-cluster' }}
+    if: ${{ inputs.resource.type != 'kubernetes' }}
     needs:
       - preprocessing
     ssh:
@@ -130,7 +130,7 @@ jobs:
 
 
   wait_for_job_start:
-    if: ${{ inputs.targetType == 'compute-cluster' }}
+    if: ${{ inputs.resource.type != 'kubernetes' }}
     needs:
       - preprocessing
     ssh:
@@ -169,7 +169,7 @@ jobs:
       remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
       - name: Controller cleanup
-        if: ${{ inputs.cluster.slurm.is_disabled && inputs.cluster.pbs.is_disabled && inputs.targetType == 'compute-cluster'}}
+        if: ${{ inputs.cluster.slurm.is_disabled && inputs.cluster.pbs.is_disabled && inputs.resource.type != 'kubernetes'}}
         run: echo "$(date) Cleaning up..."
         cleanup: |
           set -x
@@ -177,7 +177,7 @@ jobs:
             bash cancel.sh
           fi
       - name: Compute cleanup
-        if: ${{ (inputs.cluster.slurm.is_disabled == false || inputs.cluster.pbs.is_disabled == false) && inputs.targetType == 'compute-cluster' }}
+        if: ${{ (inputs.cluster.slurm.is_disabled == false || inputs.cluster.pbs.is_disabled == false) && inputs.resource.type != 'kubernetes' }}
         run: echo "Cleaning up..."
         cleanup: |
           set -x
@@ -192,7 +192,7 @@ jobs:
           fi
 
   create_session:
-    if: ${{ inputs.targetType == 'compute-cluster' }}
+    if: ${{ inputs.resource.type != 'kubernetes' }}
     needs:
       - wait_for_job_start
     ssh:
@@ -251,13 +251,13 @@ jobs:
 
 
   auth_k8s:
-    if: ${{ inputs.targetType == 'kubernetes-cluster' }}
+    if: ${{ inputs.resource.type == 'kubernetes' }}
     steps:
       - name: Authenticate kubectl
         early-cancel: any-job-failed
         run: pw kube auth ${{ inputs.k8s.cluster }}
   prepare_k8s_pvc:
-    if: ${{ inputs.targetType == 'kubernetes-cluster' }}
+    if: ${{ inputs.resource.type == 'kubernetes' }}
     needs:
       - auth_k8s
     steps:
@@ -309,7 +309,7 @@ jobs:
           echo "Performing dry run..."
           kubectl apply -f pvc.yaml --dry-run=client
   prepare_k8s_deployment:
-    if: ${{ inputs.targetType == 'kubernetes-cluster' }}
+    if: ${{ inputs.resource.type == 'kubernetes' }}
     needs:
       - prepare_k8s_pvc
     steps:
@@ -533,7 +533,7 @@ jobs:
         early-cancel: any-job-failed
         run: kubectl logs -f deployment/${{ needs.apply_k8s_deployment.outputs.app_name }} -n ${{ inputs.k8s.namespace }}
   create_k8s_session:
-    if: ${{ inputs.targetType == 'kubernetes-cluster' }}
+    if: ${{ inputs.resource.type == 'kubernetes' }}
     needs:
       - prepare_k8s_deployment
     steps:
@@ -581,86 +581,72 @@ jobs:
 'on':
   execute:
     inputs:
-      targetType:
-        label: Target Type
-        type: dropdown
-        default: compute-cluster
-        options:
-          - label: Compute Cluster
-            value: compute-cluster
-          - label: Kubernetes Cluster
-            value: kubernetes-cluster
+      resource:
+        type: compute-resources
+        label: Service host
+        include-workspace: false
+        tooltip: Resource to host the service
       cluster:
-        hidden: ${{ inputs.targetType != 'compute-cluster' }}
+        hidden: ${{ inputs.resource.type == 'kubernetes' || inputs.resource.schedulerType == '' }}
+        ignore: ${{ inputs.resource.type == 'kubernetes' || inputs.resource.schedulerType == ''  }}
         type: group
         label: Compute Cluster Settings
         items:
-          resource:
-            type: compute-clusters
-            label: Service host
-            include-workspace: false
-            optional: ${{ inputs.targetType != 'compute-cluster' }}
-            tooltip: Resource to host the service
           scheduler:
             type: boolean
             default: false
             label: Schedule Job?
-            hidden: ${{ inputs.cluster.resource.schedulerType == '' || inputs.targetType != 'compute-cluster' }}
-            ignore: ${{ .hidden }}
             tooltip: |
               Yes → Job is submitted to the scheduler using sbatch, qsub, etc
               No  → Job is executed in the controller or login node instead
           slurm:
             type: group
             label: SLURM Directives
-            hidden: ${{ ( inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' ) || inputs.cluster.scheduler == false  || inputs.targetType != 'compute-cluster' }}
+            hidden: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
             items:
               is_disabled:
                 type: boolean
                 hidden: true
-                default: ${{ ( inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' ) || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
+                default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
                 label: Is SLURM disabled?
               partition:
                 type: slurm-partitions
                 label: SLURM partition
-                ignore: ${{ ( inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' ) || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
                 optional: true
-                resource: ${{ inputs.cluster.resource }}
+                resource: ${{ inputs.resource }}
                 tooltip: Select a partition from the drop down menu.
               time:
                 label: Walltime
                 type: string
                 default: '01:00:00'
-                ignore: ${{ ( inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' ) || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
                 tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
               scheduler_directives:
                 type: editor
-                ignore: ${{ ( inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' ) ß|| inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
                 optional: true
                 tooltip: |
                   Type in additional scheduler directives. 
           pbs:
             type: group
             label: PBS Directives
-            hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
+            hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             items:
               is_disabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
+                default: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
                 label: Is PBS disabled?
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
                 tooltip: Type the PBS scheduler directives
-                hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false || inputs.targetType != 'compute-cluster' }}
-
 
       service:
         type: group
         label: Jupyter Lab Settings
         collapsed: true
-        hidden: ${{ inputs.targetType != 'compute-cluster' }}
+        hidden: ${{ inputs.resource.type == 'kubernetes' }}
         items:
           name:
             type: string
@@ -749,17 +735,14 @@ jobs:
       k8s:
         type: group
         label: Kubernetes Settings
-        hidden: ${{ inputs.targetType != 'kubernetes-cluster' }}
+        hidden: ${{ inputs.resource.type != 'kubernetes' }}
+        ignore: ${{ inputs.resource.type != 'kubernetes' }}
         items:
-          cluster:
-            label: Kubernetes cluster
-            type: kubernetes-clusters
-            optional: ${{ inputs.targetType != 'kubernetes-cluster' }}
           namespace:
             label: Namespace
             type: kubernetes-namespaces
-            clusterName: ${{ inputs.k8s.cluster }}
-            optional: ${{ inputs.targetType != 'kubernetes-cluster' }}
+            clusterName: ${{ inputs.resource.name }}
+            optional: ${{ inputs.resource.type != 'kubernetes' }}
           volumes:
             type: group
             label: Volumes
@@ -782,7 +765,7 @@ jobs:
               pvc_existing:
                 label: Select PVC Name
                 type: kubernetes-pvc
-                clusterName: ${{ inputs.k8s.cluster }}
+                clusterName: ${{ inputs.resource.name }}
                 namespace: ${{ inputs.k8s.namespace }}
                 hidden: ${{ inputs.k8s.volumes.pvc != Existing }}
                 ignore: ${{ .hidden }}
@@ -887,10 +870,11 @@ jobs:
                     tooltip: Specify the number of GPUs to allocate for the deployment.
                     hidden: ${{ inputs.k8s.resources.limits.select_gpu == None }}
                     ignore: ${{ .hidden }}
+
       service_k8s:
         type: group
         label: Service Settings
-        hidden: ${{ inputs.targetType != 'kubernetes-cluster' }}
+        hidden: ${{ inputs.resource.type != 'kubernetes' }}
         items:
           image:
             label: Jupyter Lab Image
@@ -913,7 +897,8 @@ jobs:
         type: group
         label: Attached GPU Settings
         collapsed: true
-        hidden: ${{ org.JUICE_TOKEN == "" || inputs.targetType != 'compute-cluster' }}
+        hidden: ${{ org.JUICE_TOKEN == "" || inputs.resource.type == 'kubernetes' }}
+        ignore: ${{ org.JUICE_TOKEN == "" || inputs.resource.type == 'kubernetes' }}
         items:
           use_juice:
             label: Enable Juice?

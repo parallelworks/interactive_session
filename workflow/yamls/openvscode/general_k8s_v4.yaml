@@ -107,12 +107,12 @@ jobs:
           script_path: "${PW_PARENT_JOB_DIR}/start-service.sh"
           scheduler: ${{ inputs.cluster.scheduler }}
           slurm:
-            is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
+            is_disabled: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
             partition: ${{ inputs.cluster.slurm.partition }}
             scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
             time: ${{ inputs.cluster.slurm.time }}
           pbs:
-            is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
+            is_disabled: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
       - name: Notify job ended
         early-cancel: any-job-failed

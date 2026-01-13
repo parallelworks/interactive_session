@@ -336,7 +336,7 @@ jobs:
           conda_install_dir:
             label: Name of the Conda Installation Directory
             type: string
-            default: .miniconda3c
+            default: .miniconda3cn
             hidden: ${{ inputs.service.conda_install == false }}
             ignore: ${{ .hidden }}
             tooltip: Ensure the directory has sufficient space for Conda and its packages.
@@ -351,7 +351,7 @@ jobs:
           load_env:
             label: Command to load Jupyter Notebook to the PATH
             type: string
-            default: source ${HOME}/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base
+            default: source ${HOME}/pw/.miniconda3cn/etc/profile.d/conda.sh; conda activate base
             hidden: ${{ inputs.service.conda_install == true }}
             optional: ${{ .hidden }}
             ignore: ${{ .hidden }}

@@ -629,7 +629,7 @@ jobs:
       service:
         type: group
         label: Service
-        hidden: true
+        hidden: ${{ inputs.targetType != 'compute-cluster' }}
         items:
           novnc_parent_install_dir:
             label: noVNC installation directory
@@ -646,11 +646,20 @@ jobs:
             label: Select remote display protocol
             hidden: true
             default: vncserver
+          load_env:
+            label: Command to load RStudio
+            type: string
+            optional: true
+          bin:
+            label: Service Binary
+            type: string
+            default: rstudio
+
       k8s:
         type: group
         label: Kubernetes Settings
-        hidden: ${{ inputs.resource.type != 'kubernetes' }}
-        ignore: ${{ inputs.resource.type != 'kubernetes' }}
+        hidden: ${{ inputs.resource.type == 'kubernetes' }}
+        ignore: ${{ inputs.resource.type == 'kubernetes' }}
         items:
           namespace:
             label: Namespace
@@ -788,20 +797,21 @@ jobs:
       service_k8s:
         type: group
         label: Service Settings
-        hidden: ${{ inputs.resource.type != 'kubernetes' }}
+        hidden: ${{ inputs.resource.type != 'kubernetes'  }}
+        ignore: ${{ inputs.resource.type != 'kubernetes'  }}
         items:
           image:
-            label: KasmVNC Image
+            label: RStudio Image
             type: string
-            default: kasmweb/desktop:1.16.0
-            tooltip: Sample container from https://hub.docker.com/r/kasmweb/desktop
+            default: rocker/rstudio
+            tooltip: Sample container from https://hub.docker.com/r/rocker/rstudio
           image_port:
-            label: KasmVNC Port
+            label: RStudio Port
             type: number
-            default: 6901
-            tooltip: Define the port on which the KasmVNC runs inside the container. Default is 6901.
+            default: 8787
+            hidden: true
           password:
             label: Password
             type: password
-            tooltip: Type in a password for user kasm_user
-            optional: ${{ inputs.resource.type != 'kubernetes' }}
+            tooltip: Type in a password for user rstudio
+            optional: true

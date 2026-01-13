@@ -97,12 +97,6 @@ jobs:
     ssh:
         remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - name: echo is_disabled
-        run: |
-          set -x
-          echo "slurm.is_disabled=${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}"
-          echo "pbs.is_disabled=${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}"
-          sleep 5
       - uses: marketplace/script_submitter/v3.5
         early-cancel: any-job-failed
         with:
@@ -113,12 +107,12 @@ jobs:
           script_path: "${PW_PARENT_JOB_DIR}/start-service.sh"
           scheduler: ${{ inputs.cluster.scheduler }}
           slurm:
-            is_disabled: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
             partition: ${{ inputs.cluster.slurm.partition }}
             scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
             time: ${{ inputs.cluster.slurm.time }}
           pbs:
-            is_disabled: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
       - name: Notify job ended
         early-cancel: any-job-failed

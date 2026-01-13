@@ -97,6 +97,12 @@ jobs:
     ssh:
         remoteHost: ${{ inputs.resource.ip }}
     steps:
+      - name: echo is_disabled
+        run: |
+          set -x
+          echo "slurm.is_disabled=${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}"
+          echo "pbs.is_disabled=${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}"
+          sleep 5
       - uses: marketplace/script_submitter/v3.5
         early-cancel: any-job-failed
         with:

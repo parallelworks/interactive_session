@@ -6,7 +6,6 @@ sessions:
     redirect: true
     useCustomDomain: ${{ inputs.targetType == 'kubernetes-cluster' }}
 
-
 jobs:
   preprocessing:
       if: ${{ inputs.targetType == 'compute-cluster' }}

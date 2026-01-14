@@ -257,10 +257,16 @@ jobs:
           slug: '${{ needs.preprocessing.outputs.slug }}'
           remoteHost: '${{ needs.wait_for_job_start.outputs.HOSTNAME }}'
           remotePort: '${{ needs.create_session.outputs.SESSION_PORT }}'
+          localPort: '${{ inputs.localport }}'
 
 'on':
   execute:
     inputs:
+      localport:
+        label: User Workspace Port
+        tooltip: Port that runs within the user workspace and used to connect to the code assist and chat interfaces.
+        type: string
+        optional: true
       cluster:
         type: group
         label: Compute Cluster Settings

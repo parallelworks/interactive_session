@@ -103,7 +103,7 @@ jobs:
     ssh:
         remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
-      - uses: marketplace/script_submitter/v3.5
+      - uses: workflow/scriptsubmitterlatestfork
         early-cancel: any-job-failed
         with:
           resource: ${{ inputs.cluster.resource }}

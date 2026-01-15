@@ -116,7 +116,7 @@ jobs:
             is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
             slurm_options: ${{ inputs.cluster.slurm.slurm_options }}
             partition_default: ${{ inputs.cluster.slurm.partition_default }}
-            partition_hpc4: ${{ inputs.cluster.slurm.partition_hpc4
+            partition_hpc4: ${{ inputs.cluster.slurm.partition_hpc4 }}
             cpus_per_task: ${{ inputs.cluster.slurm.cpus_per_task }}
             mem: ${{ inputs.cluster.slurm.mem }}
             gres_gpu_default: ${{ inputs.cluster.slurm.gres_gpu_default }}

@@ -501,7 +501,7 @@ EOF
 
     vncserver_pid=$(cat "${HOME}/.vnc/$(hostname)${DISPLAY}.pid")
     echo "kill ${vncserver_pid} #${HOME}/.vnc/$(hostname)${DISPLAY}.pid" >> cancel.sh
-    cat "${HOME}/.vnc/$(hostname)${DISPLAY}.log"  >> cancel.sh
+    echo "cat ${HOME}/.vnc/$(hostname)${DISPLAY}.log"  >> cancel.sh
     echo "rm \"${HOME}/.vnc/$(hostname)${DISPLAY}*\"" >> cancel.sh
     cat ${HOME}/.vnc/$(hostname)${DISPLAY}.log
 

@@ -818,4 +818,3 @@ jobs:
             label: Password
             type: password
             tooltip: Type in a password for user rstudio
-            optional: true

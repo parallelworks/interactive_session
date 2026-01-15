@@ -390,9 +390,10 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
 
     XSTARTUP_PATH="$HOME/.vnc/kasm-xstartup"
 
-cat << 'EOF' | tee "${XSTARTUP_PATH}" >/dev/null
-    #!/bin/sh
-    set -eu
+if ! [ -f "${XSTARTUP_PATH}" ]; then
+cat > ${XSTARTUP_PATH} << 'EOF'
+#!/bin/sh
+set -eu
 
 detect_desktop_env() {
     if command -v cinnamon-session >/dev/null 2>&1; then
@@ -467,7 +468,7 @@ EOF
     chmod 0755 "${XSTARTUP_PATH}"
 
     echo "Kasm xstartup wrapper installed at ${XSTARTUP_PATH}"
-
+fi
     vncserver_cmd="${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} \
         -xstartup ${XSTARTUP_PATH} \
         -websocketPort ${kasmvnc_port} \

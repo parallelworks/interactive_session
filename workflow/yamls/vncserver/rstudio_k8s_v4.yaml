@@ -90,6 +90,8 @@ jobs:
             touch job.started
             EOF
             cat ${{ inputs.service.name }}/start-template-v3.sh >> start-service.sh
+            # TRANSITION CODE
+            sed -i 's/findAvailablePort/pw agent open-port/' start-service.sh
 
   session_runner:
     if: ${{ inputs.resource.type != 'kubernetes' }}

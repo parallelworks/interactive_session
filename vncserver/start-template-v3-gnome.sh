@@ -1,7 +1,7 @@
 # Make sure no conda environment is activated! 
 # https://github.com/parallelworks/issues/issues/1081
 
-set -x
+
 start_rootless_docker() {
     local MAX_RETRIES=20
     local RETRY_INTERVAL=2
@@ -60,10 +60,10 @@ start_gnome_session_with_retries() {
     k=1
     while true; do
         if xset q >/dev/null 2>&1; then
-            echo "$(date) X server on $DISPLAY is alive."
+            echo "(date) X server on $DISPLAY is alive."
             sleep $((k*10))
         else
-            echo "$(date) X server on $DISPLAY is unresponsive."
+            echo "(date) X server on $DISPLAY is unresponsive."
             if [ $k -gt 1 ]; then
                 echo "$(date) Restarting vncserver"
                 ${service_vnc_exec} -kill ${DISPLAY}
@@ -109,7 +109,7 @@ if ! [ -z "${CONDA_PREFIX}" ]; then
     export LD_LIBRARY_PATH=$(echo "$LD_LIBRARY_PATH" | tr ':' '\n' | grep -v 'conda' | tr '\n' ':' | sed 's/:$//')
 fi
 
-[[ "${DEBUG:-}" == "true" ]] && set -x
+set -x
 
 # Find an available display port
 minPort=5901
@@ -161,7 +161,7 @@ fi
 
 if [[ ${service_download_vncserver_container} == "true" ]]; then
     if ! which singularity > /dev/null 2>&1; then
-        echo "$(date) ERROR: No vncserver or singularity command found"
+        echo "(date) ERROR: No vncserver or singularity command found"
         exit 1
     fi
     echo "$(date): vncserver is not installed. Using singularity container..."
@@ -178,7 +178,7 @@ unset DBUS_SESSION_BUS_ADDRESS
 HERE
 cat >> ${resource_jobdir}/vncserver.sh <<HERE
 #!/bin/bash
-[[ "${DEBUG:-}" == "true" ]] && set -x
+set -x
 vncserver -kill ${DISPLAY}
 vncserver ${DISPLAY} -SecurityTypes None
 mkdir -p /run/user/\$(id -u)
@@ -212,9 +212,6 @@ fi
 
 if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
 cat >> "${resource_jobdir}/cancel.sh" <<HERE
-${service_vnc_exec} -kill ${DISPLAY}
-echo "${resource_jobdir}/vncserver.log:"
-cat ${resource_jobdir}/vncserver.log
 service_pid=\$(cat ${resource_jobdir}/service.pid)
 if [ -z \"\${service_pid}\" ]; then
     echo "ERROR: No service pid was found!"
@@ -225,13 +222,17 @@ else
     done
     kill \${service_pid}
 fi
+echo "${resource_jobdir}/vncserver.pid:"
+cat ${resource_jobdir}/vncserver.pid
+echo "${resource_jobdir}/vncserver.log:"
+cat ${resource_jobdir}/vncserver.log
+vnc_pid=\$(${resource_jobdir}/vncserver.pid)
+pkill -P \${vnc_pid}
+kill \${vnc_pid}
 HERE
 
 else
 cat >> "${resource_jobdir}/cancel.sh" <<HERE
-echo "~/.vnc/\${HOSTNAME}${DISPLAY}.log:"
-cat ~/.vnc/\${HOSTNAME}${DISPLAY}.log
-${service_vnc_exec} -kill ${DISPLAY}
 service_pid=\$(cat ${resource_jobdir}/service.pid)
 if [ -z \${service_pid} ]; then
     echo "ERROR: No service pid was found!"
@@ -242,8 +243,15 @@ else
     done
     kill \${service_pid}
 fi
-rm -f ~/.vnc/\${HOSTNAME}${DISPLAY}.*
-rm -f /tmp/.X11-unix/X${XdisplayNumber}
+echo "~/.vnc/\${HOSTNAME}${DISPLAY}.pid:"
+cat ~/.vnc/\${HOSTNAME}${DISPLAY}.pid
+echo "~/.vnc/\${HOSTNAME}${DISPLAY}.log:"
+cat ~/.vnc/\${HOSTNAME}${DISPLAY}.log
+vnc_pid=\$(cat ~/.vnc/\${HOSTNAME}${DISPLAY}.pid)
+pkill -P \${vnc_pid}
+kill \${vnc_pid}
+rm ~/.vnc/\${HOSTNAME}${DISPLAY}.*
+rm /tmp/.X11-unix/X${XdisplayNumber}
 HERE
 fi
 
@@ -284,6 +292,8 @@ if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
     # Start service
     mkdir -p ~/.vnc
     ${service_vnc_exec} -kill ${DISPLAY}
+    echo "${service_vnc_exec} -kill ${DISPLAY}" >> cancel.sh
+
     # To prevent the process from being killed at startime    
     if [ -f "${HOME}/.vnc/xstartup" ]; then
         sed -i '/vncserver -kill $DISPLAY/ s/^#*/#/' ~/.vnc/xstartup
@@ -351,6 +361,7 @@ if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
 elif [[ "${service_vnc_type}" == "SingularityTurboVNC" ]]; then
     # Start service
     mkdir -p ~/.vnc
+    echo "${service_vnc_exec} -kill ${DISPLAY}" >> cancel.sh
     export TMPDIR=${PWD}/tmp
     mkdir -p $TMPDIR
     ${singularity_exec} ${resource_jobdir}/vncserver.sh | tee -a vncserver.out &
@@ -383,100 +394,17 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     #expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "'"${service_password}"'\r"; expect "Verify:"; send "'"${service_password}"'\r"; expect eof'
     printf "%s\n%s\n" "$service_password" "$service_password" | vncpasswd -u "$USER" -w -r
 
+
     ${service_vnc_exec} -kill ${DISPLAY}
+    echo "${service_vnc_exec} -kill ${DISPLAY}" >> cancel.sh
 
     MAX_RETRIES=5
     RETRY_DELAY=5
     RETRY_COUNT=0
 
-    XSTARTUP_PATH="$HOME/.vnc/kasm-xstartup"
-
-cat << 'EOF' | tee "${XSTARTUP_PATH}" >/dev/null
-    #!/bin/sh
-    set -eu
-
-detect_desktop_env() {
-    if command -v cinnamon-session >/dev/null 2>&1; then
-        echo "cinnamon"
-    elif command -v mate-session >/dev/null 2>&1; then
-        echo "mate"
-    elif command -v startlxde >/dev/null 2>&1; then
-        echo "lxde"
-    elif command -v gnome-session >/dev/null 2>&1; then
-        echo "gnome"
-    elif command -v lxqt-session >/dev/null 2>&1; then
-        echo "lxqt"
-    elif command -v startplasma-x11 >/dev/null 2>&1 || command -v plasmashell >/dev/null 2>&1; then
-        echo "kde"
-    else
-        echo "none"
-    fi
-}
-
-    # Desktop environment selected by the Kasm launcher
-    de="$(detect_desktop_env)"
-    echo "*** running $de desktop ***"
-
-    case "$de" in
-    cinnamon)
-        # Clean up stale Cinnamon processes that break restarts under VNC
-        killall -q cinnamon cinnamon-session cinnamon-panel muffin nemo nemo-desktop || true
-
-        # VNC stability for Cinnamon (prevents blank desktop on second start)
-        export LIBGL_ALWAYS_SOFTWARE=1
-        export CLUTTER_BACKEND=x11
-        export GDK_BACKEND=x11
-        export QT_QPA_PLATFORM=xcb
-        export MOZ_ENABLE_WAYLAND=0
-
-        # Start Cinnamon with a scoped D-Bus session
-        exec dbus-run-session -- cinnamon-session
-        ;;
-
-    mate)
-        exec mate-session
-        ;;
-
-    lxde)
-        exec startlxde
-        ;;
-
-    gnome)
-        export XDG_CURRENT_DESKTOP=GNOME
-        export XDG_SESSION_TYPE=x11
-        export GDK_BACKEND=x11
-        export QT_QPA_PLATFORM=xcb
-        export MOZ_ENABLE_WAYLAND=0
-
-        exec dbus-run-session -- gnome-session --session=gnome        ;;
-
-    lxqt)
-        exec lxqt-session
-        ;;
-
-    kde)
-        exec startplasma-x11
-        ;;
-
-    *)
-        # Safe fallback if nothing matches
-        exec startlxde
-        ;;
-    esac
-EOF
-
-    chmod 0755 "${XSTARTUP_PATH}"
-
-    echo "Kasm xstartup wrapper installed at ${XSTARTUP_PATH}"
-
-    vncserver_cmd="${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} \
-        -xstartup ${XSTARTUP_PATH} \
-        -websocketPort ${kasmvnc_port} \
-        -rfbport ${displayPort}"
-
+    vncserver_cmd="${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} -select-de gnome -websocketPort ${kasmvnc_port} -rfbport ${displayPort}"
     echo Running:
     echo ${vncserver_cmd}
-
     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
         ${vncserver_cmd}
         if [ $? -eq 0 ]; then
@@ -495,13 +423,12 @@ EOF
 
     if ! [ -f "${HOME}/.vnc/$(hostname)${DISPLAY}.pid" ]; then
         echo $(date): "KasmVNC server failed to start. Exiting workflow."
-        #exit 1
-        sleep inf
+        exit 1
     fi
 
     vncserver_pid=$(cat "${HOME}/.vnc/$(hostname)${DISPLAY}.pid")
     echo "kill ${vncserver_pid} #${HOME}/.vnc/$(hostname)${DISPLAY}.pid" >> cancel.sh
-    echo "cat ${HOME}/.vnc/$(hostname)${DISPLAY}.log"  >> cancel.sh
+    cat "${HOME}/.vnc/$(hostname)${DISPLAY}.log"  >> cancel.sh
     echo "rm \"${HOME}/.vnc/$(hostname)${DISPLAY}*\"" >> cancel.sh
     cat ${HOME}/.vnc/$(hostname)${DISPLAY}.log
 

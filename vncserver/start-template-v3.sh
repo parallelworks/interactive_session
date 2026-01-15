@@ -1,6 +1,7 @@
 # Make sure no conda environment is activated! 
 # https://github.com/parallelworks/issues/issues/1081
 
+set -x
 start_rootless_docker() {
     local MAX_RETRIES=20
     local RETRY_INTERVAL=2
@@ -494,7 +495,8 @@ EOF
 
     if ! [ -f "${HOME}/.vnc/$(hostname)${DISPLAY}.pid" ]; then
         echo $(date): "KasmVNC server failed to start. Exiting workflow."
-        exit 1
+        #exit 1
+        sleep inf
     fi
 
     vncserver_pid=$(cat "${HOME}/.vnc/$(hostname)${DISPLAY}.pid")

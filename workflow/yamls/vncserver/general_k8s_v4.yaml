@@ -47,6 +47,10 @@ jobs:
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
             # Create slug
+            # Remove this when issue is fixed
+            if [ -z "${PW_PLATFORM_HOST}" ]; then
+              PW_PLATFORM_HOST=activate.parallel.works
+            fi
             slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
             echo "slug=${slug}"  | tee -a $OUTPUTS
         - name: Controller Preprocessing

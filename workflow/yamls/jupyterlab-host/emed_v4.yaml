@@ -28,7 +28,7 @@ jobs:
             cat <<'EOF' >> inputs.sh
             basepath=/me/session/${PW_USER}/${{ sessions.session }}
             PATH=$HOME/pw:$PATH
-            module load singularity
+            ${{ inputs.service.load_singularity }}
             service_nginx_sif="${{ inputs.service.nginx_sif_tag_existing }}"
             service_notebook_dir="${{ inputs.service.notebook_dir_tag_existing }}"
             service_load_env="${{ inputs.service.load_env_tag_existing }}"
@@ -486,3 +486,8 @@ jobs:
                 label: Julia Kernel
               - value: R-kernel
                 label: R Kernel
+          load_singularity:
+            type: string
+            label: Load Singularity
+            default: "module load singularity"
+            ignore: ${{ 'existing' != inputs.cluster.resource.provider }}

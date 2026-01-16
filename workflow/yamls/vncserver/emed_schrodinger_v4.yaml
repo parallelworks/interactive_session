@@ -31,7 +31,7 @@ jobs:
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH
-            module load singularity
+            ${{ inputs.service.load_singularity }}
             service_novnc_parent_install_dir="${{ inputs.service.novnc_parent_install_dir }}"
             service_novnc_tgz_basename="${{ inputs.service.novnc_tgz_basename }}"
             service_nginx_sif="${{ inputs.service.nginx_sif_tag_existing }}"
@@ -427,3 +427,8 @@ jobs:
             type: string
             hidden: true
             default: maestro
+          load_singularity:
+            type: string
+            label: Load Singularity
+            default: "module load singularity"
+            ignore: ${{ 'existing' != inputs.cluster.resource.provider }}

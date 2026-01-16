@@ -185,8 +185,8 @@ source /etc/profile
 source ~/.bash_profile
 
 # Locale required for XKB
-export LANG=en_US.UTF-8
-export LC_ALL=en_US.UTF-8
+export LANG=C.UTF-8
+export LC_ALL=C.UTF-8
 
 # XKB config path
 export XKB_CONFIG_ROOT=/usr/share/X11/xkb

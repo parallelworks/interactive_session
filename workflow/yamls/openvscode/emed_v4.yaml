@@ -31,6 +31,7 @@ jobs:
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH
+            ${{ inputs.service.load_singularity }}
             service_download_url="${{ inputs.service.download_url }}"
             service_password="${{ inputs.service.password }}"
             service_directory="${{ inputs.service.directory }}"
@@ -412,3 +413,8 @@ jobs:
             type: string
             default: /gs/gsfs0/users/${USER}/pw/
             tooltip: Directory to open in VS code
+          load_singularity:
+            type: string
+            label: Load Singularity
+            default: "module load singularity"
+            ignore: ${{ 'existing' != inputs.cluster.resource.provider }}

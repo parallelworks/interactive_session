@@ -28,6 +28,7 @@ jobs:
             cat <<'EOF' >> inputs.sh
             basepath=/me/session/${PW_USER}/${{ sessions.session }}
             PATH=$HOME/pw:$PATH
+            module load singularity
             service_nginx_sif="${{ inputs.service.nginx_sif }}"
             service_notebook_dir="${{ inputs.service.notebook_dir }}"
             service_load_env="${{ inputs.service.load_env }}"

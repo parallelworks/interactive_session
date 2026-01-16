@@ -179,7 +179,17 @@ unset DBUS_SESSION_BUS_ADDRESS
 HERE
 cat >> ${resource_jobdir}/vncserver.sh <<HERE
 #!/bin/bash
-[[ "${DEBUG:-}" == "true" ]] && set -x
+set -x
+# Load login environment
+source /etc/profile
+source ~/.bash_profile
+
+# Locale required for XKB
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
+# XKB config path
+export XKB_CONFIG_ROOT=/usr/share/X11/xkb
 vncserver -kill ${DISPLAY}
 vncserver ${DISPLAY} -SecurityTypes None
 mkdir -p /run/user/\$(id -u)

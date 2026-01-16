@@ -28,7 +28,6 @@ jobs:
             cat <<'EOF' >> inputs.sh
             basepath=/me/session/${PW_USER}/${{ sessions.session }}
             PATH=$HOME/pw:$PATH
-            ${{ inputs.service.load_singularity }}
             service_nginx_sif="${{ inputs.service.nginx_sif }}"
             service_notebook_dir="${{ inputs.service.notebook_dir }}"
             service_load_env="${{ inputs.service.load_env }}"
@@ -59,6 +58,7 @@ jobs:
             echo resource_jobdir=${PW_PARENT_JOB_DIR} >> start-service.sh
             # Write code common to all services
             cat <<'EOF' >> start-service.sh
+            ${{ inputs.service.load_singularity }}
 
             if [ -z "${service_port}" ]; then
               service_port=$(pw agent open-port)
@@ -87,6 +87,7 @@ jobs:
             cat ${{ inputs.service.name }}/start-template-v3.sh >> start-service.sh
             # TRANSITION CODE
             sed -i 's/findAvailablePort/pw agent open-port/' start-service.sh
+            sed -i 's/displayErrorMessage/echo/' start-service.sh
 
   session_runner:
     needs:

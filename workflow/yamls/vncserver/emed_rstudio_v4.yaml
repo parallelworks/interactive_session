@@ -31,7 +31,6 @@ jobs:
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH
-            ${{ inputs.service.load_singularity }}
             service_novnc_parent_install_dir="${{ inputs.service.novnc_parent_install_dir }}"
             service_novnc_tgz_basename="${{ inputs.service.novnc_tgz_basename }}"
             service_nginx_sif="${{ inputs.service.nginx_sif_tag_existing }}"
@@ -72,7 +71,7 @@ jobs:
             echo resource_jobdir=${PW_PARENT_JOB_DIR} >> start-service.sh
             # Write code common to all services
             cat <<'EOF' >> start-service.sh
-
+            ${{ inputs.service.load_singularity }}
             if [ -z "${service_port}" ]; then
               service_port=$(pw agent open-port)
             fi
@@ -100,6 +99,7 @@ jobs:
             cat ${{ inputs.service.name }}/start-template-v3.sh >> start-service.sh
             # TRANSITION CODE
             sed -i 's/findAvailablePort/pw agent open-port/' start-service.sh
+            sed -i 's/displayErrorMessage/echo/' start-service.sh
 
   session_runner:
     needs:

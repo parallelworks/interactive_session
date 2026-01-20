@@ -58,7 +58,6 @@ jobs:
       - uses: marketplace/session_runner/v1.3
         early-cancel: any-job-failed
         with:
-          session: ${{ sessions.session }}
           resource: ${{ inputs.cluster.resource }}
           scheduler: ${{ inputs.cluster.scheduler }}
           slurm:

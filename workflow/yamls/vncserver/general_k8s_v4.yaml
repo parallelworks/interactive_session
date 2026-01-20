@@ -160,7 +160,7 @@ jobs:
         early-cancel: any-job-failed
         with:
           session: ${{ sessions.session }}
-          resource: ${{ inputs.cluster.resource }}
+          resource: ${{ inputs.resource }}
           scheduler: ${{ inputs.cluster.scheduler }}
           slurm:
             is_disabled: ${{ inputs.cluster.slurm.is_disabled }}

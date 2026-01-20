@@ -61,7 +61,7 @@ jobs:
     ssh:
         remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - uses: marketplace/script_submitter/v3.5
+      - uses: marketplace/script_submitter/v3.6
         early-cancel: any-job-failed
         with:
           resource: ${{ inputs.resource }}

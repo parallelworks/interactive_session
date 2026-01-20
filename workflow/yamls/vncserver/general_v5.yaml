@@ -1,8 +1,3 @@
-permissions:
-  - '*'
-sessions:
-  session:
-    redirect: true
 
 jobs:
   preprocessing:

@@ -1,67 +1,60 @@
 permissions:
   - '*'
-sessions:
-  session:
-    useTLS: false
-    redirect: true
-    useCustomDomain: false
-
 jobs:
   preprocessing:
-      working-directory: ${{ inputs.service.rundir }}
-      ssh:
-        remoteHost: ${{ inputs.resource.ip }}
-      steps:
-        - name: Controller Preprocessing
-          run: |
-            set -x
-            # This script prepares the target host and always runs in the controller node
-            cp ${{ inputs.service.inputs_sh }} ${{ inputs.service.rundir }}/controller-preprocessing-${PW_JOB_ID}.sh
-            cat ${{ inputs.service.controller_script }} >> ${{ inputs.service.rundir }}/controller-preprocessing-${PW_JOB_ID}.sh
-            bash ${{ inputs.service.rundir }}/controller-preprocessing-${PW_JOB_ID}.sh
-        - name: Create Service Script
-          run: |
-            # This script starts the service
-            cp ${{ inputs.service.inputs_sh }} ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
-            # TRANSITION CODE
-            echo resource_jobdir=${PW_PARENT_JOB_DIR} >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
-            # Write code common to all services
-            cat <<'EOF' >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
+    working-directory: ${{ inputs.service.rundir }}
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Controller Preprocessing
+        run: |
+          set -x
+          # This script prepares the target host and always runs in the controller node
+          cp ${{ inputs.service.inputs_sh }} ${{ inputs.service.rundir }}/controller-preprocessing-${PW_JOB_ID}.sh
+          cat ${{ inputs.service.controller_script }} >> ${{ inputs.service.rundir }}/controller-preprocessing-${PW_JOB_ID}.sh
+          bash ${{ inputs.service.rundir }}/controller-preprocessing-${PW_JOB_ID}.sh
+      - name: Create Service Script
+        run: |
+          # This script starts the service
+          cp ${{ inputs.service.inputs_sh }} ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
+          # TRANSITION CODE
+          echo resource_jobdir=${PW_PARENT_JOB_DIR} >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
+          # Write code common to all services
+          cat <<'EOF' >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
 
-            if [ -z "${service_port}" ]; then
-              service_port=$(pw agent open-port)
-            fi
+          if [ -z "${service_port}" ]; then
+            service_port=$(pw agent open-port)
+          fi
 
-            if [ -z "${service_port}" ]; then
-              echo "$(date) ERROR: No service port found"
-              exit 1            
-            fi
-            echo ${service_port} > SESSION_PORT
-            hostname > HOSTNAME
+          if [ -z "${service_port}" ]; then
+            echo "$(date) ERROR: No service port found"
+            exit 1            
+          fi
+          echo ${service_port} > SESSION_PORT
+          hostname > HOSTNAME
 
-            cleanup() {
-                echo "$(date) Cleaning up..."
-                kill -- -$$
-            }
+          cleanup() {
+              echo "$(date) Cleaning up..."
+              kill -- -$$
+          }
 
-            trap cleanup EXIT INT TERM
+          trap cleanup EXIT INT TERM
 
-            echo
-            echo
-            echo "$(date) STARTING SERVICE"
-            echo
-            touch job.started
-            EOF
-            cat ${{ inputs.service.start_service_script }} >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
-            # TRANSITION CODE
-            sed -i 's/findAvailablePort/pw agent open-port/' ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
-
+          echo
+          echo
+          echo "$(date) STARTING SERVICE"
+          echo
+          touch job.started
+          EOF
+          cat ${{ inputs.service.start_service_script }} >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
+          # TRANSITION CODE
+          sed -i 's/findAvailablePort/pw agent open-port/' ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
   session_runner:
     working-directory: ${{ inputs.service.rundir }}
     needs:
       - preprocessing
     ssh:
-        remoteHost: ${{ inputs.resource.ip }}
+      remoteHost: ${{ inputs.resource.ip }}
     steps:
       - uses: marketplace/script_submitter/v3.6
         early-cancel: any-job-failed
@@ -70,7 +63,7 @@ jobs:
           shebang: '#!/bin/bash'
           rundir: ${{ inputs.service.rundir }}
           use_existing_script: true
-          script_path: "${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh"
+          script_path: ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
           scheduler: ${{ inputs.cluster.scheduler }}
           slurm:
             is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
@@ -87,8 +80,6 @@ jobs:
           pwd
           touch job.ended
           ls -lat job.ended
-
-
   wait_for_job_start:
     working-directory: ${{ inputs.service.rundir }}
     needs:
@@ -119,7 +110,6 @@ jobs:
             echo "$(date) Failed to get target hostname"
             exit 1
           fi
-
   cleanup:
     working-directory: ${{ inputs.service.rundir }}
     if: ${{ always }}
@@ -151,7 +141,6 @@ jobs:
           if [ -f cancel.sh ]; then
             ${sshcmd} 'bash -s' < ${PWD}/cancel.sh
           fi
-
   create_session:
     working-directory: ${{ inputs.service.rundir }}
     needs:
@@ -205,17 +194,18 @@ jobs:
       - name: Update Session
         uses: parallelworks/update-session
         with:
-          target: '${{ inputs.resource.id }}'
-          name: '${{ sessions.session }}'
-          slug: '${{ inputs.service.slug }}'
-          remoteHost: '${{ needs.wait_for_job_start.outputs.HOSTNAME }}'
-          remotePort: '${{ needs.create_session.outputs.SESSION_PORT }}'
-
-
-
+          target: ${{ inputs.resource.id }}
+          name: ${{ inputs.session }}
+          slug: ${{ inputs.service.slug }}
+          remoteHost: ${{ needs.wait_for_job_start.outputs.HOSTNAME }}
+          remotePort: ${{ needs.create_session.outputs.SESSION_PORT }}
 'on':
   execute:
     inputs:
+      session:
+        label: Session
+        type: string
+        tooltip: Need to pass a session from the parent workflow
       resource:
         type: compute-clusters
         label: Service host
@@ -279,7 +269,6 @@ jobs:
       service:
         type: group
         label: Service
-        hidden: true
         items:
           start_service_script:
             label: Start Service Script

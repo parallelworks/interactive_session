@@ -1,3 +1,11 @@
+permissions:
+  - '*'
+sessions:
+  session:
+    useTLS: false
+    redirect: true
+    useCustomDomain: false
+
 
 jobs:
   preprocessing:
@@ -20,17 +28,12 @@ jobs:
             sed -i 's/=\(.*\)/="\1"/' inputs.sh
             # Password
             password=$(openssl rand -base64 12 | head -c 12)
-            # basepath
-            PW_JOB_NUMBER_STRIPPED=$(printf '%d' "$PW_JOB_NUMBER")
-            session_name="${PW_WORKFLOW_NAME}_${PW_JOB_NUMBER_STRIPPED}_session_runner_step_0_session"
-            basepath=/me/session/${PW_USER}/${session_name}
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH
             service_novnc_parent_install_dir="${{ inputs.service.novnc_parent_install_dir }}"
             service_novnc_tgz_basename="${{ inputs.service.novnc_tgz_basename }}"
             EOF
-            echo basepath=${basepath} >> inputs.sh
             echo password=${password} >> inputs.sh
             if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
               echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
@@ -44,8 +47,6 @@ jobs:
             if [ -z "${PW_PLATFORM_HOST}" ]; then
               PW_PLATFORM_HOST=activate.parallel.works
             fi
-            slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
-            echo "slug=${slug}"  | tee -a $OUTPUTS
 
   session_runner:
     needs:
@@ -53,9 +54,10 @@ jobs:
     ssh:
         remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
-      - uses: marketplace/session_runner/v1.1
+      - uses: marketplace/session_runner/v1.2
         early-cancel: any-job-failed
         with:
+          session: ${{ session.session }}
           resource: ${{ inputs.cluster.resource }}
           scheduler: ${{ inputs.cluster.scheduler }}
           slurm:
@@ -76,15 +78,6 @@ jobs:
 'on':
   execute:
     inputs:
-      targetType:
-        label: Target Type
-        type: dropdown
-        default: compute-cluster
-        options:
-          - label: Compute Cluster
-            value: compute-cluster
-          - label: Kubernetes Cluster
-            value: kubernetes-cluster
       cluster:
         type: group
         label: Compute Cluster Settings

@@ -21,6 +21,7 @@ jobs:
               - ${{ inputs.service.name }}
         - name: Create Inputs
           run: |
+            echo ${{ session.session }}
             set -x
             # Write PW variables
             env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh

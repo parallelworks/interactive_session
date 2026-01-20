@@ -21,7 +21,8 @@ jobs:
             # Password
             password=$(openssl rand -base64 12 | head -c 12)
             # basepath
-            basepath=/me/session/${PW_USER}/${{ sessions.session }}
+            session_name=$(echo ${PW_JOB_ID}_session_runner_step_0_session | tr '-' '_')
+            basepath=/me/session/${PW_USER}/${session_name}
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH

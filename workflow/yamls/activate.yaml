@@ -8,6 +8,7 @@ sessions:
 
 jobs:
   preprocessing:
+      working-directory: ${{ inputs.service.rundir }}
       ssh:
         remoteHost: ${{ inputs.resource.ip }}
       steps:
@@ -56,6 +57,7 @@ jobs:
             sed -i 's/findAvailablePort/pw agent open-port/' ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
 
   session_runner:
+    working-directory: ${{ inputs.service.rundir }}
     needs:
       - preprocessing
     ssh:
@@ -88,6 +90,7 @@ jobs:
 
 
   wait_for_job_start:
+    working-directory: ${{ inputs.service.rundir }}
     needs:
       - preprocessing
     ssh:
@@ -118,6 +121,7 @@ jobs:
           fi
 
   cleanup:
+    working-directory: ${{ inputs.service.rundir }}
     if: ${{ always }}
     needs:
       - session_runner
@@ -149,6 +153,7 @@ jobs:
           fi
 
   create_session:
+    working-directory: ${{ inputs.service.rundir }}
     needs:
       - wait_for_job_start
       - preprocessing

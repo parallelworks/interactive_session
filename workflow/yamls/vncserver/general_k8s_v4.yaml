@@ -47,55 +47,11 @@ jobs:
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
             # Create slug
-            # Remove this when issue is fixed
             if [ -z "${PW_PLATFORM_HOST}" ]; then
               PW_PLATFORM_HOST=activate.parallel.works
             fi
             slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
             echo "slug=${slug}"  | tee -a $OUTPUTS
-        - name: Controller Preprocessing
-          run: |
-            set -x
-            # This script prepares the target host and always runs in the controller node
-            cp inputs.sh controller-preprocessing.sh
-            cat ${{ inputs.service.name }}/controller-v3.sh >> controller-preprocessing.sh
-            bash controller-preprocessing.sh
-        - name: Create Service Script
-          run: |
-            # This script starts the service
-            cp inputs.sh start-service.sh
-            # TRANSITION CODE
-            echo resource_jobdir=${PW_PARENT_JOB_DIR} >> start-service.sh
-            # Write code common to all services
-            cat <<'EOF' >> start-service.sh
-
-            if [ -z "${service_port}" ]; then
-              service_port=$(pw agent open-port)
-            fi
-
-            if [ -z "${service_port}" ]; then
-              echo "$(date) ERROR: No service port found"
-              exit 1            
-            fi
-            echo ${service_port} > SESSION_PORT
-            hostname > HOSTNAME
-
-            cleanup() {
-                echo "$(date) Cleaning up..."
-                kill -- -$$
-            }
-
-            trap cleanup EXIT INT TERM
-
-            echo
-            echo
-            echo "$(date) STARTING SERVICE"
-            echo
-            touch job.started
-            EOF
-            cat ${{ inputs.service.name }}/start-template-v3.sh >> start-service.sh
-            # TRANSITION CODE
-            sed -i 's/findAvailablePort/pw agent open-port/' start-service.sh
 
   session_runner:
     if: ${{ inputs.resource.type != 'kubernetes' }}
@@ -192,64 +148,34 @@ jobs:
             ${sshcmd} 'bash -s' < ${PWD}/cancel.sh
           fi
 
-  create_session:
+
+  session_runner:
     if: ${{ inputs.resource.type != 'kubernetes' }}
     needs:
-      - wait_for_job_start
       - preprocessing
     ssh:
-      remoteHost: ${{ inputs.resource.ip }}
+        remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
-      - name: Get Session Port
+      - uses: marketplace/session_runner/v1.3
         early-cancel: any-job-failed
-        run: |
-          set -x
-          SESSION_PORT=$(cat SESSION_PORT)
-          echo "SESSION_PORT=${SESSION_PORT}" | tee -a $OUTPUTS
-
-          if [ -z "${SESSION_PORT}" ]; then
-            echo "$(date) Failed to get target session's port"
-            exit 1
-          fi
-      - name: Wait for Server To Start
-        early-cancel: any-job-failed
-        run: |
-          TIMEOUT=5
-          RETRY_INTERVAL=3
-          remote_host="${{ needs.wait_for_job_start.outputs.HOSTNAME }}"
-          remote_port="${{ needs.create_session.outputs.SESSION_PORT }}"
-
-          # Function to check if server is listening
-          check_server() {
-              curl --silent --connect-timeout "$TIMEOUT" "http://${remote_host}:${remote_port}" >/dev/null 2>&1
-              return $?
-          }
-
-          # Main loop
-          attempt=1
-          while true; do
-              echo "$(date) Attempt $attempt: Checking if server is listening on ${remote_host}:${remote_port}..."
-              
-              if check_server; then
-                  echo "$(date) Success: Server is listening on ${remote_host}:${remote_port}!"
-                  exit 0
-              elif [ -f job.ended ]; then
-                  echo "$(date) Job was completed. Exiting... "
-                  exit 0
-              else
-                  echo "$(date) Server not responding. Retrying in ${RETRY_INTERVAL} seconds..."
-                  sleep "$RETRY_INTERVAL"
-                  ((attempt++))
-              fi
-          done
-      - name: Update Session
-        uses: parallelworks/update-session
         with:
-          target: '${{ inputs.resource.id }}'
-          name: '${{ sessions.session }}'
-          slug: '${{ needs.preprocessing.outputs.slug }}'
-          remoteHost: '${{ needs.wait_for_job_start.outputs.HOSTNAME }}'
-          remotePort: '${{ needs.create_session.outputs.SESSION_PORT }}'
+          session: ${{ sessions.session }}
+          resource: ${{ inputs.cluster.resource }}
+          scheduler: ${{ inputs.cluster.scheduler }}
+          slurm:
+            is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
+            partition: ${{ inputs.cluster.slurm.partition }}
+            scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+            time: ${{ inputs.cluster.slurm.time }}
+          pbs:
+            is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
+            scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+          service:
+            start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/start-template-v3.sh
+            controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/controller-v3.sh
+            inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
+            slug: ${{ needs.preprocessing.outputs.slug }}
+            rundir: ${PW_PARENT_JOB_DIR}
 
   auth_k8s:
     steps:

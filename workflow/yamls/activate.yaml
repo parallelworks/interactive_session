@@ -68,7 +68,7 @@ jobs:
           shebang: '#!/bin/bash'
           rundir: ${{ inputs.service.rundir }}
           use_existing_script: true
-          script_path: " ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh"
+          script_path: "${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh"
           scheduler: ${{ inputs.cluster.scheduler }}
           slurm:
             is_disabled: ${{ inputs.cluster.slurm.is_disabled }}

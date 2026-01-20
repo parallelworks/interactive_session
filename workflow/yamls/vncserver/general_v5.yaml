@@ -55,7 +55,6 @@ jobs:
         early-cancel: any-job-failed
         with:
           resource: ${{ inputs.cluster.resource }}
-          rundir: ${PW_PARENT_JOB_DIR}
           scheduler: ${{ inputs.cluster.scheduler }}
           slurm:
             is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
@@ -70,6 +69,7 @@ jobs:
             controller_script: ${{ inputs.service.name }}/controller-v3.sh
             inputs_sh: 'inputs.sh'
             slug: ${{ needs.preprocessing.outputs.slug }}
+            rundir: ${PW_PARENT_JOB_DIR}
 
 'on':
   execute:

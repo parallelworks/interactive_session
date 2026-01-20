@@ -1,0 +1,176 @@
+permissions:
+  - '*'
+sessions:
+  session:
+    redirect: true
+
+jobs:
+  preprocessing:
+      ssh:
+        remoteHost: ${{ inputs.cluster.resource.ip }}
+      steps:
+        - name: Checkout
+          uses: parallelworks/checkout
+          with:
+            repo: https://github.com/parallelworks/interactive_session.git
+            branch: main
+            sparse_checkout:
+              - ${{ inputs.service.name }}
+        - name: Create Inputs
+          run: |
+            set -x
+            # Write PW variables
+            env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+            # Encase values between quotes
+            sed -i 's/=\(.*\)/="\1"/' inputs.sh
+            # Password
+            password=$(openssl rand -base64 12 | head -c 12)
+            # basepath
+            basepath=/me/session/${PW_USER}/${{ sessions.session }}
+            # Write input form variables and ensure the pw agent is in the PATH
+            cat <<'EOF' >> inputs.sh
+            PATH=$HOME/pw:$PATH
+            service_novnc_parent_install_dir="${{ inputs.service.novnc_parent_install_dir }}"
+            service_novnc_tgz_basename="${{ inputs.service.novnc_tgz_basename }}"
+            EOF
+            echo basepath=${basepath} >> inputs.sh
+            echo password=${password} >> inputs.sh
+            if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
+              echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
+            fi
+            # Remove empty variables
+            sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+            sed -i '/=""/d' inputs.sh # remove var=""
+            # Add export= to all lines
+            sed -i 's/^/export /' inputs.sh
+            # Create slug
+            if [ -z "${PW_PLATFORM_HOST}" ]; then
+              PW_PLATFORM_HOST=activate.parallel.works
+            fi
+            slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
+            echo "slug=${slug}"  | tee -a $OUTPUTS
+
+  session_runner:
+    needs:
+      - preprocessing
+    ssh:
+        remoteHost: ${{ inputs.cluster.resource.ip }}
+    steps:
+      - uses: marketplace/session_runner/v1.0.0
+        early-cancel: any-job-failed
+        with:
+          resource: ${{ inputs.cluster.resource }}
+          shebang: '#!/bin/bash'
+          rundir: ${PW_PARENT_JOB_DIR}
+          use_existing_script: true
+          script_path: "${PW_PARENT_JOB_DIR}/start-service.sh"
+          scheduler: ${{ inputs.cluster.scheduler }}
+          slurm:
+            is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
+            partition: ${{ inputs.cluster.slurm.partition }}
+            scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+            time: ${{ inputs.cluster.slurm.time }}
+          pbs:
+            is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
+            scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+          service:
+            start_service_script: ${{ inputs.service.name }}/start-template-v3.sh
+            controller_script: ${{ inputs.service.name }}/controller-v3.sh
+            inputs_sh: 'inputs.sh'
+            slug: ${{ needs.preprocessing.outputs.slug }}
+
+'on':
+  execute:
+    inputs:
+      targetType:
+        label: Target Type
+        type: dropdown
+        default: compute-cluster
+        options:
+          - label: Compute Cluster
+            value: compute-cluster
+          - label: Kubernetes Cluster
+            value: kubernetes-cluster
+      cluster:
+        type: group
+        label: Compute Cluster Settings
+        items:
+          resource:
+            type: compute-clusters
+            label: Service host
+            include-workspace: false
+            tooltip: Resource to host the service
+          scheduler:
+            type: boolean
+            default: false
+            label: Schedule Job?
+            hidden: ${{ inputs.cluster.resource.schedulerType == '' }}
+            ignore: ${{ .hidden }}
+            tooltip: |
+              Yes → Job is submitted to the scheduler using sbatch, qsub, etc
+              No  → Job is executed in the controller or login node instead
+          slurm:
+            type: group
+            label: SLURM Directives
+            hidden: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
+            items:
+              is_disabled:
+                type: boolean
+                hidden: true
+                default: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                label: Is SLURM disabled?
+              partition:
+                type: slurm-partitions
+                label: SLURM partition
+                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                optional: true
+                resource: ${{ inputs.cluster.resource }}
+                tooltip: Select a partition from the drop down menu.
+              time:
+                label: Walltime
+                type: string
+                default: '01:00:00'
+                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
+              scheduler_directives:
+                type: editor
+                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                optional: true
+                tooltip: |
+                  Type in additional scheduler directives. 
+          pbs:
+            type: group
+            label: PBS Directives
+            hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            items:
+              is_disabled:
+                type: boolean
+                hidden: true
+                default: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+                label: Is PBS disabled?
+              scheduler_directives:
+                label: Scheduler Directives
+                type: editor
+                tooltip: Type the PBS scheduler directives
+                hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+
+      service:
+        type: group
+        label: Service
+        hidden: true
+        items:
+          novnc_parent_install_dir:
+            label: noVNC installation directory
+            type: string
+            hidden: true
+            default: __HOME__/pw/software
+          novnc_tgz_basename:
+            label: Basename of the novnc tgz file
+            type: string
+            hidden: true
+            default: noVNC-1.5.0.tgz
+          name:
+            type: string
+            label: Select remote display protocol
+            hidden: true
+            default: vncserver

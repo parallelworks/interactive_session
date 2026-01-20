@@ -22,7 +22,7 @@ jobs:
         - name: Create Inputs
           run: |
             set -x
-            echo ${{ session.session }}
+            echo ${{ sessions.session }}
             # Write PW variables
             env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
             # Encase values between quotes
@@ -58,7 +58,7 @@ jobs:
       - uses: marketplace/session_runner/v1.2
         early-cancel: any-job-failed
         with:
-          session: ${{ session.session }}
+          session: ${{ sessions.session }}
           resource: ${{ inputs.cluster.resource }}
           scheduler: ${{ inputs.cluster.scheduler }}
           slurm:

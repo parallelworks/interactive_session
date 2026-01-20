@@ -66,9 +66,9 @@ jobs:
         with:
           resource: ${{ inputs.resource }}
           shebang: '#!/bin/bash'
-          rundir: ${PW_PARENT_JOB_DIR}
+          rundir: ${{ inputs.service.rundir }}
           use_existing_script: true
-          script_path: "${PW_PARENT_JOB_DIR}/start-service-${PW_JOB_ID}.sh"
+          script_path: " ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh"
           scheduler: ${{ inputs.cluster.scheduler }}
           slurm:
             is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
@@ -291,3 +291,7 @@ jobs:
           slug:
             label: Service URL Slug
             type: string
+          rundir:
+            label: Job Run directory
+            type: string
+            default: ${PW_PARENT_JOB_DIR}

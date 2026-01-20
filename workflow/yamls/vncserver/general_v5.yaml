@@ -55,10 +55,7 @@ jobs:
         early-cancel: any-job-failed
         with:
           resource: ${{ inputs.cluster.resource }}
-          shebang: '#!/bin/bash'
           rundir: ${PW_PARENT_JOB_DIR}
-          use_existing_script: true
-          script_path: "${PW_PARENT_JOB_DIR}/start-service.sh"
           scheduler: ${{ inputs.cluster.scheduler }}
           slurm:
             is_disabled: ${{ inputs.cluster.slurm.is_disabled }}

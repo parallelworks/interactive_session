@@ -58,17 +58,17 @@ jobs:
     needs:
       - preprocessing
     ssh:
-        remoteHost: ${{ inputs.cluster.resource.ip }}
+        remoteHost: ${{ inputs.resource.ip }}
     steps:
       - uses: marketplace/session_runner/v1.3
         early-cancel: any-job-failed
         with:
           session: ${{ sessions.session }}
-          resource: ${{ inputs.cluster.resource }}
+          resource: ${{ inputs.resource }}
           cluster:
             scheduler: ${{ inputs.cluster.scheduler }}
             slurm:
-              is_disabled: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
+              is_disabled: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
               partition: ${{ inputs.cluster.slurm.partition }}
               scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
               time: ${{ inputs.cluster.slurm.time }}

@@ -91,7 +91,6 @@ jobs:
             slug: ${{ needs.preprocessing.outputs.slug }}
             rundir: ${PW_PARENT_JOB_DIR}
 
-
 'on':
   execute:
     inputs:

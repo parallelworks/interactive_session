@@ -49,7 +49,7 @@ jobs:
             fi
             slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
             echo "slug=${slug}"  | tee -a $OUTPUTS
-            # This needs to be here due to platform bug
+            # This is needed due to platform bug
             echo "slurm_is_disabled=${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}" | tee -a $OUTPUTS
             echo "pbs_is_disabled=${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}" | tee -a $OUTPUTS
 
@@ -115,6 +115,11 @@ jobs:
             label: SLURM Directives
             hidden: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
             items:
+              is_disabled:
+                type: boolean
+                hidden: true
+                default: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                label: Is SLURM disabled?
               partition:
                 type: slurm-partitions
                 label: SLURM partition
@@ -139,6 +144,11 @@ jobs:
             label: PBS Directives
             hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             items:
+              is_disabled:
+                type: boolean
+                hidden: true
+                default: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+                label: Is PBS disabled?
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
@@ -154,7 +164,7 @@ jobs:
             label: noVNC installation directory
             type: string
             hidden: true
-            default: __HOME__/pw/software
+            default: ${HOME}/pw/software
           novnc_tgz_basename:
             label: Basename of the novnc tgz file
             type: string

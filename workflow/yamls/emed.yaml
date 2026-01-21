@@ -117,7 +117,7 @@ jobs:
         early-cancel: any-job-failed
         run: |
           set -x
-          HOSTNAME=$(cat HOSTNAME)
+          HOSTNAME=$(cat HOSTNAME | cut -d'.' -f1)
           echo "HOSTNAME=${HOSTNAME}" | tee -a $OUTPUTS
 
           if [ -z "${HOSTNAME}" ]; then
@@ -195,6 +195,7 @@ jobs:
               
               if check_server; then
                   echo "$(date) Success: Server is listening on ${remote_host}:${remote_port}!"
+                  sleep 30
                   exit 0
               elif [ -f job.ended ]; then
                   echo "$(date) Job was completed. Exiting... "

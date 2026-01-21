@@ -10,6 +10,8 @@ jobs:
         - name: Controller Preprocessing
           run: |
             set -x
+            echo "slurm_is_disabled${{ inputs.slurm.is_disabled }}"
+            echo "pbs_is_disabled${{ inputs.pbs.is_disabled }}"
             # This script prepares the target host and always runs in the controller node
             cp ${{ inputs.service.inputs_sh }} ${{ inputs.service.rundir }}/controller-preprocessing-${PW_JOB_ID}.sh
             cat ${{ inputs.service.controller_script }} >> ${{ inputs.service.rundir }}/controller-preprocessing-${PW_JOB_ID}.sh

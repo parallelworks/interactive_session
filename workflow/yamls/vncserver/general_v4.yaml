@@ -49,6 +49,9 @@ jobs:
             fi
             slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
             echo "slug=${slug}"  | tee -a $OUTPUTS
+            # This needs to be here due to platform bug
+            echo "slurm_is_disabled=${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}" | tee -a $OUTPUTS
+            echo "pbs_is_disabled=${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}" | tee -a $OUTPUTS
 
   session_runner:
     needs:
@@ -63,12 +66,12 @@ jobs:
           resource: ${{ inputs.cluster.resource }}
           scheduler: ${{ inputs.cluster.scheduler }}
           slurm:
-            is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
+            is_disabled: ${{ needs.preprocessing.outputs.slurm_is_disabled }}
             partition: ${{ inputs.cluster.slurm.partition }}
             scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
             time: ${{ inputs.cluster.slurm.time }}
           pbs:
-            is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
+            is_disabled: ${{ needs.preprocessing.outputs.pbs_is_disabled }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
           service:
             start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/start-template-v3.sh
@@ -112,11 +115,6 @@ jobs:
             label: SLURM Directives
             hidden: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
             items:
-              is_disabled:
-                type: boolean
-                hidden: true
-                default: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
-                label: Is SLURM disabled?
               partition:
                 type: slurm-partitions
                 label: SLURM partition
@@ -141,11 +139,6 @@ jobs:
             label: PBS Directives
             hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             items:
-              is_disabled:
-                type: boolean
-                hidden: true
-                default: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
-                label: Is PBS disabled?
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor

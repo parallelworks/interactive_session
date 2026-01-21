@@ -61,15 +61,16 @@ jobs:
         with:
           session: ${{ sessions.session }}
           resource: ${{ inputs.cluster.resource }}
-          scheduler: ${{ inputs.cluster.scheduler }}
-          slurm:
-            is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
-            partition: ${{ inputs.cluster.slurm.partition }}
-            scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
-            time: ${{ inputs.cluster.slurm.time }}
-          pbs:
-            is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
-            scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+          cluster:
+            scheduler: ${{ inputs.cluster.scheduler }}
+            slurm:
+              is_disabled: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
+              partition: ${{ inputs.cluster.slurm.partition }}
+              scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+              time: ${{ inputs.cluster.slurm.time }}
+            pbs:
+              is_disabled: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+              scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
           service:
             start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/start-template-v3.sh
             controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/controller-v3.sh
@@ -80,15 +81,6 @@ jobs:
 'on':
   execute:
     inputs:
-      targetType:
-        label: Target Type
-        type: dropdown
-        default: compute-cluster
-        options:
-          - label: Compute Cluster
-            value: compute-cluster
-          - label: Kubernetes Cluster
-            value: kubernetes-cluster
       cluster:
         type: group
         label: Compute Cluster Settings
@@ -161,7 +153,7 @@ jobs:
             label: noVNC installation directory
             type: string
             hidden: true
-            default: __HOME__/pw/software
+            default: ${HOME}/pw/software
           novnc_tgz_basename:
             label: Basename of the novnc tgz file
             type: string

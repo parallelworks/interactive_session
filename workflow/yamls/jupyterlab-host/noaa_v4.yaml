@@ -1,0 +1,292 @@
+permissions:
+  - '*'
+sessions:
+  session:
+    useTLS: false
+    redirect: true
+
+jobs:
+  preprocessing:
+      ssh:
+        remoteHost: ${{ inputs.resource.ip }}
+      steps:
+        - name: Checkout
+          uses: parallelworks/checkout
+          with:
+            repo: https://github.com/parallelworks/interactive_session.git
+            branch: main
+            sparse_checkout:
+              - ${{ inputs.service.name }}
+        - name: Create Inputs
+          run: |
+            set -x
+            # Write PW variables
+            env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+            # Encase values between quotes
+            sed -i 's/=\(.*\)/="\1"/' inputs.sh
+            # Write input form variables and ensure the pw agent is in the PATH
+            cat <<'EOF' >> inputs.sh
+            basepath=/me/session/${PW_USER}/${{ sessions.session }}
+            PATH=$HOME/pw:$PATH
+            service_password="${{ inputs.service.password }}"
+            service_notebook_dir="${{ inputs.service.notebook_dir }}"
+            service_conda_install="${{ inputs.service.conda_install }}"
+            service_use_conda="${{ inputs.service.use_conda }}"
+            service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
+            service_conda_install_dir="${{ inputs.service.conda_install_dir }}"
+            service_conda_env="${{ inputs.service.conda_env }}"
+            service_load_env="${{ inputs.service.load_env_tag_cloud }}"
+            service_load_env="${{ inputs.service.load_env_tag_existing }}"
+            service_install_instructions="${{ inputs.service.install_instructions_tag_cloud }}"
+            service_install_instructions="${{ inputs.service.install_instructions_tag_existing }}"
+            service_yaml="${{ inputs.service.yaml }}"
+            service_install_kernels="${{ inputs.service.install_kernels }}"
+            service_install_command="${{ inputs.service.install_command }}"
+            EOF
+            if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
+              echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
+            fi
+            # Remove empty variables
+            sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+            sed -i '/=""/d' inputs.sh # remove var=""
+            # Add export= to all lines
+            sed -i 's/^/export /' inputs.sh
+            # ONLY REQUIRED FOR TRANSITION
+            cp ${{ inputs.service.name }}/*.yaml .
+  
+  session_runner:
+    needs:
+      - preprocessing
+    ssh:
+        remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - uses: marketplace/session_runner/v1.3
+        early-cancel: any-job-failed
+        with:
+          session: ${{ sessions.session }}
+          resource: ${{ inputs.resource }}
+          cluster:
+            scheduler: ${{ inputs.cluster.scheduler }}
+            slurm:
+              is_disabled: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
+              partition: ${{ inputs.cluster.slurm.partition }}
+              scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+              time: ${{ inputs.cluster.slurm.time }}
+            pbs:
+              is_disabled: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+              scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+          service:
+            start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/start-template-v3.sh
+            controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/controller-v3.sh
+            inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
+            slug: lab
+            rundir: ${PW_PARENT_JOB_DIR}
+
+'on':
+  execute:
+    inputs:
+      resource:
+        type: compute-clusters
+        label: Service host
+        include-workspace: false
+        tooltip: Resource to host the service
+      cluster:
+        hidden: ${{ inputs.resource.schedulerType == '' }}
+        ignore: ${{ inputs.resource.schedulerType == '' }}
+        type: group
+        label: Compute Cluster Settings
+        items:
+          scheduler:
+            type: boolean
+            default: false
+            label: Schedule Job?
+            tooltip: |
+              Yes → Job is submitted to the scheduler using sbatch, qsub, etc
+              No  → Job is executed in the controller or login node instead
+          slurm:
+            type: group
+            label: SLURM Directives
+            hidden: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            items:
+              is_disabled:
+                type: boolean
+                hidden: true
+                default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                label: Is SLURM disabled?
+              account:
+                label: SLURM account
+                type: slurm-accounts
+                resource: ${{ inputs.resource }}
+                tooltip: '--account=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              partition:
+                type: slurm-partitions
+                label: SLURM partition
+                optional: true
+                resource: ${{ inputs.resource }}
+                tooltip: '--qos=partition slurm directive'
+              qos:
+                label: Quality of Service [QoS]
+                type: slurm-qos
+                resource: ${{ inputs.resource }}
+                tooltip: '--qos=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              ntasks:
+                label: Number of tasks
+                type: number
+                default: 1
+                tooltip: '--ntasks=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              nodes:
+                label: Number of nodes
+                type: number
+                default: 1
+                tooltip: '--nodes=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              time:
+                label: Walltime
+                type: string
+                default: '01:00:00'
+                tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
+              scheduler_directives:
+                type: editor
+                optional: true
+                tooltip: |
+                  Type in additional scheduler directives. 
+          pbs:
+            type: group
+            label: PBS Directives
+            hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            items:
+              is_disabled:
+                type: boolean
+                hidden: true
+                default: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+                label: Is PBS disabled?
+              scheduler_directives:
+                label: Scheduler Directives
+                type: editor
+                tooltip: Type the PBS scheduler directives
+
+      service:
+        type: group
+        label: Jupyter Lab Settings
+        items:
+          name:
+            type: string
+            hidden: true
+            default: jupyterlab-host
+          password:
+            label: Password for Jupyter Lab session
+            type: password
+            optional: true
+            hidden: true
+            ignore: true
+            tooltip: Enter password or leave blank for no password
+          notebook_dir:
+            label: Directory to start Jupyter Lab GUI
+            type: string
+            default: ${HOME}
+            tooltip: This is the directory that you start with when the Jupyter graphical user interface starts. The default value here is your home directory.
+          conda_install:
+            label: Install Jupyter-Lab If Not There?
+            type: boolean
+            default: true
+            tooltip: Select Yes to install Jupyter in miniconda environment and No to load an existing python environment
+          use_conda:
+            label: Use Conda?
+            type: boolean
+            default: false
+            hidden: ${{ 'existing' != inputs.resource.provider  }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Select Yes to install Jupyter in miniconda environment and No to load an existing python environment
+          parent_install_dir:
+            label: Parent Install Directory
+            type: string
+            default: ${HOME}/pw/software
+            hidden: ${{ inputs.service.conda_install == false || ('existing' == inputs.resource.provider &&  inputs.service.use_conda == false) }}
+            ignore: ${{ .hidden }}
+            tooltip: Software dependencies are installed in this directory. Defaults to ~/pw/software. Ensure the directory has sufficient space!
+          conda_install_dir:
+            label: Name of the Conda Installation Directory
+            type: string
+            default: .miniconda3c
+            hidden: ${{ inputs.service.conda_install == false || ('existing' == inputs.resource.provider &&  inputs.service.use_conda == false) }}
+            ignore: ${{ .hidden }}
+            tooltip: Ensure the directory has sufficient space for Conda and its packages.
+          conda_env:
+            label: Conda environment
+            type: string
+            default: base
+            hidden: ${{ inputs.service.conda_install == false || ('existing' == inputs.resource.provider &&  inputs.service.use_conda == false) }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Environment to active. The base environment enables changing kernel to other environments!
+          load_env_tag_cloud:
+            label: Command to load Jupyter Lab to the PATH
+            type: string
+            default: source ${HOME}/pw/software/.miniconda3c/etc/profile.d/conda.sh; conda activate base
+            hidden: ${{ inputs.service.conda_install == true || ('existing' == inputs.resource.provider &&  inputs.service.use_conda == false) }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Use a bash command
+          load_env_tag_existing:
+            label: Command to load Jupyter Lab to the PATH
+            type: string
+            default: export PATH=$PATH:/home/${USER}/.local/bin; module load python
+            hidden: ${{ 'existing' != inputs.resource.provider ||  inputs.service.use_conda == true }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Use a bash command
+          install_instructions_tag_cloud:
+            label: Select Jupyter Lab Installation
+            type: dropdown
+            hidden: ${{ inputs.service.conda_install == false || ('existing' == inputs.resource.provider  &&  inputs.service.use_conda == false) }}
+            ignore: ${{ .hidden }}
+            default: jupyterlab4.1.5-python3.11.5
+            options:
+              - value: jupyterlab4.1.5-python3.11.5
+                label: Jupyter Lab 4.1.5 with Python 3.11.5
+              - value: latest
+                label: Latest versions of Jupyter Lab and Python (not thoroughly tested)
+              - value: dask-extension-jupyterlab
+                label: Dask dependencies for PW
+              - value: yaml
+                label: Provide custom Conda environment YAML file
+          install_instructions_tag_existing:
+            label: Install Instructions
+            type: string
+            default: install_command
+            hidden: true
+            ignore: ${{ inputs.service.conda_install == false || 'existing' != inputs.resource.provider ||  inputs.service.use_conda == true  }}
+          yaml:
+            label: Paste Conda Environment Defition YAML
+            type: editor
+            hidden: ${{ inputs.service.install_instructions_tag_cloud != yaml ||  inputs.service.conda_install == false  ||  ('existing' == inputs.resource.provider &&  inputs.service.use_conda == false) }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Copy and paste a custom Conda environment definition YAML file
+          install_kernels:
+            label: Select additional kernels to install
+            type: multi-dropdown
+            optional: true
+            hidden: ${{ inputs.service.conda_install == false ||  ('existing' == inputs.resource.provider &&  inputs.service.use_conda == false)  }}
+            ignore: ${{ .hidden }}
+            options:
+              - value: julia-kernel
+                label: Julia Kernel
+              - value: R-kernel
+                label: R Kernel
+          install_command:
+            label: Command to install Jupyter
+            type: string
+            default: export PATH=$PATH:/home/${USER}/.local/bin; module load python; pip install jupyterlab --no-warn-script-location
+            hidden: ${{ inputs.service.conda_install == false || 'existing' != inputs.resource.provider  ||  inputs.service.use_conda == true  }}
+            ignore: ${{ .hidden }}

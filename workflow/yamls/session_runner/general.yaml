@@ -23,8 +23,7 @@ jobs:
           PW_JOB_NUMBER_STRIPPED=$(printf '%d' "$PW_JOB_NUMBER")
           session_name="${PW_WORKFLOW_NAME}_${PW_JOB_NUMBER_STRIPPED}_session_runner_step_0_session"
           basepath=/me/session/${PW_USER}/${session_name}
-          slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
-          echo "slug=${slug}"  | tee -a $OUTPUTS
+
           # Write code common to all services
           cat <<'EOF' >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
 
@@ -63,6 +62,10 @@ jobs:
           echo
           touch job.started
           EOF
+          if ! [ -f "${{ inputs.service.start_service_script }}" ]; then
+              echo "$(date) ERROR: Service start script not found at ${{ inputs.service.start_service_script }}"
+              exit 1
+          fi
           cat ${{ inputs.service.start_service_script }} >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
           # TRANSITION CODE
           sed -i 's/findAvailablePort/pw agent open-port/' ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh

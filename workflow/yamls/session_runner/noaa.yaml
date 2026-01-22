@@ -23,8 +23,6 @@ jobs:
           PW_JOB_NUMBER_STRIPPED=$(printf '%d' "$PW_JOB_NUMBER")
           session_name="${PW_WORKFLOW_NAME}_${PW_JOB_NUMBER_STRIPPED}_session_runner_step_0_session"
           basepath=/me/session/${PW_USER}/${session_name}
-          slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
-          echo "slug=${slug}"  | tee -a $OUTPUTS
           # Write code common to all services
           cat <<'EOF' >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
 
@@ -52,6 +50,10 @@ jobs:
           echo
           touch job.started
           EOF
+          if ! [ -f "${{ inputs.service.start_service_script }}" ]; then
+              echo "$(date) ERROR: Service start script not found at ${{ inputs.service.start_service_script }}"
+              exit 1
+          fi
           cat ${{ inputs.service.start_service_script }} >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
           # TRANSITION CODE
           sed -i 's/findAvailablePort/pw agent open-port/' ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
@@ -75,13 +77,11 @@ jobs:
           scheduler: ${{ inputs.cluster.scheduler }}
           slurm:
             is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
-            slurm_options: ${{ inputs.cluster.slurm.slurm_options }}
-            partition_default: ${{ inputs.cluster.slurm.partition_default }}
-            partition_hpc4: ${{ inputs.cluster.slurm.partition_hpc4 }}
-            cpus_per_task: ${{ inputs.cluster.slurm.cpus_per_task }}
-            mem: ${{ inputs.cluster.slurm.mem }}
-            gres_gpu_default: ${{ inputs.cluster.slurm.gres_gpu_default }}
-            gres_gpu_hpc4: ${{ inputs.cluster.slurm.gres_gpu_hpc4 }}
+            account: ${{ inputs.cluster.slurm.account }}
+            partition: ${{ inputs.cluster.slurm.partition }}
+            qos: ${{ inputs.cluster.slurm.qos }}
+            ntasks: ${{ inputs.cluster.slurm.ntasks }}
+            nodes: ${{ inputs.cluster.slurm.nodes }}
             time: ${{ inputs.cluster.slurm.time }}
             scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
           pbs:
@@ -195,7 +195,7 @@ jobs:
               
               if check_server; then
                   echo "$(date) Success: Server is listening on ${remote_host}:${remote_port}!"
-                  sleep 30
+                  sleep 3
                   exit 0
               elif [ -f job.ended ]; then
                   echo "$(date) Job was completed. Exiting... "
@@ -244,83 +244,45 @@ jobs:
             hidden: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
             ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
             items:
-              slurm_options:
-                type: dropdown
-                label: Select Cluster
-                optional: true
-                default: ''
-                options:
-                  - value: ''
-                    label: Default
-                  - value: '-M hpc4'
-                    label: HPC4
               is_disabled:
                 type: boolean
                 hidden: true
                 default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
                 label: Is SLURM disabled?
-              partition_default:
-                type: slurm-partitions
-                label: SLURM partition
-                ignore: ${{ '-M hpc4' == inputs.cluster.slurm.slurm_options }}
-                hidden: ${{ .ignore }}
-                optional: true
+              account:
+                label: SLURM account
+                type: slurm-accounts
                 resource: ${{ inputs.resource }}
-                tooltip: Select a partition from the drop down menu. Leave empty to let SLURM pick a partition.
-              partition_hpc4:
-                type: dropdown
-                label: SLURM partition
-                optional: true
-                tooltip: Select a partition from the drop down menu. Leave empty to let SLURM pick a partition.
-                ignore: ${{ '-M hpc4' != inputs.cluster.slurm.slurm_options }}
-                hidden: ${{ .ignore }}
-                default: normal
-                options:
-                  - normal
-                  - gpu
-                  - gpu-h200
-                  - gpu-quick
-                  - ht
-                  - large-mem
-                  - quick
-                  - test
-                  - unlimited
-              cpus_per_task:
-                type: number
-                label: CPUs per task
-                min: 1
-                max: 32
-                default: 1
-                tooltip: '--cpus-per-task=value slurm directive'
+                tooltip: '--account=value slurm directive'
                 ignore: ${{ 'existing' != inputs.resource.provider }}
                 hidden: ${{ .ignore }}
-              mem:
-                type: string
-                label: Minimum total memory required
-                default: 8GB
-                tooltip: '--mem=value slurm directive'
-                hidden: ${{ 'existing' != inputs.resource.provider }}
-                ignore: ${{ .hidden }}
+              partition:
+                type: slurm-partitions
+                label: SLURM partition
                 optional: true
-              gres_gpu_default:
-                type: number
-                label: Number of GPUs
-                ignore: ${{ ( inputs.cluster.slurm.partition_default != 'gpu' && inputs.cluster.slurm.partition_default != 'gpu-quick' ) || 'existing' != inputs.resource.provider  }}
+                resource: ${{ inputs.resource }}
+                tooltip: '--qos=partition slurm directive'
+              qos:
+                label: Quality of Service [QoS]
+                type: slurm-qos
+                resource: ${{ inputs.resource }}
+                tooltip: '--qos=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
                 hidden: ${{ .ignore }}
-                min: 1
-                max: 4
-                default: 1
-                tooltip: '--gres=gpu:X slurm directive'
-              gres_gpu_hpc4:
+              ntasks:
+                label: Number of tasks
                 type: number
-                label: Number of GPUs
-                hidden: ${{ ( inputs.cluster.slurm.partition_hpc4 != 'gpu' && inputs.cluster.slurm.partition_hpc4 != 'gpu-quick' && inputs.cluster.slurm.partition_hpc4 != 'gpu-h200' ) || 'existing' != inputs.resource.provider  }}
-                ignore: ${{ .hidden }}
-                optional: ${{ .hidden }}
-                min: 1
-                max: 4
                 default: 1
-                tooltip: '--gres=gpu:X slurm directive'
+                tooltip: '--ntasks=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              nodes:
+                label: Number of nodes
+                type: number
+                default: 1
+                tooltip: '--nodes=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
               time:
                 label: Walltime
                 type: string

@@ -1,0 +1,305 @@
+jobs:
+  stream_output:
+    working-directory: ${{ inputs.rundir }}
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Stream Output
+        run: |
+          touch run.${PW_JOB_ID}.out
+          tail -f run.${PW_JOB_ID}.out &
+          tail_pid=$!
+          # Wait for CANCEL_STREAMING
+          while [ ! -f "CANCEL_STREAMING" ]; do
+            sleep 5
+          done
+          rm -f CANCEL_STREAMING
+          echo "$(date) CANCEL_STREAMING file detected!"
+          kill ${tail_pid}
+  create_script_template:
+    working-directory: ${{ inputs.rundir }}
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Create Script Template
+        run: |
+          set -x
+          if [[ "${{ inputs.use_existing_script }}" == true ]]; then
+            if [ ! -f "${{ inputs.script_path }}" ]; then
+                echo "(date) ERROR: File ${{ inputs.script_path }} does not exist or is not a regular file." >&2
+                exit 1
+            fi
+            cp ${{ inputs.script_path }} run-template.sh
+          else
+          # Do not remove this indentation
+          cat <<'EOF' > run-template.sh
+          ${{ inputs.script }}
+          EOF
+          fi
+          cat run-template.sh
+  ssh_job:
+    needs:
+      - create_script_template
+    if: ${{ inputs.slurm.is_disabled && inputs.pbs.is_disabled }}
+    working-directory: ${{ inputs.rundir }}
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Create Script
+        run: |
+          set -x
+          cat <<EOF > run.sh
+          ${{ inputs.shebang }}
+          cd ${PWD}
+          EOF
+          cat run-template.sh >> run.sh
+          chmod +x run.sh
+          cat run.sh
+      - name: Submit Script
+        run: |
+          set -x
+          echo "$(date) Executing script"
+          ./run.sh > run.${PW_JOB_ID}.out 2>&1
+  pbs_job:
+    needs:
+      - create_script_template
+    if: ${{ inputs.pbs.is_disabled == false }}
+    working-directory: ${{ inputs.rundir }}
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Create PBS Script
+        run: |
+          set -x
+          cat <<EOF > run.sh
+          ${{ inputs.shebang }}
+          #PBS -N ${PW_JOB_ID}
+          #PBS -o ${PWD}/run.${PW_JOB_ID}.out
+          #PBS -j oe
+          ${{ inputs.pbs.scheduler_directives }}
+          cd ${PWD}
+          EOF
+          cat run-template.sh >> run.sh
+          chmod +x run.sh
+          cat run.sh
+      - name: Submit PBS Script
+        run: |
+          set -x
+          echo "$(date) Submitting PBS Job"
+          jobid=$(qsub run.sh)
+          jobid=$(echo "$jobid" | cut -d'.' -f1)
+          if ! [[ "${jobid}" =~ ^[0-9]+$ ]]; then
+            echo "$(date) Job submission failed: invalid jobid '${jobid}'"
+            exit 1
+          fi
+          echo "jobid=${jobid}"  | tee -a $OUTPUTS
+      - name: Monitor PBS Job
+        run: |
+          jobid=${{ needs.pbs_job.outputs.jobid }}
+          echo "$(date) Monitoring PBS job ${jobid}"
+          get_pbs_job_status() {
+            # Get the header line to determine the column index corresponding to the job status
+            if [ -z "${QSTAT_HEADER}" ]; then
+              export QSTAT_HEADER="$(qstat | awk 'NR==1')"
+            fi
+            status_response=$(qstat 2>/dev/null | grep "\<${jobid}\>")
+            echo "${QSTAT_HEADER}"
+            echo "${status_response}"
+            export job_status="$(qstat -f ${jobid} 2>/dev/null  | grep job_state | cut -d'=' -f2 | tr -d ' ')"
+          }
+          while true; do
+            sleep 15
+            get_pbs_job_status
+            if [[ "${job_status}" == "C" ]]; then
+              break
+            elif [ -z "${job_status}" ]; then
+              break
+            fi
+          done
+  slurm_job:
+    needs:
+      - create_script_template
+    if: ${{ inputs.slurm.is_disabled == false }}
+    working-directory: ${{ inputs.rundir }}
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Create SLURM Script
+        run: |
+          set -x
+          cat <<EOF > run.sh
+          ${{ inputs.shebang }}
+          #SBATCH --job-name=${PW_JOB_ID}
+          #SBATCH --partition=${{ inputs.slurm.partition }}
+          #SBATCH --time=${{ inputs.slurm.time }}
+          #SBATCH --chdir=${PWD}
+          #SBATCH -o ${PWD}/run.${PW_JOB_ID}.out
+          #SBATCH -e ${PWD}/run.${PW_JOB_ID}.out
+          ${scheduler_directives}
+          EOF
+          cat run-template.sh >> run.sh
+          chmod +x run.sh
+          # Remove SBATCH directives with undefined values 
+          sed -i '/^#SBATCH --[^=]*=\([^:]*:\)\{0,1\}\(undefined\)\?$/d' run.sh
+          # Remove SBATCH directives with empty values
+          sed -i '/#SBATCH.*=none$/d; /#SBATCH.*=gpu:0$/d' run.sh
+          # Remove empty lines
+          sed -i '/^[[:space:]]*$/d' run.sh
+          cat run.sh
+      - name: Submit SLURM Script
+        run: |
+          set -x
+          echo "$(date) Submitting SLURM Job"
+          jobid=$(sbatch run.sh | tail -1 | awk -F ' ' '{print $4}')
+          if ! [[ "${jobid}" =~ ^[0-9]+$ ]]; then
+            echo "$(date) Job submission failed: invalid jobid '${jobid}'"
+            exit 1
+          fi
+          echo "jobid=${jobid}"  | tee -a $OUTPUTS
+      - name: Monitor SLURM Job
+        run: |
+          jobid=${{ needs.slurm_job.outputs.jobid }}
+          echo "$(date) Monitoring SLURM job ${jobid}"
+
+          get_slurm_job_status() {
+              # Get the header line to determine the column index corresponding to the job status
+              if [ -z "${SQUEUE_HEADER}" ]; then
+                  export SQUEUE_HEADER="$(eval squeue | awk 'NR==1')"
+              fi
+              status_column=$(echo "${SQUEUE_HEADER}" | awk '{ for (i=1; i<=NF; i++) if ($i ~ /^S/) { print i; exit } }')
+              status_response=$(eval squeue | awk -v jobid="${jobid}" '$1 == jobid')
+              echo "${SQUEUE_HEADER}"
+              echo "${status_response}"
+              export job_status=$(echo ${status_response} | awk -v id="${jobid}" -v col="$status_column" '{print $col}')
+          }
+
+          while true; do
+            sleep 15
+            get_slurm_job_status
+            if [ -z "${job_status}" ]; then
+              job_status=$(sacct -j ${jobid}  --format=state | tail -n1)
+              echo "$(date) Job exited with status ${job_status}"
+              break
+            fi
+          done
+  cleanup:
+    if: ${{ always }}
+    needs:
+      - ssh_job
+      - pbs_job
+      - slurm_job
+    working-directory: ${{ inputs.rundir }}
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Cleanup
+        run: |
+          set -x
+          touch COMPLETED
+        cleanup: |
+          set -x
+          touch CANCEL_STREAMING
+          if [ -f COMPLETED ]; then
+            rm -f COMPLETED
+            echo "$(date) job was completed "
+            exit 0
+          fi 
+
+          if [[ "${{ inputs.pbs.is_disabled }}" == false ]]; then
+            qdel "${{ needs.pbs_job.outputs.jobid }}"
+          fi
+
+          if [[ "${{ inputs.slurm.is_disabled }}" == false ]]; then
+            scancel "${{ needs.slurm_job.outputs.jobid }}"
+          fi
+'on':
+  execute:
+    inputs:
+      resource:
+        label: Resource Target
+        type: compute-clusters
+        autoselect: true
+        optional: false
+      shebang:
+        label: Shebang
+        type: string
+        default: '#!/bin/bash'
+      rundir:
+        label: Run Directory
+        type: string
+        default: ${PWD}
+        tooltip: The directory in which the script will be executed. Defaults to the job’s current working directory ($PWD).
+      use_existing_script:
+        type: boolean
+        default: false
+        label: Use Existing Script?
+        tooltip: |
+          Yes → Provide path to an existing script on the target resource.
+          No  → Type the script
+      script:
+        label: Type Script
+        type: editor
+        hidden: ${{ inputs.use_existing_script == true }}
+        ignore: ${{ .hidden }}
+        tooltip: Type the script to run without shebang and scheduler directives.
+        default: |
+          echo "$(date) Running in directory ${{ inputs.rundir }} on ${HOSTNAME}"
+      script_path:
+        label: Script Path
+        type: string
+        hidden: ${{ inputs.use_existing_script == false }}
+        ignore: ${{ .hidden }}
+        tooltip: Provide path to an existing script on the target resource.
+      scheduler:
+        type: boolean
+        default: false
+        label: Schedule Job?
+        hidden: ${{ inputs.resource.schedulerType == '' }}
+        ignore: ${{ .hidden }}
+        tooltip: |
+          Yes → Job is submitted to the scheduler using sbatch, qsub, etc
+          No  → Job is executed in the controller or login node instead
+      slurm:
+        type: group
+        label: SLURM Directives
+        hidden: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        items:
+          is_disabled:
+            type: boolean
+            hidden: true
+            default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+            label: Is SLURM disabled?
+          partition:
+            type: slurm-partitions
+            label: SLURM partition
+            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+            optional: true
+            resource: ${{ inputs.resource }}
+            tooltip: Select a partition from the drop down menu.
+          time:
+            label: Walltime
+            type: string
+            default: '01:00:00'
+            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+            tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
+          scheduler_directives:
+            type: editor
+            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+            optional: true
+            tooltip: |
+              Type in additional scheduler directives. 
+      pbs:
+        type: group
+        label: PBS Directives
+        hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+        items:
+          is_disabled:
+            type: boolean
+            hidden: true
+            default: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+            label: Is PBS disabled?
+          scheduler_directives:
+            label: Scheduler Directives
+            type: editor
+            tooltip: Type the PBS scheduler directives
+            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}

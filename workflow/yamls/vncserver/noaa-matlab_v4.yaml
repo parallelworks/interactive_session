@@ -1,0 +1,219 @@
+permissions:
+  - '*'
+sessions:
+  session:
+    redirect: true
+
+jobs:
+  preprocessing:
+      ssh:
+        remoteHost: ${{ inputs.resource.ip }}
+      steps:
+        - name: Checkout
+          uses: parallelworks/checkout
+          with:
+            repo: https://github.com/parallelworks/interactive_session.git
+            branch: main
+            sparse_checkout:
+              - ${{ inputs.service.name }}
+        - name: Create Inputs
+          run: |
+            set -x
+            # Write PW variables
+            env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+            # Encase values between quotes
+            sed -i 's/=\(.*\)/="\1"/' inputs.sh
+            # Password
+            password=$(openssl rand -base64 12 | head -c 12)
+            # basepath
+            basepath=/me/session/${PW_USER}/${{ sessions.session }}
+            # Write input form variables and ensure the pw agent is in the PATH
+            cat <<'EOF' >> inputs.sh
+            PATH=$HOME/pw:$PATH
+            service_novnc_parent_install_dir="${{ inputs.service.novnc_parent_install_dir }}"
+            service_novnc_tgz_basename="${{ inputs.service.novnc_tgz_basename }}"
+            service_desktop="${{ inputs.service.desktop }}"
+            service_load_env="${{ inputs.service.load_env }}"
+            service_bin="${{ inputs.service.bin }}"
+            service_background="${{ inputs.service.background }}"
+            EOF
+            echo basepath=${basepath} >> inputs.sh
+            echo password=${password} >> inputs.sh
+            if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
+              echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
+            fi
+            # Remove empty variables
+            sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+            sed -i '/=""/d' inputs.sh # remove var=""
+            # Add export= to all lines
+            sed -i 's/^/export /' inputs.sh
+            # Create slug
+            if [ -z "${PW_PLATFORM_HOST}" ]; then
+              PW_PLATFORM_HOST=noaa.parallel.works
+            fi
+            slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
+            echo "slug=${slug}"  | tee -a $OUTPUTS
+
+  session_runner:
+    needs:
+      - preprocessing
+    ssh:
+        remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - uses: marketplace/session_runner/v1.3
+        early-cancel: any-job-failed
+        with:
+          session: ${{ sessions.session }}
+          resource: ${{ inputs.resource }}
+          cluster:
+            scheduler: ${{ inputs.cluster.scheduler }}
+            slurm:
+              is_disabled: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
+              partition: ${{ inputs.cluster.slurm.partition }}
+              scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+              time: ${{ inputs.cluster.slurm.time }}
+            pbs:
+              is_disabled: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+              scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+          service:
+            start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/start-template-v3.sh
+            controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/controller-v3.sh
+            inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
+            slug: ${{ needs.preprocessing.outputs.slug }}
+            rundir: ${PW_PARENT_JOB_DIR}
+
+'on':
+  execute:
+    inputs:
+      resource:
+        type: compute-clusters
+        label: Service host
+        include-workspace: false
+        tooltip: Resource to host the service
+        provider:
+           - existing
+      cluster:
+        hidden: ${{ inputs.resource.schedulerType == '' }}
+        ignore: ${{ inputs.resource.schedulerType == '' }}
+        type: group
+        label: Compute Cluster Settings
+        items:
+          scheduler:
+            type: boolean
+            default: false
+            label: Schedule Job?
+            tooltip: |
+              Yes → Job is submitted to the scheduler using sbatch, qsub, etc
+              No  → Job is executed in the controller or login node instead
+          slurm:
+            type: group
+            label: SLURM Directives
+            hidden: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            items:
+              is_disabled:
+                type: boolean
+                hidden: true
+                default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                label: Is SLURM disabled?
+              account:
+                label: SLURM account
+                type: slurm-accounts
+                resource: ${{ inputs.resource }}
+                tooltip: '--account=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              partition:
+                type: slurm-partitions
+                label: SLURM partition
+                optional: true
+                resource: ${{ inputs.resource }}
+                tooltip: '--qos=partition slurm directive'
+              qos:
+                label: Quality of Service [QoS]
+                type: slurm-qos
+                resource: ${{ inputs.resource }}
+                tooltip: '--qos=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              ntasks:
+                label: Number of tasks
+                type: number
+                default: 1
+                tooltip: '--ntasks=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              nodes:
+                label: Number of nodes
+                type: number
+                default: 1
+                tooltip: '--nodes=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              time:
+                label: Walltime
+                type: string
+                default: '01:00:00'
+                tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
+              scheduler_directives:
+                type: editor
+                optional: true
+                tooltip: |
+                  Type in additional scheduler directives. 
+          pbs:
+            type: group
+            label: PBS Directives
+            hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            items:
+              is_disabled:
+                type: boolean
+                hidden: true
+                default: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+                label: Is PBS disabled?
+              scheduler_directives:
+                label: Scheduler Directives
+                type: editor
+                tooltip: Type the PBS scheduler directives
+      service:
+        type: group
+        label: Service
+        hidden: ${{ 'existing' == inputs.resource.provider }}
+        items:
+          novnc_parent_install_dir:
+            label: noVNC installation directory
+            type: string
+            hidden: true
+            default: /pw/software
+          novnc_tgz_basename:
+            label: Basename of the novnc tgz file
+            type: string
+            hidden: true
+            default: noVNC-1.5.0.tgz
+          name:
+            type: string
+            label: Select remote display protocol
+            tooltip: Make sure the display protocol is installed in the host!
+            default: vncserver
+            hidden: true
+          desktop:
+            label: Desktop Session
+            type: string
+            default: mate-session
+            hidden: true
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+          load_env:
+            label: Command to load MATLAB to the PATH
+            type: string
+            default: module load matlab
+            tooltip: 'To load the environment, enter the appropriate command, for example: module load module-name or source path/to/env.sh.'
+          bin:
+            label: Command to launch MATLAB
+            type: string
+            default: matlab -desktop
+            tooltip: Command to start MATLAB
+          background:
+            label: Run service in background
+            type: boolean
+            default: true
+            hidden: true

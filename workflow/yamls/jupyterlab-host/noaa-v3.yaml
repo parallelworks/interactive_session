@@ -398,6 +398,6 @@ jobs:
           install_command:
             label: Command to install Jupyter
             type: string
-            default: module load python; pip install jupyterlab --no-warn-script-location
+            default: module load python; pip install jupyterlab --no-warn-script-location; export PATH=$PATH:/home/${USER}/.local/bin
             hidden: ${{ inputs.service.conda_install == false || 'existing' != inputs.pwrl_host.resource.provider  ||  inputs.service.use_conda == true  }}
             ignore: ${{ .hidden }}

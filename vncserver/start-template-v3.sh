@@ -469,6 +469,15 @@ EOF
 
     echo "Kasm xstartup wrapper installed at ${XSTARTUP_PATH}"
 fi
+
+# FIXME: REMOVE THIS CODE WHEN ROCKY 9 IMAGE IS UPDATED!
+sudo mv /usr/lib/kasmvncserver/select-de.sh /usr/lib/kasmvncserver/select-de.sh.bak
+sudo tee /usr/lib/kasmvncserver/select-de.sh >/dev/null <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+
+sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
     vncserver_cmd="${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} \
         -xstartup ${XSTARTUP_PATH} \
         -websocketPort ${kasmvnc_port} \

@@ -54,12 +54,23 @@ jobs:
             slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
             echo "slug=${slug}"  | tee -a $OUTPUTS
 
+
   session_runner:
     needs:
       - preprocessing
     ssh:
         remoteHost: ${{ inputs.resource.ip }}
     steps:
+      - name: Get Partition
+        run: |
+          if [[ "${{ 'existing' != inputs.resource.provider ||  (inputs.resource.name includes 'ursa') }}" == "false" ]]; then
+            echo "partition=${{ inputs.cluster.slurm.partition_tag_existing }}" | tee -a $OUTPUTS
+          elif [[ "${{ 'existing' != inputs.resource.provider || (inputs.resource.name !includes 'ursa')  }}" == "false" ]]; then
+            echo "partition=${{ inputs.cluster.slurm.partition_tag_ursa }}" | tee -a $OUTPUTS
+          elif [[ "${{ 'existing' == inputs.resource.provider }}" == "false" ]]; then
+            echo "partition=${{ inputs.cluster.slurm.partition_tag_cloud }}" | tee -a $OUTPUTS
+          fi
+
       - uses: marketplace/session_runner/v1.3
         early-cancel: any-job-failed
         with:
@@ -69,7 +80,11 @@ jobs:
             scheduler: ${{ inputs.cluster.scheduler }}
             slurm:
               is_disabled: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
-              partition: ${{ inputs.cluster.slurm.partition }}
+              account: ${{ inputs.cluster.slurm.account }}
+              partition: ${{ needs.session_runner.outputs.partition }}
+              qos: ${{ inputs.cluster.slurm.qos }}
+              ntasks: ${{ inputs.cluster.slurm.ntasks }}
+              nodes: ${{ inputs.cluster.slurm.nodes }}
               scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
               time: ${{ inputs.cluster.slurm.time }}
             pbs:
@@ -90,8 +105,6 @@ jobs:
         label: Service host
         include-workspace: false
         tooltip: Resource to host the service
-        provider:
-           - existing
       cluster:
         hidden: ${{ inputs.resource.schedulerType == '' }}
         ignore: ${{ inputs.resource.schedulerType == '' }}
@@ -123,12 +136,34 @@ jobs:
                 tooltip: '--account=value slurm directive'
                 ignore: ${{ 'existing' != inputs.resource.provider }}
                 hidden: ${{ .ignore }}
-              partition:
+              partition_tag_existing:
+                type: dropdown
+                label: SLURM partition
+                hidden: ${{ 'existing' != inputs.resource.provider ||  (inputs.resource.name includes 'ursa') }}
+                ignore: ${{ .hidden }}
+                options:
+                  - label: service
+                    value: service
+                default: service
+                tooltip: '--partition=value SLURM directive'
+              partition_tag_ursa:
+                type: dropdown
+                label: SLURM partition
+                hidden: ${{ 'existing' != inputs.resource.provider || (inputs.resource.name !includes 'ursa')  }}
+                ignore: ${{ .hidden }}
+                options:
+                  - label: u1-service
+                    value: u1-service
+                default: u1-service
+                tooltip: '--partition=value SLURM directive'
+              partition_tag_cloud:
                 type: slurm-partitions
                 label: SLURM partition
+                hidden: ${{ 'existing' == inputs.resource.provider }}
+                ignore: ${{ .hidden }}
                 optional: true
+                tooltip: '--partition=value SLURM directive'
                 resource: ${{ inputs.resource }}
-                tooltip: '--qos=partition slurm directive'
               qos:
                 label: Quality of Service [QoS]
                 type: slurm-qos
@@ -175,6 +210,7 @@ jobs:
                 label: Scheduler Directives
                 type: editor
                 tooltip: Type the PBS scheduler directives
+
       service:
         type: group
         label: Service
@@ -184,7 +220,7 @@ jobs:
             label: noVNC installation directory
             type: string
             hidden: true
-            default: /pw/software
+            default: ${HOME}/pw/software
           novnc_tgz_basename:
             label: Basename of the novnc tgz file
             type: string

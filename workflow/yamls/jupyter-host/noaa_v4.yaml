@@ -67,7 +67,11 @@ jobs:
             scheduler: ${{ inputs.cluster.scheduler }}
             slurm:
               is_disabled: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
+              account: ${{ inputs.cluster.slurm.account }}
               partition: ${{ inputs.cluster.slurm.partition }}
+              qos: ${{ inputs.cluster.slurm.qos }}
+              ntasks: ${{ inputs.cluster.slurm.ntasks }}
+              nodes: ${{ inputs.cluster.slurm.nodes }}
               scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
               time: ${{ inputs.cluster.slurm.time }}
             pbs:
@@ -77,8 +81,8 @@ jobs:
             start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/start-template-v3.sh
             controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/controller-v3.sh
             inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
-            slug: 'tree?dt=0'
-            rundir: ${PW_PARENT_JOB_DIR}  
+            slug: ${{ needs.preprocessing.outputs.slug }}
+            rundir: ${PW_PARENT_JOB_DIR}
 
 'on':
   execute:
@@ -124,7 +128,7 @@ jobs:
                 label: SLURM partition
                 optional: true
                 resource: ${{ inputs.resource }}
-                tooltip: '--qos=partition slurm directive'
+                tooltip: '--partition=value SLURM directive'
               qos:
                 label: Quality of Service [QoS]
                 type: slurm-qos

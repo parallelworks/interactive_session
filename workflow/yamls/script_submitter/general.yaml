@@ -135,7 +135,7 @@ jobs:
           #SBATCH --chdir=${PWD}
           #SBATCH -o ${PWD}/run.${PW_JOB_ID}.out
           #SBATCH -e ${PWD}/run.${PW_JOB_ID}.out
-          ${scheduler_directives}
+          ${{ inputs.slurm.scheduler_directives }}
           EOF
           cat run-template.sh >> run.sh
           chmod +x run.sh

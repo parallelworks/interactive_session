@@ -261,7 +261,7 @@ jobs:
                 label: SLURM partition
                 optional: true
                 resource: ${{ inputs.resource }}
-                tooltip: '--qos=partition slurm directive'
+                tooltip: '--partition=value SLURM directive'
               qos:
                 label: Quality of Service [QoS]
                 type: slurm-qos

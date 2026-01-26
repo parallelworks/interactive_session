@@ -74,6 +74,7 @@ jobs:
           cat <<EOF > run.sh
           ${{ inputs.shebang }}
           #PBS -N ${PW_JOB_ID}
+          #PBS -A ${{ inputs.pbs.account }}
           #PBS -o ${PWD}/run.${PW_JOB_ID}.out
           #PBS -j oe
           ${{ inputs.pbs.scheduler_directives }}
@@ -127,15 +128,16 @@ jobs:
       - name: Create SLURM Script
         run: |
           set -x
+          echo "$(date) Creating SLURM script"
+          echo "#SBATCH --partition=${{ inputs.slurm.partition }}"
           cat <<EOF > run.sh
           ${{ inputs.shebang }}
           #SBATCH --job-name=${PW_JOB_ID}
-          #SBATCH --partition=${{ inputs.slurm.partition_default }}
-          #SBATCH --partition=${{ inputs.slurm.partition_hpc4 }}
-          #SBATCH --cpus-per-task=${{ inputs.slurm.cpus_per_task }}
-          #SBATCH --mem=${{ inputs.slurm.mem }}
-          #SBATCH --gres=gpu:${{ inputs.slurm.gres_gpu_default }}
-          #SBATCH --gres=gpu:${{ inputs.slurm.gres_gpu_hpc4 }}
+          #SBATCH --account=${{ inputs.slurm.account }}
+          #SBATCH --partition=${{ inputs.slurm.partition }}
+          #SBATCH --qos=${{ inputs.slurm.qos }}
+          #SBATCH --nodes=${{ inputs.slurm.nodes }}
+          #SBATCH --cpus-per-task=${{ inputs.slurm.cpus_per_task }}  
           #SBATCH --time=${{ inputs.slurm.time }}
           #SBATCH --chdir=${PWD}
           #SBATCH -o ${PWD}/run.${PW_JOB_ID}.out
@@ -155,13 +157,12 @@ jobs:
         run: |
           set -x
           echo "$(date) Submitting SLURM Job"
-          jobid=$(sbatch ${{ inputs.slurm.slurm_options }} run.sh | tail -1 | awk -F ' ' '{print $4}')
+          jobid=$(sbatch run.sh | tail -1 | awk -F ' ' '{print $4}')
           if ! [[ "${jobid}" =~ ^[0-9]+$ ]]; then
             echo "$(date) Job submission failed: invalid jobid '${jobid}'"
             exit 1
           fi
           echo "jobid=${jobid}"  | tee -a $OUTPUTS
-          sleep 5
       - name: Monitor SLURM Job
         run: |
           jobid=${{ needs.slurm_job.outputs.jobid }}
@@ -170,10 +171,10 @@ jobs:
           get_slurm_job_status() {
               # Get the header line to determine the column index corresponding to the job status
               if [ -z "${SQUEUE_HEADER}" ]; then
-                  export SQUEUE_HEADER="$(eval squeue ${{ inputs.slurm.slurm_options }} | awk 'NR==1')"
+                  export SQUEUE_HEADER="$(eval squeue | awk 'NR==1')"
               fi
               status_column=$(echo "${SQUEUE_HEADER}" | awk '{ for (i=1; i<=NF; i++) if ($i ~ /^S/) { print i; exit } }')
-              status_response=$(eval squeue ${{ inputs.slurm.slurm_options }} | awk -v jobid="${jobid}" '$1 == jobid')
+              status_response=$(eval squeue | awk -v jobid="${jobid}" '$1 == jobid')
               echo "${SQUEUE_HEADER}"
               echo "${status_response}"
               export job_status=$(echo ${status_response} | awk -v id="${jobid}" -v col="$status_column" '{print $col}')
@@ -183,7 +184,7 @@ jobs:
             sleep 15
             get_slurm_job_status
             if [ -z "${job_status}" ]; then
-              job_status=$(sacct ${{ inputs.slurm.slurm_options }} -j ${jobid}  --format=state | tail -n1)
+              job_status=$(sacct -j ${jobid}  --format=state | tail -n1)
               echo "$(date) Job exited with status ${job_status}"
               break
             fi
@@ -249,7 +250,7 @@ jobs:
         ignore: ${{ .hidden }}
         tooltip: Type the script to run without shebang and scheduler directives.
         default: |
-          echo "$(date) Running in directory ${{ inputs.rundir }} on ${HOSTNAME}"
+          echo "$(date) Running in directory $(pwd) on ${HOSTNAME}"
       script_path:
         label: Script Path
         type: string
@@ -258,7 +259,7 @@ jobs:
         tooltip: Provide path to an existing script on the target resource.
       scheduler:
         type: boolean
-        default: true
+        default: false
         label: Schedule Job?
         hidden: ${{ inputs.resource.schedulerType == '' }}
         ignore: ${{ .hidden }}
@@ -271,83 +272,45 @@ jobs:
         hidden: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
         ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
         items:
-          slurm_options:
-            type: dropdown
-            label: Select Cluster
-            optional: true
-            default: ''
-            options:
-              - value: ''
-                label: Default
-              - value: '-M hpc4'
-                label: HPC4
           is_disabled:
             type: boolean
             hidden: true
             default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
             label: Is SLURM disabled?
-          partition_default:
-            type: slurm-partitions
-            label: SLURM partition
-            ignore: ${{ '-M hpc4' == inputs.slurm.slurm_options }}
-            hidden: ${{ .ignore }}
-            optional: true
+          account:
+            label: SLURM account
+            type: slurm-accounts
             resource: ${{ inputs.resource }}
-            tooltip: Select a partition from the drop down menu. Leave empty to let SLURM pick a partition.
-          partition_hpc4:
-            type: dropdown
-            label: SLURM partition
-            optional: true
-            tooltip: Select a partition from the drop down menu. Leave empty to let SLURM pick a partition.
-            ignore: ${{ '-M hpc4' != inputs.slurm.slurm_options }}
-            hidden: ${{ .ignore }}
-            default: normal
-            options:
-              - normal
-              - gpu
-              - gpu-h200
-              - gpu-quick
-              - ht
-              - large-mem
-              - quick
-              - test
-              - unlimited
-          cpus_per_task:
-            type: number
-            label: CPUs per task
-            min: 1
-            max: 32
-            default: 1
-            tooltip: '--cpus-per-task=value slurm directive'
+            tooltip: '--account=value slurm directive'
             ignore: ${{ 'existing' != inputs.resource.provider }}
             hidden: ${{ .ignore }}
-          mem:
-            type: string
-            label: Minimum total memory required
-            default: 8GB
-            tooltip: '--mem=value slurm directive'
-            hidden: ${{ 'existing' != inputs.resource.provider }}
-            ignore: ${{ .hidden }}
+          partition:
+            type: slurm-partitions
+            label: SLURM partition
             optional: true
-          gres_gpu_default:
-            type: number
-            label: Number of GPUs
-            ignore: ${{ ( inputs.slurm.partition_default != 'gpu' && inputs.slurm.partition_default != 'gpu-quick' ) || 'existing' != inputs.resource.provider  }}
+            resource: ${{ inputs.resource }}
+            tooltip: '--qos=partition slurm directive'
+          qos:
+            label: Quality of Service [QoS]
+            type: slurm-qos
+            resource: ${{ inputs.resource }}
+            tooltip: '--qos=value slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
             hidden: ${{ .ignore }}
-            min: 1
-            max: 4
-            default: 1
-            tooltip: '--gres=gpu:X slurm directive'
-          gres_gpu_hpc4:
+          cpus_per_task:
+            label: CPUs per task
             type: number
-            label: Number of GPUs
-            hidden: ${{ ( inputs.slurm.partition_hpc4 != 'gpu' && inputs.slurm.partition_hpc4 != 'gpu-quick' && inputs.slurm.partition_hpc4 != 'gpu-h200' ) || 'existing' != inputs.resource.provider  }}
-            ignore: ${{ .hidden }}
-            optional: ${{ .hidden }}
-            min: 1
-            max: 4
             default: 1
-            tooltip: '--gres=gpu:X slurm directive'
+            tooltip: '--cpus-per-task= SLURM directive to set the number of CPUs per task'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
+          nodes:
+            label: Number of nodes
+            type: number
+            default: 1
+            tooltip: '--nodes=value slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
           time:
             label: Walltime
             type: string
@@ -358,6 +321,9 @@ jobs:
             optional: true
             tooltip: |
               Type in additional scheduler directives. 
+            default: |
+              ##SBATCH --gres=gpu:4 # uncomment for gpus on onprem systems
+              ##SBATCH --constraint=mla # uncomment for Navy and AFRL DSRC systems 
       pbs:
         type: group
         label: PBS Directives
@@ -369,7 +335,16 @@ jobs:
             hidden: true
             default: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
             label: Is PBS disabled?
+          account:
+            label: Account
+            type: string
           scheduler_directives:
             label: Scheduler Directives
             type: editor
             tooltip: Type the PBS scheduler directives
+            default: |
+              #!/bin/bash
+              #PBS -q HIE
+              #PBS -l select=1:ncpus=92:mpiprocs=1:ngpus=1
+              #PBS -l walltime=01:00:00
+              #PBS -V    

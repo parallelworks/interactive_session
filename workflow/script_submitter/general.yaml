@@ -40,7 +40,7 @@ jobs:
   ssh_job:
     needs:
       - create_script_template
-    if: ${{ inputs.slurm.is_disabled && inputs.pbs.is_disabled }}
+    if: ${{ inputs.slurm.is_disabled != false && inputs.pbs.is_disabled != false }}
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}

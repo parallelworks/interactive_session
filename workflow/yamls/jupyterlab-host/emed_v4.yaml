@@ -48,6 +48,7 @@ jobs:
             sed -i '/=""/d' inputs.sh # var=""
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
+            echo "module load singularity" >> inputs.sh
 
   session_runner:
     needs:

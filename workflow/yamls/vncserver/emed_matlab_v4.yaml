@@ -54,6 +54,7 @@ jobs:
             fi
             slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
             echo "slug=${slug}"  | tee -a $OUTPUTS
+            echo "module load singularity" >> inputs.sh
             sleep 5
 
 

@@ -19,7 +19,6 @@ jobs:
           cp ${{ inputs.service.inputs_sh }} ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
           # TRANSITION CODE
           echo resource_jobdir=${PW_PARENT_JOB_DIR} >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
-
           # Write code common to all services
           cat <<'EOF' >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
 
@@ -74,13 +73,11 @@ jobs:
           scheduler: ${{ inputs.cluster.scheduler }}
           slurm:
             is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
-            slurm_options: ${{ inputs.cluster.slurm.slurm_options }}
-            partition_default: ${{ inputs.cluster.slurm.partition_default }}
-            partition_hpc4: ${{ inputs.cluster.slurm.partition_hpc4 }}
+            account: ${{ inputs.cluster.slurm.account }}
+            partition: ${{ inputs.cluster.slurm.partition }}
+            qos: ${{ inputs.cluster.slurm.qos }}
             cpus_per_task: ${{ inputs.cluster.slurm.cpus_per_task }}
-            mem: ${{ inputs.cluster.slurm.mem }}
-            gres_gpu_default: ${{ inputs.cluster.slurm.gres_gpu_default }}
-            gres_gpu_hpc4: ${{ inputs.cluster.slurm.gres_gpu_hpc4 }}
+            nodes: ${{ inputs.cluster.slurm.nodes }}
             time: ${{ inputs.cluster.slurm.time }}
             scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
           pbs:
@@ -137,8 +134,8 @@ jobs:
         run: echo "$(date) Cleaning up..."
         cleanup: |
           set -x
-          if [ -f cancel.sh ]; then
-            bash cancel.sh
+          if [ -f ${{ inputs.service.cleanup_script }} ]; then
+            bash ${{ inputs.service.cleanup_script }}
           fi
       - name: Compute cleanup
         if: ${{ (inputs.cluster.slurm.is_disabled == false || inputs.cluster.pbs.is_disabled == false) }}
@@ -151,8 +148,8 @@ jobs:
             exit 0
           fi
           sshcmd="ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${remote_host}"
-          if [ -f cancel.sh ]; then
-            ${sshcmd} 'bash -s' < ${PWD}/cancel.sh
+          if [ -f ${{ inputs.service.cleanup_script }} ]; then
+            ${sshcmd} 'bash -s' < ${{ inputs.service.cleanup_script }}
           fi
   create_session:
     working-directory: ${{ inputs.service.rundir }}
@@ -194,7 +191,7 @@ jobs:
               
               if check_server; then
                   echo "$(date) Success: Server is listening on ${remote_host}:${remote_port}!"
-                  sleep 30
+                  sleep 3
                   exit 0
               elif [ -f job.ended ]; then
                   echo "$(date) Job was completed. Exiting... "
@@ -240,86 +237,48 @@ jobs:
           slurm:
             type: group
             label: SLURM Directives
-            hidden: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
-            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            hidden: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
             items:
-              slurm_options:
-                type: dropdown
-                label: Select Cluster
-                optional: true
-                default: ''
-                options:
-                  - value: ''
-                    label: Default
-                  - value: '-M hpc4'
-                    label: HPC4
               is_disabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
                 label: Is SLURM disabled?
-              partition_default:
-                type: slurm-partitions
-                label: SLURM partition
-                ignore: ${{ '-M hpc4' == inputs.cluster.slurm.slurm_options }}
-                hidden: ${{ .ignore }}
-                optional: true
+              account:
+                label: SLURM account
+                type: slurm-accounts
                 resource: ${{ inputs.resource }}
-                tooltip: Select a partition from the drop down menu. Leave empty to let SLURM pick a partition.
-              partition_hpc4:
-                type: dropdown
-                label: SLURM partition
-                optional: true
-                tooltip: Select a partition from the drop down menu. Leave empty to let SLURM pick a partition.
-                ignore: ${{ '-M hpc4' != inputs.cluster.slurm.slurm_options }}
-                hidden: ${{ .ignore }}
-                default: normal
-                options:
-                  - normal
-                  - gpu
-                  - gpu-h200
-                  - gpu-quick
-                  - ht
-                  - large-mem
-                  - quick
-                  - test
-                  - unlimited
-              cpus_per_task:
-                type: number
-                label: CPUs per task
-                min: 1
-                max: 32
-                default: 1
-                tooltip: '--cpus-per-task=value slurm directive'
+                tooltip: '--account=value slurm directive'
                 ignore: ${{ 'existing' != inputs.resource.provider }}
                 hidden: ${{ .ignore }}
-              mem:
-                type: string
-                label: Minimum total memory required
-                default: 8GB
-                tooltip: '--mem=value slurm directive'
-                hidden: ${{ 'existing' != inputs.resource.provider }}
-                ignore: ${{ .hidden }}
+              partition:
+                type: slurm-partitions
+                label: SLURM partition
                 optional: true
-              gres_gpu_default:
-                type: number
-                label: Number of GPUs
-                ignore: ${{ ( inputs.cluster.slurm.partition_default != 'gpu' && inputs.cluster.slurm.partition_default != 'gpu-quick' ) || 'existing' != inputs.resource.provider  }}
+                resource: ${{ inputs.resource }}
+                tooltip: '--qos=partition slurm directive'
+              qos:
+                label: Quality of Service [QoS]
+                type: slurm-qos
+                resource: ${{ inputs.resource }}
+                tooltip: '--qos=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
                 hidden: ${{ .ignore }}
-                min: 1
-                max: 4
-                default: 1
-                tooltip: '--gres=gpu:X slurm directive'
-              gres_gpu_hpc4:
+              cpus_per_task:
+                label: CPUs per task
                 type: number
-                label: Number of GPUs
-                hidden: ${{ ( inputs.cluster.slurm.partition_hpc4 != 'gpu' && inputs.cluster.slurm.partition_hpc4 != 'gpu-quick' && inputs.cluster.slurm.partition_hpc4 != 'gpu-h200' ) || 'existing' != inputs.resource.provider  }}
-                ignore: ${{ .hidden }}
-                optional: ${{ .hidden }}
-                min: 1
-                max: 4
                 default: 1
-                tooltip: '--gres=gpu:X slurm directive'
+                tooltip: '--cpus-per-task= SLURM directive to set the number of CPUs per task'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              nodes:
+                label: Number of nodes
+                type: number
+                default: 1
+                tooltip: '--nodes=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
               time:
                 label: Walltime
                 type: string
@@ -330,21 +289,33 @@ jobs:
                 optional: true
                 tooltip: |
                   Type in additional scheduler directives. 
+                default: |
+                  ##SBATCH --gres=gpu:4 # uncomment for gpus on onprem systems
+                  ##SBATCH --constraint=mla # uncomment for Navy and AFRL DSRC systems 
           pbs:
             type: group
             label: PBS Directives
-            hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
-            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
             items:
               is_disabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+                default: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
                 label: Is PBS disabled?
+              account:
+                label: Account
+                type: string
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
                 tooltip: Type the PBS scheduler directives
+                default: |
+                  #!/bin/bash
+                  #PBS -q HIE
+                  #PBS -l select=1:ncpus=92:mpiprocs=1:ngpus=1
+                  #PBS -l walltime=01:00:00
+                  #PBS -V    
       service:
         type: group
         label: Service
@@ -358,6 +329,11 @@ jobs:
             label: Controller Script
             type: string
             tooltip: Setup and installation script to run on controller node
+          cleanup_script:
+            label: Cleanup Script
+            type: string
+            tooltip: Script to clean up the service node after the session
+            default: cancel.sh
           inputs_sh:
             label: Inputs Script
             type: string

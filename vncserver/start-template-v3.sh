@@ -375,14 +375,18 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     export kasmvnc_port=$(findAvailablePort)
     export XDG_RUNTIME_DIR=""
 
+    export KASM_HOME=/tmp/$USER-vnc
+    mkdir -p $KASM_HOME/.vnc
+    chmod 700 $KASM_HOME/.vnc
+
     if [ "${service_set_password}" != true ]; then
         service_password=password
         disableBasicAuth="-disableBasicAuth"
     fi
     #expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "'"${service_password}"'\r"; expect "Verify:"; send "'"${service_password}"'\r"; expect eof'
-    printf "%s\n%s\n" "$service_password" "$service_password" | vncpasswd -u "$USER" -w -r
+    HOME=$KASM_HOME  printf "%s\n%s\n" "$service_password" "$service_password" | vncpasswd -u "$USER" -w -r
 
-    ${service_vnc_exec} -kill ${DISPLAY}
+    HOME=$KASM_HOME  ${service_vnc_exec} -kill ${DISPLAY}
 
     MAX_RETRIES=5
     RETRY_DELAY=5
@@ -487,7 +491,7 @@ sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
     echo ${vncserver_cmd}
 
     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-        ${vncserver_cmd}
+        HOME=$KASM_HOME  ${vncserver_cmd}
         if [ $? -eq 0 ]; then
             echo "KasmVNC server started successfully."
             break

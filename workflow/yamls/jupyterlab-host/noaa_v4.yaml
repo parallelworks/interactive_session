@@ -84,7 +84,7 @@ jobs:
             start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/start-template-v3.sh
             controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/controller-v3.sh
             inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
-            slug: ${{ needs.preprocessing.outputs.slug }}
+            slug: lab
             rundir: ${PW_PARENT_JOB_DIR}
 
 'on':

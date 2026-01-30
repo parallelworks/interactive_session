@@ -213,7 +213,6 @@ jobs:
       service:
         type: group
         label: Service
-        hidden: ${{ 'existing' == inputs.resource.provider }}
         items:
           novnc_parent_install_dir:
             label: noVNC installation directory

@@ -107,8 +107,6 @@ if ! [ -z "${CONDA_PREFIX}" ]; then
     export LD_LIBRARY_PATH=$(echo "$LD_LIBRARY_PATH" | tr ':' '\n' | grep -v 'conda' | tr '\n' ':' | sed 's/:$//')
 fi
 
-[[ "${DEBUG:-}" == "true" ]] && set -x
-
 # Find an available display port
 minPort=5901
 maxPort=5999
@@ -309,8 +307,11 @@ if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
 
     if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
         # FIXME: Change ~/.vnc/config
+        echo "$(date) ${service_vnc_exec} ${DISPLAY} &> ${resource_jobdir}/vncserver.log &"
         ${service_vnc_exec} ${DISPLAY} &> ${resource_jobdir}/vncserver.log &
-        echo $! > ${resource_jobdir}/vncserver.pid
+        vncserver_pid=$!
+        echo ${vncserver_pid} > ${resource_jobdir}/vncserver.pid
+        echo "kill ${vncserver_pid} #vncserver pid" >> cancel.sh
     else
         ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${resource_jobdir}/.vncpasswd
     fi

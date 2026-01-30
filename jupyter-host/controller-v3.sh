@@ -1,6 +1,9 @@
 #[[ "${DEBUG:-}" == "true" ]] && set -x
 
-cd ${resource_jobdir}
+# TRANSISION CODE
+if ! [ -z ${resource_jobdir} ]; then
+    cd ${resource_jobdir}
+fi
 
 
 if [ -z ${service_parent_install_dir} ]; then

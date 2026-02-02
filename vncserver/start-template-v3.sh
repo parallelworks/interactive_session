@@ -513,7 +513,7 @@ sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
 
     rm -rf ${portFile}
 
-    if ! [ -f "${HOME}/.vnc/$(hostname)${DISPLAY}.pid" ]; then
+    if ! [ -f "${KASM_HOME}/.vnc/$(hostname)${DISPLAY}.pid" ]; then
         echo $(date): "KasmVNC server failed to start. Exiting workflow."
         exit 1
     fi

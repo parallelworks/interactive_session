@@ -495,7 +495,8 @@ sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
 
     echo Running:
     echo ${vncserver_cmd}
-
+    HOME=$KASM_HOME  ${vncserver_cmd}
+    
     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
         HOME=$KASM_HOME  ${vncserver_cmd}
         if [ $? -eq 0 ]; then
@@ -518,11 +519,11 @@ sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
         exit 1
     fi
 
-    vncserver_pid=$(cat "${HOME}/.vnc/$(hostname)${DISPLAY}.pid")
-    echo "kill ${vncserver_pid} #${HOME}/.vnc/$(hostname)${DISPLAY}.pid" >> cancel.sh
-    echo "cat ${HOME}/.vnc/$(hostname)${DISPLAY}.log"  >> cancel.sh
-    echo "rm \"${HOME}/.vnc/$(hostname)${DISPLAY}*\"" >> cancel.sh
-    cat ${HOME}/.vnc/$(hostname)${DISPLAY}.log
+    vncserver_pid=$(cat "${KASM_HOME}/.vnc/$(hostname)${DISPLAY}.pid")
+    echo "kill ${vncserver_pid} #${KASM_HOME}/.vnc/$(hostname)${DISPLAY}.pid" >> cancel.sh
+    echo "cat ${KASM_HOME}/.vnc/$(hostname)${DISPLAY}.log"  >> cancel.sh
+    echo "rm \"${KASM_HOME}/.vnc/$(hostname)${DISPLAY}*\"" >> cancel.sh
+    cat ${KASM_HOME}/.vnc/$(hostname)${DISPLAY}.log
 
     #######################
     # START NGINX WRAPPER #

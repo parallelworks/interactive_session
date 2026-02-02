@@ -41,6 +41,11 @@ run_xterm_loop(){
     done
 }
 
+# TRANSITION CODE
+if [ -z ${resource_jobdir} ]; then
+    resource_jobdir=${PW_PARENT_JOB_DIR}
+fi
+
 ###################
 # PREPARE CLEANUP #
 ###################
@@ -384,7 +389,8 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
         disableBasicAuth="-disableBasicAuth"
     fi
     #expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "'"${service_password}"'\r"; expect "Verify:"; send "'"${service_password}"'\r"; expect eof'
-    HOME=$KASM_HOME  printf "%s\n%s\n" "$service_password" "$service_password" | vncpasswd -u "$USER" -w -r
+    HOME=$KASM_HOME  printf "%s\n%s\n" "$service_password" "$service_password" |  HOME=$KASM_HOME vncpasswd -u "$USER" -w -r
+    #echo -e "password\npassword" | HOME=$KASM_HOME /usr/bin/vncpasswd -u admin -w -o
 
     HOME=$KASM_HOME  ${service_vnc_exec} -kill ${DISPLAY}
 

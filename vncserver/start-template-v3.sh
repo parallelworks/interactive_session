@@ -658,7 +658,9 @@ HERE
         mkdir -p ./tmp
         # Need to overwrite default configuration!
         touch empty
+        set -x
         singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B $PWD/nginx.conf:/etc/nginx/nginx.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} >> nginx.logs 2>&1 &
+        set +x
         pid=$!
         echo "kill ${pid}" >> cancel.sh
     else

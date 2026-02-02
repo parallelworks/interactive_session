@@ -216,7 +216,7 @@ jobs:
           fi
 
           if [[ "${{ inputs.slurm.is_disabled }}" == false ]]; then
-            scancel "${{ inputs.slurm.slurm_options }} ${{ needs.slurm_job.outputs.jobid }}"
+            scancel ${{ inputs.slurm.slurm_options }} ${{ needs.slurm_job.outputs.jobid }}
           fi
 'on':
   execute:

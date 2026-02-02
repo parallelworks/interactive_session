@@ -496,6 +496,7 @@ sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
             echo "KasmVNC server started successfully."
             break
         else
+            exit 1
             echo "KasmVNC server failed to start. Retrying in $RETRY_DELAY seconds..."
             ls -l /etc/pki/tls/private/kasmvnc.pem
             sleep $RETRY_DELAY

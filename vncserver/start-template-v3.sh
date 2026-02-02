@@ -494,9 +494,8 @@ sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
         -rfbport ${displayPort}"
 
     echo Running:
-    echo ${vncserver_cmd}
-    HOME=$KASM_HOME  ${vncserver_cmd}
-    
+    echo "HOME=$KASM_HOME ${vncserver_cmd}"
+
     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
         HOME=$KASM_HOME  ${vncserver_cmd}
         if [ $? -eq 0 ]; then

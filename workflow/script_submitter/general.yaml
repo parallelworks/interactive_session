@@ -263,6 +263,7 @@ jobs:
         type: group
         label: SLURM Directives
         hidden: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
         items:
           is_disabled:
             type: boolean
@@ -292,6 +293,7 @@ jobs:
         type: group
         label: PBS Directives
         hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+        ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
         items:
           is_disabled:
             type: boolean

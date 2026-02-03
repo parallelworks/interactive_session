@@ -91,6 +91,10 @@ if [ -z "${service_nginx_sif}" ]; then
     service_nginx_sif=${service_parent_install_dir}/nginx-unprivileged.sif
 fi
 
+if [ -z "${service_enroot_image}" ]; then
+    service_enroot_image=${service_parent_install_dir}/nginxinc+nginx-unprivileged+1.25.3.sqsh
+fi
+
 if [ -z "${service_vncserver_singularity_dir}" ]; then
     service_vncserver_singularity_dir=${service_parent_install_dir}/vncserver_singularity
 fi
@@ -611,7 +615,25 @@ http {
     include /etc/nginx/conf.d/*.conf;
 }
 HERE
-
+    if which enroot >/dev/null 2>&1; then
+        echo "Running enroot container"
+        container_name="nginx-${service_port}"
+        # Create tmp directory for nginx pid file
+        mkdir -p ./tmp
+        touch empty
+        touch nginx.logs
+                
+        # Run enroot container directly from squashfs
+        set -x
+        enroot start --rw \
+            -m $PWD/tmp:/tmp \
+            -m $PWD/config.conf:/etc/nginx/conf.d/config.conf \
+            -m $PWD/nginx.conf:/etc/nginx/nginx.conf \
+            -m $PWD/empty:/etc/nginx/conf.d/default.conf \
+            ${service_enroot_image} >> nginx.logs 2>&1 &
+        set +x
+        pid=$!
+        echo "kill ${pid}" >> cancel.sh
     if which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]]; then
         container_name="nginx-${service_port}"
         touch empty

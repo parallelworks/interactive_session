@@ -260,32 +260,7 @@ if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
     # NoVNC #
     #########
     echo; echo "DESKTOP ENVIRONMENT"
-    if ! [ -z "${service_desktop}" ]; then
-        true
-    elif  ! [ -z $(which gnome-session) ]; then
-        gsettings set org.gnome.desktop.session idle-delay 0
-        service_desktop=gnome-session
-    elif ! [ -z $(which mate-session) ]; then
-        service_desktop=mate-session
-    elif ! [ -z $(which xfce4-session) ]; then
-        service_desktop=xfce4-session
-    elif ! [ -z $(which icewm-session) ]; then
-        # FIXME: Code below fails to launch desktop session
-        #        Use case in onyx automatically launches the session when visual apps are launched
-        service_desktop=icewm-session
-    elif ! [ -z $(which gnome) ]; then
-        service_desktop=gnome
-    else
-        # Exit script here
-        displayErrorMessage "ERROR: No desktop environment was found! Tried gnome-session, mate-session, xfce4-session and gnome"
-    fi
-
-
-    # This is only required for turbovnc:
-    # https://turbovnc.org/Documentation/Compatibility30
-    if [[ ${service_desktop} == "mate-session" ]]; then
-        export TVNC_WM=mate
-    fi
+    service_desktop=startxfce4
     
     # Start service
     mkdir -p ~/.vnc

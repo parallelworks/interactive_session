@@ -381,6 +381,7 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     ###########
     # KasmVNC #
     ###########
+    set -x
     export kasmvnc_port=$(findAvailablePort)
     export XDG_RUNTIME_DIR=""
 
@@ -498,6 +499,9 @@ sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
         -xstartup ${XSTARTUP_PATH} \
         -websocketPort ${kasmvnc_port} \
         -rfbport ${displayPort}"
+    set +x
+    groups
+    ls -l /etc/ssl/private/ssl-cert-snakeoil.key
 
     echo Running:
     echo "HOME=$KASM_HOME ${vncserver_cmd}"

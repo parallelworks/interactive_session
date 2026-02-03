@@ -161,6 +161,7 @@ if [[ ${service_download_vncserver_container} == "true" ]]; then
         exit 1
     fi
     echo "$(date): vncserver is not installed. Using singularity container..."
+    set -x
     singularity_exec="singularity run --writable-tmpfs --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} ${service_vncserver_singularity_dir}"
     service_vnc_exec="${singularity_exec} vncserver"
     service_vnc_type="SingularityTurboVNC"

@@ -255,6 +255,7 @@ fi
 date
 
 if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
+    set -x
     #########
     # NoVNC #
     #########

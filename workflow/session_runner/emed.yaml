@@ -35,6 +35,7 @@ jobs:
           hostname > HOSTNAME
 
           cleanup() {
+              trap - EXIT INT TERM
               echo "$(date) Cleaning up..."
               kill -- -$$
           }

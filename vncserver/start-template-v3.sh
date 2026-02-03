@@ -634,7 +634,7 @@ HERE
         set +x
         pid=$!
         echo "kill ${pid}" >> cancel.sh
-    if which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]]; then
+    elif which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]]; then
         container_name="nginx-${service_port}"
         touch empty
         touch nginx.logs

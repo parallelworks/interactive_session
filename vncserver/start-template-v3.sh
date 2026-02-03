@@ -287,12 +287,12 @@ if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
     fi
     
     # Start service
-    export KASM_HOME=/tmp/$USER-vnc
-    mkdir -p $KASM_HOME/.vnc
-    chmod 700 $KASM_HOME/.vnc
-    touch ${KASM_HOME}/.Xauthority
-    chmod 600 ${KASM_HOME}/.Xauthority
-    service_vnc_exec="${KASM_HOME} ${service_vnc_exec}"
+    export VNC_HOME=/tmp/$USER-vnc
+    mkdir -p $VNC_HOME/.vnc
+    chmod 700 $VNC_HOME/.vnc
+    touch ${VNC_HOME}/.Xauthority
+    chmod 600 ${VNC_HOME}/.Xauthority
+    service_vnc_exec="VNC_HOME=${VNC_HOME} ${service_vnc_exec}"
     set -x
     ${service_vnc_exec} -kill ${DISPLAY}
     # To prevent the process from being killed at startime    

@@ -387,6 +387,8 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     export KASM_HOME=/tmp/$USER-vnc
     mkdir -p $KASM_HOME/.vnc
     chmod 700 $KASM_HOME/.vnc
+    touch ${KASM_HOME}/.Xauthority
+    chmod 600 ${KASM_HOME}/.Xauthority
 
     if [ "${service_set_password}" != true ]; then
         service_password=password

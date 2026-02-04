@@ -25,23 +25,34 @@ chmod +x cancel.sh
 echo "mv cancel.sh cancel.sh.executed" >> cancel.sh
 
 # Find an available display port
+# Find an available display port
 minPort=5901
 maxPort=5999
 for port in $(seq ${minPort} ${maxPort} | shuf); do
-    out=$(netstat -aln | grep LISTEN | grep ${port})
     displayNumber=${port: -2}
-    XdisplayNumber=$(echo ${displayNumber} | sed 's/^0*//')
-    if [ -z "${out}" ] && ! [ -e /tmp/.X11-unix/X${XdisplayNumber} ] && ! [ -e /tmp/.X${XdisplayNumber}-lock ]; then
-        # To prevent multiple users from using the same available port --> Write file to reserve it
-        portFile=/tmp/${port}.port.used
-        if ! [ -f "${portFile}" ]; then
-            touch ${portFile}
-            echo "rm ${portFile}" >> cancel.sh
-            export displayPort=${port}
-            export DISPLAY=:${displayNumber#0}
-            break
-        fi
+    XdisplayNumber=${displayNumber#0}
+    
+    # Check if port is in use (use || true to prevent exit on no match)
+    if netstat -aln | grep -q "LISTEN.*:${port}\b" 2>/dev/null; then
+        continue
     fi
+    
+    # Check for X11 socket/lock files
+    if [ -e "/tmp/.X11-unix/X${XdisplayNumber}" ] || [ -e "/tmp/.X${XdisplayNumber}-lock" ]; then
+        continue
+    fi
+    
+    # To prevent multiple users from using the same available port --> Write file to reserve it
+    portFile="/tmp/${port}.port.used"
+    if [ -f "${portFile}" ]; then
+        continue
+    fi
+    
+    touch "${portFile}"
+    echo "rm ${portFile}" >> cancel.sh
+    export displayPort=${port}
+    export DISPLAY=":${XdisplayNumber}"
+    break
 done
 
 # =============================================================================

@@ -27,6 +27,9 @@ echo "=========================================="
 JOB_DIR="${PW_PARENT_JOB_DIR%/}"
 
 CONTAINER_DIR="${HOME}/pw/singularity"
+SOFTWARE_DIR="${HOME}/pw/software"
+mkdir -p ${SOFTWARE_DIR}
+
 
 # =============================================================================
 # KasmVNC Container Mode
@@ -139,6 +142,6 @@ echo "${desktop_kasmvnc_enable_gpu:-true}" > "${JOB_DIR}/KASMVNC_CONTAINER_ENABL
 # Use xterm to access the host directly
 xterm_path=$(which xterm)
 if ! [ -z ${xterm_path} ]; then
-    cp ${xterm_path} ${service_parent_install_dir}/xterm
-    chmod +x ${service_parent_install_dir}/xterm
+    cp ${xterm_path} ${SOFTWARE_DIR}/xterm
+    chmod +x ${SOFTWARE_DIR}/xterm
 fi

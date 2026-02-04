@@ -14,6 +14,7 @@ echo "=========================================="
 # =============================================================================
 # Normalize job directory path (remove trailing slash if present)
 JOB_DIR="${PW_PARENT_JOB_DIR%/}"
+SOFTWARE_DIR="${HOME}/pw/software"
 
 # Ensure we're working from the job directory
 cd "${JOB_DIR}"
@@ -112,7 +113,7 @@ sleep 6  # Allow container to start
 run_xterm_loop(){
     while true; do
         echo "$(date): Starting xterm"
-        ${service_parent_install_dir}/xterm -fa "DejaVu Sans Mono" -fs 12
+        ${SOFTWARE_DIR}/xterm -fa "DejaVu Sans Mono" -fs 12
         sleep 1
     done
 }

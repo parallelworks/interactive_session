@@ -80,13 +80,16 @@ else
 fi
 
 # Cleanup function for KasmVNC container mode
-cleanup_kasmvnc_container() {
+cleanup() {
     echo "$(date) Stopping KasmVNC container..."
     if [ -n "${kasmvnc_container_pid:-}" ]; then
         kill ${kasmvnc_container_pid} 2>/dev/null || true
     fi
+    if [ -n "${run_xterm_pid:-}" ]; then
+        kill ${run_xterm_pid} 2>/dev/null || true
+    fi
 }
-trap cleanup_kasmvnc_container EXIT INT TERM
+trap cleanup EXIT INT TERM
 
 # Start KasmVNC container
 echo "Starting Singularity container..."
@@ -115,7 +118,8 @@ run_xterm_loop(){
 }
 
 run_xterm_loop | tee -a ${resource_jobdir}/xterm.out &
-echo "kill $! # run_xterm_loop" >> cancel.sh
+run_xterm_pid=$!
+echo "kill ${run_xterm_pid} # run_xterm_loop" >> cancel.sh
 
 # Wait for container to exit
 wait ${kasmvnc_container_pid}

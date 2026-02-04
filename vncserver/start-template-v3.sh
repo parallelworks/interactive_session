@@ -475,6 +475,7 @@ sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
     set +x
     groups
     ls -l /etc/ssl/private/ssl-cert-snakeoil.key
+    sudo ls -l /etc/ssl/private/ssl-cert-snakeoil.key
 
     echo Running:
     echo "${vncserver_cmd}"

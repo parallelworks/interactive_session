@@ -361,21 +361,18 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     export kasmvnc_port=$(findAvailablePort)
     export XDG_RUNTIME_DIR=""
 
+    # FIXME Ensure directory is linked to ~/.vnc
     export KASM_HOME=/tmp/$USER-vnc
-    mkdir -p $KASM_HOME/.vnc
-    chmod 700 $KASM_HOME/.vnc
-    touch ${KASM_HOME}/.Xauthority
-    chmod 600 ${KASM_HOME}/.Xauthority
 
     if [ "${service_set_password}" != true ]; then
         service_password=password
         disableBasicAuth="-disableBasicAuth"
     fi
     #expect -c 'spawn vncpasswd -u '"${USER}"' -w -r; expect "Password:"; send "'"${service_password}"'\r"; expect "Verify:"; send "'"${service_password}"'\r"; expect eof'
-    HOME=$KASM_HOME  printf "%s\n%s\n" "$service_password" "$service_password" |  HOME=$KASM_HOME vncpasswd -u "$USER" -w -r
-    #echo -e "password\npassword" | HOME=$KASM_HOME /usr/bin/vncpasswd -u admin -w -o
+    printf "%s\n%s\n" "$service_password" "$service_password" |  vncpasswd -u "$USER" -w -r
+    #echo -e "password\npassword" | /usr/bin/vncpasswd -u admin -w -o
 
-    HOME=$KASM_HOME  ${service_vnc_exec} -kill ${DISPLAY}
+    ${service_vnc_exec} -kill ${DISPLAY}
 
     MAX_RETRIES=5
     RETRY_DELAY=5
@@ -480,10 +477,10 @@ sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
     ls -l /etc/ssl/private/ssl-cert-snakeoil.key
 
     echo Running:
-    echo "HOME=$KASM_HOME ${vncserver_cmd}"
+    echo "${vncserver_cmd}"
 
     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-        HOME=$KASM_HOME  ${vncserver_cmd}
+        ${vncserver_cmd}
         if [ $? -eq 0 ]; then
             echo "KasmVNC server started successfully."
             break
@@ -499,16 +496,16 @@ sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
 
     rm -rf ${portFile}
 
-    if ! [ -f "${KASM_HOME}/.vnc/$(hostname)${DISPLAY}.pid" ]; then
+    if ! [ -f "${HOME}/.vnc/$(hostname)${DISPLAY}.pid" ]; then
         echo $(date): "KasmVNC server failed to start. Exiting workflow."
         exit 1
     fi
 
-    vncserver_pid=$(cat "${KASM_HOME}/.vnc/$(hostname)${DISPLAY}.pid")
-    echo "kill ${vncserver_pid} #${KASM_HOME}/.vnc/$(hostname)${DISPLAY}.pid" >> cancel.sh
-    echo "cat ${KASM_HOME}/.vnc/$(hostname)${DISPLAY}.log"  >> cancel.sh
-    echo "rm \"${KASM_HOME}/.vnc/$(hostname)${DISPLAY}*\"" >> cancel.sh
-    cat ${KASM_HOME}/.vnc/$(hostname)${DISPLAY}.log
+    vncserver_pid=$(cat "${HOME}/.vnc/$(hostname)${DISPLAY}.pid")
+    echo "kill ${vncserver_pid} #${HOME}/.vnc/$(hostname)${DISPLAY}.pid" >> cancel.sh
+    echo "cat ${HOME}/.vnc/$(hostname)${DISPLAY}.log"  >> cancel.sh
+    echo "rm \"${HOME}/.vnc/$(hostname)${DISPLAY}*\"" >> cancel.sh
+    cat ${HOME}/.vnc/$(hostname)${DISPLAY}.log
 
     #######################
     # START NGINX WRAPPER #

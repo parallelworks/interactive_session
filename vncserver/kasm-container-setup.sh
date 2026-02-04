@@ -39,6 +39,7 @@ echo "KasmVNC Container mode: skipping noVNC and nginx downloads"
 if [[ "${desktop_kasmvnc_container_source:-path}" == "git_lfs" ]]; then
     if ! git lfs version >/dev/null 2>&1; then
         echo "Git LFS not found, installing..."
+        rm -rf ~/singularity-containers-tmp 2>/dev/null || true
         git clone --depth 1 https://github.com/parallelworks/singularity-containers.git \
             ~/singularity-containers-tmp || true
 

@@ -31,6 +31,7 @@ jobs:
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH
+            module load singularity
             desktop_environment="${{ inputs.desktop.environment }}"
             desktop_kasmvnc_container_source="${{ inputs.desktop.kasmvnc_container_source }}"
             desktop_kasmvnc_container_path="${{ inputs.desktop.kasmvnc_container_path }}"

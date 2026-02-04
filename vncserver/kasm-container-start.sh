@@ -47,7 +47,7 @@ done
 # KasmVNC Container Mode
 # =============================================================================
 
-echo "Starting KasmVNC Container Mode..."
+echo "$(date) Starting KasmVNC Container Mode..."
 
 # Read container path
 if [ -f "${JOB_DIR}/KASMVNC_CONTAINER_PATH" ]; then
@@ -123,5 +123,8 @@ echo "kill ${run_xterm_pid} # run_xterm_loop" >> cancel.sh
 
 # Wait for container to exit
 wait ${kasmvnc_container_pid}
+echo "$(date) Exiting job"
 kill ${run_xterm_pid}
+rm cancel.sh
+exit 1
 

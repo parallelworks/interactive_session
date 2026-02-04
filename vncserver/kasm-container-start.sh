@@ -123,4 +123,5 @@ echo "kill ${run_xterm_pid} # run_xterm_loop" >> cancel.sh
 
 # Wait for container to exit
 wait ${kasmvnc_container_pid}
+kill ${run_xterm_pid}
 

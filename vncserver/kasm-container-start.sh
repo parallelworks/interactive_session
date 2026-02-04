@@ -18,12 +18,6 @@ JOB_DIR="${PW_PARENT_JOB_DIR%/}"
 # Ensure we're working from the job directory
 cd "${JOB_DIR}"
 
-# Verify setup completed successfully
-if [ ! -f SETUP_COMPLETE ]; then
-  echo "ERROR: SETUP_COMPLETE marker not found in ${JOB_DIR}. setup may not have run." >&2
-  exit 1
-fi
-
 # =============================================================================
 # KasmVNC Container Mode
 # =============================================================================

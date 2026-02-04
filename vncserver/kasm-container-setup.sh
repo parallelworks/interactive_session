@@ -12,7 +12,6 @@
 # - Generate VNC password and build connection slug [native mode]
 #
 # Coordinate files written here:
-#   - SETUP_COMPLETE - Signals that setup completed successfully
 #   - KASMVNC_CONTAINER_PATH - Path to KasmVNC container [KasmVNC container mode]
 
 set -e

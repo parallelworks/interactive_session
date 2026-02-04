@@ -3,7 +3,7 @@
 #
 # It uses resources prepared by setup.sh which runs in STEP 1 on the controller.
 
-set -e
+set -ex
 
 echo "=========================================="
 echo "Desktop Service Starting (Compute Node)"

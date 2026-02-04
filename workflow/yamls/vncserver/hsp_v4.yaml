@@ -20,6 +20,9 @@ jobs:
         - name: Create Inputs
           run: |
             set -x
+            if [ -z "${PW_PLATFORM_HOST}" ]; then
+              PW_PLATFORM_HOST=noaa.parallel.works
+            fi
             # Write PW variables
             env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
             # Encase values between quotes
@@ -31,7 +34,6 @@ jobs:
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH
-            module load singularity
             desktop_environment="${{ inputs.desktop.environment }}"
             desktop_kasmvnc_container_source="${{ inputs.desktop.kasmvnc_container_source }}"
             desktop_kasmvnc_container_path="${{ inputs.desktop.kasmvnc_container_path }}"
@@ -51,10 +53,7 @@ jobs:
             sed -i '/=""/d' inputs.sh # remove var=""
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
-            # Create slug
-            if [ -z "${PW_PLATFORM_HOST}" ]; then
-              PW_PLATFORM_HOST=noaa.parallel.works
-            fi
+            echo "module load singularity" >> inputs.sh
             slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
             echo "slug=${slug}"  | tee -a $OUTPUTS
 

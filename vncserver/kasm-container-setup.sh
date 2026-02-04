@@ -135,3 +135,10 @@ fi
 # Write GPU setting for start.sh
 echo "${desktop_kasmvnc_enable_gpu:-true}" > "${JOB_DIR}/KASMVNC_CONTAINER_ENABLE_GPU"
 
+
+# Use xterm to access the host directly
+xterm_path=$(which xterm)
+if ! [ -z ${xterm_path} ]; then
+    cp ${xterm_path} ${service_parent_install_dir}/xterm
+    chmod +x ${service_parent_install_dir}/xterm
+fi

@@ -137,7 +137,7 @@ jobs:
           #SBATCH --partition=${{ inputs.slurm.partition }}
           #SBATCH --qos=${{ inputs.slurm.qos }}
           #SBATCH --nodes=${{ inputs.slurm.nodes }}
-          #SBATCH --cpus-per-task=${{ inputs.slurm.cpus_per_task }}  
+          #SBATCH --cpus-per-task=${{ inputs.slurm.cpus_per_task }}
           #SBATCH --time=${{ inputs.slurm.time }}
           #SBATCH --chdir=${PWD}
           #SBATCH -o ${PWD}/run.${PW_JOB_ID}.out
@@ -150,6 +150,7 @@ jobs:
           sed -i '/^#SBATCH --[^=]*=\([^:]*:\)\{0,1\}\(undefined\)\?$/d' run.sh
           # Remove SBATCH directives with empty values
           sed -i '/#SBATCH.*=none$/d; /#SBATCH.*=gpu:0$/d' run.sh
+          sed -i '/^#SBATCH --[^=]*=[[:space:]]*$/d' run.sh
           # Remove empty lines
           sed -i '/^[[:space:]]*$/d' run.sh
           cat run.sh

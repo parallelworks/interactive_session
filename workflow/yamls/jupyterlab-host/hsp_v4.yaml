@@ -3,6 +3,7 @@ permissions:
   - '*'
 sessions:
   session:
+    useTLS: false
     redirect: true
 
 jobs:
@@ -14,9 +15,9 @@ jobs:
           uses: parallelworks/checkout
           with:
             repo: https://github.com/parallelworks/interactive_session.git
-            branch: hsp-v4
+            branch: main
             sparse_checkout:
-              - vncserver
+              - ${{ inputs.service.name }}
         - name: Create Inputs
           run: |
             set -x
@@ -34,14 +35,17 @@ jobs:
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH
-            desktop_environment="${{ inputs.desktop.environment }}"
-            desktop_kasmvnc_container_source="${{ inputs.desktop.kasmvnc_container_source }}"
-            desktop_kasmvnc_container_path="${{ inputs.desktop.kasmvnc_container_path }}"
-            desktop_kasmvnc_bucket="${{ inputs.desktop.kasmvnc_bucket }}"
-            desktop_kasmvnc_bucket_path="${{ inputs.desktop.kasmvnc_bucket_path }}"
-            desktop_kasmvnc_git_repo="${{ inputs.desktop.kasmvnc_git_repo }}"
-            desktop_kasmvnc_git_path="${{ inputs.desktop.kasmvnc_git_path }}"
-            desktop_kasmvnc_enable_gpu="${{ inputs.desktop.kasmvnc_enable_gpu }}"
+            service_notebook_dir="${{ inputs.service.notebook_dir }}"
+            service_rootless_docker="${{ inputs.service.rootless_docker }}"
+            service_conda_install="${{ inputs.service.conda_install }}"
+            service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
+            service_conda_install_dir="${{ inputs.service.conda_install_dir }}"
+            service_conda_env="${{ inputs.service.conda_env }}"
+            service_load_env="${{ inputs.service.load_env }}"
+            service_password="${{ inputs.service.password }}"
+            service_install_instructions="${{ inputs.service.install_instructions }}"
+            service_yaml="${{ inputs.service.yaml }}"
+            service_install_kernels="${{ inputs.service.install_kernels }}"
             EOF
             echo basepath=${basepath} >> inputs.sh
             echo password=${password} >> inputs.sh
@@ -54,8 +58,8 @@ jobs:
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
             echo "module load singularity" >> inputs.sh
-            slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
-            echo "slug=${slug}"  | tee -a $OUTPUTS
+            # ONLY REQUIRED FOR TRANSITION
+            cp ${{ inputs.service.name }}/*.yaml .
 
   session_runner:
     needs:
@@ -84,10 +88,10 @@ jobs:
               account: ${{ inputs.cluster.pbs.account }}
               scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
           service:
-            start_service_script: ${PW_PARENT_JOB_DIR}/vncserver/kasm-container-start.sh
-            controller_script: ${PW_PARENT_JOB_DIR}/vncserver/kasm-container-setup.sh
+            start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/start-template-v3.sh
+            controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/controller-v3.sh
             inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
-            slug: ${{ needs.preprocessing.outputs.slug }}
+            slug: lab
             rundir: ${PW_PARENT_JOB_DIR}
 
 'on':
@@ -195,80 +199,96 @@ jobs:
                   #PBS -l walltime=01:00:00
                   #PBS -V  
 
-      desktop:
+      service:
         type: group
-        label: Desktop Settings
+        label: Jupyter Lab Settings
         items:
-          environment:
-            type: dropdown
-            label: Desktop Environment
-            default: auto
-            options:
-              - label: Auto-detect
-                value: auto
-              - label: GNOME
-                value: gnome
-              - label: XFCE
-                value: xfce
-              - label: MATE
-                value: mate
-              - label: Cinnamon
-                value: cinnamon
-              - label: KDE Plasma
-                value: kde
-              - label: LXDE
-                value: lxde
-
-          kasmvnc_container_source:
-            type: dropdown
-            label: Container Source
-            default: git_lfs
-            options:
-              - label: "Pull from Git LFS"
-                value: git_lfs
-              - label: "Pull from PW Bucket"
-                value: bucket
-              - label: "Path on remote system"
-                value: path
-
-          kasmvnc_container_path:
+          name:
             type: string
-            label: Container Path
-            placeholder: "/path/to/kasmvnc.sif"
-            tooltip: Full path to the KasmVNC container on the remote system
-            hidden: ${{ inputs.desktop.kasmvnc_container_source != 'path' }}
-
-          kasmvnc_bucket:
-            type: bucket
-            label: Bucket
-            tooltip: PW bucket containing the KasmVNC container
-            hidden: ${{ inputs.desktop.kasmvnc_container_source != 'bucket' }}
-
-          kasmvnc_bucket_path:
-            type: string
-            label: Container Path in Bucket
-            default: "kasmvnc.sif"
-            placeholder: "kasmvnc.sif"
-            tooltip: Path to the container file within the bucket
-            hidden: ${{ inputs.desktop.kasmvnc_container_source != 'bucket' }}
-
-          kasmvnc_git_repo:
-            type: string
-            label: Git Repository
-            default: "https://github.com/parallelworks/singularity-containers.git"
-            tooltip: Git repository URL containing the KasmVNC container
-            hidden: ${{ inputs.desktop.kasmvnc_container_source != 'git_lfs' }}
-
-          kasmvnc_git_path:
-            type: string
-            label: Container Path in Repo
-            default: "kasmvnc"
-            tooltip: Directory in the repository containing the container
-            hidden: ${{ inputs.desktop.kasmvnc_container_source != 'git_lfs' }}
-
-          kasmvnc_enable_gpu:
-            type: boolean
-            label: Enable GPU Support (--nv)
-            default: true
-            tooltip: Pass --nv flag to Singularity for NVIDIA GPU support (safe on CPU-only nodes)
             hidden: true
+            default: jupyterlab-host
+          notebook_dir:
+            label: Directory to start Jupyter Lab GUI
+            type: string
+            default: ${HOME}
+            tooltip: This is the directory that you start with when the Jupyter graphical user interface starts. The default value here is your home directory.
+          rootless_docker:
+            label: Use Rootless Docker?
+            type: boolean
+            default: true
+            hidden: true
+          conda_install:
+            label: Install miniconda environment if not there?
+            type: boolean
+            default: true
+            tooltip: Select Yes to install Jupyter in miniconda environment and No to load an existing python environment
+          parent_install_dir:
+            label: Parent Install Directory
+            type: string
+            default: ${HOME}/pw/software
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
+            tooltip: Software dependencies are installed in this directory. Ensure the directory has sufficient space!
+          conda_install_dir:
+            label: Name of the Conda Installation Directory
+            type: string
+            default: .miniconda3c
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
+            tooltip: Ensure the directory has sufficient space for Conda and its packages.
+          conda_env:
+            label: Conda environment
+            type: string
+            default: base
+            hidden: '${{ inputs.service.conda_install == false }}'
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Environment to active. The base environment enables changing kernel to other environments!
+          load_env:
+            label: Command to load Jupyter Notebook to the PATH
+            type: string
+            default: source ${HOME}/pw/.miniconda3c/etc/profile.d/conda.sh; conda activate base
+            hidden: ${{ inputs.service.conda_install == true }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Use a bash command
+          password:
+            label: Password for notebook session
+            type: password
+            optional: true
+            hidden: true
+            ignore: true
+            tooltip: Enter password or leave blank for no password
+          install_instructions:
+            label: Select Jupyter Lab Installation
+            type: dropdown
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
+            default: jupyterlab4.1.5-python3.11.5
+            options:
+              - value: jupyterlab4.1.5-python3.11.5
+                label: Jupyter Lab 4.1.5 with Python 3.11.5
+              - value: latest
+                label: Latest versions of Jupyter Lab and Python (not thoroughly tested)
+              - value: dask-extension-jupyterlab
+                label: Dask dependencies for PW
+              - value: yaml
+                label: Provide custom Conda environment YAML file
+          yaml:
+            label: Paste Conda Environment Defition YAML
+            type: editor
+            hidden: ${{ inputs.service.install_instructions != yaml ||  inputs.service.conda_install == false }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Copy and paste a custom Conda environment definition YAML file
+          install_kernels:
+            label: Select additional kernels to install
+            type: multi-dropdown
+            optional: true
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
+            options:
+              - value: julia-kernel
+                label: Julia Kernel
+              - value: R-kernel
+                label: R Kernel

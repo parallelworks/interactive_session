@@ -137,7 +137,7 @@ jobs:
           #SBATCH --partition=${{ inputs.slurm.partition }}
           #SBATCH --qos=${{ inputs.slurm.qos }}
           #SBATCH --nodes=${{ inputs.slurm.nodes }}
-          #SBATCH --cpus-per-task=${{ inputs.slurm.cpus_per_task }}  
+          #SBATCH --cpus-per-task=${{ inputs.slurm.cpus_per_task }}
           #SBATCH --time=${{ inputs.slurm.time }}
           #SBATCH --chdir=${PWD}
           #SBATCH -o ${PWD}/run.${PW_JOB_ID}.out

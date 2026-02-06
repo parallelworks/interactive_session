@@ -1,8 +1,0 @@
-
-{
-    bash ${resource_jobdir}/docker-kill-${job_number}.sh
-    mv ${resource_jobdir}/docker-kill-${job_number}.sh ${resource_jobdir}/docker-kill-${job_number}.sh.completed
-} || {
-    echo "ERROR: Could not run bash ${resource_jobdir}/docker-kill-${job_number}.sh. Please run it manually!"
-    exit 1
-}

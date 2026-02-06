@@ -1,2 +1,0 @@
-Build singularity container with:
-sudo singularity build rserver.sif rserver.def

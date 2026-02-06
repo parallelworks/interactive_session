@@ -150,6 +150,7 @@ jobs:
           sed -i '/^#SBATCH --[^=]*=\([^:]*:\)\{0,1\}\(undefined\)\?$/d' run.sh
           # Remove SBATCH directives with empty values
           sed -i '/#SBATCH.*=none$/d; /#SBATCH.*=gpu:0$/d' run.sh
+          sed -i '/^#SBATCH --[^=]*=[[:space:]]*$/d' run.sh
           # Remove empty lines
           sed -i '/^[[:space:]]*$/d' run.sh
           cat run.sh

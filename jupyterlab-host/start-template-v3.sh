@@ -272,6 +272,8 @@ fi
 
 date
 
+mkdir -p ${resource_jobdir}/jupyter_runtime
+export JUPYTER_RUNTIME_DIR=${resource_jobdir}/jupyter_runtime
 ${juice_cmd} jupyter-lab --port=${jupyterlab_port} --no-browser --config=${resource_jobdir}/jupyter_lab_config.py --allow-root
 #jupyter-lab --port=${jupyterlab_port} --ip ${HOSTNAME} --no-browser --config=${PWD}/jupyter_lab_config.py
 

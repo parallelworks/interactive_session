@@ -45,11 +45,11 @@ run_xterm_loop(){
 # PREPARE CLEANUP #
 ###################
 
-echo '#!/bin/bash' > "${resource_jobdir}/cancel.sh"
-chmod +x "${resource_jobdir}/cancel.sh"
-echo "mv "${resource_jobdir}/cancel.sh" "${resource_jobdir}/cancel.sh".executed" >> "${resource_jobdir}/cancel.sh"
+echo '#!/bin/bash' > "${PW_PARENT_JOB_DIR}/cancel.sh"
+chmod +x "${PW_PARENT_JOB_DIR}/cancel.sh"
+echo "mv "${PW_PARENT_JOB_DIR}/cancel.sh" "${PW_PARENT_JOB_DIR}/cancel.sh".executed" >> "${PW_PARENT_JOB_DIR}/cancel.sh"
 if ![ -z "${SLURM_JOB_ID}" ]; then
-    echo "scancel ${SLURM_JOB_ID}"  >> "${resource_jobdir}/cancel.sh"
+    echo "scancel ${SLURM_JOB_ID}"  >> "${PW_PARENT_JOB_DIR}/cancel.sh"
 fi
 ###################
 ###################
@@ -66,7 +66,7 @@ start_gnome_session_with_retries() {
                 echo "$(date) Restarting vncserver"
                 ${service_vnc_exec} -kill ${DISPLAY}
                 sleep 3
-                ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${resource_jobdir}/.vncpasswd
+                ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${PW_PARENT_JOB_DIR}/.vncpasswd
             fi
             sleep 2
             echo "$(date) Starting gnome-session"
@@ -173,7 +173,7 @@ cat >> ~/.vnc/xstartup.turbovnc <<HERE
 unset SESSION_MANAGER
 unset DBUS_SESSION_BUS_ADDRESS
 HERE
-cat >> ${resource_jobdir}/vncserver.sh <<HERE
+cat >> ${PW_PARENT_JOB_DIR}/vncserver.sh <<HERE
 #!/bin/bash
 [[ "${DEBUG:-}" == "true" ]] && set -x
 vncserver -kill ${DISPLAY}
@@ -195,7 +195,7 @@ chmod -x /usr/bin/xfce4-screensaver
 startxfce4 --replace
 HERE
     chmod +x ~/.vnc/xstartup.turbovnc
-    chmod +x ${resource_jobdir}/vncserver.sh
+    chmod +x ${PW_PARENT_JOB_DIR}/vncserver.sh
 fi
 
 if [ -z ${service_vnc_type} ]; then
@@ -208,11 +208,11 @@ fi
 
 
 if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
-cat >> "${resource_jobdir}/cancel.sh" <<HERE
+cat >> "${PW_PARENT_JOB_DIR}/cancel.sh" <<HERE
 ${service_vnc_exec} -kill ${DISPLAY}
-echo "${resource_jobdir}/vncserver.log:"
-cat ${resource_jobdir}/vncserver.log
-service_pid=\$(cat ${resource_jobdir}/service.pid)
+echo "${PW_PARENT_JOB_DIR}/vncserver.log:"
+cat ${PW_PARENT_JOB_DIR}/vncserver.log
+service_pid=\$(cat ${PW_PARENT_JOB_DIR}/service.pid)
 if [ -z \"\${service_pid}\" ]; then
     echo "ERROR: No service pid was found!"
 else
@@ -225,11 +225,11 @@ fi
 HERE
 
 else
-cat >> "${resource_jobdir}/cancel.sh" <<HERE
+cat >> "${PW_PARENT_JOB_DIR}/cancel.sh" <<HERE
 echo "~/.vnc/\${HOSTNAME}${DISPLAY}.log:"
 cat ~/.vnc/\${HOSTNAME}${DISPLAY}.log
 ${service_vnc_exec} -kill ${DISPLAY}
-service_pid=\$(cat ${resource_jobdir}/service.pid)
+service_pid=\$(cat ${PW_PARENT_JOB_DIR}/service.pid)
 if [ -z \${service_pid} ]; then
     echo "ERROR: No service pid was found!"
 else
@@ -303,29 +303,29 @@ if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
     # if vncserver is not tigervnc
 
     # Set password
-    printf "${password}\n${password}\n\n" | vncpasswd -f > ${resource_jobdir}/.vncpasswd
-    chmod 600 ${resource_jobdir}/.vncpasswd
+    printf "${password}\n${password}\n\n" | vncpasswd -f > ${PW_PARENT_JOB_DIR}/.vncpasswd
+    chmod 600 ${PW_PARENT_JOB_DIR}/.vncpasswd
 
     if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
         # FIXME: Change ~/.vnc/config
-        echo "$(date) ${service_vnc_exec} ${DISPLAY} &> ${resource_jobdir}/vncserver.log &"
-        ${service_vnc_exec} ${DISPLAY} &> ${resource_jobdir}/vncserver.log &
+        echo "$(date) ${service_vnc_exec} ${DISPLAY} &> ${PW_PARENT_JOB_DIR}/vncserver.log &"
+        ${service_vnc_exec} ${DISPLAY} &> ${PW_PARENT_JOB_DIR}/vncserver.log &
         vncserver_pid=$!
-        echo ${vncserver_pid} > ${resource_jobdir}/vncserver.pid
+        echo ${vncserver_pid} > ${PW_PARENT_JOB_DIR}/vncserver.pid
         echo "kill ${vncserver_pid} #vncserver pid" >> cancel.sh
     else
-        ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${resource_jobdir}/.vncpasswd
+        ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${PW_PARENT_JOB_DIR}/.vncpasswd
     fi
 
-    rm -f ${resource_jobdir}/service.pid
-    touch ${resource_jobdir}/service.pid
+    rm -f ${PW_PARENT_JOB_DIR}/service.pid
+    touch ${PW_PARENT_JOB_DIR}/service.pid
 
     # Need this to activate pam_systemd when running under SLURM
     # Otherwise we get permission denied messages when starting the
     # desktop environment
     if [[ ${jobschedulertype} == "SLURM" ]]; then
         ssh -N -f localhost &
-        echo $! > ${resource_jobdir}/service.pid
+        echo $! > ${PW_PARENT_JOB_DIR}/service.pid
     fi
     
     mkdir -p /run/user/$(id -u)/dconf
@@ -340,32 +340,32 @@ if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
         eval ${service_desktop} &
         service_desktop_pid=$!
     fi
-    echo "${service_desktop_pid}" >> ${resource_jobdir}/service.pid
+    echo "${service_desktop_pid}" >> ${PW_PARENT_JOB_DIR}/service.pid
 
     cd ${service_novnc_install_dir}
     ./utils/novnc_proxy --vnc ${HOSTNAME}:${displayPort} --listen ${HOSTNAME}:${service_port} </dev/null &
-    echo $! >> ${resource_jobdir}/service.pid
+    echo $! >> ${PW_PARENT_JOB_DIR}/service.pid
     pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
-    echo ${pid} >> ${resource_jobdir}/service.pid
+    echo ${pid} >> ${PW_PARENT_JOB_DIR}/service.pid
     rm -f ${portFile}
 elif [[ "${service_vnc_type}" == "SingularityTurboVNC" ]]; then
     # Start service
     mkdir -p ~/.vnc
     export TMPDIR=${PWD}/tmp
     mkdir -p $TMPDIR
-    ${singularity_exec} ${resource_jobdir}/vncserver.sh | tee -a vncserver.out &
+    ${singularity_exec} ${PW_PARENT_JOB_DIR}/vncserver.sh | tee -a vncserver.out &
     #echo "kill $! # singularity run" >> cancel.sh
 
     cd ${service_novnc_install_dir}
     ./utils/novnc_proxy --vnc ${HOSTNAME}:${displayPort} --listen ${HOSTNAME}:${service_port} </dev/null &
     echo "kill $! # novnc_proxy" >> cancel.sh
     pid=$(ps -x | grep vnc | grep ${displayPort} | awk '{print $1}')
-    echo ${pid} >> ${resource_jobdir}/service.pid
+    echo ${pid} >> ${PW_PARENT_JOB_DIR}/service.pid
     rm -f ${portFile}
 
     # Run xterm in a loop so that users can access a terminal directly in the main host
     cd
-    run_xterm_loop | tee -a ${resource_jobdir}/xterm.out &
+    run_xterm_loop | tee -a ${PW_PARENT_JOB_DIR}/xterm.out &
     echo "kill $! # run_xterm_loop" >> cancel.sh
 
 
@@ -673,7 +673,7 @@ if ! [ -z "${service_bin}" ]; then
     else
         echo "Running ${service_bin} in the background"
         eval ${service_bin} &
-        echo $! >> ${resource_jobdir}/service.pid
+        echo $! >> ${PW_PARENT_JOB_DIR}/service.pid
     fi
 fi
 

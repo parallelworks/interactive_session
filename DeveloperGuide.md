@@ -236,7 +236,6 @@ The `session_runner` injects these into the start script before your code runs:
 | Variable | Description |
 |----------|-------------|
 | `service_port` | The allocated port. Your service **must** listen on this port. |
-| `resource_jobdir` | The parent job directory (`$PW_PARENT_JOB_DIR`) |
 
 All variables exported in `inputs.sh` are also available in both scripts.
 

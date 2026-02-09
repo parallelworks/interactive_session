@@ -129,7 +129,7 @@ run_xterm_loop(){
     done
 }
 
-run_xterm_loop | tee -a ${resource_jobdir}/xterm.out &
+run_xterm_loop | tee -a ${PW_PARENT_JOB_DIR}/xterm.out &
 run_xterm_pid=$!
 echo "kill ${run_xterm_pid} # run_xterm_loop" >> cancel.sh
 

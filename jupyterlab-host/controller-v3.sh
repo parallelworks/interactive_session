@@ -14,12 +14,6 @@ if [ -z "${service_nginx_sif}" ]; then
     service_nginx_sif=${service_parent_install_dir}/nginx-unprivileged.sif
 fi
 
-
-displayErrorMessage() {
-    echo $(date): $1
-    exit 1
-}
-
 f_install_miniconda() {
     install_dir=$1
     if [[ "${service_install_instructions}" == "latest" ]]; then
@@ -193,7 +187,8 @@ fi
 eval "${service_load_env}"
 
 if [ -z $(which jupyter-lab 2> /dev/null) ]; then
-    displayErrorMessage "jupyter-lab command not found"
+    echo "$(date) ERROR: jupyter-lab command not found"
+    exit 1
 fi
 
 

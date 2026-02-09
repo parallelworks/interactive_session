@@ -79,11 +79,6 @@ download_and_install_juice() {
     echo "Juice agent successfully installed in ${juice_install_dir}"
 }
 
-
-displayErrorMessage() {
-    echo $(date): $1
-}
-
 echo; echo
 
 mkdir -p ${service_parent_install_dir}
@@ -98,7 +93,7 @@ fi
 
 if ! [ -d "${service_novnc_install_dir}" ]; then
     echo
-    displayErrorMessage "Failed to install ${service_novnc_install_dir}"
+    echo "$(date) ERROR: Failed to install ${service_novnc_install_dir}"
     exit 1
 fi
 
@@ -106,7 +101,7 @@ fi
 # Check if the file exists
 if ! [ -f "${service_novnc_install_dir}/ttyd.x86_64" ]; then
     echo
-    displayErrorMessage "Missing file ${service_novnc_install_dir}/ttyd.x86_64"
+    echo "$(date) ERROR: Missing file ${service_novnc_install_dir}/ttyd.x86_64"
     exit 1
 else
     chmod +x "${service_novnc_install_dir}/ttyd.x86_64" 

@@ -203,7 +203,8 @@ if [ -z ${service_vnc_type} ]; then
 fi
 
 if [ -z ${service_vnc_type} ]; then
-    displayErrorMessage "ERROR: vncserver type not found. Supported type are TigerVNC, TurboVNC and KasmVNC"
+    echo "(date) ERROR: vncserver type not found. Supported type are TigerVNC, TurboVNC and KasmVNC"
+    exit 1
 fi
 
 
@@ -268,7 +269,8 @@ if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
         service_desktop=gnome
     else
         # Exit script here
-        displayErrorMessage "ERROR: No desktop environment was found! Tried gnome-session, mate-session, xfce4-session and gnome"
+        echo "$(date) ERROR: No desktop environment was found! Tried gnome-session, mate-session, xfce4-session and gnome"
+        exit 1
     fi
 
 
@@ -373,7 +375,7 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     ###########
     # KasmVNC #
     ###########
-    export kasmvnc_port=$(findAvailablePort)
+    export kasmvnc_port=$(pw agent open-port)
     export XDG_RUNTIME_DIR=""
 
     if [ "${service_set_password}" != true ]; then
@@ -531,7 +533,7 @@ sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
         fi
         start_rootless_docker
         # Need to run this for the container to be able to access the port on the host's network
-        proxy_port=$(findAvailablePort)
+        proxy_port=$(pw agent open-port)
         proxy_host=$(hostname -I | xargs)
         
         socat TCP-LISTEN:${proxy_port},reuseaddr,fork,bind=0.0.0.0 TCP:127.0.0.1:${kasmvnc_port} >> socat.logs 2>&1 &
@@ -652,7 +654,8 @@ HERE
         pid=$!
         echo "kill ${pid}" >> cancel.sh
     else
-        displayErrorMessage "Need Docker or Singularity to start NGINX proxy"
+        echo "$(date) ERROR: Need Docker or Singularity to start NGINX proxy"
+        exit 1
     fi
 fi
 

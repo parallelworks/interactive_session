@@ -19,7 +19,8 @@ fi
 eval "${service_load_env}"
 
 if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
-    displayErrorMessage "jupyter-notebook command not found"
+    echo "$(date) ERROR: jupyter-notebook command not found"
+    exit 1
 fi
 
 echo "starting notebook on $service_port..."
@@ -102,7 +103,7 @@ else
 # Initialize cancel script
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
-jupyterserver_port=$(findAvailablePort)
+jupyterserver_port=$(pw agent open-port)
 
 #######################
 # START NGINX WRAPPER #
@@ -204,7 +205,7 @@ elif which singularity >/dev/null 2>&1; then
     pid=$!
     echo "kill ${pid}" >> cancel.sh
 else
-    displayErrorMessage "Need Docker or Singularity to start NGINX proxy"
+    echoe "Need Docker or Singularity to start NGINX proxy"
 fi
 
 

@@ -47,7 +47,7 @@ eval "${service_load_env}"
 # Initialize cancel script
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
-jupyterlab_port=$(findAvailablePort)
+jupyterlab_port=$(pw agent open-port)
 
 if [[ "${service_conda_install}" == "true" ]]; then
     source ${service_conda_sh}
@@ -57,7 +57,7 @@ else
 fi
 
 if [ -z $(which jupyter-lab 2> /dev/null) ]; then
-    displayErrorMessage "jupyter-lab command not found"
+    echoe "jupyter-lab command not found"
 fi
 
 export XDG_RUNTIME_DIR=""
@@ -94,7 +94,7 @@ if which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]];
     fi
     start_rootless_docker
     # Need to run this for the container to be able to access the port on the host's network
-    proxy_port=$(findAvailablePort)
+    proxy_port=$(pw agent open-port)
     proxy_host=$(hostname -I | xargs)
     socat TCP-LISTEN:${proxy_port},fork,reuseaddr TCP:127.0.0.1:${jupyterlab_port} >> socat.logs 2>&1 &
     pid=$!
@@ -215,7 +215,7 @@ elif which singularity >/dev/null 2>&1; then
     pid=$!
     echo "kill ${pid}" >> cancel.sh
 else
-    displayErrorMessage "Need Docker or Singularity to start NGINX proxy"
+    echoe "Need Docker or Singularity to start NGINX proxy"
 fi
 
 

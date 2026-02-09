@@ -58,7 +58,7 @@ jobs:
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
             echo "module load singularity" >> inputs.sh
-            # ONLY REQUIRED FOR TRANSITION
+            # Copy YAMLs to job directory
             cp ${{ inputs.service.name }}/*.yaml .
 
   session_runner:

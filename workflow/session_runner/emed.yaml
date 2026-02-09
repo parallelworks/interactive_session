@@ -51,9 +51,6 @@ jobs:
               exit 1
           fi
           cat ${{ inputs.service.start_service_script }} >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
-          # TRANSITION CODE
-          sed -i 's/findAvailablePort/pw agent open-port/' ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
-          sed -i 's/displayErrorMessage/echo/' ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
 
   session_runner:
     working-directory: ${{ inputs.service.rundir }}

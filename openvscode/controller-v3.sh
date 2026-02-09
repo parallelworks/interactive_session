@@ -1,5 +1,5 @@
 
-displayErrorMessage() {
+echoe() {
     echo $(date): $1
 }
 
@@ -88,7 +88,7 @@ download_and_install_juice() {
 # Check if the ID or NAME variable indicates CentOS
 if [[ "$ID" == "centos" || "$NAME" == *"CentOS"* ]]; then
     echo; echo
-    displayErrorMessage "Code Server is no longer supported on CentOS 7"
+    echoe "Code Server is no longer supported on CentOS 7"
     exit 1
 fi
 
@@ -136,7 +136,7 @@ fi
 
 
 if [ ! -f ${service_exec} ]; then
-    displayErrorMessage "Error missing ${service_exec}"
+    echoe "Error missing ${service_exec}"
     sleep 1
     exit 1
 fi

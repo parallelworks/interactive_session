@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -o pipefail
 
-if ! [ -z ${resource_jobdir} ]; then
-    cd ${resource_jobdir}
+if ! [ -z ${PW_PARENT_JOB_DIR} ]; then
+    cd ${PW_PARENT_JOB_DIR}
 fi
 
 if [ -z ${service_parent_install_dir} ]; then

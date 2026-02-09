@@ -17,8 +17,7 @@ jobs:
         run: |
           # This script starts the service
           cp ${{ inputs.service.inputs_sh }} ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
-          # TRANSITION CODE
-          echo resource_jobdir=${PW_PARENT_JOB_DIR} >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
+
           # Write code common to all services
           cat <<'EOF' >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
 

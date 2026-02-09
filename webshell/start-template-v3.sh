@@ -62,14 +62,14 @@ fi
 
 set -x
 if command -v screen >/dev/null 2>&1; then
-    echo "screen -S ${screen_name} -X quit" > ${resource_jobdir}/cancel.sh
-    echo "screen -S ${screen_name} -X quit" > ${resource_jobdir}/service-kill-${job_number}-main.sh
+    echo "screen -S ${screen_name} -X quit" > ${PW_PARENT_JOB_DIR}/cancel.sh
+    echo "screen -S ${screen_name} -X quit" > ${PW_PARENT_JOB_DIR}/service-kill-${job_number}-main.sh
     ${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p "$service_port" -s 2 bash -lc "screen -S ${screen_name} -x || screen -S ${screen_name}"
 else
     ${juice_cmd} ${service_novnc_install_dir}/ttyd.x86_64 -p $service_port -s 2 bash &
     pid="$!"
-    echo ${pid} >> ${resource_jobdir}/service.pid
-    echo "kill ${pid}" >> ${resource_jobdir}/cancel.sh
+    echo ${pid} >> ${PW_PARENT_JOB_DIR}/service.pid
+    echo "kill ${pid}" >> ${PW_PARENT_JOB_DIR}/cancel.sh
 fi
 
 sleep inf

@@ -16,7 +16,7 @@ if [ -z "${service_nginx_sif}" ]; then
 fi
 
 
-echoe() {
+echo() {
     echo $(date): $1
     exit 1
 }
@@ -152,7 +152,7 @@ eval "${service_load_env}"
 
 
 if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
-    echoe "jupyter-notebook command not found"
+    echo "jupyter-notebook command not found"
 fi
 
 # Download singularity container if required

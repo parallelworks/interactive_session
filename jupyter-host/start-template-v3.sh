@@ -19,7 +19,7 @@ fi
 eval "${service_load_env}"
 
 if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
-    echoe "jupyter-notebook command not found"
+    echo "jupyter-notebook command not found"
 fi
 
 echo "starting notebook on $service_port..."
@@ -204,7 +204,7 @@ elif which singularity >/dev/null 2>&1; then
     pid=$!
     echo "kill ${pid}" >> cancel.sh
 else
-    echoe "Need Docker or Singularity to start NGINX proxy"
+    echo "Need Docker or Singularity to start NGINX proxy"
 fi
 
 

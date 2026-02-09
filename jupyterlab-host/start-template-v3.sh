@@ -57,7 +57,7 @@ else
 fi
 
 if [ -z $(which jupyter-lab 2> /dev/null) ]; then
-    echoe "jupyter-lab command not found"
+    echo "jupyter-lab command not found"
 fi
 
 export XDG_RUNTIME_DIR=""
@@ -215,7 +215,7 @@ elif which singularity >/dev/null 2>&1; then
     pid=$!
     echo "kill ${pid}" >> cancel.sh
 else
-    echoe "Need Docker or Singularity to start NGINX proxy"
+    echo "Need Docker or Singularity to start NGINX proxy"
 fi
 
 

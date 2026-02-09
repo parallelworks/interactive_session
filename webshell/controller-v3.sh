@@ -80,7 +80,7 @@ download_and_install_juice() {
 }
 
 
-echoe() {
+echo() {
     echo $(date): $1
 }
 
@@ -98,7 +98,7 @@ fi
 
 if ! [ -d "${service_novnc_install_dir}" ]; then
     echo
-    echoe "Failed to install ${service_novnc_install_dir}"
+    echo "Failed to install ${service_novnc_install_dir}"
     exit 1
 fi
 
@@ -106,7 +106,7 @@ fi
 # Check if the file exists
 if ! [ -f "${service_novnc_install_dir}/ttyd.x86_64" ]; then
     echo
-    echoe "Missing file ${service_novnc_install_dir}/ttyd.x86_64"
+    echo "Missing file ${service_novnc_install_dir}/ttyd.x86_64"
     exit 1
 else
     chmod +x "${service_novnc_install_dir}/ttyd.x86_64" 

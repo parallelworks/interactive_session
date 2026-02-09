@@ -1,1 +1,0 @@
-export URLEND="#/auth/login\""

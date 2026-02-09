@@ -92,10 +92,6 @@ oras_pull_file(){
     mv ${repo_path} ${host_path}
 }
 
-echo() {
-    echo $(date): $1
-}
-
 echo; echo
 
 mkdir -p ${service_parent_install_dir}
@@ -116,7 +112,7 @@ fi
 
 if ! [ -d "${service_novnc_install_dir}" ]; then
     echo
-    echo "Failed to install ${service_novnc_install_dir}"
+    echo "(date) ERROR: Failed to install ${service_novnc_install_dir}"
     exit 1
 fi
 

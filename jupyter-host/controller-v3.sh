@@ -15,12 +15,6 @@ if [ -z "${service_nginx_sif}" ]; then
     service_nginx_sif=${service_parent_install_dir}/nginx-unprivileged.sif
 fi
 
-
-echo() {
-    echo $(date): $1
-    exit 1
-}
-
 f_install_miniconda() {
     install_dir=$1
     if [[ "${service_install_instructions}" == "latest" ]]; then
@@ -152,7 +146,8 @@ eval "${service_load_env}"
 
 
 if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
-    echo "jupyter-notebook command not found"
+    echo "$(date) ERROR: jupyter-notebook command not found"
+    exit 1
 fi
 
 # Download singularity container if required

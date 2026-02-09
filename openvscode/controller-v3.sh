@@ -1,9 +1,4 @@
 
-echo() {
-    echo $(date): $1
-}
-
-
 init_code_server_settings() {
     local settings_dir=${HOME}/.local/share/code-server/User
     local settings_json=${settings_dir}/settings.json
@@ -52,7 +47,7 @@ download_and_install_juice() {
 
 
     if [ -z "$download" ]; then
-        echo "ERROR: Download URL is empty"
+        echo "(date) ERROR: Download URL is empty"
         exit 1
     fi
     echo "Found download URL: $download"
@@ -88,7 +83,7 @@ download_and_install_juice() {
 # Check if the ID or NAME variable indicates CentOS
 if [[ "$ID" == "centos" || "$NAME" == *"CentOS"* ]]; then
     echo; echo
-    echo "Code Server is no longer supported on CentOS 7"
+    echo "(date) Error: Code Server is no longer supported on CentOS 7"
     exit 1
 fi
 
@@ -136,8 +131,7 @@ fi
 
 
 if [ ! -f ${service_exec} ]; then
-    echo "Error missing ${service_exec}"
-    sleep 1
+    echo "$(date) ERROR: missing ${service_exec}"
     exit 1
 fi
 

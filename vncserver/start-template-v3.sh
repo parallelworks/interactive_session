@@ -203,7 +203,7 @@ if [ -z ${service_vnc_type} ]; then
 fi
 
 if [ -z ${service_vnc_type} ]; then
-    echo "(date) ERROR: vncserver type not found. Supported type are TigerVNC, TurboVNC and KasmVNC"
+    echo "$(date) ERROR: vncserver type not found. Supported type are TigerVNC, TurboVNC and KasmVNC"
     exit 1
 fi
 

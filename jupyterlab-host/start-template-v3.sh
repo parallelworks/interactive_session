@@ -1,5 +1,19 @@
-# Runs via ssh + sbatch
-[[ "${DEBUG:-}" == "true" ]] && set -x
+################################################################################
+# Interactive Session Service Starter - JupyterLab Host
+#
+# Purpose: Start JupyterLab service on allocated port with nginx proxy
+# Runs on: Controller or compute node
+# Called by: Workflow after controller setup
+#
+# Required Environment Variables:
+#   - service_port: Allocated port (from session_runner)
+#   - service_parent_install_dir: Installation directory
+#   - service_conda_sh: Path to conda.sh for environment activation
+#   - service_conda_env: Conda environment name
+#   - service_notebook_dir: JupyterLab root directory (default: /)
+#   - service_password: Access password (optional)
+#   - juice_use_juice: Enable Juice for remote GPU access (optional)
+################################################################################
 
 start_rootless_docker() {
     local MAX_RETRIES=20
@@ -17,7 +31,7 @@ start_rootless_docker() {
             sleep $RETRY_INTERVAL
             ((ATTEMPT++))
         else
-            echo "$(date) ERROR: Docker daemon failed to start after $MAX_RETRIES attempts."
+            echo "$(date) ERROR: Docker daemon failed to start after $MAX_RETRIES attempts." >&2
             return 1
         fi
     done
@@ -57,7 +71,7 @@ else
 fi
 
 if [ -z $(which jupyter-lab 2> /dev/null) ]; then
-    echo "(date) jupyter-lab command not found"
+    echo "$(date) ERROR: jupyter-lab command not found" >&2
     exit 1
 fi
 
@@ -86,11 +100,11 @@ proxy_port=${jupyterlab_port}
 proxy_host="127.0.0.1"
 if which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]]; then
     if ! dockerd-rootless-setuptool.sh check; then
-        echo "$(date) ERROR: Rootless docker is NOT support on this system"
+        echo "$(date) ERROR: Rootless docker is NOT support on this system" >&2
         exit 1
     fi
     if ! which socat >/dev/null 2>&1; then
-        echo "$(date) ERROR: socat is not installed"
+        echo "$(date) ERROR: socat is not installed" >&2
         exit 1
     fi
     start_rootless_docker
@@ -216,7 +230,7 @@ elif which singularity >/dev/null 2>&1; then
     pid=$!
     echo "kill ${pid}" >> cancel.sh
 else
-    echo "$(date) ERROR: Need Docker or Singularity to start NGINX proxy"
+    echo "$(date) ERROR: Need Docker or Singularity to start NGINX proxy" >&2
     exit 1
 fi
 
@@ -250,11 +264,12 @@ sed -i "s|^.*c\.ServerApp\.root_dir.*|c.ServerApp.root_dir = '${service_notebook
 cd ${service_notebook_dir}
 
 # JUICE https://docs.juicelabs.co/docs/juice/intro
+juice_cmd=""  # Initialize to empty
 if [[ "${juice_use_juice}" == "true" ]]; then
-    echo "INFO: Enabling Juice for remote GPU access"
+    echo "$(date) INFO: Enabling Juice for remote GPU access"
     if [ -z "${juice_exec}" ]; then
         juice_exec=${service_parent_install_dir}/juice/juice
-        echo "INFO: Set Juice executable path to ${juice_exec}"
+        echo "$(date) INFO: Set Juice executable path to ${juice_exec}"
     fi
     
     if ! [ -z "${juice_vram}" ]; then
@@ -264,10 +279,10 @@ if [[ "${juice_use_juice}" == "true" ]]; then
         pool_ids_arg="--pool-ids ${juice_pool_ids}"
     fi
     juice_cmd="${juice_exec} run ${juice_cmd_args} ${vram_arg} ${pool_ids_arg}"
-    echo "INFO: Prepared Juice command: ${juice_cmd}"
-    echo "INFO: Logging into Juice with provided token"
+    echo "$(date) INFO: Prepared Juice command: ${juice_cmd}"
+    echo "$(date) INFO: Logging into Juice with provided token"
     ${juice_exec} login -t "${JUICE_TOKEN}" || {
-        echo "ERROR: Failed to log into Juice"
+        echo "$(date) ERROR: Failed to log into Juice" >&2
         exit 1
     }
 fi
@@ -279,4 +294,6 @@ export JUPYTER_RUNTIME_DIR=${PW_PARENT_JOB_DIR}/jupyter_runtime
 ${juice_cmd} jupyter-lab --port=${jupyterlab_port} --no-browser --config=${PW_PARENT_JOB_DIR}/jupyter_lab_config.py --allow-root
 #jupyter-lab --port=${jupyterlab_port} --ip ${HOSTNAME} --no-browser --config=${PWD}/jupyter_lab_config.py
 
+# Keep container alive indefinitely
+# Using 'inf' which is bash-specific shorthand for infinity
 sleep inf

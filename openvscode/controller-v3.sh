@@ -1,3 +1,17 @@
+set -o pipefail
+
+################################################################################
+# Interactive Session Controller - OpenVSCode (code-server)
+#
+# Purpose: Install and configure code-server for interactive session
+# Runs on: Controller node with internet access
+# Called by: Workflow preprocessing step
+#
+# Required Environment Variables:
+#   - service_parent_install_dir: Install directory (default: ${HOME}/pw/software)
+#   - service_download_url: Download URL for code-server tarball
+#   - juice_use_juice: Enable Juice for remote GPU access (optional)
+################################################################################
 
 init_code_server_settings() {
     local settings_dir=${HOME}/.local/share/code-server/User
@@ -37,6 +51,8 @@ install_code_server() {
     rm ${service_tgz_path}
 }
 
+# Juice: Remote GPU access service (https://docs.juicelabs.co/docs/juice/intro)
+# Allows running compute workloads on remote GPUs when local GPUs are unavailable
 download_and_install_juice() {
     # Configuration
     local OUTPUT_FILE="juice.tgz"
@@ -47,7 +63,7 @@ download_and_install_juice() {
 
 
     if [ -z "$download" ]; then
-        echo "(date) ERROR: Download URL is empty"
+        echo "$(date) ERROR: Download URL is empty" >&2
         exit 1
     fi
     echo "Found download URL: $download"
@@ -58,21 +74,21 @@ download_and_install_juice() {
 
     # Step 3: Install prerequisites
     sudo dnf install -y wget libatomic numactl-libs || {
-        echo "ERROR: Failed to install dependencies"
+        echo "$(date) ERROR: Failed to install dependencies" >&2
         exit 1
     }
 
     # Step 4: Download Juice agent
     echo "Downloading Juice agent..."
     wget -O "$OUTPUT_FILE" "$download" || {
-        echo "ERROR: Failed to download file"
+        echo "$(date) ERROR: Failed to download file" >&2
         exit 1
     }
 
     # Step 5: Extract archive
     echo "Extracting Juice agent..."
     tar -xzvf "$OUTPUT_FILE" || {
-        echo "ERROR: Failed to extract $OUTPUT_FILE"
+        echo "$(date) ERROR: Failed to extract $OUTPUT_FILE" >&2
         exit 1
     }
 
@@ -83,7 +99,7 @@ download_and_install_juice() {
 # Check if the ID or NAME variable indicates CentOS
 if [[ "$ID" == "centos" || "$NAME" == *"CentOS"* ]]; then
     echo; echo
-    echo "(date) Error: Code Server is no longer supported on CentOS 7"
+    echo "$(date) ERROR: Code Server is no longer supported on CentOS 7" >&2
     exit 1
 fi
 
@@ -112,6 +128,7 @@ fi
 
 
 # Copilot extension
+# Note: Pinned to version 1.388.0 for stability - newer versions may have breaking changes
 copilot_extension_path=${service_parent_install_dir}/github.copilot-1.388.0.vsix
 if [ ! -f ${copilot_extension_path} ]; then
     echo "Extension ${copilot_extension_path} not found"
@@ -131,7 +148,7 @@ fi
 
 
 if [ ! -f ${service_exec} ]; then
-    echo "$(date) ERROR: missing ${service_exec}"
+    echo "$(date) ERROR: missing ${service_exec}" >&2
     exit 1
 fi
 
@@ -141,12 +158,12 @@ if [[ "${juice_use_juice}" == "true" ]]; then
         juice_install_dir=${service_parent_install_dir}/juice
         juice_exec=${service_parent_install_dir}/juice/juice
         if ! [ -f ${juice_exec} ]; then
-            echo "INFO: Installing Juice"
+            echo "$(date) INFO: Installing Juice"
             mkdir -p ${juice_install_dir}
             download_and_install_juice
         fi
         if ! [ -f ${juice_exec} ]; then
-            echo "ERROR: Juice installation failed"
+            echo "$(date) ERROR: Juice installation failed" >&2
             exit 1
         fi
     fi

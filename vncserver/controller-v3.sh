@@ -1,3 +1,5 @@
+set -o pipefail
+
 if [ -z ${service_parent_install_dir} ]; then
     service_parent_install_dir=${HOME}/pw/software
 fi
@@ -112,7 +114,7 @@ fi
 
 if ! [ -d "${service_novnc_install_dir}" ]; then
     echo
-    echo "(date) ERROR: Failed to install ${service_novnc_install_dir}"
+    echo "$(date) ERROR: Failed to install ${service_novnc_install_dir}"
     exit 1
 fi
 

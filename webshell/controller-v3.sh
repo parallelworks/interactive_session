@@ -1,5 +1,17 @@
-#!/usr/bin/env bash
 set -o pipefail
+
+################################################################################
+# Interactive Session Controller - WebShell (ttyd terminal)
+#
+# Purpose: Install and configure ttyd web terminal for interactive session
+# Runs on: Controller node with internet access
+# Called by: Workflow preprocessing step
+#
+# Required Environment Variables:
+#   - service_parent_install_dir: Install directory (default: ${HOME}/pw/software)
+#   - service_novnc_tgz_basename: noVNC tarball name (includes ttyd binary)
+#   - juice_use_juice: Enable Juice for remote GPU access (optional)
+################################################################################
 
 if [ -z ${service_parent_install_dir} ]; then
     service_parent_install_dir=${HOME}/pw/software
@@ -37,6 +49,8 @@ download_and_install() {
     
 }
 
+# Juice: Remote GPU access service (https://docs.juicelabs.co/docs/juice/intro)
+# Allows running compute workloads on remote GPUs when local GPUs are unavailable
 download_and_install_juice() {
     # Configuration
     local OUTPUT_FILE="juice.tgz"
@@ -47,7 +61,7 @@ download_and_install_juice() {
 
 
     if [ -z "$download" ]; then
-        echo "ERROR: Download URL is empty"
+        echo "$(date) ERROR: Download URL is empty" >&2
         exit 1
     fi
     echo "Found download URL: $download"
@@ -58,21 +72,21 @@ download_and_install_juice() {
 
     # Step 3: Install prerequisites
     sudo dnf install -y wget libatomic numactl-libs || {
-        echo "ERROR: Failed to install dependencies"
+        echo "$(date) ERROR: Failed to install dependencies" >&2
         exit 1
     }
 
     # Step 4: Download Juice agent
     echo "Downloading Juice agent..."
     wget -O "$OUTPUT_FILE" "$download" || {
-        echo "ERROR: Failed to download file"
+        echo "$(date) ERROR: Failed to download file" >&2
         exit 1
     }
 
     # Step 5: Extract archive
     echo "Extracting Juice agent..."
     tar -xzvf "$OUTPUT_FILE" || {
-        echo "ERROR: Failed to extract $OUTPUT_FILE"
+        echo "$(date) ERROR: Failed to extract $OUTPUT_FILE" >&2
         exit 1
     }
 
@@ -114,12 +128,12 @@ if [[ "${juice_use_juice}" == "true" ]]; then
         juice_install_dir=${service_parent_install_dir}/juice
         juice_exec=${service_parent_install_dir}/juice/juice
         if ! [ -f ${juice_exec} ]; then
-            echo "INFO: Installing Juice"
+            echo "$(date) INFO: Installing Juice"
             mkdir -p ${juice_install_dir}
             download_and_install_juice
         fi
         if ! [ -f ${juice_exec} ]; then
-            echo "ERROR: Juice installation failed"
+            echo "$(date) ERROR: Juice installation failed" >&2
             exit 1
         fi
     fi

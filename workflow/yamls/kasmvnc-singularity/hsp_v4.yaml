@@ -18,7 +18,7 @@ jobs:
           uses: parallelworks/checkout
           with:
             repo: https://github.com/parallelworks/interactive_session.git
-            branch: hsp-v4
+            branch: desktop-kasm-container
             sparse_checkout:
               - vncserver
         - name: Create Inputs

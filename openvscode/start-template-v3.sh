@@ -27,27 +27,6 @@ else
     password_flag="--auth=password"
 fi
 
-# ---- REMOVE THIS IN V4 -----
-# Prepare kill service script
-# - Needs to be here because we need the hostname of the compute node.
-# - kill-template.sh --> service-kill-${job_number}.sh --> service-kill-${job_number}-main.sh
-echo "Creating file ${PW_PARENT_JOB_DIR}/service-kill-${job_number}-main.sh from directory ${PWD}"
-if [[ ${jobschedulertype} != "CONTROLLER" ]]; then
-    # Remove .cluster.local for einteinmed!
-    hname=$(hostname | sed "s/.cluster.local//g")
-    echo "ssh ${hname} 'bash -s' < ${PW_PARENT_JOB_DIR}/service-kill-${job_number}-main.sh" > ${PW_PARENT_JOB_DIR}/service-kill-${job_number}.sh
-else
-    echo "bash ${PW_PARENT_JOB_DIR}/service-kill-${job_number}-main.sh" > ${PW_PARENT_JOB_DIR}/service-kill-${job_number}.sh
-fi
-
-cat >> ${PW_PARENT_JOB_DIR}/service-kill-${job_number}-main.sh <<HERE
-service_pid=\$(ps -x | grep ${server_bin} | grep ${service_port} | awk '{print \$1}')
-kill \${service_pid}
-pkill \${service_pid}
-HERE
-# ---- REMOVE THIS IN V4 -----
-
-
 # JUICE https://docs.juicelabs.co/docs/juice/intro
 if [[ "${juice_use_juice}" == "true" ]]; then
     echo "INFO: Enabling Juice for remote GPU access"

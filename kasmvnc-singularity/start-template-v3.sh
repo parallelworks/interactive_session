@@ -74,9 +74,9 @@ build_mount_flags() {
     for dir in ${directories}; do
         if [ -e "${dir}" ]; then
             flags="${flags} --bind ${dir}"
-            echo "Mount: ${dir} exists, adding to bind mounts"
+            echo "Mount: ${dir} exists, adding to bind mounts"  >&2
         else
-            echo "Mount: ${dir} does not exist, skipping"
+            echo "Mount: ${dir} does not exist, skipping"  >&2
         fi
     done
 

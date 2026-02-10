@@ -1,0 +1,342 @@
+# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
+---
+# KasmVNC Container Desktop for HSP
+# Containerized desktop environment with GPU support and HSP cluster configuration
+
+permissions:
+  - "*"
+
+sessions:
+  session:
+    useTLS: false
+    redirect: true
+
+jobs:
+  # =============================================================================
+  # PREPROCESSING
+  # =============================================================================
+  preprocessing:
+    ssh:
+      remoteHost: ${{ inputs.cluster.resource.ip }}
+    steps:
+      - name: Checkout service scripts
+        uses: parallelworks/checkout
+        with:
+          repo: https://github.com/parallelworks/interactive_session.git
+          branch: main
+          sparse_checkout:
+            - kasmvnc-container
+
+      - name: Create Inputs
+        run: |
+          set -x
+          # Write PW variables
+          env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+          # Encase values between quotes
+          sed -i 's/=\(.*\)/="\1"/' inputs.sh
+
+          # Write input form variables
+          cat <<'EOF' >> inputs.sh
+          basepath=/me/session/${PW_USER}/${{ sessions.session }}
+          PATH=$HOME/pw:$PATH
+          service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
+          kasmvnc_container_source="${{ inputs.service.kasmvnc_container_source }}"
+          kasmvnc_container_runtime="${{ inputs.service.kasmvnc_container_runtime }}"
+          kasmvnc_os="${{ inputs.service.kasmvnc_os }}"
+          kasmvnc_enable_gpu="${{ inputs.service.kasmvnc_enable_gpu }}"
+          startup_command="${{ inputs.service.startup_command }}"
+          EOF
+
+          # Add bucket URI if using bucket source
+          if [ "${{ inputs.service.kasmvnc_container_source }}" = "bucket" ]; then
+            echo "kasmvnc_bucket_uri=${{ inputs.service.kasmvnc_bucket.uri }}/${{ inputs.service.kasmvnc_bucket_path }}" >> inputs.sh
+          fi
+
+          # Add mount paths (HSP default mounts)
+          cat <<'MOUNT_EOF' >> inputs.sh
+          container_mount_paths="/p/home
+          /p/work
+          /p/work1
+          /p/app
+          /p/cwfs
+          /scratch
+          /run/munge
+          /etc/pbs.conf
+          /var/spool/pbs
+          /opt/pbs
+          ${{ inputs.service.container_mount_paths }}"
+          MOUNT_EOF
+
+          # Remove empty variables
+          sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+          sed -i '/=""/d' inputs.sh
+          # Add export to all lines
+          sed -i 's/^/export /' inputs.sh
+
+  # =============================================================================
+  # SESSION RUNNER
+  # =============================================================================
+  session_runner:
+    needs:
+      - preprocessing
+    ssh:
+      remoteHost: ${{ inputs.cluster.resource.ip }}
+    steps:
+      - uses: marketplace/session_runner/v1.3
+        early-cancel: any-job-failed
+        with:
+          session: ${{ sessions.session }}
+          resource: ${{ inputs.cluster.resource }}
+          cluster:
+            scheduler: ${{ inputs.cluster.scheduler }}
+            slurm:
+              is_disabled: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+              account: ${{ inputs.cluster.slurm.account }}
+              partition: ${{ inputs.cluster.slurm.partition }}
+              qos: ${{ inputs.cluster.slurm.qos }}
+              cpus_per_task: ${{ inputs.cluster.slurm.cpus_per_task }}
+              time: ${{ inputs.cluster.slurm.time }}
+              gres: ${{ inputs.cluster.slurm.gres }}
+              scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+            pbs:
+              is_disabled: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+              account: ${{ inputs.cluster.pbs.account }}
+              queue: ${{ inputs.cluster.pbs.queue }}
+              walltime: ${{ inputs.cluster.pbs.walltime }}
+              select: ${{ inputs.cluster.pbs.select }}
+              scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+          service:
+            start_service_script: ${PW_PARENT_JOB_DIR}/kasmvnc-container/start-template-v3.sh
+            controller_script: ${PW_PARENT_JOB_DIR}/kasmvnc-container/controller-v3.sh
+            inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
+            slug: "vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
+            rundir: ${PW_PARENT_JOB_DIR}
+
+"on":
+  execute:
+    inputs:
+      cluster:
+        type: group
+        label: Compute Cluster Settings
+        items:
+          resource:
+            type: compute-clusters
+            label: Service host
+            include-workspace: false
+            autoselect: true
+
+          scheduler:
+            type: boolean
+            label: Submit to Job Scheduler
+            tooltip: "When enabled, the desktop job is submitted to the cluster's job scheduler (SLURM or PBS). When disabled, the desktop runs directly on the login node."
+            default: false
+            hidden: ${{ inputs.cluster.resource.schedulerType != 'slurm' && inputs.cluster.resource.schedulerType != 'pbs' }}
+
+          slurm:
+            type: group
+            label: SLURM Configuration
+            hidden: ${{ inputs.cluster.scheduler != true || inputs.cluster.resource.schedulerType != 'slurm' }}
+            collapsed: false
+            items:
+              is_disabled:
+                type: boolean
+                default: ${{ inputs.cluster.scheduler != true || inputs.cluster.resource.schedulerType != 'slurm' }}
+                hidden: true
+
+              account:
+                label: Account
+                type: slurm-accounts
+                resource: ${{ inputs.cluster.resource }}
+                tooltip: SLURM account for job submission (--account)
+                optional: true
+                ignore: ${{ inputs.cluster.scheduler != true || inputs.cluster.resource.schedulerType != 'slurm' }}
+
+              partition:
+                type: slurm-partitions
+                label: Partition
+                optional: true
+                resource: ${{ inputs.cluster.resource }}
+                tooltip: Partition for job submission (--partition)
+                ignore: ${{ inputs.cluster.scheduler != true || inputs.cluster.resource.schedulerType != 'slurm' }}
+
+              qos:
+                label: Quality of Service (QoS)
+                type: slurm-qos
+                resource: ${{ inputs.cluster.resource }}
+                tooltip: SLURM QoS setting (--qos)
+                optional: true
+                ignore: ${{ inputs.cluster.scheduler != true || inputs.cluster.resource.schedulerType != 'slurm' }}
+
+              cpus_per_task:
+                type: number
+                label: CPUs per Task
+                min: 1
+                max: 256
+                default: 1
+                tooltip: Number of CPUs for the job (--cpus-per-task)
+                ignore: ${{ inputs.cluster.scheduler != true || inputs.cluster.resource.schedulerType != 'slurm' }}
+
+              time:
+                label: Walltime
+                type: string
+                default: 04:00:00
+                tooltip: Maximum job duration, e.g., 04:00:00 (--time)
+                ignore: ${{ inputs.cluster.scheduler != true || inputs.cluster.resource.schedulerType != 'slurm' }}
+
+              gres:
+                label: GPUs (gres)
+                type: dropdown
+                default: ""
+                optional: true
+                tooltip: GPU resource specification (--gres). Leave empty for CPU-only jobs.
+                options:
+                  - value: ""
+                    label: "No GPU (CPU only)"
+                  - value: "gpu:1"
+                    label: "1 GPU (gpu:1)"
+                  - value: "gpu:2"
+                    label: "2 GPUs (gpu:2)"
+                  - value: "gpu:4"
+                    label: "4 GPUs (gpu:4)"
+                  - value: "gpu:8"
+                    label: "8 GPUs (gpu:8)"
+                ignore: ${{ inputs.cluster.scheduler != true || inputs.cluster.resource.schedulerType != 'slurm' }}
+
+              scheduler_directives:
+                type: editor
+                label: Additional Directives
+                optional: true
+                tooltip: Additional SLURM directives (include #SBATCH prefix)
+                ignore: ${{ inputs.cluster.scheduler != true || inputs.cluster.resource.schedulerType != 'slurm' }}
+
+          pbs:
+            type: group
+            label: PBS Configuration
+            hidden: ${{ inputs.cluster.scheduler != true || inputs.cluster.resource.schedulerType != 'pbs' }}
+            collapsed: false
+            items:
+              is_disabled:
+                type: boolean
+                default: ${{ inputs.cluster.scheduler != true || inputs.cluster.resource.schedulerType != 'pbs' }}
+                hidden: true
+
+              account:
+                label: Account
+                type: string
+                optional: true
+                tooltip: PBS account for job submission (-A)
+                ignore: ${{ inputs.cluster.scheduler != true || inputs.cluster.resource.schedulerType != 'pbs' }}
+
+              queue:
+                label: Queue
+                type: string
+                optional: true
+                tooltip: PBS queue name (-q)
+                ignore: ${{ inputs.cluster.scheduler != true || inputs.cluster.resource.schedulerType != 'pbs' }}
+
+              walltime:
+                label: Walltime
+                type: string
+                default: 04:00:00
+                tooltip: Maximum job duration, e.g., 04:00:00 (-l walltime=)
+                ignore: ${{ inputs.cluster.scheduler != true || inputs.cluster.resource.schedulerType != 'pbs' }}
+
+              select:
+                label: Resource Selection
+                type: string
+                default: "1:ncpus=8:ngpus=1"
+                placeholder: "1:ncpus=8:ngpus=1"
+                tooltip: PBS resource selection string, e.g., 1:ncpus=8:ngpus=1 (-l select=)
+                ignore: ${{ inputs.cluster.scheduler != true || inputs.cluster.resource.schedulerType != 'pbs' }}
+
+              scheduler_directives:
+                label: Additional Directives
+                type: editor
+                tooltip: Additional PBS directives (include #PBS prefix)
+                optional: true
+                ignore: ${{ inputs.cluster.scheduler != true || inputs.cluster.resource.schedulerType != 'pbs' }}
+
+      service:
+        type: group
+        label: Desktop Settings
+        collapsed: true
+        items:
+          parent_install_dir:
+            label: Install Directory
+            type: string
+            default: ${HOME}/pw/software
+            hidden: true
+
+          kasmvnc_container_runtime:
+            type: dropdown
+            label: Container Runtime
+            default: singularity
+            tooltip: Choose the container runtime to use
+            options:
+              - label: "Singularity"
+                value: singularity
+              - label: "Enroot"
+                value: enroot
+
+          kasmvnc_container_source:
+            type: dropdown
+            label: Container Source
+            default: bucket
+            tooltip: Choose where to get the KasmVNC desktop container
+            hidden: ${{ inputs.service.kasmvnc_container_runtime == 'enroot' }}
+            options:
+              - label: "Pull from PW Bucket"
+                value: bucket
+              - label: "Pull from Git LFS"
+                value: git_lfs
+              - label: "Use existing path"
+                value: path
+
+          kasmvnc_bucket:
+            type: bucket
+            label: Bucket
+            tooltip: PW bucket containing the KasmVNC container
+            hidden: ${{ inputs.service.kasmvnc_container_source != 'bucket' || inputs.service.kasmvnc_container_runtime == 'enroot' }}
+
+          kasmvnc_bucket_path:
+            type: string
+            label: Container Path in Bucket
+            default: "kasmvnc-rocky9.sif"
+            placeholder: "kasmvnc-rocky9.sif"
+            tooltip: Path to the container file within the bucket (use kasmvnc-rocky9.sif or kasmvnc-ubuntu.sif)
+            hidden: ${{ inputs.service.kasmvnc_container_source != 'bucket' || inputs.service.kasmvnc_container_runtime == 'enroot' }}
+
+          kasmvnc_os:
+            type: dropdown
+            label: Operating System
+            default: rocky9
+            tooltip: Choose the operating system for the KasmVNC container
+            options:
+              - label: "Rocky Linux 8"
+                value: rocky8
+              - label: "Rocky Linux 9"
+                value: rocky9
+              - label: "Ubuntu 22.04"
+                value: ubuntu
+
+          kasmvnc_enable_gpu:
+            type: boolean
+            label: Enable GPU Support
+            default: true
+            tooltip: Enable GPU support in the container (requires GPU allocation in scheduler)
+            hidden: ${{ inputs.service.kasmvnc_container_runtime == 'enroot' }}
+
+          startup_command:
+            type: string
+            label: Startup Application
+            placeholder: "firefox, virtuoso, etc."
+            tooltip: Command to run after desktop starts (optional)
+            optional: true
+
+          container_mount_paths:
+            type: string
+            textarea: true
+            label: Additional Mount Paths
+            placeholder: "/p/cwfs\n/archive/navy"
+            tooltip: "Extra directories to mount into the container (one per line). Auto-mounted: /p/home, /p/work, /p/work1, /p/app, /p/cwfs, /scratch, /run/munge, /etc/pbs.conf, /var/spool/pbs, /opt/pbs"
+            optional: true

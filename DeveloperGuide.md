@@ -10,6 +10,18 @@ A session requires three files:
 
 The controller node always has internet access. The compute node may not.
 
+
+## AI Assistant Prompt: Adding a New Session Workflow
+
+Use this prompt template when instructing an AI code assistant to add a new session:
+
+```
+Using the DeveloperGuide.md and the AIPromptAddingNewWorkflow.md files, create a new interactive session workflow for [deployment] to [Describe your workflow here].
+```
+
+Replace `[deployment]` with your target deployment (general/emed/hsp/noaa) and `[Describe your workflow here]` with your specific service requirements, for example "a hello world nginx service". The AI assistant will use both reference files to understand the architecture and requirements for creating the new workflow.
+
+
 ## 1. Create the Controller Script
 
 File: `my-session/controller-v3.sh`

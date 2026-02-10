@@ -9,15 +9,13 @@ echo "=========================================="
 echo "Desktop Service Starting (Compute Node)"
 echo "=========================================="
 
-# =============================================================================
-# Source inputs and verify setup
-# =============================================================================
-# Normalize job directory path (remove trailing slash if present)
-JOB_DIR="${PW_PARENT_JOB_DIR%/}"
-SOFTWARE_DIR="${HOME}/pw/software"
+if [ -z ${service_parent_install_dir} ]; then
+    service_parent_install_dir=${HOME}/pw/software
+fi
 
-# Ensure we're working from the job directory
-cd "${JOB_DIR}"
+container_dir=${service_parent_install_dir}/kasmvnc-${kasmvnc_os}
+
+SOFTWARE_DIR="${HOME}/pw/software"
 
 # Initialize cancel script
 echo '#!/bin/bash' > cancel.sh
@@ -55,32 +53,7 @@ for port in $(seq ${minPort} ${maxPort} | shuf); do
     break
 done
 
-# =============================================================================
-# KasmVNC Container Mode
-# =============================================================================
-
-echo "$(date) Starting KasmVNC Container Mode..."
-
-# Read container path
-if [ -f "${JOB_DIR}/KASMVNC_CONTAINER_PATH" ]; then
-    KASMVNC_CONTAINER_SIF=$(cat "${JOB_DIR}/KASMVNC_CONTAINER_PATH")
-else
-    echo "ERROR: KASMVNC_CONTAINER_PATH not found" >&2
-    exit 1
-fi
-
-# Verify container exists
-if [ ! -f "${KASMVNC_CONTAINER_SIF}" ]; then
-    echo "ERROR: KasmVNC container not found at ${KASMVNC_CONTAINER_SIF}" >&2
-    exit 1
-fi
-echo "Using container: ${KASMVNC_CONTAINER_SIF}"
-
-# Read GPU setting
-enable_gpu="true"
-if [ -f "${JOB_DIR}/KASMVNC_CONTAINER_ENABLE_GPU" ]; then
-    enable_gpu=$(cat "${JOB_DIR}/KASMVNC_CONTAINER_ENABLE_GPU")
-fi
+echo "$(date) Starting KasmVNC Container ..."
 
 # GPU flag
 GPU_FLAG=""
@@ -91,31 +64,49 @@ else
     echo "GPU support disabled"
 fi
 
-# Cleanup function for KasmVNC container mode
-cleanup() {
-    echo "$(date) Stopping KasmVNC container..."
-    if [ -n "${kasmvnc_container_pid:-}" ]; then
-        kill ${kasmvnc_container_pid} 2>/dev/null || true
-    fi
-    if [ -n "${run_xterm_pid:-}" ]; then
-        kill ${run_xterm_pid} 2>/dev/null || true
-    fi
+mount_directories="/p/home /p/work /p/work1 /p/app /p/cwfs /scratch /run/munge /etc/pbs.conf /var/spool/pbs /opt/pbs ${container_mount_paths}"
+
+# Function to build mount flags for existing directories
+build_mount_flags() {
+    local directories="$1"
+    local flags=""
+
+    for dir in ${directories}; do
+        if [ -e "${dir}" ]; then
+            flags="${flags} --bind ${dir}"
+            echo "Mount: ${dir} exists, adding to bind mounts"  >&2
+        else
+            echo "Mount: ${dir} does not exist, skipping"  >&2
+        fi
+    done
+
+    echo "${flags}"
 }
-trap cleanup EXIT INT TERM
+
+# Build mount flags for existing directories
+MOUNT_FLAGS=$(build_mount_flags "${mount_directories}")
+echo "Mount flags: ${MOUNT_FLAGS}"
 
 # Start KasmVNC container
 echo "Starting Singularity container..."
+set -x
 singularity run \
+    --writable-tmpfs \
     ${GPU_FLAG} \
-    --env DISPLAY=${DISPLAY} \
+    ${MOUNT_FLAGS} \
     --env BASE_PATH="${basepath}" \
     --env NGINX_PORT="${service_port}" \
-    --env KASM_PORT=8590 \
+    --env KASM_PORT=$(pw agent open-port) \
+    --env VNC_DISPLAY="${XdisplayNumber}" \
+    --env STARTUP_COMMAND="${startup_command}" \
     --bind /etc/passwd:/etc/passwd:ro \
     --bind /etc/group:/etc/group:ro \
-    "${KASMVNC_CONTAINER_SIF}" &
+    --bind /etc/environment:/etc/environment:ro \
+    "${container_dir}" &
 
 kasmvnc_container_pid=$!
+set +x
+
 echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
 echo "KasmVNC container started with PID ${kasmvnc_container_pid}"
 

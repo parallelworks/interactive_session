@@ -1,4 +1,8 @@
 # yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
+---
+# KasmVNC Container Desktop for HSP
+# Containerized desktop environment with GPU support and HSP cluster configuration
+# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
 permissions:
   - '*'
 sessions:
@@ -14,9 +18,9 @@ jobs:
           uses: parallelworks/checkout
           with:
             repo: https://github.com/parallelworks/interactive_session.git
-            branch: hsp-v4
+            branch: desktop-kasm-container
             sparse_checkout:
-              - vncserver
+              - kasmvnc-singularity
         - name: Create Inputs
           run: |
             set -x
@@ -34,14 +38,9 @@ jobs:
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH
-            desktop_environment="${{ inputs.desktop.environment }}"
-            desktop_kasmvnc_container_source="${{ inputs.desktop.kasmvnc_container_source }}"
-            desktop_kasmvnc_container_path="${{ inputs.desktop.kasmvnc_container_path }}"
-            desktop_kasmvnc_bucket="${{ inputs.desktop.kasmvnc_bucket }}"
-            desktop_kasmvnc_bucket_path="${{ inputs.desktop.kasmvnc_bucket_path }}"
-            desktop_kasmvnc_git_repo="${{ inputs.desktop.kasmvnc_git_repo }}"
-            desktop_kasmvnc_git_path="${{ inputs.desktop.kasmvnc_git_path }}"
-            desktop_kasmvnc_enable_gpu="${{ inputs.desktop.kasmvnc_enable_gpu }}"
+            kasmvnc_os="${{ inputs.desktop.kasmvnc_os }}"
+            startup_command="${{ inputs.desktop.startup_command }}"
+            container_mount_paths="${{ inputs.desktop.container_mount_paths }}"
             EOF
             echo basepath=${basepath} >> inputs.sh
             echo password=${password} >> inputs.sh
@@ -53,7 +52,9 @@ jobs:
             sed -i '/=""/d' inputs.sh # remove var=""
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
+
             echo "module load singularity" >> inputs.sh
+
             slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
             echo "slug=${slug}"  | tee -a $OUTPUTS
 
@@ -84,8 +85,8 @@ jobs:
               account: ${{ inputs.cluster.pbs.account }}
               scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
           service:
-            start_service_script: ${PW_PARENT_JOB_DIR}/vncserver/kasm-container-start.sh
-            controller_script: ${PW_PARENT_JOB_DIR}/vncserver/kasm-container-setup.sh
+            start_service_script: ${PW_PARENT_JOB_DIR}/kasmvnc-singularity/start-template-v3.sh
+            controller_script: ${PW_PARENT_JOB_DIR}/kasmvnc-singularity/controller-v3.sh
             inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
             slug: ${{ needs.preprocessing.outputs.slug }}
             rundir: ${PW_PARENT_JOB_DIR}
@@ -198,77 +199,31 @@ jobs:
       desktop:
         type: group
         label: Desktop Settings
+        collapsed: true
         items:
-          environment:
+          kasmvnc_os:
             type: dropdown
-            label: Desktop Environment
-            default: auto
+            label: Operating System
+            default: rocky9
+            tooltip: Choose the operating system for the KasmVNC container
             options:
-              - label: Auto-detect
-                value: auto
-              - label: GNOME
-                value: gnome
-              - label: XFCE
-                value: xfce
-              - label: MATE
-                value: mate
-              - label: Cinnamon
-                value: cinnamon
-              - label: KDE Plasma
-                value: kde
-              - label: LXDE
-                value: lxde
+              - label: "Rocky Linux 8"
+                value: rocky8
+              - label: "Rocky Linux 9"
+                value: rocky9
+              - label: "Ubuntu 22.04"
+                value: ubuntu
 
-          kasmvnc_container_source:
-            type: dropdown
-            label: Container Source
-            default: git_lfs
-            options:
-              - label: "Pull from Git LFS"
-                value: git_lfs
-              - label: "Pull from PW Bucket"
-                value: bucket
-              - label: "Path on remote system"
-                value: path
-
-          kasmvnc_container_path:
+          startup_command:
             type: string
-            label: Container Path
-            placeholder: "/path/to/kasmvnc.sif"
-            tooltip: Full path to the KasmVNC container on the remote system
-            hidden: ${{ inputs.desktop.kasmvnc_container_source != 'path' }}
+            label: Startup Application
+            placeholder: "firefox, virtuoso, etc."
+            tooltip: Command to run after desktop starts (optional)
+            optional: true
 
-          kasmvnc_bucket:
-            type: bucket
-            label: Bucket
-            tooltip: PW bucket containing the KasmVNC container
-            hidden: ${{ inputs.desktop.kasmvnc_container_source != 'bucket' }}
-
-          kasmvnc_bucket_path:
+          container_mount_paths:
             type: string
-            label: Container Path in Bucket
-            default: "kasmvnc.sif"
-            placeholder: "kasmvnc.sif"
-            tooltip: Path to the container file within the bucket
-            hidden: ${{ inputs.desktop.kasmvnc_container_source != 'bucket' }}
-
-          kasmvnc_git_repo:
-            type: string
-            label: Git Repository
-            default: "https://github.com/parallelworks/singularity-containers.git"
-            tooltip: Git repository URL containing the KasmVNC container
-            hidden: ${{ inputs.desktop.kasmvnc_container_source != 'git_lfs' }}
-
-          kasmvnc_git_path:
-            type: string
-            label: Container Path in Repo
-            default: "kasmvnc"
-            tooltip: Directory in the repository containing the container
-            hidden: ${{ inputs.desktop.kasmvnc_container_source != 'git_lfs' }}
-
-          kasmvnc_enable_gpu:
-            type: boolean
-            label: Enable GPU Support (--nv)
-            default: true
-            tooltip: Pass --nv flag to Singularity for NVIDIA GPU support (safe on CPU-only nodes)
-            hidden: true
+            label: Additional Mount Paths
+            placeholder: "/p/cwfs\n/archive/navy"
+            tooltip: "Extra directories to mount into the container (one per line). Auto-mounted if they exist: /p/home, /p/work, /p/work1, /p/app, /p/cwfs, /scratch, /run/munge, /etc/pbs.conf, /var/spool/pbs, /opt/pbs"
+            optional: true

@@ -96,7 +96,7 @@ singularity run \
     ${MOUNT_FLAGS} \
     --env BASE_PATH="${basepath}" \
     --env NGINX_PORT="${service_port}" \
-    --env KASM_PORT="${kasm_port}" \
+    --env KASM_PORT=$(pw agent open-port) \
     --env VNC_DISPLAY="${DISPLAY}" \
     --env STARTUP_COMMAND="${startup_command}" \
     --bind /etc/passwd:/etc/passwd:ro \

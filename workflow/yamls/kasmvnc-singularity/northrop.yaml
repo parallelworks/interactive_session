@@ -14,13 +14,9 @@ jobs:
       ssh:
         remoteHost: ${{ inputs.resource.ip }}
       steps:
-        - name: Checkout
-          uses: parallelworks/checkout
-          with:
-            repo: https://github.com/parallelworks/interactive_session.git
-            branch: main
-            sparse_checkout:
-              - kasmvnc-singularity
+        - name: Copy Code
+          run: cp -r ${{ inputs.install.interactive_sessions_dir }}/kasmvnc-singularity .
+
         - name: Create Inputs
           run: |
             set -x
@@ -38,6 +34,7 @@ jobs:
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH
+            service_parent_install_dir="${{ inputs.install.singularity_container_parent_dir }}"
             kasmvnc_os="${{ inputs.desktop.kasmvnc_os }}"
             startup_command="${{ inputs.desktop.startup_command }}"
             container_mount_paths="${{ inputs.desktop.container_mount_paths }}"
@@ -194,7 +191,7 @@ jobs:
                   #PBS -q HIE
                   #PBS -l select=1:ncpus=92:mpiprocs=1:ngpus=1
                   #PBS -l walltime=01:00:00
-                  #PBS -V  
+                  #PBS -V
 
       desktop:
         type: group
@@ -227,3 +224,18 @@ jobs:
             placeholder: "/p/cwfs\n/archive/navy"
             tooltip: "Extra directories to mount into the container (one per line). Auto-mounted if they exist: /p/home, /p/work, /p/work1, /p/app, /p/cwfs, /scratch, /run/munge, /etc/pbs.conf, /var/spool/pbs, /opt/pbs"
             optional: true
+
+      install:
+        type: group
+        label: Install Settings
+        collapsed: true
+        items:
+          singularity_container_parent_dir:
+            type: string
+            label: Singularity Container's Parent Directory
+            tooltip: Path to the parent directory of the singularity container. For example, path/to/software is the parent directory of path/to/software/kasmvnc-rocky9
+            default: ${HOME}/pw/software
+          interactive_sessions_dir:
+            type: string
+            label: Path to the Interactive Sessions Directory
+            default: ${HOME}/pw/software/interactive_session

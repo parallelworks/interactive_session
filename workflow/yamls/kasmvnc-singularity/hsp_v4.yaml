@@ -18,7 +18,7 @@ jobs:
           uses: parallelworks/checkout
           with:
             repo: https://github.com/parallelworks/interactive_session.git
-            branch: desktop-kasm-container
+            branch: main
             sparse_checkout:
               - kasmvnc-singularity
         - name: Create Inputs

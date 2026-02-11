@@ -16,7 +16,7 @@ jobs:
           rm -f CANCEL_STREAMING
           echo "$(date) CANCEL_STREAMING file detected!"
           kill ${tail_pid}
-  create_script_template:
+  preprocessing:
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
@@ -37,10 +37,56 @@ jobs:
           EOF
           fi
           cat run-template.sh
+      - name: Create SLURM Headers
+        if: ${{ inputs.slurm.is_disabled == false }}
+        run: |
+          set -x
+          cat <<EOF > headers.sh
+          #SBATCH --job-name=${PW_JOB_ID}
+          #SBATCH --partition=${{ inputs.slurm.partition }}
+          #SBATCH --time=${{ inputs.slurm.time }}
+          #SBATCH --chdir=${PWD}
+          #SBATCH -o ${PWD}/run.${PW_JOB_ID}.out
+          #SBATCH -e ${PWD}/run.${PW_JOB_ID}.out
+          ${{ inputs.slurm.scheduler_directives }}
+          EOF
+
+          # Remove SBATCH directives with undefined values 
+          sed -i '/^#SBATCH --[^=]*=\([^:]*:\)\{0,1\}\(undefined\)\?$/d' headers.sh
+          # Remove SBATCH directives with empty values
+          sed -i '/#SBATCH.*=none$/d; /#SBATCH.*=gpu:0$/d' headers.sh
+          # Remove empty lines
+          sed -i '/^[[:space:]]*$/d' headers.sh
+
+          cat headers.sh
+          echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
+      - name: Create PBS Headers
+        if: ${{ inputs.pbs.is_disabled == false }}
+        run: |
+          set -x
+          cat <<EOF > headers.sh
+          ${{ inputs.shebang }}
+          #PBS -N ${PW_JOB_ID}
+          #PBS -o ${PWD}/run.${PW_JOB_ID}.out
+          #PBS -j oe
+          ${{ inputs.pbs.scheduler_directives }}
+          cd ${PWD}
+          EOF
+
+          # Remove PBS directives with undefined values 
+          sed -i '/^#PBS --[^=]*=\([^:]*:\)\{0,1\}\(undefined\)\?$/d' headers.sh
+          # Remove PBS directives with empty values
+          sed -i '/#PBS.*=none$/d; /#PBS.*=gpu:0$/d' headers.sh
+          # Remove empty lines
+          sed -i '/^[[:space:]]*$/d' headers.sh
+
+          cat headers.sh
+          echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
+
   ssh_job:
     needs:
-      - create_script_template
-    if: ${{ inputs.slurm.is_disabled != false && inputs.pbs.is_disabled != false }}
+      - preprocessing
+    if: ${{ inputs.slurm.is_disabled != false && inputs.pbs.is_disabled != false && inputs.use_scheduler_agent != true }}
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
@@ -62,8 +108,8 @@ jobs:
           ./run.sh > run.${PW_JOB_ID}.out 2>&1
   pbs_job:
     needs:
-      - create_script_template
-    if: ${{ inputs.pbs.is_disabled == false }}
+      - preprocessing
+    if: ${{ inputs.pbs.is_disabled == false && inputs.use_scheduler_agent != true }}
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
@@ -71,12 +117,10 @@ jobs:
       - name: Create PBS Script
         run: |
           set -x
+          echo "$(date) Creating PBS script"
           cat <<EOF > run.sh
           ${{ inputs.shebang }}
-          #PBS -N ${PW_JOB_ID}
-          #PBS -o ${PWD}/run.${PW_JOB_ID}.out
-          #PBS -j oe
-          ${{ inputs.pbs.scheduler_directives }}
+          ${{ needs.preprocessing.outputs.HEADERS }}
           cd ${PWD}
           EOF
           cat run-template.sh >> run.sh
@@ -118,8 +162,8 @@ jobs:
           done
   slurm_job:
     needs:
-      - create_script_template
-    if: ${{ inputs.slurm.is_disabled == false }}
+      - preprocessing
+    if: ${{ inputs.slurm.is_disabled == false && inputs.use_scheduler_agent != true }}
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
@@ -129,22 +173,10 @@ jobs:
           set -x
           cat <<EOF > run.sh
           ${{ inputs.shebang }}
-          #SBATCH --job-name=${PW_JOB_ID}
-          #SBATCH --partition=${{ inputs.slurm.partition }}
-          #SBATCH --time=${{ inputs.slurm.time }}
-          #SBATCH --chdir=${PWD}
-          #SBATCH -o ${PWD}/run.${PW_JOB_ID}.out
-          #SBATCH -e ${PWD}/run.${PW_JOB_ID}.out
-          ${{ inputs.slurm.scheduler_directives }}
+          ${{ needs.preprocessing.outputs.HEADERS }}
           EOF
           cat run-template.sh >> run.sh
           chmod +x run.sh
-          # Remove SBATCH directives with undefined values 
-          sed -i '/^#SBATCH --[^=]*=\([^:]*:\)\{0,1\}\(undefined\)\?$/d' run.sh
-          # Remove SBATCH directives with empty values
-          sed -i '/#SBATCH.*=none$/d; /#SBATCH.*=gpu:0$/d' run.sh
-          # Remove empty lines
-          sed -i '/^[[:space:]]*$/d' run.sh
           cat run.sh
       - name: Submit SLURM Script
         run: |
@@ -182,12 +214,49 @@ jobs:
               break
             fi
           done
+  scheduler_agent_job:
+    needs:
+      - preprocessing
+    if: ${{ inputs.use_scheduler_agent == true }}
+    working-directory: ${{ inputs.rundir }}
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Create Script
+        run: |
+          set -x
+          echo '${{ inputs.shebang }}' > run.sh
+          cat run-template.sh >> run.sh
+          chmod +x run.sh
+          cat run.sh
+      - uses: parallelworks/scheduler-agent
+        id: slurmstep
+        with:
+          scheduler-type: slurm
+          script-headers: |
+            ${{ needs.preprocessing.outputs.HEADERS }}
+          wait: false
+      - uses: parallelworks/wait-for-agent
+        id: waitstep
+        with:
+          agentId: ${{ needs.scheduler_agent_job.steps.slurmstep.outputs.agentId }}
+      - name: Run Script
+        ssh:
+          jumpNodeHost: ${{ inputs.resource.ip }}
+          remoteHost: ${{ needs.scheduler_agent_job.steps.waitstep.outputs.remoteHost }}:${{ needs.scheduler_agent_job.steps.waitstep.outputs.sshPort }}
+        run: |
+          set -x
+          echo "$(date) Executing script"
+          ./run.sh > run.${PW_JOB_ID}.out 2>&1
+
+
   cleanup:
     if: ${{ always }}
     needs:
       - ssh_job
       - pbs_job
       - slurm_job
+      - scheduler_agent_job
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
@@ -205,11 +274,11 @@ jobs:
             exit 0
           fi 
 
-          if [[ "${{ inputs.pbs.is_disabled }}" == false ]]; then
+          if [[ "${{ inputs.pbs.is_disabled }}" == false ]] && [[ "${{ inputs.use_scheduler_agent }}" != true ]]; then
             qdel "${{ needs.pbs_job.outputs.jobid }}"
           fi
 
-          if [[ "${{ inputs.slurm.is_disabled }}" == false ]]; then
+          if [[ "${{ inputs.slurm.is_disabled }}" == false ]] && [[ "${{ inputs.use_scheduler_agent }}" != true ]]; then
             scancel "${{ needs.slurm_job.outputs.jobid }}"
           fi
 'on':
@@ -259,6 +328,15 @@ jobs:
         tooltip: |
           Yes → Job is submitted to the scheduler using sbatch, qsub, etc
           No  → Job is executed in the controller or login node instead
+      use_scheduler_agent:
+        type: boolean
+        ignore: ${{ inputs.scheduler == false }}
+        hidden: ${{ .ignore }}
+        default: false
+        label: Use parallelworks/scheduler-agent?
+        tooltip: |
+          Yes → Provision the compute node using parallelworks/scheduler-agent
+          No  → Directly use sbatch, qsub, etc to submit the job
       slurm:
         type: group
         label: SLURM Directives

@@ -137,7 +137,7 @@ echo "${docker_cmd} stop ${container_name} #kasmvnc_container" >> cancel.sh
 echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
 echo "KasmVNC container started with PID ${kasmvnc_container_pid}"
 
-sleep 6  # Allow container to start
+sleep inf  # Allow container to start
 
 run_xterm_loop(){
     while true; do

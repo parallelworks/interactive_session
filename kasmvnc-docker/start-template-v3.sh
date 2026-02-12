@@ -110,6 +110,13 @@ chmod 644 empty
 touch error.log
 chmod 666 error.log
 
+sudo docker run --rm --name kasmvnc-alvaro-56 --network host -v "${x11_socket_dir}":/tmp/.X11-unix  -v /run/munge:/run/munge -e BASE_PATH=/me/session/alvaro/deleteme_101_session -e NGINX_PORT=41821 -e KASM_PORT=33867 -e VNC_DISPLAY=56 -e STARTUP_COMMAND= -v /etc/passwd:/etc/passwd:ro -v /etc/group:/etc/group:ro -v /etc/environment:/etc/environment:ro -v /home/alvaro/pw/jobs/deleteme/00101/empty:/etc/nginx/conf.d/default.conf -v /home/alvaro/pw/jobs/deleteme/00101/error.log:/var/log/nginx/error.log parallelworks/kasmvnc-rocky9
+
+# Create a shared directory for X11 sockets between container and host
+x11_socket_dir="/tmp/x11-kasmvnc-${USER}-${XdisplayNumber}"
+mkdir -p "${x11_socket_dir}"
+chmod 1777 "${x11_socket_dir}"
+
 set -x
 ${docker_cmd} run \
     --rm \
@@ -127,7 +134,7 @@ ${docker_cmd} run \
     -v /etc/environment:/etc/environment:ro \
     -v $PWD/empty:/etc/nginx/conf.d/default.conf \
     -v $PWD/error.log:/var/log/nginx/error.log \
-    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    -v "${x11_socket_dir}":/tmp/.X11-unix \
     "${container_image}" &
 
 kasmvnc_container_pid=$!
@@ -135,9 +142,22 @@ set +x
 
 echo "${docker_cmd} stop ${container_name} #kasmvnc_container" >> cancel.sh
 echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
+echo "rm -f /tmp/.X11-unix/X${XdisplayNumber}" >> cancel.sh
+echo "rm -rf ${x11_socket_dir}" >> cancel.sh
 echo "KasmVNC container started with PID ${kasmvnc_container_pid}"
 
-sleep inf  # Allow container to start
+# Wait for KasmVNC to create the X socket, then symlink it into the host's /tmp/.X11-unix
+echo "Waiting for X socket to appear in ${x11_socket_dir}..."
+for i in $(seq 1 30); do
+    if [ -e "${x11_socket_dir}/X${XdisplayNumber}" ]; then
+        echo "X socket found after ${i}s"
+        break
+    fi
+    sleep 1
+done
+mkdir -p /tmp/.X11-unix
+ln -sf "${x11_socket_dir}/X${XdisplayNumber}" "/tmp/.X11-unix/X${XdisplayNumber}"
+echo "Symlinked /tmp/.X11-unix/X${XdisplayNumber} -> ${x11_socket_dir}/X${XdisplayNumber}"
 
 run_xterm_loop(){
     while true; do

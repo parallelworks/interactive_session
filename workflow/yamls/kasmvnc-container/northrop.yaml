@@ -29,7 +29,6 @@ jobs:
           # Write input form variables and ensure the pw agent is in the PATH
           cat <<'EOF' >> inputs.sh
           PATH=$HOME/pw:$PATH
-          service_parent_install_dir="${{ inputs.install.singularity_container_parent_dir }}"
           kasmvnc_os="${{ inputs.desktop.kasmvnc_os }}"
           startup_command="${{ inputs.desktop.startup_command }}"
           container_mount_paths="${{ inputs.desktop.container_mount_paths }}"
@@ -230,11 +229,6 @@ jobs:
         label: Install Settings
         collapsed: true
         items:
-          singularity_container_parent_dir:
-            type: string
-            label: Singularity Container's Parent Directory
-            tooltip: Path to the parent directory of the singularity container. For example, path/to/software is the parent directory of path/to/software/kasmvnc-rocky9
-            default: ${HOME}/pw/software
           interactive_sessions_dir:
             type: string
             label: Path to the Interactive Sessions Directory

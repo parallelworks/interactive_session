@@ -134,11 +134,11 @@ ${docker_cmd} run \
 kasmvnc_container_pid=$!
 set +x
 
+sleep 6  # Allow container to start
+
 echo "${docker_cmd} stop ${container_name} #kasmvnc_container" >> cancel.sh
 echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
 echo "$(date) KasmVNC container started with PID ${kasmvnc_container_pid}"
-
-sleep 6  # Allow container to start
 
 echo "$(date) Starting xterm on the host..."
 ${docker_cmd} cp ${container_name}:/home/packer/.Xauthority /tmp/.xauth${XdisplayNumber}

@@ -138,8 +138,18 @@ echo "${docker_cmd} stop ${container_name} #kasmvnc_container" >> cancel.sh
 echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
 echo "$(date) KasmVNC container started with PID ${kasmvnc_container_pid}"
 
-echo "$(date) Waiting for container state to be running..."
-sleep 10 #FIXME
+echo "$(date) Waiting for container status to be up..."
+for i in $(seq 1 30); do
+    if ${docker_cmd} ps --filter "name=${container_name}" --format '{{.Status}}' | grep -q "^Up"; then
+        echo "$(date) Container is running."
+        break
+    fi
+    if [ "$i" -eq 30 ]; then
+        echo "$(date) ERROR: Container did not start within 30 seconds."
+        exit 1
+    fi
+    sleep 1
+done
 
 echo "$(date) Starting xterm on the host..."
 ${docker_cmd} cp ${container_name}:/home/packer/.Xauthority /tmp/.xauth${XdisplayNumber}

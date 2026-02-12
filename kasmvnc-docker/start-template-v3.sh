@@ -140,6 +140,7 @@ echo "$(date) KasmVNC container started with PID ${kasmvnc_container_pid}"
 
 echo "$(date) Waiting for container status to be up..."
 for i in $(seq 1 30); do
+    sleep 10
     if ${docker_cmd} ps --filter "name=${container_name}" --format '{{.Status}}' | grep -q "^Up"; then
         echo "$(date) Container is running."
         break

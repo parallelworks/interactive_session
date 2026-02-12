@@ -110,8 +110,6 @@ chmod 644 empty
 touch error.log
 chmod 666 error.log
 
-sudo docker run --rm --name kasmvnc-alvaro-56 --network host -v "${x11_socket_dir}":/tmp/.X11-unix  -v /run/munge:/run/munge -e BASE_PATH=/me/session/alvaro/deleteme_101_session -e NGINX_PORT=41821 -e KASM_PORT=33867 -e VNC_DISPLAY=56 -e STARTUP_COMMAND= -v /etc/passwd:/etc/passwd:ro -v /etc/group:/etc/group:ro -v /etc/environment:/etc/environment:ro -v /home/alvaro/pw/jobs/deleteme/00101/empty:/etc/nginx/conf.d/default.conf -v /home/alvaro/pw/jobs/deleteme/00101/error.log:/var/log/nginx/error.log parallelworks/kasmvnc-rocky9
-
 # Create a shared directory for X11 sockets between container and host
 x11_socket_dir="/tmp/x11-kasmvnc-${USER}-${XdisplayNumber}"
 mkdir -p "${x11_socket_dir}"

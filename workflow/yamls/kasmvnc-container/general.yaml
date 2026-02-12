@@ -65,17 +65,12 @@ jobs:
           cluster:
             scheduler: ${{ inputs.cluster.scheduler }}
             slurm:
-              is_disabled: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
-              account: ${{ inputs.cluster.slurm.account }}
+              is_disabled: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
               partition: ${{ inputs.cluster.slurm.partition }}
-              qos: ${{ inputs.cluster.slurm.qos }}
-              cpus_per_task: ${{ inputs.cluster.slurm.cpus_per_task }}
-              nodes: ${{ inputs.cluster.slurm.nodes }}
               scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
               time: ${{ inputs.cluster.slurm.time }}
             pbs:
-              is_disabled: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
-              account: ${{ inputs.cluster.pbs.account }}
+              is_disabled: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
               scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
           service:
             start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.container_runtime }}/start-template-v3.sh

@@ -1,62 +1,68 @@
+# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
+---
+# KasmVNC Container Desktop for HSP
+# Containerized desktop environment with GPU support and HSP cluster configuration
+# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
 permissions:
   - '*'
 sessions:
   session:
     redirect: true
+
 jobs:
   preprocessing:
-    ssh:
-      remoteHost: ${{ inputs.resource.ip }}
-    steps:
-      - name: Checkout
-        uses: parallelworks/checkout
-        with:
-          repo: https://github.com/parallelworks/interactive_session.git
-          branch: main
-          sparse_checkout:
-            - kasmvnc-docker
-      - name: Create Inputs
-        run: |
-          set -x
+      ssh:
+        remoteHost: ${{ inputs.resource.ip }}
+      steps:
+        - name: Checkout
+          uses: parallelworks/checkout
+          with:
+            repo: https://github.com/parallelworks/interactive_session.git
+            branch: main
+            sparse_checkout:
+              - ${{ inputs.container_runtime }}
+        - name: Create Inputs
+          run: |
+            set -x
+            if [ -z "${PW_PLATFORM_HOST}" ]; then
+              PW_PLATFORM_HOST=hpcmp.hsp.mil
+            fi
+            # Write PW variables
+            env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+            # Encase values between quotes
+            sed -i 's/=\(.*\)/="\1"/' inputs.sh
+            # Password
+            password=$(openssl rand -base64 12 | head -c 12)
+            # basepath
+            basepath=/me/session/${PW_USER}/${{ sessions.session }}
+            # Write input form variables and ensure the pw agent is in the PATH
+            cat <<'EOF' >> inputs.sh
+            PATH=$HOME/pw:$PATH
+            kasmvnc_os="${{ inputs.desktop.kasmvnc_os }}"
+            startup_command="${{ inputs.desktop.startup_command }}"
+            container_mount_paths="${{ inputs.desktop.container_mount_paths }}"
+            EOF
+            echo basepath=${basepath} >> inputs.sh
+            echo password=${password} >> inputs.sh
+            if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
+              echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
+            fi
+            # Remove empty variables
+            sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+            sed -i '/=""/d' inputs.sh # remove var=""
+            # Add export= to all lines
+            sed -i 's/^/export /' inputs.sh
 
-          if [ -z "${PW_PLATFORM_HOST}" ]; then
-            echo "$(date) PW_PLATFORM_HOST is unset"
-            exit 1
-          fi
-          # Write PW variables
-          env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
-          # Encase values between quotes
-          sed -i 's/=\(.*\)/="\1"/' inputs.sh
-          # Password
-          password=$(openssl rand -base64 12 | head -c 12)
-          # basepath
-          basepath=/me/session/${PW_USER}/${{ sessions.session }}
-          # Write input form variables and ensure the pw agent is in the PATH
-          cat <<'EOF' >> inputs.sh
-          PATH=$HOME/pw:$PATH
-          service_parent_install_dir="${{ inputs.install.singularity_container_parent_dir }}"
-          kasmvnc_os="${{ inputs.desktop.kasmvnc_os }}"
-          startup_command="${{ inputs.desktop.startup_command }}"
-          container_mount_paths="${{ inputs.desktop.container_mount_paths }}"
-          EOF
-          echo basepath=${basepath} >> inputs.sh
-          echo password=${password} >> inputs.sh
-          if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
-            echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
-          fi
-          # Remove empty variables
-          sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
-          sed -i '/=""/d' inputs.sh # remove var=""
-          # Add export= to all lines
-          sed -i 's/^/export /' inputs.sh
+            echo "module load singularity" >> inputs.sh
 
-          slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
-          echo "slug=${slug}"  | tee -a $OUTPUTS
+            slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
+            echo "slug=${slug}"  | tee -a $OUTPUTS
+
   session_runner:
     needs:
       - preprocessing
     ssh:
-      remoteHost: ${{ inputs.resource.ip }}
+        remoteHost: ${{ inputs.resource.ip }}
     steps:
       - uses: marketplace/session_runner/v1.3
         early-cancel: any-job-failed
@@ -79,11 +85,12 @@ jobs:
               account: ${{ inputs.cluster.pbs.account }}
               scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
           service:
-            start_service_script: ${PW_PARENT_JOB_DIR}/kasmvnc-docker/start-template-v3.sh
-            controller_script: ${PW_PARENT_JOB_DIR}/kasmvnc-docker/controller-v3.sh
+            start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.container_runtime }}/start-template-v3.sh
+            controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.container_runtime }}/controller-v3.sh
             inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
             slug: ${{ needs.preprocessing.outputs.slug }}
             rundir: ${PW_PARENT_JOB_DIR}
+
 'on':
   execute:
     inputs:
@@ -92,6 +99,17 @@ jobs:
         label: Service host
         include-workspace: false
         tooltip: Resource to host the service
+      container_runtime:
+        type: dropdown
+        label: Run container using
+        default: kasmvnc-singularity
+        tooltip: Select which container runtime will be used to launch the KasmVNC container (e.g., Docker or Singularity).
+        hidden: true
+        options:
+          - label: Docker
+            value: kasmvnc-docker
+          - label: Singularity
+            value: kasmvnc-singularity
       cluster:
         hidden: ${{ inputs.resource.schedulerType == '' }}
         ignore: ${{ inputs.resource.schedulerType == '' }}
@@ -187,7 +205,8 @@ jobs:
                   #PBS -q HIE
                   #PBS -l select=1:ncpus=92:mpiprocs=1:ngpus=1
                   #PBS -l walltime=01:00:00
-                  #PBS -V
+                  #PBS -V  
+
       desktop:
         type: group
         label: Desktop Settings
@@ -199,37 +218,23 @@ jobs:
             default: rocky9
             tooltip: Choose the operating system for the KasmVNC container
             options:
-              - label: Rocky Linux 8
+              - label: "Rocky Linux 8"
                 value: rocky8
-              - label: Rocky Linux 9
+              - label: "Rocky Linux 9"
                 value: rocky9
-              - label: Ubuntu 22.04
+              - label: "Ubuntu 22.04"
                 value: ubuntu
+
           startup_command:
             type: string
             label: Startup Application
-            placeholder: firefox, virtuoso, etc.
+            placeholder: "firefox, virtuoso, etc."
             tooltip: Command to run after desktop starts (optional)
             optional: true
+
           container_mount_paths:
             type: string
             label: Additional Mount Paths
-            placeholder: |-
-              /p/cwfs
-              /archive/navy
-            tooltip: 'Extra directories to mount into the container (one per line). Auto-mounted if they exist: /p/home, /p/work, /p/work1, /p/app, /p/cwfs, /scratch, /run/munge, /etc/pbs.conf, /var/spool/pbs, /opt/pbs'
+            placeholder: "/p/cwfs\n/archive/navy"
+            tooltip: "Extra directories to mount into the container (one per line). Auto-mounted if they exist: /p/home, /p/work, /p/work1, /p/app, /p/cwfs, /scratch, /run/munge, /etc/pbs.conf, /var/spool/pbs, /opt/pbs"
             optional: true
-      install:
-        type: group
-        label: Install Settings
-        collapsed: true
-        items:
-          singularity_container_parent_dir:
-            type: string
-            label: Singularity Container's Parent Directory
-            tooltip: Path to the parent directory of the singularity container. For example, path/to/software is the parent directory of path/to/software/kasmvnc-rocky9
-            default: ${HOME}/pw/software
-          interactive_sessions_dir:
-            type: string
-            label: Path to the Interactive Sessions Directory
-            default: ${HOME}/pw/software/interactive_session

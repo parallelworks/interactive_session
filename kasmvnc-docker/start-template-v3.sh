@@ -102,6 +102,10 @@ build_mount_flags() {
 MOUNT_FLAGS=$(build_mount_flags "${mount_directories}")
 echo "$(date) Mount flags: ${MOUNT_FLAGS}"
 
+# Pull KasmVNC container
+echo "$(date) Pulling Docker container..."
+${docker_cmd} pull "${container_image}"
+
 # Start KasmVNC container
 echo "$(date) Starting Docker container..."
 touch empty

@@ -109,6 +109,7 @@ touch empty
 chmod 644 empty
 touch error.log
 chmod 666 error.log
+
 set -x
 ${docker_cmd} run \
     --rm \
@@ -126,6 +127,7 @@ ${docker_cmd} run \
     -v /etc/environment:/etc/environment:ro \
     -v $PWD/empty:/etc/nginx/conf.d/default.conf \
     -v $PWD/error.log:/var/log/nginx/error.log \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
     "${container_image}" &
 
 kasmvnc_container_pid=$!

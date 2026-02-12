@@ -134,7 +134,11 @@ ${docker_cmd} run \
 kasmvnc_container_pid=$!
 set +x
 
-sleep 6  # Allow container to start
+echo "$(date) Waiting for container to become healthy..."
+until [ "$(${docker_cmd} inspect -f '{{.State.Health.Status}}' ${container_name} 2>/dev/null)" = "healthy" ]; do
+    sleep 2
+done
+
 
 echo "${docker_cmd} stop ${container_name} #kasmvnc_container" >> cancel.sh
 echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh

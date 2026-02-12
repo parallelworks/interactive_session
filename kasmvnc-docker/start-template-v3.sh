@@ -134,15 +134,14 @@ ${docker_cmd} run \
 kasmvnc_container_pid=$!
 set +x
 
-echo "$(date) Waiting for container to become healthy..."
-until [ "$(${docker_cmd} inspect -f '{{.State.Health.Status}}' ${container_name} 2>/dev/null)" = "healthy" ]; do
-    sleep 2
-done
-
-
 echo "${docker_cmd} stop ${container_name} #kasmvnc_container" >> cancel.sh
 echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
 echo "$(date) KasmVNC container started with PID ${kasmvnc_container_pid}"
+
+echo "$(date) Waiting for container state to be running..."
+until [ "$(${docker_cmd} inspect -f '{{.State.Running}}' ${container_name} 2>/dev/null)" = "true" ]; do
+    sleep 2
+done
 
 echo "$(date) Starting xterm on the host..."
 ${docker_cmd} cp ${container_name}:/home/packer/.Xauthority /tmp/.xauth${XdisplayNumber}

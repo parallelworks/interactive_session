@@ -20,8 +20,7 @@ jobs:
           set -x
 
           if [ -z "${PW_PLATFORM_HOST}" ]; then
-            echo "$(date) PW_PLATFORM_HOST is unset"
-            exit 1
+            export PW_PLATFORM_HOST=noaa.parallel.works
           fi
           # Write PW variables
           env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh

@@ -56,11 +56,14 @@ echo "$(date) Starting KasmVNC Container ..."
 # GPU flag
 GPU_FLAG=""
 if [[ "${enable_gpu}" == "true" ]]; then
-    GPU_FLAG="--nv"
-    echo "GPU support enabled (--nv)"
+    GPU_FLAG="--gpus all"
+    echo "GPU support enabled (--gpus all)"
 else
     echo "GPU support disabled"
 fi
+
+container_image="parallelworks/kasmvnc-${kasmvnc_os}"
+container_name="kasmvnc-${USER}-${XdisplayNumber}"
 
 mount_directories="/p/home /p/work /p/work1 /p/app /p/cwfs /scratch /run/munge /etc/pbs.conf /var/spool/pbs /opt/pbs ${container_mount_paths}"
 
@@ -71,7 +74,7 @@ build_mount_flags() {
 
     for dir in ${directories}; do
         if [ -e "${dir}" ]; then
-            flags="${flags} --bind ${dir}"
+            flags="${flags} -v ${dir}:${dir}"
             echo "Mount: ${dir} exists, adding to bind mounts"  >&2
         else
             echo "Mount: ${dir} does not exist, skipping"  >&2
@@ -86,25 +89,28 @@ MOUNT_FLAGS=$(build_mount_flags "${mount_directories}")
 echo "Mount flags: ${MOUNT_FLAGS}"
 
 # Start KasmVNC container
-echo "Starting Singularity container..."
+echo "Starting Docker container..."
 set -x
-singularity run \
-    --writable-tmpfs \
+docker run \
+    --rm \
+    --name "${container_name}" \
+    --network host \
     ${GPU_FLAG} \
     ${MOUNT_FLAGS} \
-    --env BASE_PATH="${basepath}" \
-    --env NGINX_PORT="${service_port}" \
-    --env KASM_PORT=$(pw agent open-port) \
-    --env VNC_DISPLAY="${XdisplayNumber}" \
-    --env STARTUP_COMMAND="${startup_command}" \
-    --bind /etc/passwd:/etc/passwd:ro \
-    --bind /etc/group:/etc/group:ro \
-    --bind /etc/environment:/etc/environment:ro \
-    "${container_dir}" &
+    -e BASE_PATH="${basepath}" \
+    -e NGINX_PORT="${service_port}" \
+    -e KASM_PORT=$(pw agent open-port) \
+    -e VNC_DISPLAY="${XdisplayNumber}" \
+    -e STARTUP_COMMAND="${startup_command}" \
+    -v /etc/passwd:/etc/passwd:ro \
+    -v /etc/group:/etc/group:ro \
+    -v /etc/environment:/etc/environment:ro \
+    "${container_image}" &
 
 kasmvnc_container_pid=$!
 set +x
 
+echo "docker stop ${container_name} #kasmvnc_container" >> cancel.sh
 echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
 echo "KasmVNC container started with PID ${kasmvnc_container_pid}"
 

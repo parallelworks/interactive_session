@@ -6,7 +6,7 @@
 set -ex
 
 echo "=========================================="
-echo "Desktop Service Starting (Compute Node)"
+echo "$(date) Desktop Service Starting (Compute Node)"
 echo "=========================================="
 
 if [ -z ${service_parent_install_dir} ]; then
@@ -20,7 +20,6 @@ echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 echo "mv cancel.sh cancel.sh.executed" >> cancel.sh
 
-# Find an available display port
 # Find an available display port
 minPort=5901
 maxPort=5999
@@ -56,15 +55,15 @@ sudo systemctl start docker || true
 # Detect docker command and ensure the service is running
 if docker info &>/dev/null; then
     docker_cmd="docker"
-    echo "Docker is accessible without sudo"
+    echo "$(date) Docker is accessible without sudo"
 elif sudo docker info &>/dev/null; then
     docker_cmd="sudo docker"
-    echo "Docker requires sudo"
+    echo "$(date) Docker requires sudo"
 else
     echo "$(date) ERROR: Docker is not available on this system" >&2
     exit 1
 fi
-echo "Using docker command: ${docker_cmd}"
+echo "$(date) Using docker command: ${docker_cmd}"
 
 echo "$(date) Starting KasmVNC Container ..."
 
@@ -72,9 +71,9 @@ echo "$(date) Starting KasmVNC Container ..."
 GPU_FLAG=""
 if [[ "${enable_gpu}" == "true" ]]; then
     GPU_FLAG="--gpus all"
-    echo "GPU support enabled (--gpus all)"
+    echo "$(date) GPU support enabled (--gpus all)"
 else
-    echo "GPU support disabled"
+    echo "$(date) GPU support disabled"
 fi
 
 container_image="parallelworks/kasmvnc-${kasmvnc_os}"
@@ -90,9 +89,9 @@ build_mount_flags() {
     for dir in ${directories}; do
         if [ -e "${dir}" ]; then
             flags="${flags} -v ${dir}:${dir}"
-            echo "Mount: ${dir} exists, adding to bind mounts"  >&2
+            echo "$(date) Mount: ${dir} exists, adding to bind mounts"  >&2
         else
-            echo "Mount: ${dir} does not exist, skipping"  >&2
+            echo "$(date) Mount: ${dir} does not exist, skipping"  >&2
         fi
     done
 
@@ -101,10 +100,10 @@ build_mount_flags() {
 
 # Build mount flags for existing directories
 MOUNT_FLAGS=$(build_mount_flags "${mount_directories}")
-echo "Mount flags: ${MOUNT_FLAGS}"
+echo "$(date) Mount flags: ${MOUNT_FLAGS}"
 
 # Start KasmVNC container
-echo "Starting Docker container..."
+echo "$(date) Starting Docker container..."
 touch empty
 chmod 644 empty
 touch error.log
@@ -133,13 +132,14 @@ set +x
 
 echo "${docker_cmd} stop ${container_name} #kasmvnc_container" >> cancel.sh
 echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
-echo "KasmVNC container started with PID ${kasmvnc_container_pid}"
+echo "$(date) KasmVNC container started with PID ${kasmvnc_container_pid}"
 
 sleep 6  # Allow container to start
 
-echo "Starting xterm on the host..."
+echo "$(date) Starting xterm on the host..."
 ${docker_cmd} cp ${container_name}:/home/packer/.Xauthority /tmp/.xauth${XdisplayNumber}
-sudo chown ${USER} /tmp/.xauth${XdisplayNumber} || true
+sudo chown "$USER" "/tmp/.xauth${XdisplayNumber}" || chown "$USER" "/tmp/.xauth${XdisplayNumber}"
+echo "rm /tmp/.xauth${XdisplayNumber}" >> cancel.sh
 export XAUTHORITY=/tmp/.xauth${XdisplayNumber}
 
 run_xterm_loop(){

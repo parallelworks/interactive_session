@@ -105,6 +105,10 @@ echo "Mount flags: ${MOUNT_FLAGS}"
 
 # Start KasmVNC container
 echo "Starting Docker container..."
+touch empty
+chmod 644 
+touch error.log
+chmod 666 error.log
 set -x
 ${docker_cmd} run \
     --rm \
@@ -120,6 +124,8 @@ ${docker_cmd} run \
     -v /etc/passwd:/etc/passwd:ro \
     -v /etc/group:/etc/group:ro \
     -v /etc/environment:/etc/environment:ro \
+    -v $PWD/empty:/etc/nginx/conf.d/default.conf \
+    -v $PWD/error.log:/var/log/nginx/error.log \
     "${container_image}" &
 
 kasmvnc_container_pid=$!

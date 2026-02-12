@@ -139,9 +139,7 @@ echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
 echo "$(date) KasmVNC container started with PID ${kasmvnc_container_pid}"
 
 echo "$(date) Waiting for container state to be running..."
-until [ "$(${docker_cmd} inspect -f '{{.State.Running}}' ${container_name} 2>/dev/null)" = "true" ]; do
-    sleep 2
-done
+sleep 10 #FIXME
 
 echo "$(date) Starting xterm on the host..."
 ${docker_cmd} cp ${container_name}:/home/packer/.Xauthority /tmp/.xauth${XdisplayNumber}

@@ -109,12 +109,6 @@ touch empty
 chmod 644 empty
 touch error.log
 chmod 666 error.log
-
-# Create a shared directory for X11 sockets between container and host
-x11_socket_dir="/tmp/x11-kasmvnc-${USER}-${XdisplayNumber}"
-mkdir -p "${x11_socket_dir}"
-chmod 1777 "${x11_socket_dir}"
-
 set -x
 ${docker_cmd} run \
     --rm \
@@ -132,7 +126,6 @@ ${docker_cmd} run \
     -v /etc/environment:/etc/environment:ro \
     -v $PWD/empty:/etc/nginx/conf.d/default.conf \
     -v $PWD/error.log:/var/log/nginx/error.log \
-    -v "${x11_socket_dir}":/tmp/.X11-unix \
     "${container_image}" &
 
 kasmvnc_container_pid=$!
@@ -140,22 +133,14 @@ set +x
 
 echo "${docker_cmd} stop ${container_name} #kasmvnc_container" >> cancel.sh
 echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
-echo "rm -f /tmp/.X11-unix/X${XdisplayNumber}" >> cancel.sh
-echo "rm -rf ${x11_socket_dir}" >> cancel.sh
 echo "KasmVNC container started with PID ${kasmvnc_container_pid}"
 
-# Wait for KasmVNC to create the X socket, then symlink it into the host's /tmp/.X11-unix
-echo "Waiting for X socket to appear in ${x11_socket_dir}..."
-for i in $(seq 1 30); do
-    if [ -e "${x11_socket_dir}/X${XdisplayNumber}" ]; then
-        echo "X socket found after ${i}s"
-        break
-    fi
-    sleep 1
-done
-mkdir -p /tmp/.X11-unix
-ln -sf "${x11_socket_dir}/X${XdisplayNumber}" "/tmp/.X11-unix/X${XdisplayNumber}"
-echo "Symlinked /tmp/.X11-unix/X${XdisplayNumber} -> ${x11_socket_dir}/X${XdisplayNumber}"
+sleep 6  # Allow container to start
+
+echo "Starting xterm on the host..."
+${docker_cmd} cp ${container_name}:/home/packer/.Xauthority /tmp/.xauth${XdisplayNumber}
+sudo chown ${USER} /tmp/.xauth${XdisplayNumber} || true
+export XAUTHORITY=/tmp/.xauth${XdisplayNumber}
 
 run_xterm_loop(){
     while true; do

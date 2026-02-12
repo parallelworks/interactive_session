@@ -51,6 +51,21 @@ for port in $(seq ${minPort} ${maxPort} | shuf); do
     break
 done
 
+sudo systemctl start docker || true
+
+# Detect docker command and ensure the service is running
+if docker info &>/dev/null; then
+    docker_cmd="docker"
+    echo "Docker is accessible without sudo"
+elif sudo docker info &>/dev/null; then
+    docker_cmd="sudo docker"
+    echo "Docker requires sudo"
+else
+    echo "$(date) ERROR: Docker is not available on this system" >&2
+    exit 1
+fi
+echo "Using docker command: ${docker_cmd}"
+
 echo "$(date) Starting KasmVNC Container ..."
 
 # GPU flag
@@ -91,7 +106,7 @@ echo "Mount flags: ${MOUNT_FLAGS}"
 # Start KasmVNC container
 echo "Starting Docker container..."
 set -x
-docker run \
+${docker_cmd} run \
     --rm \
     --name "${container_name}" \
     --network host \
@@ -110,7 +125,7 @@ docker run \
 kasmvnc_container_pid=$!
 set +x
 
-echo "docker stop ${container_name} #kasmvnc_container" >> cancel.sh
+echo "${docker_cmd} stop ${container_name} #kasmvnc_container" >> cancel.sh
 echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
 echo "KasmVNC container started with PID ${kasmvnc_container_pid}"
 

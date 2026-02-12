@@ -92,7 +92,7 @@ jobs:
       container_runtime:
         type: dropdown
         label: Run container using
-        default: kasmvnc-docker
+        default: kasmvnc-singularity
         tooltip: Select which container runtime will be used to launch the KasmVNC container (e.g., Docker or Singularity).
         options:
           - label: Docker

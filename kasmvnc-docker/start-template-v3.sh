@@ -106,7 +106,7 @@ echo "Mount flags: ${MOUNT_FLAGS}"
 # Start KasmVNC container
 echo "Starting Docker container..."
 touch empty
-chmod 644 
+chmod 644 empty
 touch error.log
 chmod 666 error.log
 set -x

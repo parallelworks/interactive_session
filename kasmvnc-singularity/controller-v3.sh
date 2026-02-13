@@ -40,6 +40,7 @@ if ! [ -d "${container_dir}" ]; then
         exit 1
     fi
     tar -xzf ${container_tgz} -C $(dirname ${container_dir})
+    rm ${container_tgz}
 fi
 
 xterm_path=$(which xterm)

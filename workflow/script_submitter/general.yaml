@@ -43,7 +43,11 @@ jobs:
           set -x
           cat <<EOF > headers.sh
           #SBATCH --job-name=${PW_JOB_ID}
+          #SBATCH --account=${{ inputs.slurm.account }}
+          #SBATCH --qos=${{ inputs.slurm.qos }}
           #SBATCH --partition=${{ inputs.slurm.partition }}
+          #SBATCH --ntasks=${{ inputs.slurm.ntasks }}
+          #SBATCH --nodes=${{ inputs.slurm.nodes }}
           #SBATCH --time=${{ inputs.slurm.time }}
           #SBATCH --chdir=${PWD}
           #SBATCH -o ${PWD}/run.${PW_JOB_ID}.out
@@ -348,22 +352,47 @@ jobs:
             hidden: true
             default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
             label: Is SLURM disabled?
+          account:
+            label: SLURM account
+            type: slurm-accounts
+            resource: ${{ inputs.resource }}
+            tooltip: '--account=value slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
           partition:
             type: slurm-partitions
             label: SLURM partition
-            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
             optional: true
             resource: ${{ inputs.resource }}
-            tooltip: Select a partition from the drop down menu.
+            tooltip: '--partition=value SLURM directive'
+          qos:
+            label: Quality of Service [QoS]
+            type: slurm-qos
+            resource: ${{ inputs.resource }}
+            tooltip: '--qos=value slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
+          ntasks:
+            label: Number of tasks
+            type: number
+            default: 1
+            tooltip: '--ntasks=value slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
+          nodes:
+            label: Number of nodes
+            type: number
+            default: 1
+            tooltip: '--nodes=value slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
           time:
             label: Walltime
             type: string
             default: '01:00:00'
-            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
             tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
           scheduler_directives:
             type: editor
-            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
             optional: true
             tooltip: |
               Type in additional scheduler directives. 
@@ -376,10 +405,8 @@ jobs:
           is_disabled:
             type: boolean
             hidden: true
-            default: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
             label: Is PBS disabled?
           scheduler_directives:
             label: Scheduler Directives
             type: editor
             tooltip: Type the PBS scheduler directives
-            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}

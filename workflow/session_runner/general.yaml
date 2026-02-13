@@ -222,6 +222,7 @@ jobs:
             tooltip: |
               Yes → Job is submitted to the scheduler using sbatch, qsub, etc
               No  → Job is executed in the controller or login node instead
+          use_scheduler_agent: true
           slurm:
             type: group
             label: SLURM Directives

@@ -8,15 +8,17 @@ The user supplies a script and (when applicable) configures scheduler directives
 
 The workflow auto-detects whether the selected resource is a SLURM or PBS cluster. Based on this, users can choose to:
 
-1. **Schedule the job**: Submit to the cluster's scheduler (SLURM via `sbatch` or PBS via `qsub`). The workflow monitors the job until completion.
+1. **Use the scheduler agent** (recommended): Provision a compute node dynamically via `parallelworks/scheduler-agent`. The agent handles node allocation, waits for the node to become ready, and then executes the script over SSH through a jump node. This is the recommended option for single-node jobs as it simplifies job management and cleanup. Note: the scheduler agent does not support multi-node jobs.
 
-2. **Run directly on the controller**: Execute the script immediately on the login/controller node via SSH.
+2. **Schedule the job directly**: Submit to the cluster's scheduler (SLURM via `sbatch` or PBS via `qsub`). The workflow monitors the job until completion. Use this option when you need multi-node support (e.g., distributed MPI jobs).
+
+3. **Run directly on the controller**: Execute the script immediately on the login/controller node via SSH.
 
 ## Monitoring & Cleanup
 
-For PBS and SLURM, the workflow continuously monitors job status until completion or until the job is no longer found in the queue.
+For PBS and SLURM direct submissions, the workflow continuously monitors job status until completion or until the job is no longer found in the queue. If the workflow is canceled, the cleanup logic automatically terminates the remote job (`qdel` or `scancel`) to prevent orphaned workloads.
 
-If the workflow is canceled, the cleanup logic automatically terminates the remote job (`qdel` or `scancel`) to prevent orphaned workloads.
+When using the scheduler agent, cleanup is handled by the agent itself.
 
 ## Usage as a Standalone Workflow
 
@@ -30,6 +32,35 @@ Run the script submitter directly from the UI:
 
 Call the script submitter from another workflow to submit scripts programmatically:
 
+
+### Example: Scheduler Agent (Recommended)
+
+Use the scheduler agent for single-node jobs:
+
+```yaml
+jobs:
+  run_my_script:
+    ssh:
+      remoteHost: ${{ inputs.cluster.resource.ip }}
+    steps:
+      - uses: marketplace/script_submitter/v3.5
+        with:
+          resource: ${{ inputs.cluster.resource }}
+          rundir: ${PW_JOB_DIR}
+          script: |
+            echo "Running on $(hostname) at $(date)"
+            python my_analysis.py --input data.csv
+          scheduler: ${{ inputs.cluster.scheduler }}
+          use_scheduler_agent: true
+          slurm:
+            is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
+            partition: ${{ inputs.cluster.slurm.partition }}
+            time: ${{ inputs.cluster.slurm.time }}
+            scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+          pbs:
+            is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
+            scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+```
 
 ### Example: Inline Script
 
@@ -112,6 +143,7 @@ jobs:
 | `script_path` | Path to existing script (when `use_existing_script: true`) | No |
 | `shebang` | Script shebang (default: `#!/bin/bash`) | No |
 | `scheduler` | Submit to job scheduler (true/false) | No |
+| `use_scheduler_agent` | Use the scheduler agent instead of direct submission (true/false, default: false) | No |
 | `slurm` | SLURM scheduler options | No |
 | `pbs` | PBS scheduler options | No |
 

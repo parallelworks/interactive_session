@@ -40,48 +40,45 @@ jobs:
       - name: Create SLURM Headers
         if: ${{ inputs.slurm.is_disabled == false }}
         run: |
-          set -x
+          # Need to evaluate the env variables here
           cat <<EOF > headers.sh
           #SBATCH --job-name=${PW_JOB_ID}
-          #SBATCH --partition=${{ inputs.slurm.partition }}
           #SBATCH --time=${{ inputs.slurm.time }}
           #SBATCH --chdir=${PWD}
           #SBATCH -o ${PWD}/run.${PW_JOB_ID}.out
           #SBATCH -e ${PWD}/run.${PW_JOB_ID}.out
-          ${{ inputs.slurm.scheduler_directives }}
           EOF
 
-          # Remove SBATCH directives with undefined values 
-          sed -i '/^#SBATCH --[^=]*=\([^:]*:\)\{0,1\}\(undefined\)\?$/d' headers.sh
-          # Remove SBATCH directives with empty values
-          sed -i '/#SBATCH.*=none$/d; /#SBATCH.*=gpu:0$/d' headers.sh
-          # Remove empty lines
-          sed -i '/^[[:space:]]*$/d' headers.sh
+          # The partitions directive parameter is always optional
+          if ! [ -z "${{ inputs.slurm.partition }}" ]; then
+            echo "#SBATCH --partition=${{ inputs.slurm.partition }}" >> headers.sh
+          fi
 
-          cat headers.sh
+          # The scheduler directives parameter is always optional
+          if ! [ -z "${{ inputs.slurm.scheduler_directives }}" ]; then
+            echo "${{ inputs.slurm.scheduler_directives }}" >> headers.sh
+          fi
+
           echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
+          echo "SCHEDULER_TYPE=slurm" | tee -a $OUTPUTS
+
       - name: Create PBS Headers
         if: ${{ inputs.pbs.is_disabled == false }}
         run: |
           set -x
           cat <<EOF > headers.sh
-          ${{ inputs.shebang }}
           #PBS -N ${PW_JOB_ID}
           #PBS -o ${PWD}/run.${PW_JOB_ID}.out
           #PBS -j oe
-          ${{ inputs.pbs.scheduler_directives }}
-          cd ${PWD}
           EOF
 
-          # Remove PBS directives with undefined values 
-          sed -i '/^#PBS --[^=]*=\([^:]*:\)\{0,1\}\(undefined\)\?$/d' headers.sh
-          # Remove PBS directives with empty values
-          sed -i '/#PBS.*=none$/d; /#PBS.*=gpu:0$/d' headers.sh
-          # Remove empty lines
-          sed -i '/^[[:space:]]*$/d' headers.sh
+          # The scheduler directives parameter is always optional
+          if ! [ -z "${{ inputs.pbs.scheduler_directives }}" ]; then
+            echo "${{ inputs.pbs.scheduler_directives }}" >> headers.sh
+          fi
 
-          cat headers.sh
           echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
+          echo "SCHEDULER_TYPE=pbs" | tee -a $OUTPUTS
 
   ssh_job:
     needs:
@@ -118,11 +115,9 @@ jobs:
         run: |
           set -x
           echo "$(date) Creating PBS script"
-          cat <<EOF > run.sh
-          ${{ inputs.shebang }}
-          ${{ needs.preprocessing.outputs.HEADERS }}
-          cd ${PWD}
-          EOF
+          echo '${{ inputs.shebang }}' > run.sh
+          cat headers.sh >> run.sh
+          echo "cd ${PWD}" >> run.sh
           cat run-template.sh >> run.sh
           chmod +x run.sh
           cat run.sh
@@ -171,10 +166,8 @@ jobs:
       - name: Create SLURM Script
         run: |
           set -x
-          cat <<EOF > run.sh
-          ${{ inputs.shebang }}
-          ${{ needs.preprocessing.outputs.HEADERS }}
-          EOF
+          echo '${{ inputs.shebang }}' > run.sh
+          cat headers.sh >> run.sh
           cat run-template.sh >> run.sh
           chmod +x run.sh
           cat run.sh
@@ -232,7 +225,7 @@ jobs:
       - uses: parallelworks/scheduler-agent
         id: slurmstep
         with:
-          scheduler-type: slurm
+          scheduler-type: ${{ needs.preprocessing.outputs.SCHEDULER_TYPE }}
           script-headers: |
             ${{ needs.preprocessing.outputs.HEADERS }}
           wait: false
@@ -312,7 +305,7 @@ jobs:
         ignore: ${{ .hidden }}
         tooltip: Type the script to run without shebang and scheduler directives.
         default: |
-          echo "$(date) Running in directory ${{ inputs.rundir }} on ${HOSTNAME}"
+          echo "$(date) Running in directory ${PWD} on ${HOSTNAME}"
       script_path:
         label: Script Path
         type: string

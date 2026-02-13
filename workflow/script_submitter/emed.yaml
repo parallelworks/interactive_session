@@ -16,7 +16,7 @@ jobs:
           rm -f CANCEL_STREAMING
           echo "$(date) CANCEL_STREAMING file detected!"
           kill ${tail_pid}
-  create_script_template:
+  preprocessing:
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
@@ -37,10 +37,74 @@ jobs:
           EOF
           fi
           cat run-template.sh
+      - name: Create SLURM Headers
+        if: ${{ inputs.slurm.is_disabled == false }}
+        run: |
+          # Need to evaluate the env variables here
+          cat <<EOF > headers.sh
+          #SBATCH --job-name=${PW_JOB_ID}
+          #SBATCH --time=${{ inputs.slurm.time }}
+          #SBATCH --chdir=${PWD}
+          #SBATCH -o ${PWD}/run.${PW_JOB_ID}.out
+          #SBATCH -e ${PWD}/run.${PW_JOB_ID}.out
+          EOF
+
+          # Partition
+          if ! [ -z "${{ inputs.slurm.partition_default }}" ]; then
+            echo "#SBATCH --partition=${{ inputs.slurm.partition_default }}" >> headers.sh
+          elif ! [ -z "${{ inputs.slurm.partition_hpc4 }}" ]; then
+            echo "#SBATCH --partition=${{ inputs.slurm.partition_hpc4 }}" >> headers.sh
+          fi
+
+          # GPUs
+          if ! [ -z "${{ inputs.slurm.gres_gpu_default }}" ]; then
+            echo "#SBATCH --gres=gpu:${{ inputs.slurm.gres_gpu_default }}" >> headers.sh
+          elif ! [ -z "${{ inputs.slurm.gres_gpu_hpc4 }}" ]; then
+            echo "#SBATCH --gres=gpu:${{ inputs.slurm.gres_gpu_hpc4 }}" >> headers.sh
+          fi
+
+          # The scheduler directives parameter is always optional
+          if ! [ -z "${{ inputs.slurm.scheduler_directives }}" ]; then
+            echo "${{ inputs.slurm.scheduler_directives }}" >> headers.sh
+          fi
+
+          if [[ ${{ inputs.resource.provider }} == 'existing' ]]; then
+            echo "#SBATCH --mem=${{ inputs.slurm.mem }}" >> headers.sh
+            echo "#SBATCH --cpus-per-task=${{ inputs.slurm.cpus_per_task }}" >> headers.sh
+          fi
+
+          if ! [ -z "${{ inputs.slurm.slurm_options }}" ]; then
+            echo "#SBATCH --clusters=${{ inputs.slurm.slurm_options }}" >> headers.sh
+            echo "SLURM_OPTIONS_ARG=-M ${{ inputs.slurm.slurm_options }}" | tee -a $OUTPUTS
+          else
+            echo "SLURM_OPTIONS_ARG=" | tee -a $OUTPUTS
+          fi
+
+          echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
+          echo "SCHEDULER_TYPE=slurm" | tee -a $OUTPUTS
+
+      - name: Create PBS Headers
+        if: ${{ inputs.pbs.is_disabled == false }}
+        run: |
+          set -x
+          cat <<EOF > headers.sh
+          #PBS -N ${PW_JOB_ID}
+          #PBS -o ${PWD}/run.${PW_JOB_ID}.out
+          #PBS -j oe
+          EOF
+
+          # The scheduler directives parameter is always optional
+          if ! [ -z "${{ inputs.pbs.scheduler_directives }}" ]; then
+            echo "${{ inputs.pbs.scheduler_directives }}" >> headers.sh
+          fi
+
+          echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
+          echo "SCHEDULER_TYPE=pbs" | tee -a $OUTPUTS
+
   ssh_job:
     needs:
-      - create_script_template
-    if: ${{ inputs.slurm.is_disabled != false && inputs.pbs.is_disabled != false }}
+      - preprocessing
+    if: ${{ inputs.slurm.is_disabled != false && inputs.pbs.is_disabled != false && inputs.use_scheduler_agent != true }}
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
@@ -62,8 +126,8 @@ jobs:
           ./run.sh > run.${PW_JOB_ID}.out 2>&1
   pbs_job:
     needs:
-      - create_script_template
-    if: ${{ inputs.pbs.is_disabled == false }}
+      - preprocessing
+    if: ${{ inputs.pbs.is_disabled == false && inputs.use_scheduler_agent != true }}
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
@@ -71,14 +135,10 @@ jobs:
       - name: Create PBS Script
         run: |
           set -x
-          cat <<EOF > run.sh
-          ${{ inputs.shebang }}
-          #PBS -N ${PW_JOB_ID}
-          #PBS -o ${PWD}/run.${PW_JOB_ID}.out
-          #PBS -j oe
-          ${{ inputs.pbs.scheduler_directives }}
-          cd ${PWD}
-          EOF
+          echo "$(date) Creating PBS script"
+          echo '${{ inputs.shebang }}' > run.sh
+          cat headers.sh >> run.sh
+          echo "cd ${PWD}" >> run.sh
           cat run-template.sh >> run.sh
           chmod +x run.sh
           cat run.sh
@@ -118,8 +178,8 @@ jobs:
           done
   slurm_job:
     needs:
-      - create_script_template
-    if: ${{ inputs.slurm.is_disabled == false }}
+      - preprocessing
+    if: ${{ inputs.slurm.is_disabled == false && inputs.use_scheduler_agent != true }}
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
@@ -127,41 +187,21 @@ jobs:
       - name: Create SLURM Script
         run: |
           set -x
-          cat <<EOF > run.sh
-          ${{ inputs.shebang }}
-          #SBATCH --job-name=${PW_JOB_ID}
-          #SBATCH --partition=${{ inputs.slurm.partition_default }}
-          #SBATCH --partition=${{ inputs.slurm.partition_hpc4 }}
-          #SBATCH --cpus-per-task=${{ inputs.slurm.cpus_per_task }}
-          #SBATCH --mem=${{ inputs.slurm.mem }}
-          #SBATCH --gres=gpu:${{ inputs.slurm.gres_gpu_default }}
-          #SBATCH --gres=gpu:${{ inputs.slurm.gres_gpu_hpc4 }}
-          #SBATCH --time=${{ inputs.slurm.time }}
-          #SBATCH --chdir=${PWD}
-          #SBATCH -o ${PWD}/run.${PW_JOB_ID}.out
-          #SBATCH -e ${PWD}/run.${PW_JOB_ID}.out
-          ${{ inputs.slurm.scheduler_directives }}
-          EOF
+          echo '${{ inputs.shebang }}' > run.sh
+          cat headers.sh >> run.sh
           cat run-template.sh >> run.sh
           chmod +x run.sh
-          # Remove SBATCH directives with undefined values 
-          sed -i '/^#SBATCH --[^=]*=\([^:]*:\)\{0,1\}\(undefined\)\?$/d' run.sh
-          # Remove SBATCH directives with empty values
-          sed -i '/#SBATCH.*=none$/d; /#SBATCH.*=gpu:0$/d' run.sh
-          # Remove empty lines
-          sed -i '/^[[:space:]]*$/d' run.sh
           cat run.sh
       - name: Submit SLURM Script
         run: |
           set -x
           echo "$(date) Submitting SLURM Job"
-          jobid=$(sbatch ${{ inputs.slurm.slurm_options }} run.sh | tail -1 | awk -F ' ' '{print $4}')
+          jobid=$(sbatch run.sh | tail -1 | awk -F ' ' '{print $4}')
           if ! [[ "${jobid}" =~ ^[0-9]+$ ]]; then
             echo "$(date) Job submission failed: invalid jobid '${jobid}'"
             exit 1
           fi
           echo "jobid=${jobid}"  | tee -a $OUTPUTS
-          sleep 5
       - name: Monitor SLURM Job
         run: |
           jobid=${{ needs.slurm_job.outputs.jobid }}
@@ -170,10 +210,10 @@ jobs:
           get_slurm_job_status() {
               # Get the header line to determine the column index corresponding to the job status
               if [ -z "${SQUEUE_HEADER}" ]; then
-                  export SQUEUE_HEADER="$(eval squeue ${{ inputs.slurm.slurm_options }} | awk 'NR==1')"
+                  export SQUEUE_HEADER="$(eval squeue ${{ needs.preprocessing.outputs.SLURM_OPTIONS_ARG }} | awk 'NR==1')"
               fi
               status_column=$(echo "${SQUEUE_HEADER}" | awk '{ for (i=1; i<=NF; i++) if ($i ~ /^S/) { print i; exit } }')
-              status_response=$(eval squeue ${{ inputs.slurm.slurm_options }} | awk -v jobid="${jobid}" '$1 == jobid')
+              status_response=$(eval squeue ${{ needs.preprocessing.outputs.SLURM_OPTIONS_ARG }} | awk -v jobid="${jobid}" '$1 == jobid')
               echo "${SQUEUE_HEADER}"
               echo "${status_response}"
               export job_status=$(echo ${status_response} | awk -v id="${jobid}" -v col="$status_column" '{print $col}')
@@ -183,17 +223,54 @@ jobs:
             sleep 15
             get_slurm_job_status
             if [ -z "${job_status}" ]; then
-              job_status=$(sacct ${{ inputs.slurm.slurm_options }} -j ${jobid}  --format=state | tail -n1)
+              job_status=$(sacct -j ${jobid}  --format=state | tail -n1)
               echo "$(date) Job exited with status ${job_status}"
               break
             fi
           done
+  scheduler_agent_job:
+    needs:
+      - preprocessing
+    if: ${{ inputs.use_scheduler_agent == true }}
+    working-directory: ${{ inputs.rundir }}
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Create Script
+        run: |
+          set -x
+          echo '${{ inputs.shebang }}' > run.sh
+          cat run-template.sh >> run.sh
+          chmod +x run.sh
+          cat run.sh
+      - uses: parallelworks/scheduler-agent
+        id: slurmstep
+        with:
+          scheduler-type: ${{ needs.preprocessing.outputs.SCHEDULER_TYPE }}
+          script-headers: |
+            ${{ needs.preprocessing.outputs.HEADERS }}
+          wait: false
+      - uses: parallelworks/wait-for-agent
+        id: waitstep
+        with:
+          agentId: ${{ needs.scheduler_agent_job.steps.slurmstep.outputs.agentId }}
+      - name: Run Script
+        ssh:
+          jumpNodeHost: ${{ inputs.resource.ip }}
+          remoteHost: ${{ needs.scheduler_agent_job.steps.waitstep.outputs.remoteHost }}:${{ needs.scheduler_agent_job.steps.waitstep.outputs.sshPort }}
+        run: |
+          set -x
+          echo "$(date) Executing script"
+          ./run.sh > run.${PW_JOB_ID}.out 2>&1
+
+
   cleanup:
     if: ${{ always }}
     needs:
       - ssh_job
       - pbs_job
       - slurm_job
+      - scheduler_agent_job
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
@@ -211,12 +288,12 @@ jobs:
             exit 0
           fi 
 
-          if [[ "${{ inputs.pbs.is_disabled }}" == false ]]; then
+          if [[ "${{ inputs.pbs.is_disabled }}" == false ]] && [[ "${{ inputs.use_scheduler_agent }}" != true ]]; then
             qdel "${{ needs.pbs_job.outputs.jobid }}"
           fi
 
-          if [[ "${{ inputs.slurm.is_disabled }}" == false ]]; then
-            scancel ${{ inputs.slurm.slurm_options }} ${{ needs.slurm_job.outputs.jobid }}
+          if [[ "${{ inputs.slurm.is_disabled }}" == false ]] && [[ "${{ inputs.use_scheduler_agent }}" != true ]]; then
+            scancel ${{ needs.preprocessing.outputs.SLURM_OPTIONS_ARG }} ${{ needs.slurm_job.outputs.jobid }}
           fi
 'on':
   execute:
@@ -249,7 +326,7 @@ jobs:
         ignore: ${{ .hidden }}
         tooltip: Type the script to run without shebang and scheduler directives.
         default: |
-          echo "$(date) Running in directory ${{ inputs.rundir }} on ${HOSTNAME}"
+          echo "$(date) Running in directory ${PWD} on ${HOSTNAME}"
       script_path:
         label: Script Path
         type: string
@@ -258,13 +335,22 @@ jobs:
         tooltip: Provide path to an existing script on the target resource.
       scheduler:
         type: boolean
-        default: true
+        default: false
         label: Schedule Job?
         hidden: ${{ inputs.resource.schedulerType == '' }}
         ignore: ${{ .hidden }}
         tooltip: |
           Yes → Job is submitted to the scheduler using sbatch, qsub, etc
           No  → Job is executed in the controller or login node instead
+      use_scheduler_agent:
+        type: boolean
+        ignore: ${{ inputs.scheduler == false }}
+        hidden: ${{ .ignore }}
+        default: false
+        label: Use parallelworks/scheduler-agent?
+        tooltip: |
+          Yes → Provision the compute node using parallelworks/scheduler-agent
+          No  → Directly use sbatch, qsub, etc to submit the job
       slurm:
         type: group
         label: SLURM Directives
@@ -279,7 +365,7 @@ jobs:
             options:
               - value: ''
                 label: Default
-              - value: '-M hpc4'
+              - value: 'hpc4'
                 label: HPC4
           is_disabled:
             type: boolean
@@ -289,7 +375,7 @@ jobs:
           partition_default:
             type: slurm-partitions
             label: SLURM partition
-            ignore: ${{ '-M hpc4' == inputs.slurm.slurm_options }}
+            ignore: ${{ 'hpc4' == inputs.slurm.slurm_options }}
             hidden: ${{ .ignore }}
             optional: true
             resource: ${{ inputs.resource }}
@@ -299,7 +385,7 @@ jobs:
             label: SLURM partition
             optional: true
             tooltip: Select a partition from the drop down menu. Leave empty to let SLURM pick a partition.
-            ignore: ${{ '-M hpc4' != inputs.slurm.slurm_options }}
+            ignore: ${{ 'hpc4' != inputs.slurm.slurm_options }}
             hidden: ${{ .ignore }}
             default: normal
             options:
@@ -373,3 +459,4 @@ jobs:
             label: Scheduler Directives
             type: editor
             tooltip: Type the PBS scheduler directives
+            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}

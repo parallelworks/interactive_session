@@ -138,26 +138,17 @@ echo "${docker_cmd} stop ${container_name} #kasmvnc_container" >> cancel.sh
 echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
 echo "$(date) KasmVNC container started with PID ${kasmvnc_container_pid}"
 
-echo "$(date) Waiting for container status to be up..."
+echo "$(date) Copy .Xauthority from container to host..."
 for i in $(seq 1 30); do
-    sleep 10
-    if ${docker_cmd} ps --filter "name=${container_name}" --format '{{.Status}}' | grep -q "^Up"; then
-        echo "$(date) Container is running."
-        break
-    fi
-    if [ "$i" -eq 30 ]; then
-        echo "$(date) ERROR: Container did not start within 30 seconds."
-        exit 1
-    fi
-    sleep 1
+    ${docker_cmd} cp ${container_name}:/home/packer/.Xauthority /tmp/.xauth${XdisplayNumber} && break
+    echo "$(date) Attempt $i/30 failed, retrying in 2s..."
+    sleep 2
 done
-
-echo "$(date) Starting xterm on the host..."
-${docker_cmd} cp ${container_name}:/home/packer/.Xauthority /tmp/.xauth${XdisplayNumber}
 sudo chown "$USER" "/tmp/.xauth${XdisplayNumber}" || chown "$USER" "/tmp/.xauth${XdisplayNumber}"
 echo "rm /tmp/.xauth${XdisplayNumber}" >> cancel.sh
 export XAUTHORITY=/tmp/.xauth${XdisplayNumber}
 
+echo "$(date) Starting xterm on the host..."
 run_xterm_loop(){
     while true; do
         echo "$(date): Starting xterm"
@@ -174,6 +165,6 @@ echo "kill ${run_xterm_pid} # run_xterm_loop" >> cancel.sh
 wait ${kasmvnc_container_pid}
 echo "$(date) Exiting job"
 kill ${run_xterm_pid}
-rm cancel.sh
+bash cancel.sh
 exit 1
 

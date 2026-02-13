@@ -1,0 +1,216 @@
+permissions:
+  - '*'
+sessions:
+  session:
+    redirect: true
+jobs:
+  preprocessing:
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Checkout
+        uses: parallelworks/checkout
+        with:
+          repo: https://github.com/parallelworks/interactive_session.git
+          branch: main
+          sparse_checkout:
+            - ${{ inputs.container_runtime }}
+      - name: Create Inputs
+        run: |
+          set -x
+
+          if [ -z "${PW_PLATFORM_HOST}" ]; then
+            export PW_PLATFORM_HOST=noaa.parallel.works
+          fi
+          # Write PW variables
+          env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+          # Encase values between quotes
+          sed -i 's/=\(.*\)/="\1"/' inputs.sh
+          # Password
+          password=$(openssl rand -base64 12 | head -c 12)
+          # basepath
+          basepath=/me/session/${PW_USER}/${{ sessions.session }}
+          # Write input form variables and ensure the pw agent is in the PATH
+          cat <<'EOF' >> inputs.sh
+          PATH=$HOME/pw:$PATH
+          kasmvnc_os="${{ inputs.desktop.kasmvnc_os }}"
+          startup_command="${{ inputs.desktop.startup_command }}"
+          container_mount_paths="${{ inputs.desktop.container_mount_paths }}"
+          EOF
+          echo basepath=${basepath} >> inputs.sh
+          echo password=${password} >> inputs.sh
+          if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
+            echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
+          fi
+          # Remove empty variables
+          sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+          sed -i '/=""/d' inputs.sh # remove var=""
+          # Add export= to all lines
+          sed -i 's/^/export /' inputs.sh
+
+          slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
+          echo "slug=${slug}"  | tee -a $OUTPUTS
+  session_runner:
+    needs:
+      - preprocessing
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - uses: marketplace/session_runner/v1.3
+        early-cancel: any-job-failed
+        with:
+          session: ${{ sessions.session }}
+          resource: ${{ inputs.resource }}
+          cluster:
+            scheduler: ${{ inputs.cluster.scheduler }}
+            slurm:
+              is_disabled: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
+              account: ${{ inputs.cluster.slurm.account }}
+              partition: ${{ inputs.cluster.slurm.partition }}
+              qos: ${{ inputs.cluster.slurm.qos }}
+              ntasks: ${{ inputs.cluster.slurm.ntasks }}
+              nodes: ${{ inputs.cluster.slurm.nodes }}
+              scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+              time: ${{ inputs.cluster.slurm.time }}
+            pbs:
+              is_disabled: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+              scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+          service:
+            start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.container_runtime }}/start-template-v3.sh
+            controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.container_runtime }}/controller-v3.sh
+            inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
+            slug: ${{ needs.preprocessing.outputs.slug }}
+            rundir: ${PW_PARENT_JOB_DIR}
+'on':
+  execute:
+    inputs:
+      resource:
+        type: compute-clusters
+        label: Service host
+        include-workspace: false
+        tooltip: Resource to host the service
+      container_runtime:
+        type: dropdown
+        label: Run container using
+        default: kasmvnc-singularity
+        tooltip: Select which container runtime will be used to launch the KasmVNC container (e.g., Docker or Singularity).
+        options:
+          - label: Docker
+            value: kasmvnc-docker
+          - label: Singularity
+            value: kasmvnc-singularity
+      cluster:
+        hidden: ${{ inputs.resource.schedulerType == '' }}
+        ignore: ${{ inputs.resource.schedulerType == '' }}
+        type: group
+        label: Compute Cluster Settings
+        items:
+          scheduler:
+            type: boolean
+            default: false
+            label: Schedule Job?
+            tooltip: |
+              Yes → Job is submitted to the scheduler using sbatch, qsub, etc
+              No  → Job is executed in the controller or login node instead
+          slurm:
+            type: group
+            label: SLURM Directives
+            hidden: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            items:
+              is_disabled:
+                type: boolean
+                hidden: true
+                default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                label: Is SLURM disabled?
+              account:
+                label: SLURM account
+                type: slurm-accounts
+                resource: ${{ inputs.resource }}
+                tooltip: '--account=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              partition:
+                type: slurm-partitions
+                label: SLURM partition
+                optional: true
+                resource: ${{ inputs.resource }}
+                tooltip: '--partition=value SLURM directive'
+              qos:
+                label: Quality of Service [QoS]
+                type: slurm-qos
+                resource: ${{ inputs.resource }}
+                tooltip: '--qos=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              ntasks:
+                label: Number of tasks
+                type: number
+                default: 1
+                tooltip: '--ntasks=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              nodes:
+                label: Number of nodes
+                type: number
+                default: 1
+                tooltip: '--nodes=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              time:
+                label: Walltime
+                type: string
+                default: '01:00:00'
+                tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
+              scheduler_directives:
+                type: editor
+                optional: true
+                tooltip: |
+                  Type in additional scheduler directives. 
+          pbs:
+            type: group
+            label: PBS Directives
+            hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            items:
+              is_disabled:
+                type: boolean
+                hidden: true
+                default: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+                label: Is PBS disabled?
+              scheduler_directives:
+                label: Scheduler Directives
+                type: editor
+                tooltip: Type the PBS scheduler directives
+      desktop:
+        type: group
+        label: Desktop Settings
+        collapsed: true
+        items:
+          kasmvnc_os:
+            type: dropdown
+            label: Operating System
+            default: rocky9
+            tooltip: Choose the operating system for the KasmVNC container
+            options:
+              - label: Rocky Linux 8
+                value: rocky8
+              - label: Rocky Linux 9
+                value: rocky9
+              - label: Ubuntu 22.04
+                value: ubuntu
+          startup_command:
+            type: string
+            label: Startup Application
+            placeholder: firefox, virtuoso, etc.
+            tooltip: Command to run after desktop starts (optional)
+            optional: true
+          container_mount_paths:
+            type: string
+            label: Additional Mount Paths
+            placeholder: |-
+              /p/cwfs
+              /archive/navy
+            tooltip: 'Extra directories to mount into the container (one per line). Auto-mounted if they exist: /p/home, /p/work, /p/work1, /p/app, /p/cwfs, /scratch, /run/munge, /etc/pbs.conf, /var/spool/pbs, /opt/pbs'
+            optional: true
+

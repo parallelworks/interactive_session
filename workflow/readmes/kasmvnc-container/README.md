@@ -1,10 +1,11 @@
 # KasmVNC Container Desktop
 
-A containerized remote desktop environment using Singularity on HPC clusters. Provides browser-based access to a full Linux desktop with GPU support.
+A containerized remote desktop environment supporting both Docker and Singularity runtimes. Provides browser-based access to a full Linux desktop with GPU support.
 
 ## Features
 
 - **Multiple OS Options**: Rocky Linux 8/9 or Ubuntu 22.04
+- **Container Runtime**: Supports both Docker and Singularity
 - **GPU Support**: Native GPU access for visualization and compute workloads
 - **Custom Applications**: Launch any desktop application at startup
 - **Flexible Storage**: Auto-mount common directories plus custom paths
@@ -14,7 +15,7 @@ A containerized remote desktop environment using Singularity on HPC clusters. Pr
 
 - Running GUI applications (Firefox, MATLAB, RStudio, FSL, VMD, etc.)
 - Scientific visualization and analysis
-- Remote desktop access to HPC resources
+- Remote desktop access on HPC clusters or cloud resources
 - Development and testing in containerized environments
 
 ## Configuration
@@ -31,10 +32,15 @@ Common directories (`/p/home`, `/p/work`, `/scratch`, etc.) are automatically mo
 ### Compute Resources
 Configure CPU, memory, and GPU requirements based on your workload. GPU support requires enabling the appropriate scheduler directives for your cluster.
 
+## Requirements
+
+- **Docker**: Must be installed and accessible on the target compute node (with or without `sudo`).
+- **Singularity**: Must be available on the target compute node (e.g., via `module load singularity`).
+
 ## Getting Started
 
 1. Select your resource and scheduler settings
-2. Choose your preferred OS and optional startup application
+2. Choose your container runtime, preferred OS, and optional startup application
 3. Launch the session
 4. Access your desktop through the browser-based VNC interface
 

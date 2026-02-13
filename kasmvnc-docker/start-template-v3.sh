@@ -152,12 +152,17 @@ for i in $(seq 1 30); do
     sleep 1
 done
 
-echo "$(date) Starting xterm on the host..."
-${docker_cmd} cp ${container_name}:/home/packer/.Xauthority /tmp/.xauth${XdisplayNumber}
+echo "$(date) Copy .Xauthority from container to host..."
+for i in $(seq 1 30); do
+    ${docker_cmd} cp ${container_name}:/home/packer/.Xauthority /tmp/.xauth${XdisplayNumber} && break
+    echo "$(date) Attempt $i/30 failed, retrying in 2s..."
+    sleep 2
+done
 sudo chown "$USER" "/tmp/.xauth${XdisplayNumber}" || chown "$USER" "/tmp/.xauth${XdisplayNumber}"
 echo "rm /tmp/.xauth${XdisplayNumber}" >> cancel.sh
 export XAUTHORITY=/tmp/.xauth${XdisplayNumber}
 
+echo "$(date) Starting xterm on the host..."
 run_xterm_loop(){
     while true; do
         echo "$(date): Starting xterm"
@@ -174,6 +179,6 @@ echo "kill ${run_xterm_pid} # run_xterm_loop" >> cancel.sh
 wait ${kasmvnc_container_pid}
 echo "$(date) Exiting job"
 kill ${run_xterm_pid}
-rm cancel.sh
+bash cancel.sh
 exit 1
 

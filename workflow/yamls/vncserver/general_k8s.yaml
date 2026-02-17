@@ -615,7 +615,6 @@ jobs:
             options:
                - gnome-session
                - mate-session
-            ignore: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
           novnc_parent_install_dir:
             label: noVNC installation directory
             type: string

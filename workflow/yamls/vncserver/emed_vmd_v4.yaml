@@ -128,7 +128,7 @@ jobs:
                 options:
                   - value: ''
                     label: Default
-                  - value: '-M hpc4'
+                  - value: 'hpc4'
                     label: HPC4
               is_disabled:
                 type: boolean
@@ -138,7 +138,7 @@ jobs:
               partition_default:
                 type: slurm-partitions
                 label: SLURM partition
-                ignore: ${{ '-M hpc4' == inputs.cluster.slurm.slurm_options }}
+                ignore: ${{ 'hpc4' == inputs.cluster.slurm.slurm_options }}
                 hidden: ${{ .ignore }}
                 optional: true
                 resource: ${{ inputs.cluster.resource }}
@@ -148,7 +148,7 @@ jobs:
                 label: SLURM partition
                 optional: true
                 tooltip: Select a partition from the drop down menu. Leave empty to let SLURM pick a partition.
-                ignore: ${{ '-M hpc4' != inputs.cluster.slurm.slurm_options }}
+                ignore: ${{ 'hpc4' != inputs.cluster.slurm.slurm_options }}
                 hidden: ${{ .ignore }}
                 default: normal
                 options:

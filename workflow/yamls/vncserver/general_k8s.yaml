@@ -606,8 +606,16 @@ jobs:
       service:
         type: group
         label: Service
-        hidden: true
+        hidden: false
         items:
+          desktop:
+            label: Desktop Session
+            type: dropdown
+            default: gnome-session
+            options:
+               - gnome-session
+               - mate-session
+            ignore: ${{ 'existing' != inputs.pwrl_host.resource.provider }}
           novnc_parent_install_dir:
             label: noVNC installation directory
             type: string

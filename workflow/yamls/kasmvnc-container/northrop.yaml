@@ -195,7 +195,7 @@ jobs:
         items:
           kasmvnc_os:
             type: dropdown
-            label: Operating System
+            label: Container Operating System
             default: rocky9
             tooltip: Choose the operating system for the KasmVNC container
             options:

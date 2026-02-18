@@ -224,6 +224,10 @@ jobs:
         label: Service
         hidden: true
         items:
+          desktop:
+            label: Desktop Environment
+            type: string
+            default: gnome-session
           novnc_parent_install_dir:
             label: noVNC installation directory
             type: string

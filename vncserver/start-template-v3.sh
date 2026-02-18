@@ -480,9 +480,25 @@ sudo tee /usr/lib/kasmvncserver/select-de.sh >/dev/null <<'EOF'
 exit 0
 EOF
 
+if [[ ${service_desktop} == "gnome-session" ]]; then
+    desktop_arg="-select-de gnome"
+elif [[ ${service_desktop} == "mate-session" ]]; then
+    desktop_arg="-select-de mate"
+elif [[ ${service_desktop} == "xfce4-session" ]]; then
+    desktop_arg="-select-de xfce4"
+elif [[ ${service_desktop} == "icewm-session" ]]; then
+    desktop_arg="-select-de icewm"
+elif [[ ${service_desktop} == "lxqt-session" ]]; then
+    desktop_arg="-select-de lxqt"
+elif [[ ${service_desktop} == "lxde" ]]; then
+    desktop_arg="-select-de lxde"
+else
+    desktop_arg="-xstartup ${XSTARTUP_PATH}"
+fi
+
 sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
     vncserver_cmd="${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} \
-        -xstartup ${XSTARTUP_PATH} \
+        ${desktop_arg} \
         -websocketPort ${kasmvnc_port} \
         -rfbport ${displayPort}"
 

@@ -31,6 +31,7 @@ jobs:
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH
+            service_desktop="${{ inputs.service.desktop }}"
             service_novnc_parent_install_dir="${{ inputs.service.novnc_parent_install_dir }}"
             service_novnc_tgz_basename="${{ inputs.service.novnc_tgz_basename }}"
             service_nginx_sif="${{ inputs.service.nginx_sif_tag_existing }}"
@@ -228,6 +229,11 @@ jobs:
         type: group
         label: Service
         items:
+          desktop:
+            label: Desktop Environment
+            type: string
+            default: gnome-session
+            hidden: true
           novnc_parent_install_dir:
             label: noVNC installation directory
             type: string

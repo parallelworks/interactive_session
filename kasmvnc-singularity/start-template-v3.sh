@@ -109,7 +109,7 @@ singularity run \
     --bind /etc/environment:/etc/environment:ro \
     --bind $PWD/empty:/etc/nginx/conf.d/default.conf \
     --bind $PWD/error.log:/var/log/nginx/error.log \
-    "${container_dir}" &
+    "${container_dir}" ${startup_command} &
 
 kasmvnc_container_pid=$!
 set +x

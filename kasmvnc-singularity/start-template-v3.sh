@@ -87,6 +87,16 @@ echo "Mount flags: ${MOUNT_FLAGS}"
 
 # Start KasmVNC container
 echo "Starting Singularity container..."
+touch empty
+chmod 644 empty
+touch error.log
+chmod 666 error.log
+
+# Create a per-job /tmp to avoid cross-user permission conflicts on shared nodes
+# (Singularity bind-mounts host /tmp by default; container entrypoint writes /tmp/env.sh)
+mkdir -p $PWD/container_tmp
+echo "rm -rf $PWD/container_tmp" >> cancel.sh
+
 set -x
 singularity run \
     --writable-tmpfs \
@@ -100,6 +110,9 @@ singularity run \
     --bind /etc/passwd:/etc/passwd:ro \
     --bind /etc/group:/etc/group:ro \
     --bind /etc/environment:/etc/environment:ro \
+    --bind $PWD/empty:/etc/nginx/conf.d/default.conf \
+    --bind $PWD/error.log:/var/log/nginx/error.log \
+    --bind $PWD/container_tmp:/tmp \
     "${container_dir}" &
 
 kasmvnc_container_pid=$!

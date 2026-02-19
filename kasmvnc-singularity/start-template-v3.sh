@@ -97,7 +97,7 @@ singularity run \
     --writable-tmpfs \
     ${GPU_FLAG} \
     ${MOUNT_FLAGS} \
-    --env HOME=${HOME} \
+    --home ${HOME} \
     --env BASE_PATH="${basepath}" \
     --env NGINX_PORT="${service_port}" \
     --env KASM_PORT=$(pw agent open-port) \

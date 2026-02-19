@@ -92,12 +92,13 @@ chmod 644 empty
 touch error.log
 chmod 666 error.log
 set -x
-echo "$(date): HOME=${HOME}"
+export SINGULARITY_HOME=${HOME}
+export APPTAINER_HOME=${HOME}
+
 singularity run \
     --writable-tmpfs \
     ${GPU_FLAG} \
     ${MOUNT_FLAGS} \
-    --home ${HOME} \
     --env BASE_PATH="${basepath}" \
     --env NGINX_PORT="${service_port}" \
     --env KASM_PORT=$(pw agent open-port) \

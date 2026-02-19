@@ -86,15 +86,13 @@ MOUNT_FLAGS=$(build_mount_flags "${mount_directories}")
 echo "Mount flags: ${MOUNT_FLAGS}"
 
 # Start KasmVNC container
-echo "$(date) Starting Singularity container..."
+echo "Starting Singularity container..."
 touch empty
 chmod 644 empty
 touch error.log
 chmod 666 error.log
-set -x
-export SINGULARITY_HOME=${HOME}
-export APPTAINER_HOME=${HOME}
 
+set -x
 singularity run \
     --writable-tmpfs \
     ${GPU_FLAG} \
@@ -109,7 +107,6 @@ singularity run \
     --bind /etc/environment:/etc/environment:ro \
     --bind $PWD/empty:/etc/nginx/conf.d/default.conf \
     --bind $PWD/error.log:/var/log/nginx/error.log \
-    --bind ${HOME}/.ssh:/tmp/${USER}_home/.ssh \
     "${container_dir}" &
 
 kasmvnc_container_pid=$!

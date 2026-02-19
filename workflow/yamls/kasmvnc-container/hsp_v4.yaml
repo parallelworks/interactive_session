@@ -234,7 +234,10 @@ jobs:
 
           container_mount_paths:
             type: string
-            label: Additional Mount Paths
-            placeholder: "/p/cwfs\n/archive/navy"
+            textarea: true
             tooltip: "Extra directories to mount into the container (one per line). Auto-mounted if they exist: /p/home, /p/work, /p/work1, /p/app, /p/cwfs, /scratch, /run/munge, /etc/pbs.conf, /var/spool/pbs, /opt/pbs"
             optional: true
+            label: Additional Mount Paths
+            placeholder: |
+              /p/cwfs
+              /archive/navy

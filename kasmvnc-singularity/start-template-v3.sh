@@ -96,6 +96,7 @@ singularity run \
     --writable-tmpfs \
     ${GPU_FLAG} \
     ${MOUNT_FLAGS} \
+    --env HOME=${HOME} \
     --env BASE_PATH="${basepath}" \
     --env NGINX_PORT="${service_port}" \
     --env KASM_PORT=$(pw agent open-port) \
@@ -106,7 +107,6 @@ singularity run \
     --bind /etc/environment:/etc/environment:ro \
     --bind $PWD/empty:/etc/nginx/conf.d/default.conf \
     --bind $PWD/error.log:/var/log/nginx/error.log \
-    --bind ${HOME}/.ssh \
     "${container_dir}" &
 
 kasmvnc_container_pid=$!

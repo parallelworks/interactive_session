@@ -78,6 +78,7 @@ jobs:
               qos: ${{ inputs.cluster.slurm.qos }}
               cpus_per_task: ${{ inputs.cluster.slurm.cpus_per_task }}
               nodes: ${{ inputs.cluster.slurm.nodes }}
+              gpus: ${{ inputs.cluster.slurm.gpus }}
               scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
               time: ${{ inputs.cluster.slurm.time }}
             pbs:
@@ -168,6 +169,13 @@ jobs:
                 tooltip: '--nodes=value slurm directive'
                 ignore: ${{ 'existing' != inputs.resource.provider }}
                 hidden: ${{ .ignore }}
+              gpus:
+                label: Number of GPUs
+                type: number
+                default: 0
+                tooltip: '--gres=gpu:value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
               time:
                 label: Walltime
                 type: string
@@ -179,7 +187,6 @@ jobs:
                 tooltip: |
                   Type in additional scheduler directives. 
                 default: |
-                  ##SBATCH --gres=gpu:4 # uncomment for gpus on onprem systems
                   ##SBATCH --constraint=mla # uncomment for Navy and AFRL DSRC systems 
           pbs:
             type: group

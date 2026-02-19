@@ -86,7 +86,11 @@ MOUNT_FLAGS=$(build_mount_flags "${mount_directories}")
 echo "Mount flags: ${MOUNT_FLAGS}"
 
 # Start KasmVNC container
-echo "Starting Singularity container..."
+echo "$(date) Starting Singularity container..."
+touch empty
+chmod 644 empty
+touch error.log
+chmod 666 error.log
 set -x
 singularity run \
     --writable-tmpfs \
@@ -100,6 +104,8 @@ singularity run \
     --bind /etc/passwd:/etc/passwd:ro \
     --bind /etc/group:/etc/group:ro \
     --bind /etc/environment:/etc/environment:ro \
+    --bind $PWD/empty:/etc/nginx/conf.d/default.conf \
+    --bind $PWD/error.log:/var/log/nginx/error.log \
     "${container_dir}" &
 
 kasmvnc_container_pid=$!

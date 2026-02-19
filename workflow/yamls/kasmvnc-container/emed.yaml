@@ -12,7 +12,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: main
+          branch: aecm-dev
           sparse_checkout:
             - ${{ inputs.container_runtime }}
       - name: Create Inputs

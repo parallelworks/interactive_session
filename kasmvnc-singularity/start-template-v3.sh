@@ -106,6 +106,7 @@ singularity run \
     --bind /etc/environment:/etc/environment:ro \
     --bind $PWD/empty:/etc/nginx/conf.d/default.conf \
     --bind $PWD/error.log:/var/log/nginx/error.log \
+    --bind ${HOME}/.ssh \
     "${container_dir}" &
 
 kasmvnc_container_pid=$!

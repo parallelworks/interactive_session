@@ -92,6 +92,7 @@ chmod 644 empty
 touch error.log
 chmod 666 error.log
 set -x
+echo "$(date): HOME=${HOME}"
 singularity run \
     --writable-tmpfs \
     ${GPU_FLAG} \

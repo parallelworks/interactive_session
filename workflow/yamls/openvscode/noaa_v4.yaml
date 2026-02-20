@@ -145,7 +145,7 @@ jobs:
                 default: 1
                 tooltip: '--nodes=value slurm directive'
                 ignore: ${{ 'existing' != inputs.resource.provider }}
-                hidden: ${{ .ignore }}
+                hidden: true
               time:
                 label: Walltime
                 type: string

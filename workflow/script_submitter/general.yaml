@@ -56,7 +56,7 @@ jobs:
 
           # The scheduler directives parameter is always optional
           if ! [ -z "${{ inputs.slurm.scheduler_directives }}" ]; then
-            echo "${{ inputs.slurm.scheduler_directives | sed ':a;N;$!ba;s/\n/\\n/g' }}" >> headers.sh
+            echo "${{ inputs.slurm.scheduler_directives }}" >> headers.sh
           fi
 
           echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS

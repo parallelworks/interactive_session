@@ -66,7 +66,7 @@ jobs:
             echo "#SBATCH --nodes=${{ inputs.slurm.nodes }}" >> headers.sh
           fi
 
-          echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
+          echo "HEADERS=$(cat headers.sh | sed ':a;N;$!ba;s/\n/\\n/g' )" | tee -a $OUTPUTS
           echo "SCHEDULER_TYPE=slurm" | tee -a $OUTPUTS
 
       - name: Create PBS Headers
@@ -84,7 +84,7 @@ jobs:
             echo "${{ inputs.pbs.scheduler_directives }}" >> headers.sh
           fi
 
-          echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
+          echo "HEADERS=$(cat headers.sh | sed ':a;N;$!ba;s/\n/\\n/g' )" | tee -a $OUTPUTS
           echo "SCHEDULER_TYPE=pbs" | tee -a $OUTPUTS
 
   ssh_job:

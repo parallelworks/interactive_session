@@ -24,10 +24,8 @@ if [ -z "${service_opennotebook_image_tag}" ]; then
     service_opennotebook_image_tag="v1-latest"
 fi
 
-if [ -z "${service_opennotebook_encryption_key}" ]; then
-    echo "$(date) WARNING: No encryption key set; using default (not recommended for production)."
-    service_opennotebook_encryption_key="change-me-to-a-secret-key"
-fi
+# Fixed encryption key — authentication is disabled for this deployment
+service_opennotebook_encryption_key="open-notebook-default-key"
 
 open_notebook_image="lfnovo/open_notebook:${service_opennotebook_image_tag}"
 surrealdb_image="surrealdb/surrealdb:v2"

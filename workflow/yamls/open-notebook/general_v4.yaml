@@ -30,7 +30,6 @@ jobs:
           basepath=/me/session/${PW_USER}/${{ sessions.session }}
           PATH=$HOME/pw:$PATH
           service_opennotebook_data_dir="${{ inputs.service.data_dir }}"
-          service_opennotebook_encryption_key="${{ inputs.service.encryption_key }}"
           service_opennotebook_image_tag="${{ inputs.service.image_tag }}"
           EOF
           # Remove empty and undefined variables
@@ -144,13 +143,6 @@ jobs:
             tooltip: >
               Host path where Open Notebook and SurrealDB data will be persisted.
               The directory will be created if it does not exist.
-          encryption_key:
-            label: Encryption Key
-            type: password
-            tooltip: >
-              Secret key used to encrypt notebook data. Must be set to a unique,
-              random string before first use. Changing this after data has been
-              saved will make existing data unreadable.
           image_tag:
             label: Open Notebook Image Tag
             type: string

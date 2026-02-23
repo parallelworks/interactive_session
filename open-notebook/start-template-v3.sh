@@ -14,6 +14,8 @@
 #   - service_opennotebook_image_tag: Open Notebook image tag (default: v1-latest)
 ################################################################################
 
+set -ex
+
 if [ -z "${service_opennotebook_data_dir}" ]; then
     service_opennotebook_data_dir="${HOME}/open-notebook-data"
 fi
@@ -35,19 +37,39 @@ notebook_data_dir="${service_opennotebook_data_dir}/notebook_data"
 
 mkdir -p "${surreal_data_dir}" "${notebook_data_dir}"
 
+# Initialize cancel script
+echo '#!/bin/bash' > "${PW_PARENT_JOB_DIR}/cancel.sh"
+chmod +x "${PW_PARENT_JOB_DIR}/cancel.sh"
+
+# Ensure the Docker daemon is running (no-op if already running or not systemctl-managed)
+sudo systemctl start docker || true
+
+# Detect docker command: prefer without sudo, fall back to sudo docker
+if docker info &>/dev/null; then
+    docker_cmd="docker"
+    echo "$(date) Docker is accessible without sudo"
+elif sudo docker info &>/dev/null; then
+    docker_cmd="sudo docker"
+    echo "$(date) Docker requires sudo"
+else
+    echo "$(date) ERROR: Docker is not available on this system" >&2
+    exit 1
+fi
+echo "$(date) Using docker command: ${docker_cmd}"
+
+# Pull images on the node where the job runs.
+# Images are NOT pre-pulled on the controller because controller and compute
+# nodes do not share a Docker image cache.
+echo "$(date) Pulling ${surrealdb_image} ..."
+${docker_cmd} pull "${surrealdb_image}"
+
+echo "$(date) Pulling ${open_notebook_image} ..."
+${docker_cmd} pull "${open_notebook_image}"
+
 # Use a unique Docker Compose project name scoped to this job to avoid collisions
 project_name="open_notebook_${PW_JOB_ID:-$$}"
 
-set -x
-
-# Write the cancel script so the platform can cleanly stop the service
-cat > "${PW_PARENT_JOB_DIR}/cancel.sh" <<EOF
-#!/bin/bash
-docker compose -p ${project_name} down --remove-orphans
-EOF
-chmod +x "${PW_PARENT_JOB_DIR}/cancel.sh"
-
-# Write a docker-compose.yml for this job, binding service_port to the web UI
+# Write a docker-compose.yml with the allocated service_port bound to the web UI
 cat > "${PW_PARENT_JOB_DIR}/docker-compose.yml" <<EOF
 services:
   surrealdb:
@@ -83,8 +105,13 @@ services:
       - surrealdb
 EOF
 
-# Start the stack in the background
-docker compose -p "${project_name}" -f "${PW_PARENT_JOB_DIR}/docker-compose.yml" up -d
+# Write the cancel script before starting, so cleanup works even if start fails
+echo "${docker_cmd} compose -p ${project_name} down --remove-orphans" >> "${PW_PARENT_JOB_DIR}/cancel.sh"
+
+# Start the stack
+${docker_cmd} compose -p "${project_name}" -f "${PW_PARENT_JOB_DIR}/docker-compose.yml" up -d
+
+echo "$(date) Open Notebook stack started on port ${service_port}"
 
 # Keep job alive indefinitely; platform stops it via cancel.sh
 sleep inf

@@ -68,7 +68,7 @@ jobs:
           use_existing_script: true
           script_path: ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
           scheduler: ${{ inputs.cluster.scheduler }}
-          use_scheduler_agent: false
+          use_scheduler_agent: ${{ inputs.cluster.scheduler }}
           slurm:
             is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
             account: ${{ inputs.cluster.slurm.account }}

@@ -63,6 +63,16 @@ When creating a new interactive session workflow, the YAML will be named `[deplo
        - Standard `cluster` group (resource, scheduler, slurm, pbs settings)
        - Service-specific `service` group for your configuration options
 
+### 4. `workflow/yamls/[service-name]/README.md`
+   - User-facing documentation for the workflow. Structure:
+     - **Title + one-line description** of what the service provides
+     - **Features**: bullet list of key capabilities (runtime options, GPU support, scheduler support, etc.)
+     - **Use Cases**: bullet list of typical scenarios users would launch this for
+     - **Configuration**: subsection per major input group (e.g., OS, startup options, compute resources) — describe what each does and any valid values
+     - **Requirements**: any software that must be present on the target node (e.g., module, binary, container runtime)
+     - **Getting Started**: short numbered steps (select resource → configure → launch → access)
+   - Keep it factual and concise — no implementation details, no internal paths
+
 ## Reference Implementations
 - Look at `webshell/controller-v3.sh` and `webshell/start-template-v3.sh` for the simplest example
 - Look at `workflow/yamls/jupyterlab-host/general_v4.yaml` for workflow structure (but don't copy JupyterLab-specific settings)

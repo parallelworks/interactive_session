@@ -33,13 +33,13 @@ jobs:
           hostname > HOSTNAME
 
           cleanup() {
-              trap - EXIT INT TERM
+              trap - EXIT INT TERM HUP QUIT USR1 USR2 PIPE
               echo "$(date) Cleaning up..."
               [[ -f cancel.sh ]] && bash cancel.sh 2>&1 | tee cancel.log
               kill -- -$$
           }
 
-          trap cleanup EXIT INT TERM
+          trap cleanup EXIT INT TERM HUP QUIT USR1 USR2 PIPE
 
           echo
           echo

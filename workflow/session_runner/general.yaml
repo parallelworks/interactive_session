@@ -33,13 +33,12 @@ jobs:
           hostname > HOSTNAME
 
           cleanup() {
-              trap - EXIT INT TERM HUP QUIT USR1 USR2 PIPE
+              trap - EXIT INT TERM
               echo "$(date) Cleaning up..."
-              [[ -f cancel.sh ]] && bash cancel.sh 2>&1 | tee cancel.log
               kill -- -$$
           }
 
-          trap cleanup EXIT INT TERM HUP QUIT USR1 USR2 PIPE
+          trap cleanup EXIT INT TERM
 
           echo
           echo
@@ -111,7 +110,328 @@ jobs:
             echo "$(date) Failed to get target hostname"
             exit 1
           fi
+  cleanup:
+    working-directory: ${{ inputs.service.rundir }}
+    if: ${{ always }}
+    needs:
+      - session_runner
+      - wait_for_job_start
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Controller cleanup
+        if: ${{ inputs.cluster.slurm.is_disabled && inputs.cluster.pbs.is_disabled }}
+        run: echo "$(date) Cleaning up..."
+        cleanup: |
+          set -x
+          if [ -f cancel.sh ]; then
+            bash cancel.sh
+          fi
+      - name: Compute cleanup
+        if: ${{ (inputs.cluster.slurm.is_disabled == false || inputs.cluster.pbs.is_disabled == false) }}
+        run: echo "Cleaning up..."
+        cleanup: |
+          set -x
+          remote_host="${{ needs.wait_for_job_start.outputs.HOSTNAME }}"
+          if [ -z "${remote_host}" ]; then
+            echo "$(date) WARNING: Compute node's hostname is missing. Exiting step."
+            exit 0
+          fi
+          sshcmd="ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${remote_host}"
+          if [ -f cancel.sh ]; then
+            ${sshcmd} 'bash -s' < ${PWD}/cancel.sh
+          fi
+  create_session:
+    working-directory: ${{ inputs.service.rundir }}
+    needs:
+      - wait_for_job_start
+      - preprocessing
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Get Session Port
+        early-cancel: any-job-failed
+        run: |
+          set -x
+          SESSION_PORT=$(cat SESSION_PORT)
+          echo "SESSION_PORT=${SESSION_PORT}" | tee -a $OUTPUTS
 
+          if [ -z "${SESSION_PORT}" ]; then
+            echo "$(date) Failed to get target session's port"
+            exit 1
+          fi
+      - name: Wait for Server To Start
+        early-cancel: any-job-failed
+        run: |
+          TIMEOUT=5
+          RETRY_INTERVAL=3
+          remote_host="${{ needs.wait_for_job_start.outputs.HOSTNAME }}"
+          remote_port="${{ needs.create_session.outputs.SESSION_PORT }}"
+
+          # Function to check if server is listening
+          check_server() {
+              curl --silent --connect-timeout "$TIMEOUT" "http://${remote_host}:${remote_port}" >/dev/null 2>&1
+              return $?
+          }
+
+          # Main loop
+          attempt=1
+          while true; do
+              echo "$(date) Attempt $attempt: Checking if server is listening on ${remote_host}:${remote_port}..."
+              
+              if check_server; then
+                  echo "$(date) Success: Server is listening on ${remote_host}:${remote_port}!"
+                  exit 0
+              elif [ -f job.ended ]; then
+                  echo "$(date) Job was completed. Exiting... "
+                  exit 0
+              else
+                  echo "$(date) Server not responding. Retrying in ${RETRY_INTERVAL} seconds..."
+                  sleep "$RETRY_INTERVAL"
+                  ((attempt++))
+              fi
+          done
+      - name: Update Session
+        uses: parallelworks/update-session
+        with:
+          target: ${{ inputs.resource.id }}
+          name: ${{ inputs.session }}
+          slug: ${{ inputs.service.slug }}
+          remoteHost: ${{ needs.wait_for_job_start.outputs.HOSTNAME }}
+          remotePort: ${{ needs.create_session.outputs.SESSION_PORT }}
+'on':
+  execute:
+    inputs:
+      session:
+        label: Session Name
+        type: string
+      resource:
+        type: compute-clusters
+        label: Service host
+        include-workspace: false
+        tooltip: Resource to host the service
+      cluster:
+        hidden: ${{ inputs.resource.schedulerType == '' }}
+        ignore: ${{ inputs.resource.schedulerType == ''  }}
+        type: group
+        label: Compute Cluster Settings
+        items:
+          scheduler:
+            type: boolean
+            default: false
+            label: Schedule Job?
+            tooltip: |
+              Yes → Job is submitted to the scheduler using sbatch, qsub, etc
+              No  → Job is executed in the controller or login node instead
+          slurm:
+            type: group
+            label: SLURM Directives
+            hidden: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            items:
+              is_disabled:
+                type: boolean
+                hidden: true
+                default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                label: Is SLURM disabled?
+              partition:
+                type: slurm-partitions
+                label: SLURM partition
+                optional: true
+                resource: ${{ inputs.resource }}
+                tooltip: Select a partition from the drop down menu.
+              time:
+                label: Walltime
+                type: string
+                default: '01:00:00'
+                tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
+              scheduler_directives:
+                type: editor
+                optional: true
+                tooltip: |
+                  Type in additional scheduler directives. 
+          pbs:
+            type: group
+            label: PBS Directives
+            hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            items:
+              is_disabled:
+                type: boolean
+                hidden: true
+                default: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+                label: Is PBS disabled?
+              scheduler_directives:
+                label: Scheduler Directives
+                type: editor
+                tooltip: Type the PBS scheduler directives
+      service:
+        type: group
+        label: Service
+        hidden: true
+        items:
+          start_service_script:
+            label: Start Service Script
+            type: string
+            tooltip: Script to start the session server
+          controller_script:
+            label: Controller Script
+            type: string
+            tooltip: Setup and installation script to run on controller node
+          inputs_sh:
+            label: Inputs Script
+            type: string
+            tooltip: Script Containing the inputs
+          slug:
+            label: Service URL Slug
+            type: string
+          rundir:
+            label: Job Run directory
+            type: string
+            default: ${PW_PARENT_JOB_DIR}
+permissions:
+  - '*'
+jobs:
+  preprocessing:
+    working-directory: ${{ inputs.service.rundir }}
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Controller Preprocessing
+        run: |
+          set -x
+          # This script prepares the target host and always runs in the controller node
+          cp ${{ inputs.service.inputs_sh }} ${{ inputs.service.rundir }}/controller-preprocessing-${PW_JOB_ID}.sh
+          cat ${{ inputs.service.controller_script }} >> ${{ inputs.service.rundir }}/controller-preprocessing-${PW_JOB_ID}.sh
+          bash ${{ inputs.service.rundir }}/controller-preprocessing-${PW_JOB_ID}.sh
+      - name: Create Service Script
+        run: |
+          # This script starts the service
+          cp ${{ inputs.service.inputs_sh }} ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
+
+          # Write code common to all services
+          cat <<'EOF' >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
+
+          if [ -z "${service_port}" ]; then
+            service_port=$(pw agent open-port)
+          fi
+
+          if [ -z "${service_port}" ]; then
+            echo "$(date) ERROR: No service port found"
+            exit 1            
+          fi
+          echo ${service_port} > SESSION_PORT
+          hostname > HOSTNAME
+
+          cleanup() {
+              trap - EXIT INT TERM
+              echo "$(date) Cleaning up..."
+              kill -- -$$
+          }
+
+          trap cleanup EXIT INT TERM
+
+          echo
+          echo
+          echo "$(date) STARTING SERVICE"
+          echo
+          touch job.started
+          EOF
+          cat ${{ inputs.service.start_service_script }} >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
+
+  script_submitter:
+    working-directory: ${{ inputs.service.rundir }}
+    needs:
+      - preprocessing
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - uses: marketplace/script_submitter/v3.5
+        early-cancel: any-job-failed
+        with:
+          resource: ${{ inputs.resource }}
+          shebang: '#!/bin/bash'
+          rundir: ${{ inputs.service.rundir }}
+          use_existing_script: true
+          script_path: ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
+          scheduler: ${{ inputs.cluster.scheduler }}
+          use_scheduler_agent: ${{ inputs.cluster.scheduler }}
+          slurm:
+            is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
+            partition: ${{ inputs.cluster.slurm.partition }}
+            scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+            time: ${{ inputs.cluster.slurm.time }}
+          pbs:
+            is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
+            scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+      - name: Notify job ended
+        early-cancel: any-job-failed
+        run: |
+          set -x
+          pwd
+          touch job.ended
+          ls -lat job.ended
+  wait_for_job_start:
+    working-directory: ${{ inputs.service.rundir }}
+    needs:
+      - preprocessing
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Wait for job to start
+        early-cancel: any-job-failed
+        run: |
+          set -x
+          while [ ! -f job.started ]; do
+            if [ -f job.ended ]; then
+              echo "$(date) Job ended before it started. Exiting."
+              exit 1
+            fi
+            echo "$(date) Waiting for job to start..."
+            sleep 5
+          done
+      - name: Get Hostname
+        early-cancel: any-job-failed
+        run: |
+          set -x
+          HOSTNAME=$(cat HOSTNAME)
+          echo "HOSTNAME=${HOSTNAME}" | tee -a $OUTPUTS
+
+          if [ -z "${HOSTNAME}" ]; then
+            echo "$(date) Failed to get target hostname"
+            exit 1
+          fi
+  cleanup:
+    working-directory: ${{ inputs.service.rundir }}
+    if: ${{ always }}
+    needs:
+      - session_runner
+      - wait_for_job_start
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Controller cleanup
+        if: ${{ inputs.cluster.slurm.is_disabled && inputs.cluster.pbs.is_disabled }}
+        run: echo "$(date) Cleaning up..."
+        cleanup: |
+          set -x
+          if [ -f cancel.sh ]; then
+            bash cancel.sh
+          fi
+      - name: Compute cleanup
+        if: ${{ (inputs.cluster.slurm.is_disabled == false || inputs.cluster.pbs.is_disabled == false) }}
+        run: echo "Cleaning up..."
+        cleanup: |
+          set -x
+          remote_host="${{ needs.wait_for_job_start.outputs.HOSTNAME }}"
+          if [ -z "${remote_host}" ]; then
+            echo "$(date) WARNING: Compute node's hostname is missing. Exiting step."
+            exit 0
+          fi
+          sshcmd="ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${remote_host}"
+          if [ -f cancel.sh ]; then
+            ${sshcmd} 'bash -s' < ${PWD}/cancel.sh
+          fi
   create_session:
     working-directory: ${{ inputs.service.rundir }}
     needs:

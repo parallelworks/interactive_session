@@ -415,6 +415,8 @@ jobs:
         run: echo "$(date) Cleaning up..."
         cleanup: |
           set -x
+          ls -l
+          pwd
           if [ -f cancel.sh ]; then
             bash cancel.sh
           fi

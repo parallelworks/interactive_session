@@ -405,7 +405,7 @@ jobs:
     working-directory: ${{ inputs.service.rundir }}
     if: ${{ always }}
     needs:
-      - session_runner
+      - script_submitter
       - wait_for_job_start
     ssh:
       remoteHost: ${{ inputs.resource.ip }}

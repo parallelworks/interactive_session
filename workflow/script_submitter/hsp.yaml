@@ -143,6 +143,7 @@ jobs:
             exit 1
           fi
           echo "jobid=${jobid}"  | tee -a $OUTPUTS
+        cleanup: qdel "${{ needs.pbs_job.outputs.jobid }}"
       - name: Monitor PBS Job
         run: |
           jobid=${{ needs.pbs_job.outputs.jobid }}
@@ -192,6 +193,7 @@ jobs:
             exit 1
           fi
           echo "jobid=${jobid}"  | tee -a $OUTPUTS
+        cleanup: scancel ${{ needs.slurm_job.outputs.jobid }}
       - name: Monitor SLURM Job
         run: |
           jobid=${{ needs.slurm_job.outputs.jobid }}
@@ -278,13 +280,6 @@ jobs:
             exit 0
           fi 
 
-          if [[ "${{ inputs.pbs.is_disabled }}" == false ]] && [[ "${{ inputs.use_scheduler_agent }}" != true ]]; then
-            qdel "${{ needs.pbs_job.outputs.jobid }}"
-          fi
-
-          if [[ "${{ inputs.slurm.is_disabled }}" == false ]] && [[ "${{ inputs.use_scheduler_agent }}" != true ]]; then
-            scancel "${{ needs.slurm_job.outputs.jobid }}"
-          fi
 'on':
   execute:
     inputs:

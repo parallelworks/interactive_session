@@ -75,7 +75,7 @@ sleep inf
 
 Key requirements:
 - **Use `service_port`** as the listening port. It is allocated automatically.
-- **Write a `cancel.sh`** script that kills your service process. The platform runs this on cleanup.
+- **Write a `cancel.sh`** script that kills your service process.
 - **End with `sleep inf`** to keep the job alive (or run the service in the foreground).
 
 ## 3. Create the Workflow YAML

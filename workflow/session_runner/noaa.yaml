@@ -52,7 +52,7 @@ jobs:
           fi
           cat ${{ inputs.service.start_service_script }} >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
 
-  session_runner:
+  script_submitter:
     working-directory: ${{ inputs.service.rundir }}
     needs:
       - preprocessing
@@ -122,7 +122,7 @@ jobs:
     working-directory: ${{ inputs.service.rundir }}
     if: ${{ always }}
     needs:
-      - session_runner
+      - script_submitter
       - wait_for_job_start
     ssh:
       remoteHost: ${{ inputs.resource.ip }}

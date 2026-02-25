@@ -127,5 +127,5 @@ sudo docker run  -d --name ${container_name} \
     --network=host nginxinc/nginx-unprivileged:1.25.3
 
 # Print logs
-sudo docker logs ${container_name}
+sudo docker logs ${container_name} -f
 

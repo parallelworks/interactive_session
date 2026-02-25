@@ -41,7 +41,7 @@ services:
       # the Next.js frontend (port 8502); Next.js then rewrites /api/* to the
       # FastAPI backend on localhost:5055 internally.  Port 5055 is never
       # exposed outside the container.
-      - API_URL=https://${PW_PLATFORM_HOST}${basepath}
+      - API_URL=https://${PW_PLATFORM_HOST}
       - OPEN_NOTEBOOK_ENCRYPTION_KEY=change-me-to-a-secret-string
       - SURREAL_URL=ws://surrealdb:8000/rpc
       - SURREAL_USER=root

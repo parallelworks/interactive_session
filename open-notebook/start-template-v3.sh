@@ -79,31 +79,24 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
 
- # Exact match for the session root without a trailing slash — redirect so
- # the browser always has a trailing slash and the location block below matches.
- location = ${basepath} {
-     return 301 ${basepath}/;
- }
+ # The platform proxy strips the basepath before forwarding to this node, so
+ # all requests arrive here without the basepath prefix (e.g. GET /notebooks,
+ # GET /_next/static/...).  The location / block below handles everything.
+ #
+ # The core problem: Next.js embeds asset URLs as root-relative paths
+ # (/_next/static/...) in its HTML and JavaScript.  The browser requests
+ # those paths without the basepath prefix, so the platform proxy never routes
+ # them to this node — the JavaScript never loads, and the page stays blank.
+ #
+ # Fix: sub_filter rewrites every occurrence of /_next/ to ${basepath}/_next/
+ # in HTML and JavaScript responses.  The browser then requests assets as
+ # ${basepath}/_next/..., the platform routes those (basepath prefix present),
+ # strips the prefix, and nginx serves them from Next.js — exactly as if
+ # Next.js had been built with basePath configured.
+ #
+ # proxy_set_header Accept-Encoding "identity" asks Next.js not to gzip its
+ # responses so sub_filter can scan the plain-text body.
 
- # Primary location: strip the basepath prefix before forwarding to the
- # Next.js frontend.  The trailing slash on proxy_pass is what causes nginx
- # to remove the matched prefix, so Next.js receives a clean path (e.g.
- # /notebooks, /api/...) and can route it correctly.
- location ${basepath}/ {
-     proxy_pass http://${proxy_host}:8502/;
-     proxy_http_version 1.1;
-     proxy_set_header Upgrade \$http_upgrade;
-     proxy_set_header Connection "upgrade";
-     proxy_set_header X-Real-IP \$remote_addr;
-     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-     proxy_set_header Host \$http_host;
-     proxy_set_header X-NginX-Proxy true;
- }
-
- # Fallback: forward everything else (/_next/static/, /_next/image, etc.)
- # directly to Next.js without any prefix manipulation.  The platform proxy
- # routes these requests to the session node because the browser sends them
- # in the context of the same session.
  location / {
      proxy_pass http://${proxy_host}:8502;
      proxy_http_version 1.1;
@@ -113,6 +106,10 @@ server {
      proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
      proxy_set_header Host \$http_host;
      proxy_set_header X-NginX-Proxy true;
+     proxy_set_header Accept-Encoding "identity";
+     sub_filter '/_next/' '${basepath}/_next/';
+     sub_filter_once off;
+     sub_filter_types text/html application/javascript text/javascript;
  }
 }
 HERE

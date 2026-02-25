@@ -1,0 +1,172 @@
+permissions:
+  - '*'
+
+sessions:
+  session:
+    useTLS: false
+    redirect: true
+
+jobs:
+  preprocessing:
+    ssh:
+      remoteHost: ${{ inputs.cluster.resource.ip }}
+    steps:
+      - name: Checkout
+        uses: parallelworks/checkout
+        with:
+          repo: https://github.com/parallelworks/interactive_session.git
+          branch: main
+          sparse_checkout:
+            - ${{ inputs.service.name }}
+      - name: Create Inputs
+        run: |
+          set -x
+          # Write PW environment variables
+          env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+          # Enclose values in quotes
+          sed -i 's/=\(.*\)/="\1"/' inputs.sh
+          # Write form inputs
+          cat <<'EOF' >> inputs.sh
+          basepath=/me/session/${PW_USER}/${{ sessions.session }}
+          PATH=$HOME/pw:$PATH
+          service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
+          service_data_dir="${{ inputs.service.data_dir }}"
+          service_encryption_key="${{ inputs.service.encryption_key }}"
+          service_version="${{ inputs.service.version }}"
+          EOF
+          # Remove empty and undefined variables
+          sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+          sed -i '/=""/d' inputs.sh
+          # Export all variables
+          sed -i 's/^/export /' inputs.sh
+
+  session_runner:
+    needs:
+      - preprocessing
+    ssh:
+      remoteHost: ${{ inputs.cluster.resource.ip }}
+    steps:
+      - uses: marketplace/session_runner/v1.3
+        early-cancel: any-job-failed
+        with:
+          session: ${{ sessions.session }}
+          resource: ${{ inputs.cluster.resource }}
+          cluster:
+            scheduler: ${{ inputs.cluster.scheduler }}
+            slurm:
+              is_disabled: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+              partition: ${{ inputs.cluster.slurm.partition }}
+              scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+              time: ${{ inputs.cluster.slurm.time }}
+            pbs:
+              is_disabled: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+              scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+          service:
+            start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/start-template-v3.sh
+            controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/controller-v3.sh
+            inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
+            slug: ""
+            rundir: ${PW_PARENT_JOB_DIR}
+
+'on':
+  execute:
+    inputs:
+      cluster:
+        type: group
+        label: Compute Cluster Settings
+        items:
+          resource:
+            type: compute-clusters
+            label: Service host
+            include-workspace: false
+            tooltip: Resource to host the Open Notebook service
+          scheduler:
+            type: boolean
+            default: false
+            label: Schedule Job?
+            hidden: ${{ inputs.cluster.resource.schedulerType == '' }}
+            ignore: ${{ .hidden }}
+            tooltip: |
+              Yes → Job is submitted to the scheduler using sbatch, qsub, etc
+              No  → Job is executed on the controller/login node instead
+          slurm:
+            type: group
+            label: SLURM Directives
+            hidden: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            items:
+              is_disabled:
+                type: boolean
+                hidden: true
+                default: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                label: Is SLURM disabled?
+              partition:
+                type: slurm-partitions
+                label: SLURM partition
+                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                optional: true
+                resource: ${{ inputs.cluster.resource }}
+                tooltip: Select a partition from the drop down menu.
+              time:
+                label: Walltime
+                type: string
+                default: '04:00:00'
+                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
+              scheduler_directives:
+                type: editor
+                ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                optional: true
+                tooltip: Type in additional SLURM scheduler directives.
+          pbs:
+            type: group
+            label: PBS Directives
+            hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            items:
+              is_disabled:
+                type: boolean
+                hidden: true
+                default: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+                label: Is PBS disabled?
+              scheduler_directives:
+                label: Scheduler Directives
+                type: editor
+                tooltip: Type the PBS scheduler directives
+                hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+
+      service:
+        type: group
+        label: Open Notebook Settings
+        collapsed: true
+        items:
+          name:
+            type: string
+            hidden: true
+            default: open-notebook
+          encryption_key:
+            label: Encryption Key
+            type: password
+            tooltip: >
+              Secret string used to encrypt stored API keys and sensitive data.
+              Choose any value and keep it consistent across restarts so your
+              data remains accessible.
+          version:
+            label: Open Notebook Image Tag
+            type: string
+            default: v1-latest
+            tooltip: >
+              Docker image tag for lfnovo/open_notebook. Use "v1-latest" for
+              the most recent stable release.
+          data_dir:
+            label: Data Directory
+            type: string
+            default: ${HOME}/pw/open-notebook-data
+            tooltip: >
+              Directory on the service node where SurrealDB and notebook data
+              are persisted. Reuse the same path across sessions to keep your
+              data between restarts.
+          parent_install_dir:
+            label: Parent Install Directory
+            type: string
+            default: ${HOME}/pw/software
+            hidden: true
+            ignore: true

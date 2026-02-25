@@ -49,20 +49,45 @@ cat >> config.conf <<HERE
 server {
  listen ${service_port};
  server_name _;
- index index.html index.htm index.php;
  add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
  add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
+
+ # Redirect basepath without trailing slash
+ location = ${basepath} {
+     return 301 ${basepath}/;
+ }
+
+ # Strip basepath prefix before forwarding to the app (app serves from root)
+ location ${basepath}/ {
+     rewrite ^${basepath}/(.*)$ /\$1 break;
+     proxy_pass http://${proxy_host}:8502;
+     proxy_http_version 1.1;
+     proxy_set_header Upgrade \$http_upgrade;
+     proxy_set_header Connection "upgrade";
+     proxy_set_header X-Real-IP \$remote_addr;
+     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+     proxy_set_header X-Forwarded-Proto https;
+     proxy_set_header Host \$http_host;
+     proxy_set_header X-NginX-Proxy true;
+     proxy_cache_bypass \$http_upgrade;
+     proxy_read_timeout 300;
+ }
+
+ # Fallback for asset requests (/_next/, /_stcore/, /api/, etc.) that arrive without the basepath prefix
  location / {
      proxy_pass http://${proxy_host}:8502;
      proxy_http_version 1.1;
-       proxy_set_header Upgrade \$http_upgrade;
-       proxy_set_header Connection "upgrade";
-       proxy_set_header X-Real-IP \$remote_addr;
-       proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-       proxy_set_header Host \$http_host;
-       proxy_set_header X-NginX-Proxy true;
+     proxy_set_header Upgrade \$http_upgrade;
+     proxy_set_header Connection "upgrade";
+     proxy_set_header X-Real-IP \$remote_addr;
+     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+     proxy_set_header X-Forwarded-Proto https;
+     proxy_set_header Host \$http_host;
+     proxy_set_header X-NginX-Proxy true;
+     proxy_cache_bypass \$http_upgrade;
+     proxy_read_timeout 300;
  }
 }
 HERE

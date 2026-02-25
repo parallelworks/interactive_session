@@ -1,14 +1,32 @@
+#!/bin/bash
+set -ex
 
-set -x
+# Use a unique project name scoped to this job to avoid collisions when multiple
+# sessions run on the same node.
+project_name="open_notebook_${PW_JOB_ID:-$$}"
 
-cat >> docker-compose.yaml <<HERE
+# Initialize cancel script before starting anything so cleanup always works.
+echo '#!/bin/bash' > cancel.sh
+chmod +x cancel.sh
+
+# Detect docker command (prefer without sudo, fall back to sudo).
+if docker info &>/dev/null; then
+    docker_cmd="docker"
+elif sudo docker info &>/dev/null; then
+    docker_cmd="sudo docker"
+else
+    echo "$(date) ERROR: Docker is not available on this system" >&2
+    exit 1
+fi
+echo "$(date) Using docker command: ${docker_cmd}"
+
+# Write docker-compose.yml (use > to create/overwrite, never append).
+cat > docker-compose.yml <<HERE
 services:
   surrealdb:
     image: surrealdb/surrealdb:v2
     command: start --log info --user root --pass root rocksdb:/mydata/mydatabase.db
     user: root
-    ports:
-      - "8000:8000"
     volumes:
       - ./surreal_data:/mydata
     restart: always
@@ -17,8 +35,12 @@ services:
     image: lfnovo/open_notebook:v1-latest
     ports:
       - "8502:8502"
-      - "5055:5055"
     environment:
+      # API_URL tells the browser where to reach the API.  The browser calls
+      # <API_URL>/api/... which nginx strips of the basepath and forwards to
+      # the Next.js frontend (port 8502); Next.js then rewrites /api/* to the
+      # FastAPI backend on localhost:5055 internally.  Port 5055 is never
+      # exposed outside the container.
       - API_URL=https://${PW_PLATFORM_HOST}${basepath}
       - OPEN_NOTEBOOK_ENCRYPTION_KEY=change-me-to-a-secret-string
       - SURREAL_URL=ws://surrealdb:8000/rpc
@@ -33,8 +55,10 @@ services:
     restart: always
 HERE
 
-echo "sudo docker compose down" > cancel.sh
-sudo docker compose up -d
+# Register the compose stack in cancel.sh before starting it.
+echo "${docker_cmd} compose -p ${project_name} -f ${PWD}/docker-compose.yml down --remove-orphans" >> cancel.sh
+
+${docker_cmd} compose -p "${project_name}" -f "${PWD}/docker-compose.yml" up -d
 
 
 
@@ -44,38 +68,42 @@ sudo docker compose up -d
 
 proxy_host="127.0.0.1"
 
-# Write config file
-cat >> config.conf <<HERE
+# Write config file (use > to create/overwrite, never append).
+cat > config.conf <<HERE
 server {
  listen ${service_port};
  server_name _;
+ index index.html index.htm index.php;
  add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
  add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
 
- # Redirect basepath without trailing slash
+ # Exact match for the session root without a trailing slash — redirect so
+ # the browser always has a trailing slash and the location block below matches.
  location = ${basepath} {
      return 301 ${basepath}/;
  }
 
- # Strip basepath prefix before forwarding to the app (app serves from root)
+ # Primary location: strip the basepath prefix before forwarding to the
+ # Next.js frontend.  The trailing slash on proxy_pass is what causes nginx
+ # to remove the matched prefix, so Next.js receives a clean path (e.g.
+ # /notebooks, /api/...) and can route it correctly.
  location ${basepath}/ {
-     rewrite ^${basepath}/(.*)$ /\$1 break;
-     proxy_pass http://${proxy_host}:8502;
+     proxy_pass http://${proxy_host}:8502/;
      proxy_http_version 1.1;
      proxy_set_header Upgrade \$http_upgrade;
      proxy_set_header Connection "upgrade";
      proxy_set_header X-Real-IP \$remote_addr;
      proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-     proxy_set_header X-Forwarded-Proto https;
      proxy_set_header Host \$http_host;
      proxy_set_header X-NginX-Proxy true;
-     proxy_cache_bypass \$http_upgrade;
-     proxy_read_timeout 300;
  }
 
- # Fallback for asset requests (/_next/, /_stcore/, /api/, etc.) that arrive without the basepath prefix
+ # Fallback: forward everything else (/_next/static/, /_next/image, etc.)
+ # directly to Next.js without any prefix manipulation.  The platform proxy
+ # routes these requests to the session node because the browser sends them
+ # in the context of the same session.
  location / {
      proxy_pass http://${proxy_host}:8502;
      proxy_http_version 1.1;
@@ -83,16 +111,13 @@ server {
      proxy_set_header Connection "upgrade";
      proxy_set_header X-Real-IP \$remote_addr;
      proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-     proxy_set_header X-Forwarded-Proto https;
      proxy_set_header Host \$http_host;
      proxy_set_header X-NginX-Proxy true;
-     proxy_cache_bypass \$http_upgrade;
-     proxy_read_timeout 300;
  }
 }
 HERE
 
-cat >> nginx.conf <<HERE
+cat > nginx.conf <<HERE
 worker_processes  2;
 
 error_log  /var/log/nginx/error.log notice;
@@ -134,16 +159,15 @@ HERE
 
 container_name="nginx-${service_port}"
 # Remove container when job is canceled
-echo "sudo docker stop ${container_name}" >> cancel.sh
-echo "sudo docker rm ${container_name}" >> cancel.sh
+echo "${docker_cmd} stop ${container_name}" >> cancel.sh
+echo "${docker_cmd} rm ${container_name}" >> cancel.sh
 # Start container
-sudo service docker start
 touch empty
 touch nginx.logs
 # change ownership to nginx user
-sudo chown 101:101 nginx.conf config.conf empty nginx.logs  
+sudo chown 101:101 nginx.conf config.conf empty nginx.logs
 sudo chmod 644 *.conf
-sudo docker run  -d --name ${container_name} \
+${docker_cmd} run -d --name ${container_name} \
     -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
     -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
     -v $PWD/empty:/etc/nginx/conf.d/default.conf \
@@ -151,6 +175,5 @@ sudo docker run  -d --name ${container_name} \
     -v $PWD/nginx.logs:/var/log/nginx/error.log \
     --network=host nginxinc/nginx-unprivileged:1.25.3
 
-# Print logs
-sudo docker logs ${container_name} -f
-
+# Print logs (keeps the job alive; cancel.sh stops the containers on exit)
+${docker_cmd} logs ${container_name} -f

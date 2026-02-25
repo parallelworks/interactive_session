@@ -124,8 +124,6 @@ ${docker_cmd} run \
     -e KASM_PORT=$(pw agent open-port) \
     -e VNC_DISPLAY="${XdisplayNumber}" \
     -e STARTUP_COMMAND="${startup_command}" \
-    -v /etc/passwd:/etc/passwd:ro \
-    -v /etc/group:/etc/group:ro \
     -v /etc/environment:/etc/environment:ro \
     -v $PWD/empty:/etc/nginx/conf.d/default.conf \
     -v $PWD/error.log:/var/log/nginx/error.log \
@@ -140,7 +138,11 @@ echo "$(date) KasmVNC container started with PID ${kasmvnc_container_pid}"
 
 echo "$(date) Copy .Xauthority from container to host..."
 for i in $(seq 1 30); do
-    ${docker_cmd} cp ${container_name}:/home/packer/.Xauthority /tmp/.xauth${XdisplayNumber} && break
+    if ${docker_cmd} cp "${container_name}:/home/packer/.Xauthority" "/tmp/.xauth${XdisplayNumber}" \
+       || ${docker_cmd} cp "${container_name}:/home/metauser/.Xauthority" "/tmp/.xauth${XdisplayNumber}"
+    then
+        break
+    fi
     echo "$(date) Attempt $i/30 failed, retrying in 2s..."
     sleep 2
 done

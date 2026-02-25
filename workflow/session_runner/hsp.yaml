@@ -33,12 +33,13 @@ jobs:
           hostname > HOSTNAME
 
           cleanup() {
-              trap - EXIT INT TERM
+              trap - EXIT INT TERM HUP QUIT USR1 USR2 PIPE
               echo "$(date) Cleaning up..."
+              bash cancel.sh
               kill -- -$$
           }
 
-          trap cleanup EXIT INT TERM
+          trap cleanup EXIT INT TERM HUP QUIT USR1 USR2 PIPE
 
           echo
           echo
@@ -131,24 +132,12 @@ jobs:
         if: ${{ inputs.cluster.slurm.is_disabled && inputs.cluster.pbs.is_disabled }}
         run: echo "$(date) Cleaning up..."
         cleanup: |
+          # FIXME: THIS IS NEEDED BECAUSE SIGTERM SIGNAL IS NOT SENT WHEN CANCELING A JOB
           set -x
           if [ -f ${{ inputs.service.cleanup_script }} ]; then
             bash ${{ inputs.service.cleanup_script }}
           fi
-      - name: Compute cleanup
-        if: ${{ (inputs.cluster.slurm.is_disabled == false || inputs.cluster.pbs.is_disabled == false) }}
-        run: echo "Cleaning up..."
-        cleanup: |
-          set -x
-          remote_host="${{ needs.wait_for_job_start.outputs.HOSTNAME }}"
-          if [ -z "${remote_host}" ]; then
-            echo "$(date) WARNING: Compute node's hostname is missing. Exiting step."
-            exit 0
-          fi
-          sshcmd="ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${remote_host}"
-          if [ -f ${{ inputs.service.cleanup_script }} ]; then
-            ${sshcmd} 'bash -s' < ${{ inputs.service.cleanup_script }}
-          fi
+
   create_session:
     working-directory: ${{ inputs.service.rundir }}
     needs:

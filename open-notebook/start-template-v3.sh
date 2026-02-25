@@ -19,7 +19,7 @@ services:
       - "8502:8502"
       - "5055:5055"
     environment:
-      - API_URL=https://${PW_PLATFORM_HOST}
+      - API_URL=https://${PW_PLATFORM_HOST}${basepath}
       - OPEN_NOTEBOOK_ENCRYPTION_KEY=change-me-to-a-secret-string
       - SURREAL_URL=ws://surrealdb:8000/rpc
       - SURREAL_USER=root
@@ -55,7 +55,7 @@ server {
  add_header X-Frame-Options "ALLOWALL";
  client_max_body_size 1000M;
  location / {
-     proxy_pass http://${proxy_host}:8502${basepath}/;
+     proxy_pass http://${proxy_host}:8502;
      proxy_http_version 1.1;
        proxy_set_header Upgrade \$http_upgrade;
        proxy_set_header Connection "upgrade";

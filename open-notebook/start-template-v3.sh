@@ -37,13 +37,16 @@ services:
     image: lfnovo/open_notebook:v1-latest
     ports:
       - "8502:8502"
+      # Bind FastAPI to loopback only so nginx (running --network=host) can
+      # proxy /health and /api/* directly to it, without exposing the port
+      # to any external interface.
+      - "127.0.0.1:5055:5055"
     environment:
-      # API_URL tells the browser where to reach the API.  The browser calls
-      # <API_URL>/api/... which nginx strips of the basepath and forwards to
-      # the Next.js frontend (port 8502); Next.js then rewrites /api/* to the
-      # FastAPI backend on localhost:5055 internally.  Port 5055 is never
-      # exposed outside the container.
-      - API_URL=http://${PW_PLATFORM_HOST}${basepath}
+      # API_URL is the base URL the browser uses for all API calls.
+      # The browser calls <API_URL>/health (connectivity check) and
+      # <API_URL>/api/... (data operations).  nginx routes both directly
+      # to the FastAPI backend on port 5055 — see the location blocks below.
+      - API_URL=https://${PW_PLATFORM_HOST}${basepath}
       - OPEN_NOTEBOOK_ENCRYPTION_KEY=change-me-to-a-secret-string
       - SURREAL_URL=ws://surrealdb:8000/rpc
       - SURREAL_USER=root
@@ -82,22 +85,36 @@ server {
  client_max_body_size 1000M;
 
  # The platform proxy strips the basepath before forwarding to this node, so
- # all requests arrive here without the basepath prefix (e.g. GET /notebooks,
- # GET /_next/static/...).  The location / block below handles everything.
+ # all requests arrive here without the basepath prefix.
  #
- # The core problem: Next.js embeds asset URLs as root-relative paths
- # (/_next/static/...) in its HTML and JavaScript.  The browser requests
- # those paths without the basepath prefix, so the platform proxy never routes
- # them to this node — the JavaScript never loads, and the page stays blank.
+ # Routing strategy:
+ #   /health and /api/* → FastAPI backend (port 5055) directly.
+ #     The app uses <API_URL>/health as a connectivity check and
+ #     <API_URL>/api/... for all data operations.  Next.js has no /health
+ #     route, so these must bypass Next.js and go straight to FastAPI.
  #
- # Fix: sub_filter rewrites every occurrence of /_next/ to ${basepath}/_next/
- # in HTML and JavaScript responses.  The browser then requests assets as
- # ${basepath}/_next/..., the platform routes those (basepath prefix present),
- # strips the prefix, and nginx serves them from Next.js — exactly as if
- # Next.js had been built with basePath configured.
- #
- # proxy_set_header Accept-Encoding "identity" asks Next.js not to gzip its
- # responses so sub_filter can scan the plain-text body.
+ #   everything else → Next.js frontend (port 8502).
+ #     sub_filter rewrites /_next/ asset paths to ${basepath}/_next/ so the
+ #     browser requests them with the basepath prefix.  The platform then
+ #     routes those back to this node, nginx strips the prefix, and Next.js
+ #     serves them.  Accept-Encoding "identity" disables gzip so sub_filter
+ #     can scan the plain-text response body.
+
+ location /health {
+     proxy_pass http://${proxy_host}:5055;
+     proxy_http_version 1.1;
+     proxy_set_header X-Real-IP \$remote_addr;
+     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+     proxy_set_header Host \$http_host;
+ }
+
+ location /api/ {
+     proxy_pass http://${proxy_host}:5055;
+     proxy_http_version 1.1;
+     proxy_set_header X-Real-IP \$remote_addr;
+     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+     proxy_set_header Host \$http_host;
+ }
 
  location / {
      proxy_pass http://${proxy_host}:8502;

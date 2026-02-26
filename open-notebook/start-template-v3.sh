@@ -42,6 +42,7 @@ services:
       # to any external interface.
       - "127.0.0.1:5055:5055"
     environment:
+      - API_URL=https://${PW_PLATFORM_HOST}${basepath}/
       - OPEN_NOTEBOOK_ENCRYPTION_KEY=change-me-to-a-secret-string
       - SURREAL_URL=ws://surrealdb:8000/rpc
       - SURREAL_USER=root

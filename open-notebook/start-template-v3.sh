@@ -75,70 +75,28 @@ proxy_host="localhost"
 
 # Write config file (use > to create/overwrite, never append).
 cat > config.conf <<HERE
+
 server {
- listen ${service_port};
- server_name _;
- index index.html index.htm index.php;
- add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
- add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since';
- add_header X-Frame-Options "ALLOWALL";
- client_max_body_size 1000M;
+    listen ${service_port};
 
- # The platform proxy strips the basepath before forwarding to this node, so
- # all requests arrive here without the basepath prefix.
- #
- # Routing strategy:
- #   /health and /api/* → FastAPI backend (port 5055) directly.
- #     The app uses <API_URL>/health as a connectivity check and
- #     <API_URL>/api/... for all data operations.  Next.js has no /health
- #     route, so these must bypass Next.js and go straight to FastAPI.
- #
- #   everything else → Next.js frontend (port 8502).
- #     sub_filter rewrites /_next/ asset paths to ${basepath}/_next/ so the
- #     browser requests them with the basepath prefix.  The platform then
- #     routes those back to this node, nginx strips the prefix, and Next.js
- #     serves them.  Accept-Encoding "identity" disables gzip so sub_filter
- #     can scan the plain-text response body.
+    ssl_certificate /etc/nginx/ssl/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
 
- location /health {
-     proxy_pass http://${proxy_host}:5055;
-     proxy_http_version 1.1;
-     proxy_set_header X-Real-IP \$remote_addr;
-     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-     proxy_set_header Host \$http_host;
- }
+    # Allow file uploads up to 100MB
+    client_max_body_size 100M;
 
- location /api/ {
-     proxy_pass http://${proxy_host}:5055;
-     proxy_http_version 1.1;
-     proxy_set_header X-Real-IP \$remote_addr;
-     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-     proxy_set_header Host \$http_host;
- }
-
- location / {
-     proxy_pass http://${proxy_host}:8502;
-     proxy_http_version 1.1;
-     proxy_set_header Upgrade \$http_upgrade;
-     proxy_set_header Connection "upgrade";
-     proxy_set_header X-Real-IP \$remote_addr;
-     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-     proxy_set_header Host \$http_host;
-     proxy_set_header X-NginX-Proxy true;
-     proxy_set_header Accept-Encoding "identity";
-     sub_filter '/_next/' '${basepath}/_next/';
-     # The client JS calls fetch('/config') (root-relative) to discover the
-     # API URL at runtime.  Without the basepath the platform never routes
-     # that request to this node, fetch fails, and the app falls back to
-     # http://localhost:5055 → "Unable to Connect".  Rewrite the string to
-     # include the basepath so the browser requests
-     # <basepath>/config, which the platform routes here → Next.js serves it.
-     # Both quote styles are covered because minifiers vary.
-     sub_filter '"/config"' '"${basepath}/config"';
-     sub_filter "'/config'" "'${basepath}/config'";
-     sub_filter_once off;
-     sub_filter_types text/html application/javascript text/javascript;
- }
+    # Single location block - that's it!
+    location / {
+        proxy_pass http://${proxy_host}:8502;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_cache_bypass $http_upgrade;
+    }
 }
 HERE
 

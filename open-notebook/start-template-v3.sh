@@ -42,11 +42,6 @@ services:
       # to any external interface.
       - "127.0.0.1:5055:5055"
     environment:
-      # API_URL is the base URL the browser uses for all API calls.
-      # The browser calls <API_URL>/health (connectivity check) and
-      # <API_URL>/api/... (data operations).  nginx routes both directly
-      # to the FastAPI backend on port 5055 — see the location blocks below.
-      - API_URL=https://${PW_PLATFORM_HOST}${basepath}
       - OPEN_NOTEBOOK_ENCRYPTION_KEY=change-me-to-a-secret-string
       - SURREAL_URL=ws://surrealdb:8000/rpc
       - SURREAL_USER=root
@@ -84,7 +79,7 @@ server {
 
     # Single location block - that's it!
     location / {
-        proxy_pass http://${proxy_host}:8502;
+        proxy_pass http://${proxy_host}:8502${basepath}/;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;

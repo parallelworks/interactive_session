@@ -9,6 +9,8 @@ project_name="open_notebook_${PW_JOB_ID:-$$}"
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
+sudo systemctl start docker
+
 # Detect docker command (prefer without sudo, fall back to sudo).
 if docker info &>/dev/null; then
     docker_cmd="docker"

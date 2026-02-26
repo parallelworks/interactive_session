@@ -127,6 +127,15 @@ server {
      proxy_set_header X-NginX-Proxy true;
      proxy_set_header Accept-Encoding "identity";
      sub_filter '/_next/' '${basepath}/_next/';
+     # The client JS calls fetch('/config') (root-relative) to discover the
+     # API URL at runtime.  Without the basepath the platform never routes
+     # that request to this node, fetch fails, and the app falls back to
+     # http://localhost:5055 → "Unable to Connect".  Rewrite the string to
+     # include the basepath so the browser requests
+     # <basepath>/config, which the platform routes here → Next.js serves it.
+     # Both quote styles are covered because minifiers vary.
+     sub_filter '"/config"' '"${basepath}/config"';
+     sub_filter "'/config'" "'${basepath}/config'";
      sub_filter_once off;
      sub_filter_types text/html application/javascript text/javascript;
  }

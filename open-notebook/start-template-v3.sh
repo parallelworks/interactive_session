@@ -79,9 +79,6 @@ cat > config.conf <<HERE
 server {
     listen ${service_port};
 
-    ssl_certificate /etc/nginx/ssl/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
-
     # Allow file uploads up to 100MB
     client_max_body_size 100M;
 

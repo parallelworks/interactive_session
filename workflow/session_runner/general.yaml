@@ -35,7 +35,8 @@ jobs:
           cleanup() {
               trap - EXIT INT TERM HUP QUIT USR1 USR2 PIPE
               echo "$(date) Cleaning up..."
-              bash cancel.sh
+              mv cancel.sh cancel.sh.submitted
+              bash cancel.sh.submitted
               kill -- -$$
           }
 
@@ -64,6 +65,8 @@ jobs:
           rundir: ${{ inputs.service.rundir }}
           use_existing_script: true
           script_path: ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
+          define_cleanup_script: true
+          cleanup_script_path: ${{ inputs.service.rundir }}/cancel.sh
           scheduler: ${{ inputs.cluster.scheduler }}
           use_scheduler_agent: false
           slurm:
@@ -113,24 +116,6 @@ jobs:
             exit 1
           fi
 
-  cleanup:
-    working-directory: ${{ inputs.service.rundir }}
-    if: ${{ always }}
-    needs:
-      - script_submitter
-      - wait_for_job_start
-    ssh:
-      remoteHost: ${{ inputs.resource.ip }}
-    steps:
-      - name: Controller cleanup
-        if: ${{ inputs.cluster.slurm.is_disabled && inputs.cluster.pbs.is_disabled }}
-        run: echo "$(date) Cleaning up..."
-        cleanup: |
-          # FIXME: THIS IS NEEDED BECAUSE SIGTERM SIGNAL IS NOT SENT WHEN CANCELING A JOB
-          set -x
-          if [ -f cancel.sh ]; then
-            bash cancel.sh
-          fi
 
   create_session:
     working-directory: ${{ inputs.service.rundir }}

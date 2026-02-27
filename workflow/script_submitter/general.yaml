@@ -5,17 +5,11 @@ jobs:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
       - name: Stream Output
+        early-cancel: any-job-failed
         run: |
           touch run.${PW_JOB_ID}.out
-          tail -f run.${PW_JOB_ID}.out &
-          tail_pid=$!
-          # Wait for CANCEL_STREAMING
-          while [ ! -f "CANCEL_STREAMING" ]; do
-            sleep 5
-          done
-          rm -f CANCEL_STREAMING
-          echo "$(date) CANCEL_STREAMING file detected!"
-          kill ${tail_pid}
+          tail -f run.${PW_JOB_ID}.out 
+ 
   preprocessing:
     working-directory: ${{ inputs.rundir }}
     ssh:
@@ -37,6 +31,17 @@ jobs:
           EOF
           fi
           cat run-template.sh
+      - name: Prepare Cleanup Script
+        run: |
+          set -x
+          if [[ "${{ inputs.define_cleanup_script }}" == "true" ]]; then
+            CLEANUP_SCRIPT_PATH="${{ inputs.cleanup_script_path }}"
+            # Ensure the path is absolute
+            [[ "${CLEANUP_SCRIPT_PATH}" = /* ]] || CLEANUP_SCRIPT_PATH="$PWD/${CLEANUP_SCRIPT_PATH}"
+          else
+            CLEANUP_SCRIPT_PATH=""
+          fi
+          echo "CLEANUP_SCRIPT_PATH=${CLEANUP_SCRIPT_PATH}" | tee -a $OUTPUTS
       - name: Create SLURM Headers
         if: ${{ inputs.slurm.is_disabled == false }}
         run: |
@@ -61,7 +66,6 @@ jobs:
 
           echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
           echo "SCHEDULER_TYPE=slurm" | tee -a $OUTPUTS
-
       - name: Create PBS Headers
         if: ${{ inputs.pbs.is_disabled == false }}
         run: |
@@ -79,7 +83,6 @@ jobs:
 
           echo "HEADERS=$(cat headers.sh | sed ':a;N;$!ba;s/\n/\\n/g' )" | tee -a $OUTPUTS
           echo "SCHEDULER_TYPE=pbs" | tee -a $OUTPUTS
-
   ssh_job:
     needs:
       - preprocessing
@@ -103,6 +106,29 @@ jobs:
           set -x
           echo "$(date) Executing script"
           ./run.sh > run.${PW_JOB_ID}.out 2>&1
+        cleanup: |
+          set -x
+
+          if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
+              echo "$(date) INFO: No cleanup script provided."
+              exit 0
+          fi
+
+          if [ ! -f "${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}" ]; then
+              # This is warning and not an error because the job could be canceled before the main script creates the cancel script
+              echo "$(date) WARNING: No cleanup script found in path ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}."
+              exit 0
+          else
+              echo "$(date) INFO: Running cleanup script"
+              chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
+              timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
+          fi
+      - uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - stream_output
+
+
   pbs_job:
     needs:
       - preprocessing
@@ -118,6 +144,7 @@ jobs:
           echo '${{ inputs.shebang }}' > run.sh
           cat headers.sh >> run.sh
           echo "cd ${PWD}" >> run.sh
+          echo "hostname > HOSTNAME" >> run.sh
           cat run-template.sh >> run.sh
           chmod +x run.sh
           cat run.sh
@@ -156,6 +183,36 @@ jobs:
               break
             fi
           done
+        cleanup: |
+          set -x
+
+          if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
+            echo "$(date) INFO: No cleanup script provided."
+            exit 0
+          fi
+
+          if [ ! -f "HOSTNAME" ]; then
+            # This is warning and not an error because the job could be canceled before the main script creates the HOSTNAME file
+            echo "$(date) WARNING: No hostname found"
+            exit 0
+          fi
+          compute_node="$(cat HOSTNAME | cut -d'.' -f1)"
+          sshcmd="ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${compute_node}"
+
+          if [ ! -f "${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}" ]; then
+              # This is warning and not an error because the job could be canceled before the main script creates the cancel script
+              echo "$(date) WARNING: No cleanup script found in path ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}."
+              exit 0
+          else
+              echo "$(date) INFO: Running cleanup script"
+              chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
+              ${sshcmd} timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
+          fi
+      - uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - stream_output
+
   slurm_job:
     needs:
       - preprocessing
@@ -169,6 +226,7 @@ jobs:
           set -x
           echo '${{ inputs.shebang }}' > run.sh
           cat headers.sh >> run.sh
+          echo "hostname > HOSTNAME" >> run.sh
           cat run-template.sh >> run.sh
           chmod +x run.sh
           cat run.sh
@@ -209,6 +267,35 @@ jobs:
               break
             fi
           done
+        cleanup: |
+          set -x
+
+          if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
+            echo "$(date) INFO: No cleanup script provided."
+            exit 0
+          fi
+
+          if [ ! -f "HOSTNAME" ]; then
+            # This is warning and not an error because the job could be canceled before the main script creates the HOSTNAME file
+            echo "$(date) WARNING: No hostname found"
+            exit 0
+          fi
+          compute_node="$(cat HOSTNAME | cut -d'.' -f1)"
+          sshcmd="ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${compute_node}"
+
+          if [ ! -f "${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}" ]; then
+              # This is warning and not an error because the job could be canceled before the main script creates the cancel script
+              echo "$(date) WARNING: No cleanup script found in path ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}."
+              exit 0
+          else
+              echo "$(date) INFO: Running cleanup script"
+              chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
+              ${sshcmd} timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
+          fi
+      - uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - stream_output
   scheduler_agent_job:
     needs:
       - preprocessing
@@ -243,31 +330,28 @@ jobs:
           set -x
           echo "$(date) Executing script"
           ./run.sh > run.${PW_JOB_ID}.out 2>&1
-
-
-  cleanup:
-    if: ${{ always }}
-    needs:
-      - ssh_job
-      - pbs_job
-      - slurm_job
-      - scheduler_agent_job
-    working-directory: ${{ inputs.rundir }}
-    ssh:
-      remoteHost: ${{ inputs.resource.ip }}
-    steps:
-      - name: Cleanup
-        run: |
-          set -x
-          touch COMPLETED
         cleanup: |
           set -x
-          touch CANCEL_STREAMING
-          if [ -f COMPLETED ]; then
-            rm -f COMPLETED
-            echo "$(date) job was completed "
-            exit 0
-          fi 
+          echo "$(date) INFO: Running cleanup"
+
+          if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
+              echo "$(date) INFO: No cleanup script provided."
+              exit 0
+          fi
+
+          if [ ! -f "${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}" ]; then
+              # This is warning and not an error because the job could be canceled before the main script creates the cancel script
+              echo "$(date) WARNING: No cleanup script found in path ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}."
+              exit 0
+          else
+              echo "$(date) INFO: Running cleanup script"
+              chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
+              timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
+          fi
+      - uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - stream_output
 
 'on':
   execute:
@@ -307,6 +391,17 @@ jobs:
         hidden: ${{ inputs.use_existing_script == false }}
         ignore: ${{ .hidden }}
         tooltip: Provide path to an existing script on the target resource.
+      define_cleanup_script:
+        type: boolean
+        default: false
+        label: Define Cleanup Script?
+        tooltip: Run a cleanup script after the main script to undo its changes — removing files, stopping processes, deleting containers, etc.
+      cleanup_script_path:
+        label: Cleanup Script Path
+        type: string
+        hidden: ${{ inputs.define_cleanup_script == false }}
+        ignore: ${{ .hidden }}
+        tooltip: Path to the cleanup script on the target resource. The script can be created by the main script itself.
       scheduler:
         type: boolean
         default: false

@@ -18,7 +18,6 @@ container_dir=${service_parent_install_dir}/kasmvnc-${kasmvnc_os}
 # Initialize cancel script
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
-echo "mv cancel.sh cancel.sh.executed" >> cancel.sh
 
 # Find an available display port
 minPort=5901

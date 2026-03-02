@@ -106,7 +106,6 @@ singularity run \
     --env NGINX_PORT="${service_port}" \
     --env KASM_PORT=$(pw agent open-port) \
     --env VNC_DISPLAY="${XdisplayNumber}" \
-    --env STARTUP_COMMAND="${startup_command}" \
     --bind /etc/passwd:/etc/passwd:ro \
     --bind /etc/group:/etc/group:ro \
     --bind /etc/environment:/etc/environment:ro \
@@ -114,6 +113,8 @@ singularity run \
     --bind $PWD/error.log:/var/log/nginx/error.log \
     --bind $PWD/container_tmp:/tmp \
     "${container_dir}" &
+
+#     --env STARTUP_COMMAND="${startup_command}" \
 
 kasmvnc_container_pid=$!
 set +x
@@ -133,7 +134,14 @@ run_xterm_loop(){
 
 run_xterm_loop | tee -a ${PW_PARENT_JOB_DIR}/xterm.out &
 run_xterm_pid=$!
-echo "kill ${run_xterm_pid} # run_xterm_loop" >> cancel.sh
+echo "kill ${run_xterm_pid} || true # run_xterm_loop" >> cancel.sh
+
+if [ -n "${startup_command}" ]; then
+    echo "$(date) Running startup command: ${startup_command}"
+    eval ${startup_command} &
+    startup_command_pid=$!
+    echo "kill ${startup_command_pid} || true # startup_command" >> cancel.sh
+fi
 
 # Wait for container to exit
 wait ${kasmvnc_container_pid}

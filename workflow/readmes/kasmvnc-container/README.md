@@ -24,7 +24,7 @@ A containerized remote desktop environment supporting both Docker and Singularit
 Choose from Rocky Linux 8, Rocky Linux 9, or Ubuntu 22.04 depending on your software requirements.
 
 ### Startup Application
-Optionally specify a command to launch automatically (e.g., `firefox`, `rstudio`, `matlab`). Leave blank for a standard desktop.
+Optionally specify a command to launch automatically (e.g., `firefox`, `rstudio`, `matlab`). Leave blank for a standard desktop. The command runs on the compute node host (not inside the container) and has access to the desktop display via the container's X server.
 
 ### Additional Mount Paths
 Common directories (`/p/home`, `/p/work`, `/scratch`, etc.) are automatically mounted if they exist. Specify additional paths (one per line) if needed.

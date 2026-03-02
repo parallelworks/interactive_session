@@ -36,6 +36,7 @@ jobs:
               trap - EXIT INT TERM HUP QUIT USR1 USR2 PIPE
               echo "$(date) Cleaning up..."
               mv cancel.sh cancel.sh.submitted
+              echo "echo Cleanup script was already executed" > cancel.sh
               bash cancel.sh.submitted
               kill -- -$$
           }

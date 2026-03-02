@@ -132,7 +132,7 @@ kasmvnc_container_pid=$!
 set +x
 
 echo "${docker_cmd} stop ${container_name} #kasmvnc_container" >> cancel.sh
-echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
+echo "kill ${kasmvnc_container_pid} | true #kasmvnc_container_pid" >> cancel.sh
 echo "$(date) KasmVNC container started with PID ${kasmvnc_container_pid}"
 
 echo "$(date) Copy .Xauthority from container to host..."
@@ -160,7 +160,7 @@ run_xterm_loop(){
 
 run_xterm_loop | tee -a ${PW_PARENT_JOB_DIR}/xterm.out &
 run_xterm_pid=$!
-echo "kill ${run_xterm_pid} # run_xterm_loop" >> cancel.sh
+echo "kill ${run_xterm_pid} | true # run_xterm_loop" >> cancel.sh
 
 # Wait for container to exit
 wait ${kasmvnc_container_pid}

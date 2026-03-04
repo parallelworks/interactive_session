@@ -35,7 +35,9 @@ jobs:
           cleanup() {
               trap - EXIT INT TERM HUP QUIT USR1 USR2 PIPE
               echo "$(date) Cleaning up..."
-              bash cancel.sh
+              mv cancel.sh cancel.sh.submitted
+              echo "echo Cleanup script was already executed" > cancel.sh
+              bash cancel.sh.submitted
               kill -- -$$
           }
 
@@ -83,6 +85,7 @@ jobs:
             scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
           pbs:
             is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
+            account: ${{ inputs.cluster.pbs.account }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
       - name: Notify job ended
         early-cancel: any-job-failed

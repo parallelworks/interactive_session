@@ -68,6 +68,7 @@ ${docker_cmd} pull "${open_notebook_image}"
 project_name="open_notebook_${PW_JOB_ID:-$$}"
 
 # Write a docker-compose.yml with the allocated service_port bound to the web UI
+"""
 cat > "${PW_PARENT_JOB_DIR}/docker-compose.yml" <<EOF
 services:
   surrealdb:
@@ -103,6 +104,39 @@ services:
     depends_on:
       - surrealdb
 EOF
+"""
+
+cat > "${PW_PARENT_JOB_DIR}/docker-compose.yml" <<EOF
+services:
+  surrealdb:
+    image: surrealdb/surrealdb:v2
+    command: start --log info --user root --pass root rocksdb:/mydata/mydatabase.db
+    user: root
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./surreal_data:/mydata
+    restart: always
+
+  open_notebook:
+    image: lfnovo/open_notebook:v1-latest
+    ports:
+      - "${service_port}:8502"
+      - "5055:5055"
+    environment:
+      - OPEN_NOTEBOOK_ENCRYPTION_KEY=change-me-to-a-secret-string
+      - SURREAL_URL=ws://surrealdb:8000/rpc
+      - SURREAL_USER=root
+      - SURREAL_PASSWORD=root
+      - SURREAL_NAMESPACE=open_notebook
+      - SURREAL_DATABASE=open_notebook
+    volumes:
+      - ./notebook_data:/app/data
+    depends_on:
+      - surrealdb
+    restart: always
+EOF
+
 
 # Write the cancel script before starting, so cleanup works even if start fails
 echo "${docker_cmd} compose -p ${project_name} down --remove-orphans" >> "${PW_PARENT_JOB_DIR}/cancel.sh"

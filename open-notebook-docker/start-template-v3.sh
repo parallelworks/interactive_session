@@ -90,6 +90,7 @@ services:
     pull_policy: never
     ports:
       - "${service_port}:8502"
+      - "$(pw agent open-port):5055"
     environment:
       OPEN_NOTEBOOK_ENCRYPTION_KEY: "${service_opennotebook_encryption_key}"
       SURREAL_URL: "ws://surrealdb:8000/rpc"

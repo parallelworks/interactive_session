@@ -20,6 +20,17 @@ For PBS and SLURM direct submissions, the workflow continuously monitors job sta
 
 When using the scheduler agent, cleanup is handled by the agent itself.
 
+### Custom Cleanup Script
+
+All submission modes support an optional custom cleanup script for application-level cleanup when the workflow is canceled. Enable it with `define_cleanup_script: true` and set `cleanup_script_path` to the path of the script on the remote resource.
+
+The cleanup script can either **already exist** on the remote resource, or be **created dynamically by the main script itself** during execution (for example, the main script could write a cancel script that knows how to gracefully terminate the running application). 
+
+- Relative paths are resolved against the run directory (`rundir`)
+- For PBS, SLURM and scheduler agent jobs submissions, the script is executed **on the compute node** via SSH before canceling the job.
+- For direct SSH and scheduler agent jobs, the script runs on the login node
+- The script runs with a 300-second timeout
+
 ## Usage as a Standalone Workflow
 
 Run the script submitter directly from the UI:
@@ -144,6 +155,8 @@ jobs:
 | `shebang` | Script shebang (default: `#!/bin/bash`) | No |
 | `scheduler` | Submit to job scheduler (true/false) | No |
 | `use_scheduler_agent` | Use the scheduler agent instead of direct submission (true/false, default: false) | No |
+| `define_cleanup_script` | Run a custom cleanup script when the workflow is canceled (true/false, default: false) | No |
+| `cleanup_script_path` | Path to the cleanup script on the remote resource (required when `define_cleanup_script: true`) | No |
 | `slurm` | SLURM scheduler options | No |
 | `pbs` | PBS scheduler options | No |
 

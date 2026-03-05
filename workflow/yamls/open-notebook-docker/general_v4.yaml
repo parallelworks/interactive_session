@@ -141,15 +141,14 @@ jobs:
             default: ${HOME}/open-notebook-data
             tooltip: |
               Host path where Open Notebook and SurrealDB data will be persisted. The directory will be created if it does not exist.
-          open_notebook_image::
+          open_notebook_image:
             label: Open Notebook Image
             type: string
             default: lfnovo/open_notebook:v1-latest
           opennotebook_encryption_key:
             label: Encription Key
             type: password
-          surrealdb_image::
+          surrealdb_image:
             label: SurrealDB Image
             type: string
-            default: surrealdb/surrealdb:v2          
-
+            default: surrealdb/surrealdb:v2

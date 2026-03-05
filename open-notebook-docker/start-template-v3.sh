@@ -111,19 +111,19 @@ services:
     command: start --log info --user root --pass root rocksdb:/mydata/mydatabase.db
     user: root
     ports:
-      - "${pw agent open-port}:8000"
+      - "$(pw agent open-port):8000"
     volumes:
       - ./surreal_data:/mydata
     restart: always
 
   open_notebook:
-    image: ${service_open_notebook_image}
+    image: ${open_notebook_image}
     ports:
       - "${service_port}:8502"
       - "$(pw agent open-port):5055"
     environment:
       - API_URL=https://${PW_USER}-${SESSION_NAME}
-      - OPEN_NOTEBOOK_ENCRYPTION_KEY=${service_opennotebook_encryption_key}
+      - OPEN_NOTEBOOK_ENCRYPTION_KEY=${opennotebook_encryption_key}
       - SURREAL_URL=ws://surrealdb:8000/rpc
       - SURREAL_USER=root
       - SURREAL_PASSWORD=root

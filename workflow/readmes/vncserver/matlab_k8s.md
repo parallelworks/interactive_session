@@ -1,5 +1,5 @@
 ## MATLAB Interactive Session
-This workflow launches MATLAB in a remote desktop [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README-v3.md) accessible via a web browser on a **Compute Cluster** (SLURM or PBS) or as a container on a **Kubernetes Cluster** using the official MATLAB docker [image](https://hub.docker.com/r/mathworks/matlab).
+This workflow launches MATLAB in a remote desktop [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README.md) accessible via a web browser on a **Compute Cluster** (SLURM or PBS) or as a container on a **Kubernetes Cluster** using the official MATLAB docker [image](https://hub.docker.com/r/mathworks/matlab).
 
 Use the `Target Type` input to select your environment.
 

@@ -68,8 +68,7 @@ ${docker_cmd} pull "${open_notebook_image}"
 project_name="open_notebook_${PW_JOB_ID:-$$}"
 
 # Write a docker-compose.yml with the allocated service_port bound to the web UI
-"""
-cat > "${PW_PARENT_JOB_DIR}/docker-compose.yml" <<EOF
+cat > "${PW_PARENT_JOB_DIR}/docker-compose_.yml" <<EOF
 services:
   surrealdb:
     image: ${surrealdb_image}
@@ -104,7 +103,6 @@ services:
     depends_on:
       - surrealdb
 EOF
-"""
 
 cat > "${PW_PARENT_JOB_DIR}/docker-compose.yml" <<EOF
 services:

@@ -30,6 +30,9 @@ jobs:
           PATH=$HOME/pw:$PATH
           service_opennotebook_data_dir="${{ inputs.service.data_dir }}"
           service_opennotebook_image_tag="${{ inputs.service.image_tag }}"
+          open_notebook_image="${{ inputs.service.open_notebook_image }}"
+          opennotebook_encryption_key="${{ inputs.service.opennotebook_encryption_key }}"
+          surrealdb_image="${{ inputs.service.surrealdb_image }}"
           EOF
           # Remove empty and undefined variables
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
@@ -138,9 +141,15 @@ jobs:
             default: ${HOME}/open-notebook-data
             tooltip: |
               Host path where Open Notebook and SurrealDB data will be persisted. The directory will be created if it does not exist.
-          image_tag:
-            label: Open Notebook Image Tag
+          open_notebook_image::
+            label: Open Notebook Image
             type: string
-            default: v1-latest
-            tooltip: |
-              Docker image tag for lfnovo/open_notebook. Change this to pin a specific release (e.g. v1.2.0). Defaults to v1-latest.
+            default: lfnovo/open_notebook:v1-latest
+          opennotebook_encryption_key:
+            label: Encription Key
+            type: password
+          surrealdb_image::
+            label: SurrealDB Image
+            type: string
+            default: surrealdb/surrealdb:v2          
+

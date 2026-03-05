@@ -107,23 +107,23 @@ EOF
 cat > "${PW_PARENT_JOB_DIR}/docker-compose.yml" <<EOF
 services:
   surrealdb:
-    image: surrealdb/surrealdb:v2
+    image: ${surrealdb_image}
     command: start --log info --user root --pass root rocksdb:/mydata/mydatabase.db
     user: root
     ports:
-      - "8000:8000"
+      - "${pw agent open-port}:8000"
     volumes:
       - ./surreal_data:/mydata
     restart: always
 
   open_notebook:
-    image: lfnovo/open_notebook:v1-latest
+    image: ${service_open_notebook_image}
     ports:
       - "${service_port}:8502"
       - "$(pw agent open-port):5055"
     environment:
       - API_URL=https://${PW_USER}-${SESSION_NAME}
-      - OPEN_NOTEBOOK_ENCRYPTION_KEY=change-me-to-a-secret-string
+      - OPEN_NOTEBOOK_ENCRYPTION_KEY=${service_opennotebook_encryption_key}
       - SURREAL_URL=ws://surrealdb:8000/rpc
       - SURREAL_USER=root
       - SURREAL_PASSWORD=root

@@ -29,11 +29,11 @@ jobs:
           basepath=/me/session/${PW_USER}/${{ sessions.session }}
           SESSION_NAME=${{ sessions.session }}.activate.pw
           PATH=$HOME/pw:$PATH
-          service_opennotebook_data_dir="${{ inputs.service.data_dir }}"
-          service_opennotebook_image_tag="${{ inputs.service.image_tag }}"
           open_notebook_image="${{ inputs.service.open_notebook_image }}"
           opennotebook_encryption_key="${{ inputs.service.opennotebook_encryption_key }}"
           surrealdb_image="${{ inputs.service.surrealdb_image }}"
+          notebook_data_dir="${{ inputs.service.notebook_data_dir }}"
+          surreal_data_dir="${{ inputs.service.surreal_data_dir }}"
           EOF
           # Remove empty and undefined variables
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
@@ -136,12 +136,6 @@ jobs:
         label: Open Notebook Settings
         collapsed: true
         items:
-          data_dir:
-            label: Data Directory
-            type: string
-            default: ${HOME}/open-notebook-data
-            tooltip: |
-              Host path where Open Notebook and SurrealDB data will be persisted. The directory will be created if it does not exist.
           open_notebook_image:
             label: Open Notebook Image
             type: string
@@ -149,7 +143,16 @@ jobs:
           opennotebook_encryption_key:
             label: Encription Key
             type: password
+          notebook_data_dir:
+            label: Notebook Data Directory
+            type: string
+            default: ./notebook_data
           surrealdb_image:
             label: SurrealDB Image
             type: string
             default: surrealdb/surrealdb:v2
+          surreal_data_dir:
+            label: Surreal Data Directory
+            type: string
+            default: ./surreal_data
+

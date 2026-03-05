@@ -123,7 +123,6 @@ services:
       - "5055:5055"
     environment:
       - API_URL=https://${PW_USER}-${SESSION_NAME}
-      - API_URL=https://alvaro-aaaaa7session.activate.pw
       - OPEN_NOTEBOOK_ENCRYPTION_KEY=change-me-to-a-secret-string
       - SURREAL_URL=ws://surrealdb:8000/rpc
       - SURREAL_USER=root

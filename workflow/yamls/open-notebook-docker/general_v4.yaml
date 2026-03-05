@@ -27,6 +27,7 @@ jobs:
           # Write input form variables and ensure the pw agent is in the PATH
           cat <<'EOF' >> inputs.sh
           basepath=/me/session/${PW_USER}/${{ sessions.session }}
+          SESSION_NAME=${{ sessions.session }}.activate.pw
           PATH=$HOME/pw:$PATH
           service_opennotebook_data_dir="${{ inputs.service.data_dir }}"
           service_opennotebook_image_tag="${{ inputs.service.image_tag }}"

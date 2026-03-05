@@ -1,0 +1,350 @@
+permissions:
+  - '*'
+sessions:
+  session:
+    useTLS: false
+    redirect: true
+    useCustomDomain: true
+app:
+  target: inputs.k8s.cluster
+jobs:
+  get_pw_api_key:
+    steps:
+      - name: Authenticate with K8s
+        run: pw kube auth ${{ inputs.k8s.cluster }}
+      - name: Export PW_API_KEY from Parallel Works environment
+        run: |
+          source /etc/profile.d/parallelworks-env.sh
+          echo "PW_API_KEY found: ${PW_API_KEY:0:6}********"
+          echo "pw_api_key=$PW_API_KEY" >> OUTPUTS
+
+          pw_api_key_b64=$(echo -n "$PW_API_KEY" | base64)
+          echo "pw_api_key_b64=$pw_api_key_b64" >> OUTPUTS
+
+
+          team=$(curl -s -H "Authorization: Basic $pw_api_key_b64" https://activate.parallel.works/api/v2/teams | grep -o '"id": *"[^"]*"' | head -n1 | cut -d':' -f2 | tr -d ' "')
+          echo "team=$team" >> OUTPUTS
+
+          org=$(curl -s -H "Authorization: Basic $pw_api_key_b64" https://activate.parallel.works/api/auth/whoami/organization | tr -d '"')
+          echo "org=$org" >> OUTPUTS
+
+          np=$(curl -s -H "Authorization: Basic $pw_api_key_b64" https://activate.parallel.works/api/auth/whoami | sed 's/^user://')
+          echo "np=$np" >> OUTPUTS
+  create_pvc:
+    needs:
+      - get_pw_api_key
+    steps:
+      - name: Authenticate Kubernetes
+        run: pw kube auth ${{ inputs.k8s.cluster }}
+      - name: Create PVC
+        run: |
+          cat <<EOF > test-pvc.yaml
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: test-pvc
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 30Gi
+          EOF
+          kubectl apply -f test-pvc.yaml
+  deploy_ollama_openwebui:
+    needs:
+      - create_pvc
+    steps:
+      - name: Authenticate Kubernetes
+        run: pw kube auth ${{ inputs.k8s.cluster }}
+      - name: Generate API Key and Deployment YAML
+        run: |
+          API_KEY=$(openssl rand -hex 16)
+          echo "Generated API_KEY=$API_KEY"
+
+          cat <<EOF > ollama-openwebui-deployment.yaml
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: ${{ inputs.app.name }}
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: ${{ inputs.app.name }}
+            template:
+              metadata:
+                labels:
+                  app: ${{ inputs.app.name }}
+              spec:
+                runtimeClassName: nvidia
+                volumes:
+                  - name: shared-pvc
+                    persistentVolumeClaim:
+                      claimName: ${{ inputs.pvc.name }}
+                  - name: shared-tmp
+                    emptyDir: {}
+                containers:
+                  - name: ollama
+                    image: ollama/ollama
+                    ports:
+                      - containerPort: 11434
+                    resources:
+                      limits:
+                        nvidia.com/gpu: ${{ inputs.resources.gpu_count }}
+                        cpu: "2"
+                        memory: "4Gi"
+                    volumeMounts:
+                      - mountPath: /root/.ollama
+                        name: shared-pvc
+                      - mountPath: /tmp
+                        name: shared-tmp
+                    command: ["sh", "-c"]
+                    args:
+                      - |
+                        set -ex
+                        apt-get update && apt-get install -y curl
+                        echo "$API_KEY" > /tmp/api_key.txt
+                        ollama serve &
+                        
+                        until curl -s http://localhost:11434/api/tags > /dev/null; do
+                          echo "Waiting for Ollama..."
+                          sleep 2
+                        done
+
+                        echo "Pulling model: ${{ inputs.app.model }}"
+                        ollama pull ${{ inputs.app.model }}
+                        
+                        wait
+
+                  - name: ollama-proxy
+                    image: nhuytan/ollama-apikey-proxy:latest
+                    ports:
+                      - containerPort: 8000
+                    env:
+                      - name: OLLAMA_API_KEY
+                        value: "$API_KEY"
+                      - name: OLLAMA_BASE_URL
+                        value: "http://localhost:11434"
+                    volumeMounts:
+                      - mountPath: /tmp
+                        name: shared-tmp
+                    command: ["sh", "-c"]
+                    args:
+                        - |
+                          apt-get update && apt-get install -y curl
+
+                          curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared
+                          chmod +x /usr/local/bin/cloudflared
+
+                          echo "Starting API proxy..."
+                          uvicorn proxy:app --host 0.0.0.0 --port 8000 &
+
+                          echo "Starting tunnel..."
+                          cloudflared tunnel --url http://localhost:8000 --no-autoupdate > /tmp/cloudflared-url.txt 2>&1 &
+
+                          tail -f /dev/null   
+
+                  - name: openwebui
+                    image: ghcr.io/open-webui/open-webui:main
+                    env:
+                      - name: OLLAMA_BASE_URL
+                        value: "http://localhost:11434"
+                      - name: USE_OLLAMA_DOCKER
+                        value: "true"
+                    ports:
+                      - containerPort: 8080
+                    resources:
+                      limits:
+                        cpu: "1"
+                        memory: "2Gi"
+                    volumeMounts:
+                      - mountPath: /app/data
+                        name: shared-pvc
+                    lifecycle:
+                      postStart:
+                        exec:
+                          command:
+                            - sh
+                            - -c
+                            - |
+                              until curl -s http://localhost:11434/api/tags > /dev/null; do
+                                echo "Still waiting for Ollama..."
+                                sleep 2
+                              done
+          EOF
+      - name: Apply Deployment
+        run: kubectl apply -f ollama-openwebui-deployment.yaml
+      - name: Create Service
+        run: |
+          cat <<EOF > ollama-openwebui-service.yaml
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: ${{ inputs.app.name }}
+            namespace: ${{ inputs.k8s.namespace }}
+          spec:
+            selector:
+              app: ${{ inputs.app.name }}
+            ports:
+              - name: openwebui
+                protocol: TCP
+                port: 8080
+                targetPort: 8080
+              - name: ollama
+                protocol: TCP
+                port: 11434
+                targetPort: 11434
+              - name: proxy
+                protocol: TCP
+                port: 8000
+                targetPort: 8000
+            type: LoadBalancer
+          EOF
+          kubectl apply -f ollama-openwebui-service.yaml
+      - name: Wait for Pod to be Ready
+        run: |
+          echo "Waiting for pod to be ready..."
+          pod=$(kubectl get pods -n ${{ inputs.k8s.namespace }} -l app=${{ inputs.app.name }} -o jsonpath='{.items[0].metadata.name}')
+          kubectl wait --for=condition=Ready pod/$pod -n ${{ inputs.k8s.namespace }} --timeout=300s
+  create_session:
+    needs:
+      - deploy_ollama_openwebui
+    steps:
+      - name: Debug Service + Pod
+        run: |
+          echo "Checking pod + service for session connection..."
+          kubectl get svc ${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }}
+          kubectl get pods -l app=${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }}
+      - name: Wait for Cloudflare Tunnel URL
+        run: |
+          pod=$(kubectl get pods -l app=${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }} -o jsonpath="{.items[0].metadata.name}")
+
+          echo "model=${{inputs.app.model}}" >> OUTPUTS
+
+          api_key=$(kubectl exec -n ${{ inputs.k8s.namespace }} "$pod" -c ollama -- sh -c 'cat /tmp/api_key.txt' || echo "")
+          echo "api_key=$api_key" >> OUTPUTS
+
+          for i in $(seq 1 15); do
+            url=$(kubectl exec -n ${{ inputs.k8s.namespace }} "$pod" -c ollama-proxy -- sh -c "grep -o 'https://[a-zA-Z0-9.-]*\\.trycloudflare\\.com' /tmp/cloudflared-url.txt | head -n1")
+            if [ -n "$url" ]; then
+              echo "tunnel_url=$url" >> OUTPUTS
+              break
+            fi
+            echo "Waiting for tunnel URL..."
+            sleep 2
+          done
+      - name: Display Information to put at AI
+        run: |
+          source OUTPUTS
+          echo "Model: $model"
+          echo "API Key: $api_key"
+          echo "Tunnel URL: $tunnel_url"
+
+          echo "PW_API_KEY: $pw_api_key_b64"
+          echo "TEAM": $team
+          echo "Organization": $org
+          echo "Namespace": $np
+      - name: Expose Session
+        uses: parallelworks/update-session
+        with:
+          remotePort: '8080'
+          name: ${{ sessions.session }}
+          slug: ''
+          targetInfo:
+            name: ${{ inputs.k8s.cluster }}
+            namespace: ${{ inputs.k8s.namespace }}
+            resourceType: services
+            resourceName: ${{ inputs.app.name }}
+  keep_alive:
+    needs:
+      - create_session
+    steps:
+      - name: Display Information for AI - backup
+        run: |
+          source OUTPUTS
+          echo "Model: $model"
+          echo "API Key: $api_key"
+          echo "Tunnel URL: $tunnel_url"
+
+          echo "PW_API_KEY: $pw_api_key_b64"
+          echo "TEAM": $team
+          echo "Organization": $org
+          echo "Namespace": $np
+      - name: Register AI Chat Provider
+        run: |
+          source OUTPUTS
+
+          echo "Registering AI Chat Provider..."
+          safe_model=$(echo "$model" | tr -cd 'a-z0-9')
+          unique_suffix=$(date +%s | tail -c 6)
+          aichat_name="${safe_model}-${unique_suffix}"
+          echo "aichat_name=$aichat_name"
+
+          curl -s -X POST "https://activate.parallel.works/api/organizations/$org/namespaces/$np/aichat-providers" \
+            -H "Authorization: Basic $pw_api_key_b64" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "'"$aichat_name"'",
+              "description": "'"$model"'",
+              "tags": "",
+              "csp": "custom",
+              "team": "'"$team"'",
+              "variables": {
+                "endpoint": "'"$tunnel_url"'",
+                "apiKey": "'"$api_key"'",
+                "model": "'"$model"'"
+              }
+            }'
+      - name: Keep Session Running
+        run: tail -f /dev/null
+        cleanup: |
+          echo "Cleaning up resources..."
+          kubectl delete deployment ${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }} --ignore-not-found
+          kubectl delete service ${{ inputs.app.name }} -n ${{ inputs.k8s.namespace }} --ignore-not-found
+'on':
+  execute:
+    inputs:
+      k8s:
+        type: group
+        label: Kubernetes Settings
+        items:
+          cluster:
+            label: Kubernetes Cluster
+            type: kubernetes-clusters
+          namespace:
+            label: Namespace
+            type: kubernetes-namespaces
+            clusterName: ${{ inputs.k8s.cluster }}
+      app:
+        type: group
+        label: App Settings
+        items:
+          name:
+            label: Deployment Name
+            type: string
+            default: ollama-ui
+          model:
+            label: Ollama Model to Pull
+            type: string
+            default: mistral
+      pvc:
+        type: group
+        label: Shared Volume
+        items:
+          name:
+            label: PVC Name
+            type: string
+            default: test-pvc
+      resources:
+        type: group
+        label: GPU Settings
+        items:
+          gpu_count:
+            label: Number of GPUs
+            type: number
+            default: 1
+            min: 1
+            step: 1

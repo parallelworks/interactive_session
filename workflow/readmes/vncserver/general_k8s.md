@@ -1,5 +1,5 @@
 ## Desktop Interactive Session
-This workflow starts a remote desktop [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README-v3.md) accessible via a web browser, on either a **Compute Cluster** (SLURM or PBS) or a **Kubernetes Cluster**.
+This workflow starts a remote desktop [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README.md) accessible via a web browser, on either a **Compute Cluster** (SLURM or PBS) or a **Kubernetes Cluster**.
 
 Use the `Target Type` input to select your environment.
 

@@ -1,5 +1,5 @@
 # OpenVSCode Interactive Session
-This workflow starts an OpenVSCode server [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README-v3.md), on either a **Compute Cluster** (SLURM or PBS) or a **Kubernetes Cluster**.
+This workflow starts an OpenVSCode server [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README.md), on either a **Compute Cluster** (SLURM or PBS) or a **Kubernetes Cluster**.
 
 Use the `Target Type` input to select your environment.
 

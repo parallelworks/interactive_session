@@ -1,5 +1,5 @@
 ## JupyterLab Interactive Session
-This workflow starts a JupyterLab server [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README-v3.md).
+This workflow starts a JupyterLab server [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README.md).
 
 
 ### Dask Integration on Parallel Works

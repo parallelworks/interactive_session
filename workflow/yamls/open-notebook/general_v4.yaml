@@ -14,7 +14,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: open-notebook-dev
+          branch: main
           sparse_checkout:
             - open-notebook-docker
       - name: Create Inputs
@@ -140,19 +140,24 @@ jobs:
             label: Open Notebook Image
             type: string
             default: lfnovo/open_notebook:v1-latest
+            tooltip: Docker image for Open Notebook. Use a specific tag (e.g. lfnovo/open_notebook:v1.2.3) to pin a version, or keep the default (v1-latest) to always pull the latest stable release.
           opennotebook_encryption_key:
-            label: Encription Key
+            label: Encryption Key
             type: password
+            tooltip: Secret string used to encrypt stored API keys and sensitive data. Required. Use the same value every time you restart this session to retain access to your existing data.
           notebook_data_dir:
             label: Notebook Data Directory
             type: string
             default: ./notebook_data
+            tooltip: Path on the service node where Open Notebook stores its data files. Set this to a stable, persistent path (e.g. ${HOME}/open-notebook/data) and reuse it across sessions to preserve your notebooks and sources.
           surrealdb_image:
             label: SurrealDB Image
             type: string
             default: surrealdb/surrealdb:v2
+            tooltip: Docker image for SurrealDB, the database backend used by Open Notebook. Change only if you need to pin a specific SurrealDB version.
           surreal_data_dir:
             label: Surreal Data Directory
             type: string
             default: ./surreal_data
+            tooltip: Path on the service node where SurrealDB stores its database files. Must be a persistent location if you want your data to survive session restarts. Should be different from the Notebook Data Directory.
 

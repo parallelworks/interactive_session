@@ -120,7 +120,7 @@ services:
     image: lfnovo/open_notebook:v1-latest
     ports:
       - "${service_port}:8502"
-      - "5055:5055"
+      - "$(pw agent open-port):5055"
     environment:
       - API_URL=https://${PW_USER}-${SESSION_NAME}
       - OPEN_NOTEBOOK_ENCRYPTION_KEY=change-me-to-a-secret-string

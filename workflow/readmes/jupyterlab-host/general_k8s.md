@@ -16,7 +16,7 @@ Refer to the included Jupyter notebook at `jupyterlab-host/dask-extension-jupyte
 
 A sample YAML file outlining Dask dependencies for PW is provided at `jupyterlab-host/dask-extension-jupyterlab.yaml`. These dependencies are automatically installed by selecting the input form parameters displayed in the screenshot below. Alternatively, you have the option to use your own YAML file.
 
-![Dask input form](dask-input-form.png)
+![Parallel Works ACTIVATE input form](dask-input-form.png)
 
 
 

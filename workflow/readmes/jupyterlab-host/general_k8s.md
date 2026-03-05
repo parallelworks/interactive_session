@@ -1,5 +1,5 @@
 # JupyterLab Interactive Session
-This workflow starts a JupyterLab server [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README.md), on either a **Compute Cluster** (SLURM or PBS) or a **Kubernetes Cluster**.
+This workflow starts a JupyterLab server [interactive session](../../../README.md), on either a **Compute Cluster** (SLURM or PBS) or a **Kubernetes Cluster**.
 
 Use the `Target Type` input to select your environment.
 
@@ -14,8 +14,10 @@ Refer to the included Jupyter notebook at `jupyterlab-host/dask-extension-jupyte
 2. Data transfer to and from a PW storage resource, corresponding to an AWS S3 bucket. Authentication is streamlined through short-term credentials.
 3. Integration of the [Dask extension for JupyterLab](https://github.com/dask/dask-labextension)
 
-A sample YAML file outlining Dask dependencies for PW is provided at `jupyterlab-host/dask-extension-jupyterlab.yaml`. These dependencies are automatically installed by selecting the input form parameters displayed in this [screenshot](https://raw.githubusercontent.com/parallelworks/interactive_session/jupyterlab-yaml-file/workflow/readmes/jupyterlab-host/dask-input-form.png). Alternatively, you have the option to use your own YAML file.
- 
+A sample YAML file outlining Dask dependencies for PW is provided at `jupyterlab-host/dask-extension-jupyterlab.yaml`. These dependencies are automatically installed by selecting the input form parameters displayed in the screenshot below. Alternatively, you have the option to use your own YAML file.
+
+![Dask input form](dask-input-form.png)
+
 
 
 ## Kubernetes Cluster

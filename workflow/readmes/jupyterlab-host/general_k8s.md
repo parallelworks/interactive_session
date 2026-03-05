@@ -39,7 +39,7 @@ Examples:
 #### Test GPU Access in JupyterLab
 
 ##### PyTorch
-```
+```python
 import torch
 if torch.cuda.is_available():
     num_gpus = torch.cuda.device_count()
@@ -51,7 +51,7 @@ else:
 ```
 
 ##### TensorFlow
-```
+```python
 import tensorflow as tf
 physical_devices = tf.config.list_physical_devices('GPU')
 if physical_devices:
@@ -64,7 +64,7 @@ else:
 
 ##### Nvidia MIG Instances
 To use more than one Multi-Instance GPUs (MIG) set the `CUDA_VISIBLE_DEVICES` environment variable.
-```
+```python
 !nvidia-smi -L | grep MIG | grep -o 'MIG-[a-f0-9-]\+'
 import os
 # Replace with the MIG instance IDs

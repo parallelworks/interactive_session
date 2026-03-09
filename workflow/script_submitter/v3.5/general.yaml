@@ -1,0 +1,468 @@
+jobs:
+  stream_output:
+    working-directory: ${{ inputs.rundir }}
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Stream Output
+        early-cancel: any-job-failed
+        run: |
+          touch run.${PW_JOB_ID}.out
+          tail -f run.${PW_JOB_ID}.out 
+ 
+  preprocessing:
+    working-directory: ${{ inputs.rundir }}
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Create Script Template
+        run: |
+          set -x
+          if [[ "${{ inputs.use_existing_script }}" == true ]]; then
+            if [ ! -f "${{ inputs.script_path }}" ]; then
+                echo "$(date) ERROR: File ${{ inputs.script_path }} does not exist or is not a regular file." >&2
+                exit 1
+            fi
+            cp ${{ inputs.script_path }} run-template.sh
+          else
+          # Do not remove this indentation
+          cat <<'EOF' > run-template.sh
+          ${{ inputs.script }}
+          EOF
+          fi
+          cat run-template.sh
+      - name: Prepare Cleanup Script
+        run: |
+          set -x
+          if [[ "${{ inputs.define_cleanup_script }}" == "true" ]]; then
+            CLEANUP_SCRIPT_PATH="${{ inputs.cleanup_script_path }}"
+            # Ensure the path is absolute
+            [[ "${CLEANUP_SCRIPT_PATH}" = /* ]] || CLEANUP_SCRIPT_PATH="$PWD/${CLEANUP_SCRIPT_PATH}"
+          else
+            CLEANUP_SCRIPT_PATH=""
+          fi
+          echo "CLEANUP_SCRIPT_PATH=${CLEANUP_SCRIPT_PATH}" | tee -a $OUTPUTS
+      - name: Create SLURM Headers
+        if: ${{ inputs.slurm.is_disabled == false }}
+        run: |
+          # Need to evaluate the env variables here
+          cat <<EOF > headers.sh
+          #SBATCH --job-name=${PW_JOB_ID}
+          #SBATCH --time=${{ inputs.slurm.time }}
+          #SBATCH --chdir=${PWD}
+          #SBATCH -o ${PWD}/run.${PW_JOB_ID}.out
+          #SBATCH -e ${PWD}/run.${PW_JOB_ID}.out
+          EOF
+
+          # The partitions directive parameter is always optional
+          if ! [ -z "${{ inputs.slurm.partition }}" ]; then
+            echo "#SBATCH --partition=${{ inputs.slurm.partition }}" >> headers.sh
+          fi
+
+          # The scheduler directives parameter is always optional
+          if ! [ -z "${{ inputs.slurm.scheduler_directives }}" ]; then
+            echo "${{ inputs.slurm.scheduler_directives }}" >> headers.sh
+          fi
+
+          echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
+          echo "SCHEDULER_TYPE=slurm" | tee -a $OUTPUTS
+      - name: Create PBS Headers
+        if: ${{ inputs.pbs.is_disabled == false }}
+        run: |
+          set -x
+          cat <<EOF > headers.sh
+          #PBS -N ${PW_JOB_ID}
+          #PBS -o ${PWD}/run.${PW_JOB_ID}.out
+          #PBS -j oe
+          EOF
+
+          # The scheduler directives parameter is always optional
+          if ! [ -z "${{ inputs.pbs.scheduler_directives }}" ]; then
+            echo "${{ inputs.pbs.scheduler_directives }}" >> headers.sh
+          fi
+
+          echo "HEADERS=$(cat headers.sh | sed ':a;N;$!ba;s/\n/\\n/g' )" | tee -a $OUTPUTS
+          echo "SCHEDULER_TYPE=pbs" | tee -a $OUTPUTS
+  ssh_job:
+    needs:
+      - preprocessing
+    if: ${{ inputs.slurm.is_disabled != false && inputs.pbs.is_disabled != false && inputs.use_scheduler_agent != true }}
+    working-directory: ${{ inputs.rundir }}
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Create Script
+        run: |
+          set -x
+          cat <<EOF > run.sh
+          ${{ inputs.shebang }}
+          cd ${PWD}
+          EOF
+          cat run-template.sh >> run.sh
+          chmod +x run.sh
+          cat run.sh
+      - name: Submit Script
+        run: |
+          set -x
+          echo "$(date) Executing script"
+          ./run.sh > run.${PW_JOB_ID}.out 2>&1
+        cleanup: |
+          set -x
+
+          if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
+              echo "$(date) INFO: No cleanup script provided."
+              exit 0
+          fi
+
+          if [ ! -f "${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}" ]; then
+              # This is warning and not an error because the job could be canceled before the main script creates the cancel script
+              echo "$(date) WARNING: No cleanup script found in path ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}."
+              exit 0
+          else
+              echo "$(date) INFO: Running cleanup script"
+              chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
+              timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
+          fi
+      - uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - stream_output
+
+
+  pbs_job:
+    needs:
+      - preprocessing
+    if: ${{ inputs.pbs.is_disabled == false && inputs.use_scheduler_agent != true }}
+    working-directory: ${{ inputs.rundir }}
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Create PBS Script
+        run: |
+          set -x
+          echo "$(date) Creating PBS script"
+          echo '${{ inputs.shebang }}' > run.sh
+          cat headers.sh >> run.sh
+          echo "cd ${PWD}" >> run.sh
+          echo "hostname > HOSTNAME" >> run.sh
+          cat run-template.sh >> run.sh
+          chmod +x run.sh
+          cat run.sh
+      - name: Submit PBS Script
+        run: |
+          set -x
+          echo "$(date) Submitting PBS Job"
+          jobid=$(qsub run.sh)
+          jobid=$(echo "$jobid" | cut -d'.' -f1)
+          if ! [[ "${jobid}" =~ ^[0-9]+$ ]]; then
+            echo "$(date) Job submission failed: invalid jobid '${jobid}'"
+            exit 1
+          fi
+          echo "jobid=${jobid}"  | tee -a $OUTPUTS
+        cleanup: qdel "${{ needs.pbs_job.outputs.jobid }}"
+      - name: Monitor PBS Job
+        run: |
+          jobid=${{ needs.pbs_job.outputs.jobid }}
+          echo "$(date) Monitoring PBS job ${jobid}"
+          get_pbs_job_status() {
+            # Get the header line to determine the column index corresponding to the job status
+            if [ -z "${QSTAT_HEADER}" ]; then
+              export QSTAT_HEADER="$(qstat | awk 'NR==1')"
+            fi
+            status_response=$(qstat 2>/dev/null | grep "\<${jobid}\>")
+            echo "${QSTAT_HEADER}"
+            echo "${status_response}"
+            export job_status="$(qstat -f ${jobid} 2>/dev/null  | grep job_state | cut -d'=' -f2 | tr -d ' ')"
+          }
+          while true; do
+            sleep 15
+            get_pbs_job_status
+            if [[ "${job_status}" == "C" ]]; then
+              break
+            elif [ -z "${job_status}" ]; then
+              break
+            fi
+          done
+        cleanup: |
+          set -x
+
+          if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
+            echo "$(date) INFO: No cleanup script provided."
+            exit 0
+          fi
+
+          if [ ! -f "HOSTNAME" ]; then
+            # This is warning and not an error because the job could be canceled before the main script creates the HOSTNAME file
+            echo "$(date) WARNING: No hostname found"
+            exit 0
+          fi
+          compute_node="$(cat HOSTNAME | cut -d'.' -f1)"
+          sshcmd="ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${compute_node}"
+
+          if [ ! -f "${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}" ]; then
+              # This is warning and not an error because the job could be canceled before the main script creates the cancel script
+              echo "$(date) WARNING: No cleanup script found in path ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}."
+              exit 0
+          else
+              echo "$(date) INFO: Running cleanup script"
+              chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
+              ${sshcmd} timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
+          fi
+      - uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - stream_output
+
+  slurm_job:
+    needs:
+      - preprocessing
+    if: ${{ inputs.slurm.is_disabled == false && inputs.use_scheduler_agent != true }}
+    working-directory: ${{ inputs.rundir }}
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Create SLURM Script
+        run: |
+          set -x
+          echo '${{ inputs.shebang }}' > run.sh
+          cat headers.sh >> run.sh
+          echo "hostname > HOSTNAME" >> run.sh
+          cat run-template.sh >> run.sh
+          chmod +x run.sh
+          cat run.sh
+      - name: Submit SLURM Script
+        run: |
+          set -x
+          echo "$(date) Submitting SLURM Job"
+          jobid=$(sbatch run.sh | tail -1 | awk -F ' ' '{print $4}')
+          if ! [[ "${jobid}" =~ ^[0-9]+$ ]]; then
+            echo "$(date) Job submission failed: invalid jobid '${jobid}'"
+            exit 1
+          fi
+          echo "jobid=${jobid}"  | tee -a $OUTPUTS
+        cleanup: scancel "${{ needs.slurm_job.outputs.jobid }}"
+      - name: Monitor SLURM Job
+        run: |
+          jobid=${{ needs.slurm_job.outputs.jobid }}
+          echo "$(date) Monitoring SLURM job ${jobid}"
+
+          get_slurm_job_status() {
+              # Get the header line to determine the column index corresponding to the job status
+              if [ -z "${SQUEUE_HEADER}" ]; then
+                  export SQUEUE_HEADER="$(eval squeue | awk 'NR==1')"
+              fi
+              status_column=$(echo "${SQUEUE_HEADER}" | awk '{ for (i=1; i<=NF; i++) if ($i ~ /^S/) { print i; exit } }')
+              status_response=$(eval squeue | awk -v jobid="${jobid}" '$1 == jobid')
+              echo "${SQUEUE_HEADER}"
+              echo "${status_response}"
+              export job_status=$(echo ${status_response} | awk -v id="${jobid}" -v col="$status_column" '{print $col}')
+          }
+
+          while true; do
+            sleep 15
+            get_slurm_job_status
+            if [ -z "${job_status}" ]; then
+              job_status=$(sacct -j ${jobid}  --format=state | tail -n1)
+              echo "$(date) Job exited with status ${job_status}"
+              break
+            fi
+          done
+        cleanup: |
+          set -x
+
+          if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
+            echo "$(date) INFO: No cleanup script provided."
+            exit 0
+          fi
+
+          if [ ! -f "HOSTNAME" ]; then
+            # This is warning and not an error because the job could be canceled before the main script creates the HOSTNAME file
+            echo "$(date) WARNING: No hostname found"
+            exit 0
+          fi
+          compute_node="$(cat HOSTNAME | cut -d'.' -f1)"
+          sshcmd="ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${compute_node}"
+
+          if [ ! -f "${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}" ]; then
+              # This is warning and not an error because the job could be canceled before the main script creates the cancel script
+              echo "$(date) WARNING: No cleanup script found in path ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}."
+              exit 0
+          else
+              echo "$(date) INFO: Running cleanup script"
+              chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
+              ${sshcmd} timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
+          fi
+      - uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - stream_output
+  scheduler_agent_job:
+    needs:
+      - preprocessing
+    if: ${{ inputs.use_scheduler_agent == true }}
+    working-directory: ${{ inputs.rundir }}
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Create Script
+        run: |
+          set -x
+          echo '${{ inputs.shebang }}' > run.sh
+          cat run-template.sh >> run.sh
+          chmod +x run.sh
+          cat run.sh
+      - uses: parallelworks/scheduler-agent
+        id: slurmstep
+        with:
+          scheduler-type: ${{ needs.preprocessing.outputs.SCHEDULER_TYPE }}
+          script-headers: |
+            ${{ needs.preprocessing.outputs.HEADERS }}
+          wait: false
+      - uses: parallelworks/wait-for-agent
+        id: waitstep
+        with:
+          agentId: ${{ needs.scheduler_agent_job.steps.slurmstep.outputs.agentId }}
+      - name: Run Script
+        ssh:
+          jumpNodeHost: ${{ inputs.resource.ip }}
+          remoteHost: ${{ needs.scheduler_agent_job.steps.waitstep.outputs.remoteHost }}:${{ needs.scheduler_agent_job.steps.waitstep.outputs.sshPort }}
+        run: |
+          set -x
+          echo "$(date) Executing script"
+          ./run.sh > run.${PW_JOB_ID}.out 2>&1
+        cleanup: |
+          set -x
+          echo "$(date) INFO: Running cleanup"
+
+          if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
+              echo "$(date) INFO: No cleanup script provided."
+              exit 0
+          fi
+
+          if [ ! -f "${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}" ]; then
+              # This is warning and not an error because the job could be canceled before the main script creates the cancel script
+              echo "$(date) WARNING: No cleanup script found in path ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}."
+              exit 0
+          else
+              echo "$(date) INFO: Running cleanup script"
+              chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
+              timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
+          fi
+      - uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - stream_output
+
+'on':
+  execute:
+    inputs:
+      resource:
+        label: Resource Target
+        type: compute-clusters
+        autoselect: true
+        optional: false
+      shebang:
+        label: Shebang
+        type: string
+        default: '#!/bin/bash'
+      rundir:
+        label: Run Directory
+        type: string
+        default: ${PWD}
+        tooltip: The directory in which the script will be executed. Defaults to the job’s current working directory ($PWD).
+      use_existing_script:
+        type: boolean
+        default: false
+        label: Use Existing Script?
+        tooltip: |
+          Yes → Provide path to an existing script on the target resource.
+          No  → Type the script
+      script:
+        label: Type Script
+        type: editor
+        hidden: ${{ inputs.use_existing_script == true }}
+        ignore: ${{ .hidden }}
+        tooltip: Type the script to run without shebang and scheduler directives.
+        default: |
+          echo "$(date) Running in directory ${PWD} on ${HOSTNAME}"
+      script_path:
+        label: Script Path
+        type: string
+        hidden: ${{ inputs.use_existing_script == false }}
+        ignore: ${{ .hidden }}
+        tooltip: Provide path to an existing script on the target resource.
+      define_cleanup_script:
+        type: boolean
+        default: false
+        label: Define Cleanup Script?
+        tooltip: Run a cleanup script after the main script to undo its changes — removing files, stopping processes, deleting containers, etc.
+      cleanup_script_path:
+        label: Cleanup Script Path
+        type: string
+        hidden: ${{ inputs.define_cleanup_script == false }}
+        ignore: ${{ .hidden }}
+        tooltip: Path to the cleanup script on the target resource. The script can be created by the main script itself.
+      scheduler:
+        type: boolean
+        default: false
+        label: Schedule Job?
+        hidden: ${{ inputs.resource.schedulerType == '' }}
+        ignore: ${{ .hidden }}
+        tooltip: |
+          Yes → Job is submitted to the scheduler using sbatch, qsub, etc
+          No  → Job is executed in the controller or login node instead
+      use_scheduler_agent:
+        type: boolean
+        ignore: ${{ inputs.scheduler == false }}
+        hidden: ${{ .ignore }}
+        default: false
+        label: Use parallelworks/scheduler-agent?
+        tooltip: |
+          Yes → Provision the compute node using parallelworks/scheduler-agent
+          No  → Directly use sbatch, qsub, etc to submit the job
+      slurm:
+        type: group
+        label: SLURM Directives
+        hidden: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        items:
+          is_disabled:
+            type: boolean
+            hidden: true
+            default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+            label: Is SLURM disabled?
+          partition:
+            type: slurm-partitions
+            label: SLURM partition
+            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+            optional: true
+            resource: ${{ inputs.resource }}
+            tooltip: Select a partition from the drop down menu.
+          time:
+            label: Walltime
+            type: string
+            default: '01:00:00'
+            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+            tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
+          scheduler_directives:
+            type: editor
+            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+            optional: true
+            tooltip: |
+              Type in additional scheduler directives. 
+      pbs:
+        type: group
+        label: PBS Directives
+        hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+        ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+        items:
+          is_disabled:
+            type: boolean
+            hidden: true
+            default: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+            label: Is PBS disabled?
+          scheduler_directives:
+            label: Scheduler Directives
+            type: editor
+            tooltip: Type the PBS scheduler directives
+            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}

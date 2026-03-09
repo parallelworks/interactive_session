@@ -456,6 +456,7 @@ jobs:
           is_enabled:
             type: boolean
             hidden: true
+            default: true
             label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
           scheduler_directives:
             label: Scheduler Directives

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(pw-workflows)",
+      "Skill(pw-workflows:*)"
+    ]
+  }
+}

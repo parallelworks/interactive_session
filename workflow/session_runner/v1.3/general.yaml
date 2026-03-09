@@ -58,7 +58,7 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - uses: marketplace/script_submitter/v3.6
+      - uses: marketplace/script_submitter/v3.5
         early-cancel: any-job-failed
         with:
           resource: ${{ inputs.resource }}
@@ -71,12 +71,12 @@ jobs:
           scheduler: ${{ inputs.cluster.scheduler }}
           use_scheduler_agent: false
           slurm:
-            is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
+            is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
             partition: ${{ inputs.cluster.slurm.partition }}
             scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
             time: ${{ inputs.cluster.slurm.time }}
           pbs:
-            is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
+            is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
       - name: Notify job ended
         early-cancel: any-job-failed
@@ -203,14 +203,14 @@ jobs:
           slurm:
             type: group
             label: SLURM Directives
-            hidden: ${{ inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
-            ignore: ${{ inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            hidden: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
             items:
-              is_enabled:
+              is_disabled:
                 type: boolean
                 hidden: true
-                default: true
-                label: Is SLURM Enabled? Yes, unless the slurm section is hidden and ignored
+                default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                label: Is SLURM disabled?
               partition:
                 type: slurm-partitions
                 label: SLURM partition
@@ -233,10 +233,11 @@ jobs:
             hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             items:
-              is_enabled:
+              is_disabled:
                 type: boolean
                 hidden: true
-                label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
+                default: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+                label: Is PBS disabled?
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor

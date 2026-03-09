@@ -7,7 +7,7 @@ jobs:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
       - name: Controller Preprocessing
-        run: |
+        run: | 
           set -x
           # This script prepares the target host and always runs in the controller node
           cp ${{ inputs.service.inputs_sh }} ${{ inputs.service.rundir }}/controller-preprocessing-${PW_JOB_ID}.sh
@@ -36,7 +36,6 @@ jobs:
               trap - EXIT INT TERM HUP QUIT USR1 USR2 PIPE
               echo "$(date) Cleaning up..."
               mv cancel.sh cancel.sh.submitted
-              echo "echo Cleanup script was already executed" > cancel.sh
               bash cancel.sh.submitted
               kill -- -$$
           }
@@ -49,6 +48,10 @@ jobs:
           echo
           touch job.started
           EOF
+          if ! [ -f "${{ inputs.service.start_service_script }}" ]; then
+              echo "$(date) ERROR: Service start script not found at ${{ inputs.service.start_service_script }}"
+              exit 1
+          fi
           cat ${{ inputs.service.start_service_script }} >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
 
   script_submitter:
@@ -58,7 +61,7 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - uses: marketplace/script_submitter/v3.6
+      - uses: marketplace/script_submitter/v3.5
         early-cancel: any-job-failed
         with:
           resource: ${{ inputs.resource }}
@@ -71,12 +74,16 @@ jobs:
           scheduler: ${{ inputs.cluster.scheduler }}
           use_scheduler_agent: false
           slurm:
-            is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
+            is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
+            account: ${{ inputs.cluster.slurm.account }}
             partition: ${{ inputs.cluster.slurm.partition }}
-            scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+            qos: ${{ inputs.cluster.slurm.qos }}
+            ntasks: ${{ inputs.cluster.slurm.ntasks }}
+            nodes: ${{ inputs.cluster.slurm.nodes }}
             time: ${{ inputs.cluster.slurm.time }}
+            scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
           pbs:
-            is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
+            is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
       - name: Notify job ended
         early-cancel: any-job-failed
@@ -85,7 +92,6 @@ jobs:
           pwd
           touch job.ended
           ls -lat job.ended
-
   wait_for_job_start:
     working-directory: ${{ inputs.service.rundir }}
     needs:
@@ -109,14 +115,13 @@ jobs:
         early-cancel: any-job-failed
         run: |
           set -x
-          HOSTNAME=$(cat HOSTNAME)
+          HOSTNAME=$(cat HOSTNAME | cut -d'.' -f1)
           echo "HOSTNAME=${HOSTNAME}" | tee -a $OUTPUTS
 
           if [ -z "${HOSTNAME}" ]; then
             echo "$(date) Failed to get target hostname"
             exit 1
           fi
-
 
   create_session:
     working-directory: ${{ inputs.service.rundir }}
@@ -158,6 +163,7 @@ jobs:
               
               if check_server; then
                   echo "$(date) Success: Server is listening on ${remote_host}:${remote_port}!"
+                  sleep 3
                   exit 0
               elif [ -f job.ended ]; then
                   echo "$(date) Job was completed. Exiting... "
@@ -189,7 +195,7 @@ jobs:
         tooltip: Resource to host the service
       cluster:
         hidden: ${{ inputs.resource.schedulerType == '' }}
-        ignore: ${{ inputs.resource.schedulerType == ''  }}
+        ignore: ${{ inputs.resource.schedulerType == '' }}
         type: group
         label: Compute Cluster Settings
         items:
@@ -203,20 +209,48 @@ jobs:
           slurm:
             type: group
             label: SLURM Directives
-            hidden: ${{ inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
-            ignore: ${{ inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            hidden: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
             items:
-              is_enabled:
+              is_disabled:
                 type: boolean
                 hidden: true
-                default: true
-                label: Is SLURM Enabled? Yes, unless the slurm section is hidden and ignored
+                default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                label: Is SLURM disabled?
+              account:
+                label: SLURM account
+                type: slurm-accounts
+                resource: ${{ inputs.resource }}
+                tooltip: '--account=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
               partition:
                 type: slurm-partitions
                 label: SLURM partition
                 optional: true
                 resource: ${{ inputs.resource }}
-                tooltip: Select a partition from the drop down menu.
+                tooltip: '--partition=value SLURM directive'
+              qos:
+                label: Quality of Service [QoS]
+                type: slurm-qos
+                resource: ${{ inputs.resource }}
+                tooltip: '--qos=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              ntasks:
+                label: Number of tasks
+                type: number
+                default: 1
+                tooltip: '--ntasks=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              nodes:
+                label: Number of nodes
+                type: number
+                default: 1
+                tooltip: '--nodes=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
               time:
                 label: Walltime
                 type: string
@@ -233,10 +267,11 @@ jobs:
             hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             items:
-              is_enabled:
+              is_disabled:
                 type: boolean
                 hidden: true
-                label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
+                default: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+                label: Is PBS disabled?
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor

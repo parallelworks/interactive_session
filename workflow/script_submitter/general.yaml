@@ -43,7 +43,7 @@ jobs:
           fi
           echo "CLEANUP_SCRIPT_PATH=${CLEANUP_SCRIPT_PATH}" | tee -a $OUTPUTS
       - name: Create SLURM Headers
-        if: ${{ inputs.slurm.is_disabled == false }}
+        if: ${{ inputs.slurm.is_enabled == true }}
         run: |
           # Need to evaluate the env variables here
           cat <<EOF > headers.sh
@@ -67,7 +67,7 @@ jobs:
           echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
           echo "SCHEDULER_TYPE=slurm" | tee -a $OUTPUTS
       - name: Create PBS Headers
-        if: ${{ inputs.pbs.is_disabled == false }}
+        if: ${{ inputs.pbs.is_enabled == true }}
         run: |
           set -x
           cat <<EOF > headers.sh
@@ -86,7 +86,7 @@ jobs:
   ssh_job:
     needs:
       - preprocessing
-    if: ${{ inputs.slurm.is_disabled != false && inputs.pbs.is_disabled != false && inputs.use_scheduler_agent != true }}
+    if: ${{ inputs.slurm.is_enabled != true && inputs.pbs.is_enabled != true && inputs.use_scheduler_agent != true }}
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
@@ -132,7 +132,7 @@ jobs:
   pbs_job:
     needs:
       - preprocessing
-    if: ${{ inputs.pbs.is_disabled == false && inputs.use_scheduler_agent != true }}
+    if: ${{ inputs.pbs.is_enabled == true && inputs.use_scheduler_agent != true }}
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
@@ -216,7 +216,7 @@ jobs:
   slurm_job:
     needs:
       - preprocessing
-    if: ${{ inputs.slurm.is_disabled == false && inputs.use_scheduler_agent != true }}
+    if: ${{ inputs.slurm.is_enabled == true && inputs.use_scheduler_agent != true }}
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
@@ -423,18 +423,17 @@ jobs:
       slurm:
         type: group
         label: SLURM Directives
-        hidden: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
-        ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        hidden: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        ignore: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
         items:
-          is_disabled:
+          is_enabled:
             type: boolean
             hidden: true
-            default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
-            label: Is SLURM disabled?
+            default: true
+            label: Is SLURM Enabled? Yes, unless the slurm section is hidden and ignored
           partition:
             type: slurm-partitions
             label: SLURM partition
-            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
             optional: true
             resource: ${{ inputs.resource }}
             tooltip: Select a partition from the drop down menu.
@@ -442,11 +441,9 @@ jobs:
             label: Walltime
             type: string
             default: '01:00:00'
-            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
             tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
           scheduler_directives:
             type: editor
-            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
             optional: true
             tooltip: |
               Type in additional scheduler directives. 
@@ -456,13 +453,11 @@ jobs:
         hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
         ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
         items:
-          is_disabled:
+          is_enabled:
             type: boolean
             hidden: true
-            default: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
-            label: Is PBS disabled?
+            label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
           scheduler_directives:
             label: Scheduler Directives
             type: editor
             tooltip: Type the PBS scheduler directives
-            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}

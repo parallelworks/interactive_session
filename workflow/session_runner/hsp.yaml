@@ -15,6 +15,7 @@ jobs:
           bash ${{ inputs.service.rundir }}/controller-preprocessing-${PW_JOB_ID}.sh
       - name: Create Service Script
         run: |
+          rm -f HOSTNAME SESSION_PORT job.ended job.started
           # This script starts the service
           cp ${{ inputs.service.inputs_sh }} ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
 

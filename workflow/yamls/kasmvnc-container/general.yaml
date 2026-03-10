@@ -149,20 +149,10 @@ jobs:
                 hidden: true
                 default: true
                 label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
-              account:
-                label: Account
-                type: string
-                tooltip: PBS account for job submission (-A)
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
                 tooltip: Type the PBS scheduler directives
-                default: |
-                  #!/bin/bash
-                  #PBS -q HIE
-                  #PBS -l select=1:ncpus=92:mpiprocs=1:ngpus=1
-                  #PBS -l walltime=01:00:00
-                  #PBS -V
       desktop:
         type: group
         label: Desktop Settings

@@ -5,6 +5,7 @@ jobs:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
       - name: Stream Output
+        early-cancel: any-job-failed
         run: |
           touch run.${PW_JOB_ID}.out
           tail -f run.${PW_JOB_ID}.out 

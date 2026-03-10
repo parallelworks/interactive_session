@@ -43,7 +43,7 @@ echo "$(date) Pulling ${open_notebook_image} ..."
 ${docker_cmd} pull "${open_notebook_image}"
 
 # Use a unique Docker Compose project name scoped to this job to avoid collisions
-project_name="open_notebook_${PW_JOB_ID:-$$}"
+project_name="open_notebook_$(echo "${PW_JOB_ID:-$$}" | tr '.' '_')"
 
 cat > "${PW_PARENT_JOB_DIR}/docker-compose.yml" <<EOF
 services:

@@ -42,7 +42,7 @@ jobs:
           fi
           echo "CLEANUP_SCRIPT_PATH=${CLEANUP_SCRIPT_PATH}" | tee -a $OUTPUTS
       - name: Create SLURM Headers
-        if: ${{ inputs.slurm.is_disabled == false }}
+        if: ${{ inputs.slurm.is_enabled == true }}
         run: |
           # Need to evaluate the env variables here
           cat <<EOF > headers.sh
@@ -77,7 +77,7 @@ jobs:
           echo "SCHEDULER_TYPE=slurm" | tee -a $OUTPUTS
 
       - name: Create PBS Headers
-        if: ${{ inputs.pbs.is_disabled == false }}
+        if: ${{ inputs.pbs.is_enabled == true }}
         run: |
           set -x
           cat <<EOF > headers.sh
@@ -98,7 +98,7 @@ jobs:
   ssh_job:
     needs:
       - preprocessing
-    if: ${{ inputs.slurm.is_disabled != false && inputs.pbs.is_disabled != false && inputs.use_scheduler_agent != true }}
+    if: ${{ inputs.slurm.is_enabled != true && inputs.pbs.is_enabled != true && inputs.use_scheduler_agent != true }}
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
@@ -142,7 +142,7 @@ jobs:
   pbs_job:
     needs:
       - preprocessing
-    if: ${{ inputs.pbs.is_disabled == false && inputs.use_scheduler_agent != true }}
+    if: ${{ inputs.pbs.is_enabled == true && inputs.use_scheduler_agent != true }}
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
@@ -227,7 +227,7 @@ jobs:
   slurm_job:
     needs:
       - preprocessing
-    if: ${{ inputs.slurm.is_disabled == false && inputs.use_scheduler_agent != true }}
+    if: ${{ inputs.slurm.is_enabled == true && inputs.use_scheduler_agent != true }}
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
@@ -424,14 +424,14 @@ jobs:
       slurm:
         type: group
         label: SLURM Directives
-        hidden: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
-        ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        hidden: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        ignore: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
         items:
-          is_disabled:
+          is_enabled:
             type: boolean
             hidden: true
-            default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
-            label: Is SLURM disabled?
+            default: true
+            label: Is SLURM Enabled? Yes, unless the slurm section is hidden and ignored
           account:
             label: SLURM account
             type: slurm-accounts
@@ -491,11 +491,11 @@ jobs:
         hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
         ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
         items:
-          is_disabled:
+          is_enabled:
             type: boolean
             hidden: true
-            default: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
-            label: Is PBS disabled?
+            default: true
+            label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
           account:
             label: Account
             type: string

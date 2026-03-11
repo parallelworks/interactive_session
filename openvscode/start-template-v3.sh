@@ -65,6 +65,20 @@ if [[ "${juice_use_juice}" == "true" ]]; then
     }
 fi
 
+# DISABLE EXTENSION TELEMETRY
+export VSCODE_TELEMETRY_LEVEL=off
+export KILOCODE_POSTHOG_API_KEY=“”
+export POSTHOG_DISABLED=1
+export POSTHOG_TELEMETRY_ENABLED=false
+export ANONYMIZED_TELEMETRY=false
+export OTEL_SDK_DISABLED=true
+export TELEMETRY_DISABLED=1
+export DISABLE_TELEMETRY=1
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+export POWERSHELL_TELEMETRY_OPTOUT=1
+export NEXT_TELEMETRY_DISABLED=1
+export GOTELEMETRY=off
+
 # START SERVICE
 echo ${juice_cmd} ${service_exec} --bind-addr=${HOSTNAME}:${service_port} ${password_flag} ${service_directory}
 

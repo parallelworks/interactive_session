@@ -24,6 +24,7 @@ jobs:
             echo "$(date) WARNING PW_PLATFORM_HOST is unset"
             PW_PLATFORM_HOST=cluster.einsteinmed.edu
           fi
+          PW_PLATFORM_HOST="${PW_PLATFORM_HOST#https://}"
           # Write PW variables
           env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
           # Encase values between quotes

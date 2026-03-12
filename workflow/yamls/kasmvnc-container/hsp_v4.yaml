@@ -27,6 +27,7 @@ jobs:
             if [ -z "${PW_PLATFORM_HOST}" ]; then
               PW_PLATFORM_HOST=hpcmp.hsp.mil
             fi
+            PW_PLATFORM_HOST="${PW_PLATFORM_HOST#https://}"
             # Write PW variables
             env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
             # Encase values between quotes

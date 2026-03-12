@@ -19,6 +19,7 @@ jobs:
             echo "$(date) PW_PLATFORM_HOST is unset"
             exit 1
           fi
+          PW_PLATFORM_HOST="${PW_PLATFORM_HOST#https://}"
           # Write PW variables
           env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
           # Encase values between quotes

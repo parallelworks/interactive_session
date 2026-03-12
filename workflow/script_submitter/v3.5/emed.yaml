@@ -147,7 +147,8 @@ jobs:
               chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
               timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
           fi
-      - uses: parallelworks/cancel-jobs
+      - name: Cancel Streaming
+        uses: parallelworks/cancel-jobs
         with:
           jobs:
             - stream_output
@@ -231,7 +232,8 @@ jobs:
               chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
               ${sshcmd} timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
           fi
-      - uses: parallelworks/cancel-jobs
+      - name: Cancel Streaming
+        uses: parallelworks/cancel-jobs
         with:
           jobs:
             - stream_output
@@ -314,7 +316,8 @@ jobs:
               chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
               ${sshcmd} timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
           fi
-      - uses: parallelworks/cancel-jobs
+      - name: Cancel Streaming
+        uses: parallelworks/cancel-jobs
         with:
           jobs:
             - stream_output
@@ -371,7 +374,8 @@ jobs:
               chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
               timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
           fi
-      - uses: parallelworks/cancel-jobs
+      - name: Cancel Streaming
+        uses: parallelworks/cancel-jobs
         with:
           jobs:
             - stream_output

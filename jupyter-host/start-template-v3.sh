@@ -205,7 +205,7 @@ elif which singularity >/dev/null 2>&1; then
     pid=$!
     echo "kill ${pid}" >> cancel.sh
 else
-    echoe "Need Docker or Singularity to start NGINX proxy"
+    echo "Need Docker or Singularity to start NGINX proxy"
 fi
 
 

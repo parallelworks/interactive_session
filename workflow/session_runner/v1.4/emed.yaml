@@ -63,7 +63,7 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - uses: marketplace/script_submitter/v3.6
+      - uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
           resource: ${{ inputs.resource }}
@@ -74,18 +74,19 @@ jobs:
           define_cleanup_script: true
           cleanup_script_path: ${{ inputs.service.rundir }}/cancel.sh
           scheduler: ${{ inputs.cluster.scheduler }}
-          use_scheduler_agent: false
           slurm:
-            is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
-            account: ${{ inputs.cluster.slurm.account }}
-            partition: ${{ inputs.cluster.slurm.partition }}
-            qos: ${{ inputs.cluster.slurm.qos }}
-            ntasks: ${{ inputs.cluster.slurm.ntasks }}
-            nodes: ${{ inputs.cluster.slurm.nodes }}
+            is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
+            slurm_options: ${{ inputs.cluster.slurm.slurm_options }}
+            partition_default: ${{ inputs.cluster.slurm.partition_default }}
+            partition_hpc4: ${{ inputs.cluster.slurm.partition_hpc4 }}
+            cpus_per_task: ${{ inputs.cluster.slurm.cpus_per_task }}
+            mem: ${{ inputs.cluster.slurm.mem }}
+            gres_gpu_default: ${{ inputs.cluster.slurm.gres_gpu_default }}
+            gres_gpu_hpc4: ${{ inputs.cluster.slurm.gres_gpu_hpc4 }}
             time: ${{ inputs.cluster.slurm.time }}
             scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
           pbs:
-            is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
+            is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
       - name: Notify job ended
         early-cancel: any-job-failed
@@ -124,6 +125,7 @@ jobs:
             echo "$(date) Failed to get target hostname"
             exit 1
           fi
+
 
   create_session:
     working-directory: ${{ inputs.service.rundir }}
@@ -165,7 +167,7 @@ jobs:
               
               if check_server; then
                   echo "$(date) Success: Server is listening on ${remote_host}:${remote_port}!"
-                  sleep 3
+                  sleep 30
                   exit 0
               elif [ -f job.ended ]; then
                   echo "$(date) Job was completed. Exiting... "
@@ -211,48 +213,86 @@ jobs:
           slurm:
             type: group
             label: SLURM Directives
-            hidden: ${{ inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
-            ignore: ${{ inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            hidden: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
             items:
-              is_enabled:
+              slurm_options:
+                type: dropdown
+                label: Select Cluster
+                optional: true
+                default: ''
+                options:
+                  - value: ''
+                    label: Default
+                  - value: 'hpc4'
+                    label: HPC4
+              is_disabled:
                 type: boolean
                 hidden: true
-                default: true
-                label: Is SLURM Enabled? Yes, unless the slurm section is hidden and ignored
-              account:
-                label: SLURM account
-                type: slurm-accounts
-                resource: ${{ inputs.resource }}
-                tooltip: '--account=value slurm directive'
-                ignore: ${{ 'existing' != inputs.resource.provider }}
-                hidden: ${{ .ignore }}
-              partition:
+                default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                label: Is SLURM disabled?
+              partition_default:
                 type: slurm-partitions
                 label: SLURM partition
+                ignore: ${{ 'hpc4' == inputs.cluster.slurm.slurm_options }}
+                hidden: ${{ .ignore }}
                 optional: true
                 resource: ${{ inputs.resource }}
-                tooltip: '--partition=value SLURM directive'
-              qos:
-                label: Quality of Service [QoS]
-                type: slurm-qos
-                resource: ${{ inputs.resource }}
-                tooltip: '--qos=value slurm directive'
-                ignore: ${{ 'existing' != inputs.resource.provider }}
+                tooltip: Select a partition from the drop down menu. Leave empty to let SLURM pick a partition.
+              partition_hpc4:
+                type: dropdown
+                label: SLURM partition
+                optional: true
+                tooltip: Select a partition from the drop down menu. Leave empty to let SLURM pick a partition.
+                ignore: ${{ 'hpc4' != inputs.cluster.slurm.slurm_options }}
                 hidden: ${{ .ignore }}
-              ntasks:
-                label: Number of tasks
+                default: normal
+                options:
+                  - normal
+                  - gpu
+                  - gpu-h200
+                  - gpu-quick
+                  - ht
+                  - large-mem
+                  - quick
+                  - test
+                  - unlimited
+              cpus_per_task:
                 type: number
+                label: CPUs per task
+                min: 1
+                max: 32
                 default: 1
-                tooltip: '--ntasks=value slurm directive'
+                tooltip: '--cpus-per-task=value slurm directive'
                 ignore: ${{ 'existing' != inputs.resource.provider }}
                 hidden: ${{ .ignore }}
-              nodes:
-                label: Number of nodes
+              mem:
+                type: string
+                label: Minimum total memory required
+                default: 8GB
+                tooltip: '--mem=value slurm directive'
+                hidden: ${{ 'existing' != inputs.resource.provider }}
+                ignore: ${{ .hidden }}
+                optional: true
+              gres_gpu_default:
                 type: number
-                default: 1
-                tooltip: '--nodes=value slurm directive'
-                ignore: ${{ 'existing' != inputs.resource.provider }}
+                label: Number of GPUs
+                ignore: ${{ ( inputs.cluster.slurm.partition_default != 'gpu' && inputs.cluster.slurm.partition_default != 'gpu-quick' ) || 'existing' != inputs.resource.provider  }}
                 hidden: ${{ .ignore }}
+                min: 1
+                max: 4
+                default: 1
+                tooltip: '--gres=gpu:X slurm directive'
+              gres_gpu_hpc4:
+                type: number
+                label: Number of GPUs
+                hidden: ${{ ( inputs.cluster.slurm.partition_hpc4 != 'gpu' && inputs.cluster.slurm.partition_hpc4 != 'gpu-quick' && inputs.cluster.slurm.partition_hpc4 != 'gpu-h200' ) || 'existing' != inputs.resource.provider  }}
+                ignore: ${{ .hidden }}
+                optional: ${{ .hidden }}
+                min: 1
+                max: 4
+                default: 1
+                tooltip: '--gres=gpu:X slurm directive'
               time:
                 label: Walltime
                 type: string
@@ -269,11 +309,11 @@ jobs:
             hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             items:
-              is_enabled:
+              is_disabled:
                 type: boolean
                 hidden: true
-                default: true
-                label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
+                default: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+                label: Is PBS disabled?
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor

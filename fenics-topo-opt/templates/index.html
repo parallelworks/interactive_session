@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FEniCS Topology Optimization</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        h1 { color: #333; }
+        .status-bar {
+            background: #fff; padding: 15px; border-radius: 8px;
+            margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .status-bar span { margin-right: 30px; font-size: 14px; }
+        .status-running { color: #2196F3; font-weight: bold; }
+        .status-complete { color: #4CAF50; font-weight: bold; }
+        .status-waiting { color: #FF9800; font-weight: bold; }
+        .status-initializing { color: #FF9800; font-weight: bold; }
+        .plot-container {
+            background: #fff; padding: 15px; border-radius: 8px;
+            margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .plot-container img { max-width: 100%; height: auto; }
+    </style>
+</head>
+<body>
+    <h1>FEniCS Topology Optimization</h1>
+
+    <div class="status-bar" id="status-bar">
+        <span>State: <span id="state" class="status-waiting">waiting</span></span>
+        <span>Iteration: <span id="iteration">0</span> / <span id="total">--</span></span>
+        <span>Compliance: <span id="compliance">--</span></span>
+        <span>Volume: <span id="volume">--</span></span>
+        <span>Change: <span id="change">--</span></span>
+    </div>
+
+    <div class="plot-container">
+        <h2>Density Field</h2>
+        <img id="density-img" src="/plot/density.png" alt="Density Field">
+    </div>
+
+    <div class="plot-container">
+        <h2>Convergence</h2>
+        <img id="convergence-img" src="/plot/convergence.png" alt="Convergence">
+    </div>
+
+    <script>
+        function refreshDashboard() {
+            var ts = new Date().getTime();
+            document.getElementById('density-img').src = '/plot/density.png?t=' + ts;
+            document.getElementById('convergence-img').src = '/plot/convergence.png?t=' + ts;
+
+            fetch('/api/status')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var el = document.getElementById('state');
+                    el.textContent = data.state || 'waiting';
+                    el.className = 'status-' + (data.state || 'waiting');
+                    document.getElementById('iteration').textContent = data.iteration || 0;
+                    document.getElementById('total').textContent = data.total_iterations || '--';
+                    document.getElementById('compliance').textContent =
+                        data.compliance ? data.compliance.toFixed(4) : '--';
+                    document.getElementById('volume').textContent =
+                        data.volume_fraction ? data.volume_fraction.toFixed(4) : '--';
+                    document.getElementById('change').textContent =
+                        data.change ? data.change.toFixed(6) : '--';
+
+                    if (data.state !== 'complete') {
+                        setTimeout(refreshDashboard, 3000);
+                    }
+                })
+                .catch(function() {
+                    setTimeout(refreshDashboard, 5000);
+                });
+        }
+
+        setTimeout(refreshDashboard, 3000);
+    </script>
+</body>
+</html>

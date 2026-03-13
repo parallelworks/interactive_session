@@ -56,7 +56,7 @@ jobs:
     needs:
       - preprocessing
     ssh:
-      remoteHost: ${{ inputs.resource.ip }}
+        remoteHost: ${{ inputs.resource.ip }}
     steps:
       - name: Get Partition
         run: |
@@ -68,10 +68,9 @@ jobs:
             echo "partition=${{ inputs.cluster.slurm.partition_tag_cloud }}" | tee -a $OUTPUTS
           fi
 
-      - uses: github/parallelworks/interactive_session@main
+      - uses: marketplace/session_runner/v1.4
         early-cancel: any-job-failed
         with:
-          $yaml: workflow/session_runner/v1.4/general.yaml
           session: ${{ sessions.session }}
           resource: ${{ inputs.resource }}
           cluster:

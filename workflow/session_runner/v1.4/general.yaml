@@ -8,7 +8,7 @@ jobs:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
       - name: Controller Preprocessing
-        run: | 
+        run: |
           set -x
           # This script prepares the target host and always runs in the controller node
           cp ${{ inputs.service.inputs_sh }} ${{ inputs.service.rundir }}/controller-preprocessing-${PW_JOB_ID}.sh
@@ -51,10 +51,6 @@ jobs:
           echo
           touch job.started
           EOF
-          if ! [ -f "${{ inputs.service.start_service_script }}" ]; then
-              echo "$(date) ERROR: Service start script not found at ${{ inputs.service.start_service_script }}"
-              exit 1
-          fi
           cat ${{ inputs.service.start_service_script }} >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
 
   script_submitter:
@@ -64,9 +60,10 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - uses: marketplace/script_submitter/v3.6
+      - uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
+          $yaml: workflow/script_submitter/v3.6/general.yaml
           resource: ${{ inputs.resource }}
           shebang: '#!/bin/bash'
           rundir: ${{ inputs.service.rundir }}
@@ -78,17 +75,11 @@ jobs:
           use_scheduler_agent: false
           slurm:
             is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
-            account: ${{ inputs.cluster.slurm.account }}
             partition: ${{ inputs.cluster.slurm.partition }}
-            qos: ${{ inputs.cluster.slurm.qos }}
-            cpus_per_task: ${{ inputs.cluster.slurm.cpus_per_task }}
-            nodes: ${{ inputs.cluster.slurm.nodes }}
-            gpus: ${{ inputs.cluster.slurm.gpus }}
-            time: ${{ inputs.cluster.slurm.time }}
             scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+            time: ${{ inputs.cluster.slurm.time }}
           pbs:
             is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
-            account: ${{ inputs.cluster.pbs.account }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
       - name: Notify job ended
         early-cancel: any-job-failed
@@ -97,6 +88,7 @@ jobs:
           pwd
           touch job.ended
           ls -lat job.ended
+
   wait_for_job_start:
     working-directory: ${{ inputs.service.rundir }}
     needs:
@@ -120,13 +112,14 @@ jobs:
         early-cancel: any-job-failed
         run: |
           set -x
-          HOSTNAME=$(cat HOSTNAME | cut -d'.' -f1)
+          HOSTNAME=$(cat HOSTNAME)
           echo "HOSTNAME=${HOSTNAME}" | tee -a $OUTPUTS
 
           if [ -z "${HOSTNAME}" ]; then
             echo "$(date) Failed to get target hostname"
             exit 1
           fi
+
 
   create_session:
     working-directory: ${{ inputs.service.rundir }}
@@ -168,7 +161,6 @@ jobs:
               
               if check_server; then
                   echo "$(date) Success: Server is listening on ${remote_host}:${remote_port}!"
-                  sleep 3
                   exit 0
               elif [ -f job.ended ]; then
                   echo "$(date) Job was completed. Exiting... "
@@ -200,7 +192,7 @@ jobs:
         tooltip: Resource to host the service
       cluster:
         hidden: ${{ inputs.resource.schedulerType == '' }}
-        ignore: ${{ inputs.resource.schedulerType == '' }}
+        ignore: ${{ inputs.resource.schedulerType == ''  }}
         type: group
         label: Compute Cluster Settings
         items:
@@ -222,47 +214,12 @@ jobs:
                 hidden: true
                 default: true
                 label: Is SLURM Enabled? Yes, unless the slurm section is hidden and ignored
-              account:
-                label: SLURM account
-                type: slurm-accounts
-                resource: ${{ inputs.resource }}
-                tooltip: '--account=value slurm directive'
-                ignore: ${{ 'existing' != inputs.resource.provider }}
-                hidden: ${{ .ignore }}
               partition:
                 type: slurm-partitions
                 label: SLURM partition
                 optional: true
                 resource: ${{ inputs.resource }}
-                tooltip: '--qos=partition slurm directive'
-              qos:
-                label: Quality of Service [QoS]
-                type: slurm-qos
-                resource: ${{ inputs.resource }}
-                tooltip: '--qos=value slurm directive'
-                ignore: ${{ 'existing' != inputs.resource.provider }}
-                hidden: ${{ .ignore }}
-              cpus_per_task:
-                label: CPUs per task
-                type: number
-                default: 1
-                tooltip: '--cpus-per-task= SLURM directive to set the number of CPUs per task'
-                ignore: ${{ 'existing' != inputs.resource.provider }}
-                hidden: ${{ .ignore }}
-              nodes:
-                label: Number of nodes
-                type: number
-                default: 1
-                tooltip: '--nodes=value slurm directive'
-                ignore: ${{ 'existing' != inputs.resource.provider }}
-                hidden: ${{ .ignore }}
-              gpus:
-                label: Number of GPUs
-                type: number
-                default: 0
-                tooltip: '--gres=gpu:value slurm directive'
-                ignore: ${{ 'existing' != inputs.resource.provider }}
-                hidden: ${{ .ignore }}
+                tooltip: Select a partition from the drop down menu.
               time:
                 label: Walltime
                 type: string
@@ -273,33 +230,21 @@ jobs:
                 optional: true
                 tooltip: |
                   Type in additional scheduler directives. 
-                default: |
-                  ##SBATCH --gres=gpu:4 # uncomment for gpus on onprem systems
-                  ##SBATCH --constraint=mla # uncomment for Navy and AFRL DSRC systems 
           pbs:
             type: group
             label: PBS Directives
-            hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
-            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+            hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             items:
               is_enabled:
                 type: boolean
                 hidden: true
                 default: true
                 label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
-              account:
-                label: Account
-                type: string
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
                 tooltip: Type the PBS scheduler directives
-                default: |
-                  #!/bin/bash
-                  #PBS -q HIE
-                  #PBS -l select=1:ncpus=92:mpiprocs=1:ngpus=1
-                  #PBS -l walltime=01:00:00
-                  #PBS -V    
       service:
         type: group
         label: Service
@@ -313,11 +258,6 @@ jobs:
             label: Controller Script
             type: string
             tooltip: Setup and installation script to run on controller node
-          cleanup_script:
-            label: Cleanup Script
-            type: string
-            tooltip: Script to clean up the service node after the session
-            default: cancel.sh
           inputs_sh:
             label: Inputs Script
             type: string

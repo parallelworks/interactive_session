@@ -66,6 +66,7 @@ jobs:
       - uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
+          $yaml: workflow/script_submitter/v1.4/general.yaml
           resource: ${{ inputs.resource }}
           shebang: '#!/bin/bash'
           rundir: ${{ inputs.service.rundir }}

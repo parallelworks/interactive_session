@@ -22,9 +22,13 @@ import dolfin
 
 def setup_problem(nelx, nely, load_type):
     """
-    Create mesh, function spaces, boundary conditions, and load.
+    Create mesh, function spaces, boundary conditions, and load specification.
 
-    Returns: mesh, V (displacement), D (density), bcs, f_load
+    Returns: mesh, V (displacement), D (density), bcs, load_info (dict)
+
+    load_info has one of two forms:
+      {"type": "point", "points": [(x, y, component, magnitude), ...]}
+      {"type": "boundary", "subdomain": SubDomain, "traction": (tx, ty)}
     """
     mesh = dolfin.RectangleMesh(
         dolfin.Point(0, 0), dolfin.Point(nelx, nely), nelx, nely
@@ -40,19 +44,11 @@ def setup_problem(nelx, nely, load_type):
 
         bcs = [dolfin.DirichletBC(V, dolfin.Constant((0, 0)), left_boundary)]
 
-        class PointLoad(dolfin.UserExpression):
-            def eval(self, values, x):
-                if dolfin.near(x[0], nelx) and abs(x[1] - nely / 2.0) < 1.5:
-                    values[0] = 0.0
-                    values[1] = -1.0
-                else:
-                    values[0] = 0.0
-                    values[1] = 0.0
-
-            def value_shape(self):
-                return (2,)
-
-        f_load = PointLoad(degree=0)
+        # PointSource: (x, y, component_index, magnitude)
+        load_info = {
+            "type": "point",
+            "points": [(float(nelx), float(nely) / 2.0, 1, -1.0)],
+        }
 
     elif load_type == "mbb_beam":
         # MBB beam: symmetry on left (ux=0), pin bottom-right (uy=0),
@@ -69,19 +65,10 @@ def setup_problem(nelx, nely, load_type):
         )
         bcs = [bc_left, bc_br]
 
-        class MBBLoad(dolfin.UserExpression):
-            def eval(self, values, x):
-                if dolfin.near(x[0], 0.0) and dolfin.near(x[1], nely):
-                    values[0] = 0.0
-                    values[1] = -1.0
-                else:
-                    values[0] = 0.0
-                    values[1] = 0.0
-
-            def value_shape(self):
-                return (2,)
-
-        f_load = MBBLoad(degree=0)
+        load_info = {
+            "type": "point",
+            "points": [(0.0, float(nely), 1, -1.0)],
+        }
 
     elif load_type == "bridge":
         # Bottom corners pinned, distributed load on top
@@ -99,19 +86,15 @@ def setup_problem(nelx, nely, load_type):
         )
         bcs = [bc_bl, bc_br]
 
-        class BridgeLoad(dolfin.UserExpression):
-            def eval(self, values, x):
-                if dolfin.near(x[1], nely):
-                    values[0] = 0.0
-                    values[1] = -1.0
-                else:
-                    values[0] = 0.0
-                    values[1] = 0.0
+        class TopEdge(dolfin.SubDomain):
+            def inside(self, x, on_boundary):
+                return on_boundary and dolfin.near(x[1], nely)
 
-            def value_shape(self):
-                return (2,)
-
-        f_load = BridgeLoad(degree=0)
+        load_info = {
+            "type": "boundary",
+            "subdomain": TopEdge(),
+            "traction": (0.0, -1.0),
+        }
 
     elif load_type == "half_wheel":
         # Center bottom support, distributed load on top
@@ -124,28 +107,25 @@ def setup_problem(nelx, nely, load_type):
             )
         ]
 
-        class HalfWheelLoad(dolfin.UserExpression):
-            def eval(self, values, x):
-                if dolfin.near(x[1], nely):
-                    values[0] = 0.0
-                    values[1] = -1.0
-                else:
-                    values[0] = 0.0
-                    values[1] = 0.0
+        class TopEdge(dolfin.SubDomain):
+            def inside(self, x, on_boundary):
+                return on_boundary and dolfin.near(x[1], nely)
 
-            def value_shape(self):
-                return (2,)
-
-        f_load = HalfWheelLoad(degree=0)
+        load_info = {
+            "type": "boundary",
+            "subdomain": TopEdge(),
+            "traction": (0.0, -1.0),
+        }
 
     else:
         raise ValueError(f"Unknown load_type: {load_type}")
 
-    return mesh, V, D, bcs, f_load
+    return mesh, V, D, bcs, load_info
 
 
-def solve_elasticity(V, D, rho, bcs, f_load, penal, E0=1.0, E_min=1e-9, nu=0.3):
+def solve_elasticity(V, D, rho, bcs, load_info, penal, E0=1.0, E_min=1e-9, nu=0.3):
     """Solve linear elasticity with SIMP-penalized stiffness."""
+    mesh = V.mesh()
     u = dolfin.TrialFunction(V)
     v = dolfin.TestFunction(V)
 
@@ -160,10 +140,26 @@ def solve_elasticity(V, D, rho, bcs, f_load, penal, E0=1.0, E_min=1e-9, nu=0.3):
         return lmbda * dolfin.div(u) * dolfin.Identity(2) + 2 * mu * epsilon(u)
 
     a = dolfin.inner(sigma(u), epsilon(v)) * dolfin.dx
-    L = dolfin.dot(f_load, v) * dolfin.dx
+
+    if load_info["type"] == "boundary":
+        boundaries = dolfin.MeshFunction(
+            "size_t", mesh, mesh.topology().dim() - 1, 0
+        )
+        load_info["subdomain"].mark(boundaries, 1)
+        ds = dolfin.Measure("ds", domain=mesh, subdomain_data=boundaries)
+        traction = dolfin.Constant(load_info["traction"])
+        L = dolfin.dot(traction, v) * ds(1)
+        A, b = dolfin.assemble_system(a, L, bcs)
+    else:
+        # Point loads — assemble with zero RHS, then add PointSource
+        L = dolfin.dot(dolfin.Constant((0.0, 0.0)), v) * dolfin.dx
+        A, b = dolfin.assemble_system(a, L, bcs)
+        for px, py, comp, mag in load_info["points"]:
+            ps = dolfin.PointSource(V.sub(comp), dolfin.Point(px, py), mag)
+            ps.apply(b)
 
     u_sol = dolfin.Function(V)
-    dolfin.solve(a == L, u_sol, bcs)
+    dolfin.solve(A, u_sol.vector(), b)
     return u_sol
 
 
@@ -207,10 +203,13 @@ def oc_update(D, rho, dc, volfrac, mesh):
     vol = np.array([cell.volume() for cell in dolfin.cells(mesh)])
     total_vol = vol.sum()
 
+    # Ensure sensitivities are strictly negative (numerical safeguard)
+    dc_arr = np.minimum(dc_arr, -1e-20)
+
     l1, l2 = 0.0, 1e9
     move = 0.2
 
-    while (l2 - l1) / (l2 + l1) > 1e-3:
+    while (l2 - l1) / (l2 + l1 + 1e-30) > 1e-3:
         lmid = 0.5 * (l2 + l1)
         rho_new = np.maximum(
             0.001,
@@ -247,7 +246,7 @@ def run_optimization(nelx, nely, volfrac, penal, num_iterations, load_type, resu
     with open(os.path.join(results_dir, "status.json"), "w") as f:
         json.dump(status, f)
 
-    mesh, V, D, bcs, f_load = setup_problem(nelx, nely, load_type)
+    mesh, V, D, bcs, load_info = setup_problem(nelx, nely, load_type)
     rho = dolfin.interpolate(dolfin.Constant(volfrac), D)
 
     convergence_file = os.path.join(results_dir, "convergence.csv")
@@ -257,7 +256,7 @@ def run_optimization(nelx, nely, volfrac, penal, num_iterations, load_type, resu
     for iteration in range(1, num_iterations + 1):
         t0 = time.time()
 
-        u_sol = solve_elasticity(V, D, rho, bcs, f_load, penal)
+        u_sol = solve_elasticity(V, D, rho, bcs, load_info, penal)
         compliance = compute_compliance(V, D, u_sol, rho, penal)
         dc = compute_sensitivity(D, u_sol, rho, penal)
         rho_new = oc_update(D, rho, dc, volfrac, mesh)

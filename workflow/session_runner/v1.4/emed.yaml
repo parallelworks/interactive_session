@@ -63,10 +63,9 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - uses: github/parallelworks/interactive_session@main
+      - uses: marketplace/script_submitter/v3.6
         early-cancel: any-job-failed
         with:
-          $yaml: workflow/script_submitter/v1.4/general.yaml
           resource: ${{ inputs.resource }}
           shebang: '#!/bin/bash'
           rundir: ${{ inputs.service.rundir }}

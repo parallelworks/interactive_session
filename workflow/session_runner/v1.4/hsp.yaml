@@ -38,6 +38,7 @@ jobs:
               trap - EXIT INT TERM HUP QUIT USR1 USR2 PIPE
               echo "$(date) Cleaning up..."
               mv cancel.sh cancel.sh.submitted
+              echo "echo Cleanup script was already executed" > cancel.sh
               bash cancel.sh.submitted
               kill -- -$$
           }
@@ -63,9 +64,10 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - uses: marketplace/script_submitter/v3.6
+      - uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
+          $yaml: workflow/script_submitter/v3.6/general.yaml
           resource: ${{ inputs.resource }}
           shebang: '#!/bin/bash'
           rundir: ${{ inputs.service.rundir }}
@@ -80,12 +82,14 @@ jobs:
             account: ${{ inputs.cluster.slurm.account }}
             partition: ${{ inputs.cluster.slurm.partition }}
             qos: ${{ inputs.cluster.slurm.qos }}
-            ntasks: ${{ inputs.cluster.slurm.ntasks }}
+            cpus_per_task: ${{ inputs.cluster.slurm.cpus_per_task }}
             nodes: ${{ inputs.cluster.slurm.nodes }}
+            gpus: ${{ inputs.cluster.slurm.gpus }}
             time: ${{ inputs.cluster.slurm.time }}
             scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
           pbs:
             is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
+            account: ${{ inputs.cluster.pbs.account }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
       - name: Notify job ended
         early-cancel: any-job-failed
@@ -231,7 +235,7 @@ jobs:
                 label: SLURM partition
                 optional: true
                 resource: ${{ inputs.resource }}
-                tooltip: '--partition=value SLURM directive'
+                tooltip: '--qos=partition slurm directive'
               qos:
                 label: Quality of Service [QoS]
                 type: slurm-qos
@@ -239,11 +243,11 @@ jobs:
                 tooltip: '--qos=value slurm directive'
                 ignore: ${{ 'existing' != inputs.resource.provider }}
                 hidden: ${{ .ignore }}
-              ntasks:
-                label: Number of tasks
+              cpus_per_task:
+                label: CPUs per task
                 type: number
                 default: 1
-                tooltip: '--ntasks=value slurm directive'
+                tooltip: '--cpus-per-task= SLURM directive to set the number of CPUs per task'
                 ignore: ${{ 'existing' != inputs.resource.provider }}
                 hidden: ${{ .ignore }}
               nodes:
@@ -251,6 +255,13 @@ jobs:
                 type: number
                 default: 1
                 tooltip: '--nodes=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              gpus:
+                label: Number of GPUs
+                type: number
+                default: 0
+                tooltip: '--gres=gpu:value slurm directive'
                 ignore: ${{ 'existing' != inputs.resource.provider }}
                 hidden: ${{ .ignore }}
               time:
@@ -263,21 +274,33 @@ jobs:
                 optional: true
                 tooltip: |
                   Type in additional scheduler directives. 
+                default: |
+                  ##SBATCH --gres=gpu:4 # uncomment for gpus on onprem systems
+                  ##SBATCH --constraint=mla # uncomment for Navy and AFRL DSRC systems 
           pbs:
             type: group
             label: PBS Directives
-            hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
-            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
             items:
               is_enabled:
                 type: boolean
                 hidden: true
                 default: true
                 label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
+              account:
+                label: Account
+                type: string
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
                 tooltip: Type the PBS scheduler directives
+                default: |
+                  #!/bin/bash
+                  #PBS -q HIE
+                  #PBS -l select=1:ncpus=92:mpiprocs=1:ngpus=1
+                  #PBS -l walltime=01:00:00
+                  #PBS -V    
       service:
         type: group
         label: Service
@@ -291,6 +314,11 @@ jobs:
             label: Controller Script
             type: string
             tooltip: Setup and installation script to run on controller node
+          cleanup_script:
+            label: Cleanup Script
+            type: string
+            tooltip: Script to clean up the service node after the session
+            default: cancel.sh
           inputs_sh:
             label: Inputs Script
             type: string

@@ -135,7 +135,7 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
-      - uses: marketplace/session_runner/v1.3
+      - uses: marketplace/session_runner/v1.4
         early-cancel: any-job-failed
         with:
           session: ${{ sessions.session }}
@@ -263,7 +263,7 @@ workflow/yamls/my-session/
 └── hsp_v4.yaml          # HSP clusters
 ```
 
-Each YAML uses the corresponding `session_runner` variant (e.g., `marketplace/session_runner/v1.3` resolves to the appropriate deployment). The differences are typically in scheduler directives, partition names, and cluster-specific environment setup in the `inputs.sh` generation.
+Each YAML uses the corresponding `session_runner` variant (e.g., `marketplace/session_runner/v1.4` resolves to the appropriate deployment). The differences are typically in scheduler directives, partition names, and cluster-specific environment setup in the `inputs.sh` generation.
 
 ## Existing Sessions as Reference
 

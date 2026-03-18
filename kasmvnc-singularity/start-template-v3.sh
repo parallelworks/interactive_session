@@ -116,7 +116,6 @@ unset PYTHONPATH PYTHONHOME PERL5LIB PERLLIB PERL5OPT
 
 set -x
 singularity run \
-    --writable-tmpfs \
     ${GPU_FLAG} \
     ${MOUNT_FLAGS} \
     --env BASE_PATH="${basepath}" \

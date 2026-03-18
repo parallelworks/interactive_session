@@ -149,6 +149,7 @@ run_xterm_loop(){
     done
 }
 
+export DISPLAY=":${XdisplayNumber}"
 run_xterm_loop | tee -a ${PW_PARENT_JOB_DIR}/xterm.out &
 run_xterm_pid=$!
 echo "kill ${run_xterm_pid} || true # run_xterm_loop" >> cancel.sh

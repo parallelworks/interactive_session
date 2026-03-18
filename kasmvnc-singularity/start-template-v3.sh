@@ -138,6 +138,8 @@ else
     WRITABLE_TMPFS_FLAG="--writable-tmpfs"
 fi
 
+mkdir -p $PWD/container_tmp
+
 set -x
 singularity run \
     ${WRITABLE_TMPFS_FLAG} ${USERNS_FLAG} ${ETC_ENV_FLAG} \

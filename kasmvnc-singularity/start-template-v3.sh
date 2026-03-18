@@ -156,6 +156,7 @@ echo "KasmVNC container started with PID ${kasmvnc_container_pid}"
 
 sleep 6  # Allow container to start
 
+export DISPLAY=":${XdisplayNumber}" 
 run_xterm_loop(){
     while true; do
         echo "$(date): Starting xterm"

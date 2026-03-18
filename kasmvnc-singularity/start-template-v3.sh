@@ -51,6 +51,20 @@ for port in $(seq ${minPort} ${maxPort} | shuf); do
     break
 done
 
+# Load singularity/apptainer if not already in PATH
+if ! command -v singularity &> /dev/null; then
+    if module load apptainer 2>/dev/null; then
+        echo "$(date) Loaded apptainer module"
+    elif module load singularity 2>/dev/null; then
+        echo "$(date) Loaded singularity module"
+    else
+        echo "$(date) ERROR: singularity/apptainer not found in PATH and could not be loaded via module" >&2
+        exit 1
+    fi
+else
+    echo "$(date) singularity already available in PATH"
+fi
+
 echo "$(date) Starting KasmVNC Container ..."
 
 # GPU flag

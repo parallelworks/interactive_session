@@ -52,25 +52,18 @@ for port in $(seq ${minPort} ${maxPort} | shuf); do
 done
 
 # Load singularity/apptainer if not already in PATH
-# Prefer apptainer (Singularity successor, typically has proper setuid config)
-SINGULARITY_CMD=""
-if command -v apptainer &> /dev/null; then
-    SINGULARITY_CMD=apptainer
-    echo "$(date) apptainer already available in PATH"
-elif command -v singularity &> /dev/null; then
-    SINGULARITY_CMD=singularity
-    echo "$(date) singularity already available in PATH"
-elif module load apptainer 2>/dev/null && command -v apptainer &> /dev/null; then
-    SINGULARITY_CMD=apptainer
-    echo "$(date) Loaded apptainer module"
-elif module load singularity 2>/dev/null && command -v singularity &> /dev/null; then
-    SINGULARITY_CMD=singularity
-    echo "$(date) Loaded singularity module"
+if ! command -v singularity &> /dev/null; then
+    if module load apptainer 2>/dev/null; then
+        echo "$(date) Loaded apptainer module"
+    elif module load singularity 2>/dev/null; then
+        echo "$(date) Loaded singularity module"
+    else
+        echo "$(date) ERROR: singularity/apptainer not found in PATH and could not be loaded via module" >&2
+        exit 1
+    fi
 else
-    echo "$(date) ERROR: singularity/apptainer not found in PATH and could not be loaded via module" >&2
-    exit 1
+    echo "$(date) singularity already available in PATH"
 fi
-echo "$(date) Using container runtime: ${SINGULARITY_CMD}"
 
 echo "$(date) Starting KasmVNC Container ..."
 
@@ -122,8 +115,9 @@ echo "rm -rf $PWD/container_tmp" >> cancel.sh
 unset PYTHONPATH PYTHONHOME PERL5LIB PERLLIB PERL5OPT
 
 set -x
-${SINGULARITY_CMD} run \
-     --userns \
+singularity run \
+    --userns \
+    --writable-tmpfs \
     ${GPU_FLAG} \
     ${MOUNT_FLAGS} \
     --env BASE_PATH="${basepath}" \

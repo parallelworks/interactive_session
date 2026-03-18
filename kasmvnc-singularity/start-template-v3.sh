@@ -121,21 +121,19 @@ echo "rm -rf $PWD/container_tmp" >> cancel.sh
 unset PYTHONPATH PYTHONHOME PERL5LIB PERLLIB PERL5OPT
 
 
-
 USERNS_FLAG=""
 WRITABLE_TMPFS_FLAG=""
-if stat -f -c %T "$PWD" 2>/dev/null | grep -qi lustre; then
-    USERNS_FLAG="--userns"
-else
+if ! stat -f -c %T "$PWD" 2>/dev/null | grep -qi lustre; then
     WRITABLE_TMPFS_FLAG="--writable-tmpfs"
+else
+    USERNS_FLAG="--userns"
 fi
 
 set -x
 singularity run \
-    ${USERNS_FLAG} \
+    ${WRITABLE_TMPFS_FLAG} ${USERNS_FLAG} \
     ${GPU_FLAG} \
     ${MOUNT_FLAGS} \
-    ${WRITABLE_TMPFS_FLAG} \
     --env BASE_PATH="${basepath}" \
     --env NGINX_PORT="${service_port}" \
     --env KASM_PORT=$(pw agent open-port) \

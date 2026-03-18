@@ -123,10 +123,10 @@ unset PYTHONPATH PYTHONHOME PERL5LIB PERLLIB PERL5OPT
 
 USERNS_FLAG=""
 WRITABLE_TMPFS_FLAG=""
-if ! stat -f -c %T "$PWD" 2>/dev/null | grep -qi lustre; then
-    WRITABLE_TMPFS_FLAG="--writable-tmpfs"
-else
+if [[ "$(hostname)" == *narwhal* ]]; then
     USERNS_FLAG="--userns"
+else
+    WRITABLE_TMPFS_FLAG="--writable-tmpfs"
 fi
 
 set -x

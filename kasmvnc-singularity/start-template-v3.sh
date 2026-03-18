@@ -120,6 +120,15 @@ echo "rm -rf $PWD/container_tmp" >> cancel.sh
 # Unset host Python/Perl env vars that corrupt the container's runtime
 unset PYTHONPATH PYTHONHOME PERL5LIB PERLLIB PERL5OPT
 
+# Only bind /etc/environment if it's safe (simple key=value, no shell control flow).
+# Some systems have shell syntax in /etc/environment that breaks Singularity's 95-apps.sh.
+ETC_ENV_FLAG=""
+if [ -f /etc/environment ] && ! grep -qE '^\s*(if|for|while|case|do|then|function)\b' /etc/environment 2>/dev/null; then
+    ETC_ENV_FLAG="--bind /etc/environment:/etc/environment:ro"
+else
+    echo "$(date) WARNING: Skipping /etc/environment bind (file missing or contains shell syntax)"
+fi
+
 
 USERNS_FLAG=""
 WRITABLE_TMPFS_FLAG=""
@@ -131,7 +140,7 @@ fi
 
 set -x
 singularity run \
-    ${WRITABLE_TMPFS_FLAG} ${USERNS_FLAG} \
+    ${WRITABLE_TMPFS_FLAG} ${USERNS_FLAG} ${ETC_ENV_FLAG} \
     ${GPU_FLAG} \
     ${MOUNT_FLAGS} \
     --env BASE_PATH="${basepath}" \
@@ -140,7 +149,6 @@ singularity run \
     --env VNC_DISPLAY="${XdisplayNumber}" \
     --bind /etc/passwd:/etc/passwd:ro \
     --bind /etc/group:/etc/group:ro \
-    --bind /etc/environment:/etc/environment:ro \
     --bind $PWD/empty:/etc/nginx/conf.d/default.conf \
     --bind $PWD/error.log:/var/log/nginx/error.log \
     --bind $PWD/container_tmp:/tmp \

@@ -123,6 +123,7 @@ unset PYTHONPATH PYTHONHOME PERL5LIB PERLLIB PERL5OPT
 
 set -x
 ${SINGULARITY_CMD} run \
+     --userns \
     ${GPU_FLAG} \
     ${MOUNT_FLAGS} \
     --env BASE_PATH="${basepath}" \

@@ -111,6 +111,9 @@ chmod 666 error.log
 mkdir -p $PWD/container_tmp
 echo "rm -rf $PWD/container_tmp" >> cancel.sh
 
+# Unset host Python/Perl env vars that corrupt the container's runtime
+unset PYTHONPATH PYTHONHOME PERL5LIB PERLLIB PERL5OPT
+
 set -x
 singularity run \
     --writable-tmpfs \
@@ -146,6 +149,7 @@ run_xterm_loop(){
     done
 }
 
+export DISPLAY=":${XdisplayNumber}"
 run_xterm_loop | tee -a ${PW_PARENT_JOB_DIR}/xterm.out &
 run_xterm_pid=$!
 echo "kill ${run_xterm_pid} || true # run_xterm_loop" >> cancel.sh

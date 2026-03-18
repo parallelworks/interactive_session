@@ -20,7 +20,7 @@ echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 echo "mv cancel.sh cancel.sh.executed" >> cancel.sh
 
-# Find an available display port
+
 # Find an available display port
 minPort=5901
 maxPort=5999
@@ -28,8 +28,14 @@ for port in $(seq ${minPort} ${maxPort} | shuf); do
     displayNumber=${port: -2}
     XdisplayNumber=${displayNumber#0}
     
-    # Check if port is in use (use || true to prevent exit on no match)
+    # Check if VNC port (5900+display) is in use
     if netstat -aln | grep -q "LISTEN.*:${port}\b" 2>/dev/null; then
+        continue
+    fi
+    
+    # Check if X11 TCP port (6000+display) is in use (e.g. SSH X11 forwarding)
+    x11Port=$((6000 + XdisplayNumber))
+    if netstat -aln | grep -q "LISTEN.*:${x11Port}\b" 2>/dev/null; then
         continue
     fi
     
@@ -114,11 +120,19 @@ echo "rm -rf $PWD/container_tmp" >> cancel.sh
 # Unset host Python/Perl env vars that corrupt the container's runtime
 unset PYTHONPATH PYTHONHOME PERL5LIB PERLLIB PERL5OPT
 
+
+
+WRITABLE_TMPFS_FLAG=""
+if ! stat -f -c %T "$PWD" 2>/dev/null | grep -qi lustre; then
+    WRITABLE_TMPFS_FLAG="--writable-tmpfs"
+fi
+
 set -x
 singularity run \
     --userns \
     ${GPU_FLAG} \
     ${MOUNT_FLAGS} \
+    ${WRITABLE_TMPFS_FLAG} \
     --env BASE_PATH="${basepath}" \
     --env NGINX_PORT="${service_port}" \
     --env KASM_PORT=$(pw agent open-port) \

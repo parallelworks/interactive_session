@@ -20,7 +20,7 @@ echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 echo "mv cancel.sh cancel.sh.executed" >> cancel.sh
 
-# Find an available display port
+
 # Find an available display port
 minPort=5901
 maxPort=5999
@@ -28,8 +28,14 @@ for port in $(seq ${minPort} ${maxPort} | shuf); do
     displayNumber=${port: -2}
     XdisplayNumber=${displayNumber#0}
     
-    # Check if port is in use (use || true to prevent exit on no match)
+    # Check if VNC port (5900+display) is in use
     if netstat -aln | grep -q "LISTEN.*:${port}\b" 2>/dev/null; then
+        continue
+    fi
+    
+    # Check if X11 TCP port (6000+display) is in use (e.g. SSH X11 forwarding)
+    x11Port=$((6000 + XdisplayNumber))
+    if netstat -aln | grep -q "LISTEN.*:${x11Port}\b" 2>/dev/null; then
         continue
     fi
     
@@ -76,7 +82,7 @@ else
     echo "GPU support disabled"
 fi
 
-mount_directories="/p/home /p/work /p/work1 /p/app /p/cwfs /scratch /run/munge /etc/pbs.conf /var/spool/pbs /opt/pbs ${container_mount_paths}"
+mount_directories="${HOME} /p/work /p/work1 /p/app /p/cwfs /scratch /run/munge /etc/pbs.conf /var/spool/pbs /opt/pbs ${container_mount_paths}"
 
 # Function to build mount flags for existing directories
 build_mount_flags() {
@@ -111,12 +117,35 @@ chmod 666 error.log
 mkdir -p $PWD/container_tmp
 echo "rm -rf $PWD/container_tmp" >> cancel.sh
 
-# Unset host Python/Perl env vars that corrupt the container's runtime
-unset PYTHONPATH PYTHONHOME PERL5LIB PERLLIB PERL5OPT
+# Unset host env vars that corrupt the container's runtime.
+# On Cray EX systems, LD_LIBRARY_PATH carries PE paths (libsci, mpich, cce) that
+# cause Python/Perl inside the container to load incompatible native libraries.
+# PYTHONSTARTUP points to a host file that doesn't exist in the container.
+unset PYTHONPATH PYTHONHOME PERL5LIB PERLLIB PERL5OPT PYTHONSTARTUP LD_LIBRARY_PATH
+
+# Only bind /etc/environment if it's safe (simple key=value, no shell control flow).
+# Some systems have shell syntax in /etc/environment that breaks Singularity's 95-apps.sh.
+ETC_ENV_FLAG=""
+if [ -f /etc/environment ] && ! grep -qE '^\s*(if|for|while|case|do|then|function)\b' /etc/environment 2>/dev/null; then
+    ETC_ENV_FLAG="--bind /etc/environment:/etc/environment:ro"
+else
+    echo "$(date) WARNING: Skipping /etc/environment bind (file missing or contains shell syntax)"
+fi
+
+
+USERNS_FLAG=""
+WRITABLE_TMPFS_FLAG=""
+if [[ "$(hostname)" == *narwhal* ]]; then
+    USERNS_FLAG="--userns"
+else
+    WRITABLE_TMPFS_FLAG="--writable-tmpfs"
+fi
+
+mkdir -p $PWD/container_tmp
 
 set -x
 singularity run \
-    --writable-tmpfs \
+    ${WRITABLE_TMPFS_FLAG} ${USERNS_FLAG} ${ETC_ENV_FLAG} \
     ${GPU_FLAG} \
     ${MOUNT_FLAGS} \
     --env BASE_PATH="${basepath}" \
@@ -125,7 +154,6 @@ singularity run \
     --env VNC_DISPLAY="${XdisplayNumber}" \
     --bind /etc/passwd:/etc/passwd:ro \
     --bind /etc/group:/etc/group:ro \
-    --bind /etc/environment:/etc/environment:ro \
     --bind $PWD/empty:/etc/nginx/conf.d/default.conf \
     --bind $PWD/error.log:/var/log/nginx/error.log \
     --bind $PWD/container_tmp:/tmp \
@@ -139,8 +167,9 @@ set +x
 echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
 echo "KasmVNC container started with PID ${kasmvnc_container_pid}"
 
-sleep 6  # Allow container to start
+sleep 30  # Allow container to start
 
+export DISPLAY=":${XdisplayNumber}" 
 run_xterm_loop(){
     while true; do
         echo "$(date): Starting xterm"

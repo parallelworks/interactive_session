@@ -82,7 +82,7 @@ else
     echo "GPU support disabled"
 fi
 
-mount_directories="/p/work1 /p/app /p/cwfs /scratch /run/munge /etc/pbs.conf /var/spool/pbs /opt/pbs ${container_mount_paths}"
+mount_directories="${HOME} /p/work /p/work1 /p/app /p/cwfs /scratch /run/munge /etc/pbs.conf /var/spool/pbs /opt/pbs ${container_mount_paths}"
 
 # Function to build mount flags for existing directories
 build_mount_flags() {

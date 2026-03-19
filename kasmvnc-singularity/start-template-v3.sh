@@ -117,8 +117,11 @@ chmod 666 error.log
 mkdir -p $PWD/container_tmp
 echo "rm -rf $PWD/container_tmp" >> cancel.sh
 
-# Unset host Python/Perl env vars that corrupt the container's runtime
-unset PYTHONPATH PYTHONHOME PERL5LIB PERLLIB PERL5OPT
+# Unset host env vars that corrupt the container's runtime.
+# On Cray EX systems, LD_LIBRARY_PATH carries PE paths (libsci, mpich, cce) that
+# cause Python/Perl inside the container to load incompatible native libraries.
+# PYTHONSTARTUP points to a host file that doesn't exist in the container.
+unset PYTHONPATH PYTHONHOME PERL5LIB PERLLIB PERL5OPT PYTHONSTARTUP LD_LIBRARY_PATH
 
 # Only bind /etc/environment if it's safe (simple key=value, no shell control flow).
 # Some systems have shell syntax in /etc/environment that breaks Singularity's 95-apps.sh.

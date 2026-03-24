@@ -148,6 +148,8 @@ jobs:
                   - large-mem
                   - quick
                   - test
+                  - test-cpu
+                  - test-gpu
                   - unlimited
               cpus_per_task:
                 type: number

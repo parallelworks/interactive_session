@@ -161,10 +161,12 @@ jobs:
                 type: editor
                 optional: true
                 tooltip: |
-                  Type in additional scheduler directives. 
+                  Add extra SLURM directives, one per line, using the #SBATCH prefix. For example:
+                  #SBATCH --exclusive
+                  #SBATCH --nodelist=<node-name>
                 default: |
                   ##SBATCH --gres=gpu:4 # uncomment for gpus on onprem systems
-                  ##SBATCH --constraint=mla # uncomment for Navy and AFRL DSRC systems 
+                  ##SBATCH --constraint=mla # uncomment for Navy and AFRL DSRC systems
           pbs:
             type: group
             label: PBS Directives
@@ -183,7 +185,10 @@ jobs:
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
-                tooltip: Type the PBS scheduler directives
+                tooltip: |
+                  Add extra PBS directives, one per line, using the #PBS prefix. For example:
+                  #PBS -l mem=16gb
+                  #PBS -l ngpus=1
                 default: |
                   #!/bin/bash
                   #PBS -q HIE

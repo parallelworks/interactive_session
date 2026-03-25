@@ -75,8 +75,6 @@ if [ -z $(which jupyter-lab 2> /dev/null) ]; then
     exit 1
 fi
 
-export XDG_RUNTIME_DIR=""
-
 # Generate sha:
 if [ -z "${service_password}" ]; then
     echo "No password was specified"
@@ -238,6 +236,7 @@ fi
 ####################
 # START JUPYTERLAB #
 ####################
+export XDG_RUNTIME_DIR=""
 
 if [ -z ${service_notebook_dir} ]; then
     service_notebook_dir="/"

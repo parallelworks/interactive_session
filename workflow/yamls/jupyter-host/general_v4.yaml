@@ -125,7 +125,9 @@ jobs:
                 type: editor
                 optional: true
                 tooltip: |
-                  Type in additional scheduler directives. 
+                  Add extra SLURM directives, one per line, using the #SBATCH prefix. For example:
+                  #SBATCH --exclusive
+                  #SBATCH --nodelist=<node-name>
           pbs:
             type: group
             label: PBS Directives
@@ -140,7 +142,10 @@ jobs:
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
-                tooltip: Type the PBS scheduler directives
+                tooltip: |
+                  Add extra PBS directives, one per line, using the #PBS prefix. For example:
+                  #PBS -l mem=16gb
+                  #PBS -l ngpus=1
       service:
         type: group
         label: Jupyter Notebook Settings

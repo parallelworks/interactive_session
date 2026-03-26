@@ -23,7 +23,7 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
-      - uses: marketplace/session_runner/v1.4
+      - uses: marketplace/script_submitter/v3.5
         early-cancel: any-job-failed
         with:
           session: ${{ sessions.session }}

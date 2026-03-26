@@ -9,7 +9,7 @@ When creating a new interactive session workflow, the YAML will be named `[deplo
 ## General Requirements
 
 1. DO NOT add k8s support - create only the standard deployment workflow
-2. Use the session_runner subworkflow (marketplace/session_runner/v1.4) for deployment
+2. Use the session_runner subworkflow (github/parallelworks/interactive_session@mai with $yaml: workflow/session_runner/v1.4/<deployment>.yaml) for deployment
 3. Follow the existing v4 session pattern with preprocessing + session_runner jobs
 4. Ask the user which deployment target to use (general/emed/hsp/noaa) if not specified
 
@@ -51,7 +51,7 @@ When creating a new interactive session workflow, the YAML will be named `[deplo
        - Uses `remoteHost: ${{ inputs.cluster.resource.ip }}`
      - `session_runner` job that:
        - Depends on preprocessing (`needs: [preprocessing]`)
-       - Uses `marketplace/session_runner/v1.4`
+       - Uses `github/parallelworks/interactive_session@main` with `$yaml: workflow/session_runner/v1.4/<deployment>.yaml`
        - Passes session, resource, cluster (slurm/pbs settings), and service configuration
        - Service config must include:
          - `start_service_script: ${PW_PARENT_JOB_DIR}/[service-name]/start-template-v3.sh`

@@ -26,6 +26,7 @@ jobs:
       - uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
+          $yaml: workflow/session_runner/v1.4/general.yaml
           session: ${{ sessions.session }}
           resource: ${{ inputs.cluster.resource }}
           cluster:

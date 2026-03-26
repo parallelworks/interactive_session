@@ -173,7 +173,21 @@ export DISPLAY=":${XdisplayNumber}"
 run_xterm_loop(){
     while true; do
         echo "$(date): Starting xterm"
-        ${service_parent_install_dir}/xterm -fa "DejaVu Sans Mono" -fs 12
+        ${service_parent_install_dir}/xterm -fa "DejaVu Sans Mono" -fs 12 -e bash -c '
+printf "\033[1;36m"
+printf "╔══════════════════════════════════════════════════════════════╗\n"
+printf "║              Welcome to your Interactive Session             ║\n"
+printf "╚══════════════════════════════════════════════════════════════╝\n"
+printf "\033[0m\n"
+printf "\033[1mThis terminal is running directly on the compute host.\033[0m\n"
+printf "If you close it, it will automatically reopen.\n\n"
+printf "\033[1mThe desktop environment is running inside a container.\033[0m\n"
+printf "The desktop you see in your browser is served from within that container.\n\n"
+printf "\033[1mYou can launch applications directly on the host from here.\033[0m\n"
+printf "For example, to open Firefox on the host:\n"
+printf "  \033[1;32mfirefox &\033[0m\n\n"
+printf "────────────────────────────────────────────────────────────────\n\n"
+exec bash'
         sleep 1
     done
 }

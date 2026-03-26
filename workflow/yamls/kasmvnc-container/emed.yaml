@@ -70,7 +70,7 @@ jobs:
             scheduler: ${{ inputs.cluster.scheduler }}
             slurm:
               slurm_options: ${{ inputs.cluster.slurm.slurm_options }}
-              is_disabled: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+              is_disabled: ${{ inputs.cluster.resource.schedulerType != 'slurm'  || inputs.scheduler == false }}
               partition_default: ${{ inputs.cluster.slurm.partition_default }}
               partition_hpc4: ${{ inputs.cluster.slurm.partition_hpc4 }}
               cpus_per_task: ${{ inputs.cluster.slurm.cpus_per_task }}
@@ -125,8 +125,8 @@ jobs:
           slurm:
             type: group
             label: SLURM Directives
-            hidden: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
-            ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+            hidden: ${{ inputs.cluster.resource.schedulerType != 'slurm'  || inputs.scheduler == false }}
+            ignore: ${{ inputs.cluster.resource.schedulerType != 'slurm'  || inputs.scheduler == false }}
             items:
               slurm_options:
                 type: dropdown
@@ -141,7 +141,7 @@ jobs:
               is_disabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+                default: ${{ inputs.cluster.resource.schedulerType != 'slurm'  || inputs.scheduler == false }}
                 label: Is SLURM disabled?
               partition_default:
                 type: slurm-partitions

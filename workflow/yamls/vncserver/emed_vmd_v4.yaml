@@ -74,7 +74,7 @@ jobs:
             scheduler: ${{ inputs.cluster.scheduler }}
             slurm:
               slurm_options: ${{ inputs.cluster.slurm.slurm_options }}
-              is_disabled: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+              is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
               partition_default: ${{ inputs.cluster.slurm.partition_default }}
               partition_hpc4: ${{ inputs.cluster.slurm.partition_hpc4 }}
               cpus_per_task: ${{ inputs.cluster.slurm.cpus_per_task }}
@@ -84,7 +84,7 @@ jobs:
               time: ${{ inputs.cluster.slurm.time }}
               scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }} 
             pbs:
-              is_disabled: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+              is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
               scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
           service:
             start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/start-template-v3.sh
@@ -119,8 +119,8 @@ jobs:
           slurm:
             type: group
             label: SLURM Directives
-            hidden: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
-            ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+            hidden: ${{ inputs.cluster.resource.schedulerType != 'slurm'  || inputs.cluster.scheduler == false  }}
+            ignore: ${{ inputs.cluster.resource.schedulerType != 'slurm'  || inputs.cluster.scheduler == false  }}
             items:
               slurm_options:
                 type: dropdown
@@ -132,11 +132,11 @@ jobs:
                     label: Default
                   - value: 'hpc4'
                     label: HPC4
-              is_disabled:
+              is_enabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
-                label: Is SLURM disabled?
+                default: true
+                label: Is SLURM Enabled? Yes, unless the slurm section is hidden and ignored
               partition_default:
                 type: slurm-partitions
                 label: SLURM partition
@@ -216,14 +216,14 @@ jobs:
           pbs:
             type: group
             label: PBS Directives
-            hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
-            ignore: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+            hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             items:
-              is_disabled:
+              is_enabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
-                label: Is PBS disabled?
+                default: true
+                label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor

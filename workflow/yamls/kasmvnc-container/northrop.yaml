@@ -62,7 +62,7 @@ jobs:
           cluster:
             scheduler: ${{ inputs.cluster.scheduler }}
             slurm:
-              is_disabled: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
+              is_disabled: ${{ inputs.cluster.resource.schedulerType != 'slurm'  || inputs.cluster.scheduler == false  }}
               partition: ${{ inputs.cluster.slurm.partition }}
               scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
               time: ${{ inputs.cluster.slurm.time }}

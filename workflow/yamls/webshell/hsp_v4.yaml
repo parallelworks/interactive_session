@@ -60,7 +60,7 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - uses: github/parallelworks/interactive_session@main
+      - uses: marketplace/session_runner/v1.4
         early-cancel: any-job-failed
         with:
           session: ${{ sessions.session }}

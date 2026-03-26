@@ -176,7 +176,7 @@ run_xterm_loop(){
         ${service_parent_install_dir}/xterm -fa "DejaVu Sans Mono" -fs 12 -e bash -c '
 printf "\033[1;36m"
 printf "╔══════════════════════════════════════════════════════════════╗\n"
-printf "║              Welcome to your Interactive Session             ║\n"
+printf "║              Welcome to your Remote Desktop Session          ║\n"
 printf "╚══════════════════════════════════════════════════════════════╝\n"
 printf "\033[0m\n"
 printf "\033[1mThis terminal is running directly on the compute host.\033[0m\n"

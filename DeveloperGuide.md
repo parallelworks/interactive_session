@@ -144,7 +144,7 @@ jobs:
           cluster:
             scheduler: ${{ inputs.cluster.scheduler }}
             slurm:
-              is_disabled: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+              is_disabled: ${{ inputs.cluster.resource.schedulerType != 'slurm'  || inputs.cluster.scheduler == false }}
               partition: ${{ inputs.cluster.slurm.partition }}
               scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
               time: ${{ inputs.cluster.slurm.time }}
@@ -178,12 +178,12 @@ jobs:
           slurm:
             type: group
             label: SLURM Directives
-            hidden: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            hidden: ${{ inputs.cluster.resource.schedulerType != 'slurm'  || inputs.cluster.scheduler == false }}
             items:
               is_disabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+                default: ${{ inputs.cluster.resource.schedulerType != 'slurm'  || inputs.cluster.scheduler == false }}
               partition:
                 type: slurm-partitions
                 label: SLURM partition

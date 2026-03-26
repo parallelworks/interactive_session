@@ -101,8 +101,8 @@ jobs:
           slurm:
             type: group
             label: SLURM Directives
-            hidden: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
-            ignore: ${{ inputs.cluster.resource.provider == 'existing' && inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false  }}
+            hidden: ${{ inputs.cluster.resource.schedulerType != 'slurm'  || inputs.cluster.scheduler == false  }}
+            ignore: ${{ inputs.cluster.resource.schedulerType != 'slurm'  || inputs.cluster.scheduler == false  }}
             items:
               is_enabled:
                 type: boolean

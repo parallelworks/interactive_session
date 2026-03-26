@@ -76,7 +76,7 @@ jobs:
           cleanup_script_path: ${{ inputs.service.rundir }}/cancel.sh
           scheduler: ${{ inputs.cluster.scheduler }}
           slurm:
-            is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
+            is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
             slurm_options: ${{ inputs.cluster.slurm.slurm_options }}
             partition_default: ${{ inputs.cluster.slurm.partition_default }}
             partition_hpc4: ${{ inputs.cluster.slurm.partition_hpc4 }}
@@ -87,7 +87,7 @@ jobs:
             time: ${{ inputs.cluster.slurm.time }}
             scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
           pbs:
-            is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
+            is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
       - name: Notify job ended
         early-cancel: any-job-failed
@@ -227,11 +227,11 @@ jobs:
                     label: Default
                   - value: 'hpc4'
                     label: HPC4
-              is_disabled:
+              is_enabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
-                label: Is SLURM disabled?
+                default: true
+                label: Is SLURM Enabled? Yes, unless the slurm section is hidden and ignored
               partition_default:
                 type: slurm-partitions
                 label: SLURM partition
@@ -314,11 +314,11 @@ jobs:
             hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             items:
-              is_disabled:
+              is_enabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
-                label: Is PBS disabled?
+                default: true
+                label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor

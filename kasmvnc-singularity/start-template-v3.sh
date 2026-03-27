@@ -167,7 +167,7 @@ set +x
 echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
 echo "KasmVNC container started with PID ${kasmvnc_container_pid}"
 
-sleep 30  # Allow container to start
+sleep 45  # Allow container to start
 
 xauthority_file=$(find container_tmp -name .Xauthority 2>/dev/null | head -1)
 if [ -n "${xauthority_file}" ]; then

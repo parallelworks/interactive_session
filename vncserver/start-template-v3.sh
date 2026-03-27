@@ -377,7 +377,7 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     # KasmVNC #
     ###########
     export kasmvnc_port=$(pw agent open-port)
-    mkdir -p /tmp/.X11-unix
+    mkdir -p ${PWD}/tmp/.X11-unix
     mkdir -p ${PWD}/.run
     chmod 700 ${PWD}/.run
     export XDG_RUNTIME_DIR=${PWD}/.run
@@ -504,7 +504,8 @@ sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
     vncserver_cmd="${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} \
         ${desktop_arg} \
         -websocketPort ${kasmvnc_port} \
-        -rfbport ${displayPort}"
+        -rfbport ${displayPort} \
+        -tmpdir ${PWD}/tmp"
 
     echo Running:
     echo ${vncserver_cmd}

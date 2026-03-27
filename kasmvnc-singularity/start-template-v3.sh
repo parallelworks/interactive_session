@@ -39,8 +39,14 @@ for port in $(seq ${minPort} ${maxPort} | shuf); do
         continue
     fi
     
-    # Check for X11 socket/lock files
+    # Check for X11 socket/lock files (filesystem and abstract Unix domain sockets)
+    # Abstract sockets are held in kernel namespace and won't appear under /tmp/.X11-unix/
+    # but are visible via ss -xl; Singularity shares the host network namespace so the
+    # container would collide with them.
     if [ -e "/tmp/.X11-unix/X${XdisplayNumber}" ] || [ -e "/tmp/.X${XdisplayNumber}-lock" ]; then
+        continue
+    fi
+    if ss -xl 2>/dev/null | grep -qE "\.X11-unix/X${XdisplayNumber}$"; then
         continue
     fi
     

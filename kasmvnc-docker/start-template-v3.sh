@@ -137,18 +137,19 @@ echo "kill ${kasmvnc_container_pid} | true #kasmvnc_container_pid" >> cancel.sh
 echo "$(date) KasmVNC container started with PID ${kasmvnc_container_pid}"
 
 echo "$(date) Copy .Xauthority from container to host..."
+mkdir -p ${PWD}/tmp
 for i in $(seq 1 30); do
-    if ${docker_cmd} cp "${container_name}:/home/packer/.Xauthority" "/tmp/.xauth${XdisplayNumber}" \
-       || ${docker_cmd} cp "${container_name}:/home/metauser/.Xauthority" "/tmp/.xauth${XdisplayNumber}"
+    if ${docker_cmd} cp "${container_name}:/home/packer/.Xauthority" "${PWD}/tmp/.xauth${XdisplayNumber}" \
+       || ${docker_cmd} cp "${container_name}:/home/metauser/.Xauthority" "${PWD}/tmp/.xauth${XdisplayNumber}"
     then
         break
     fi
     echo "$(date) Attempt $i/30 failed, retrying in 2s..."
     sleep 2
 done
-sudo chown "$USER" "/tmp/.xauth${XdisplayNumber}" || chown "$USER" "/tmp/.xauth${XdisplayNumber}"
-echo "rm /tmp/.xauth${XdisplayNumber}" >> cancel.sh
-export XAUTHORITY=/tmp/.xauth${XdisplayNumber}
+sudo chown "$USER" "${PWD}/tmp/.xauth${XdisplayNumber}" || chown "$USER" "${PWD}/tmp/.xauth${XdisplayNumber}"
+echo "rm ${PWD}/tmp/.xauth${XdisplayNumber}" >> cancel.sh
+export XAUTHORITY=${PWD}/tmp/.xauth${XdisplayNumber}
 
 echo "$(date) Starting xterm on the host..."
 run_xterm_loop(){

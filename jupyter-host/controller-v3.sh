@@ -24,10 +24,11 @@ f_install_miniconda() {
         conda_repo="https://repo.anaconda.com/miniconda/Miniconda3-py312_24.9.2-0-Linux-x86_64.sh"
     fi
     ID=$(date +%s)-${RANDOM} # This script may run at the same time!
-    nohup wget --no-check-certificate ${conda_repo} -O /tmp/miniconda-${ID}.sh 2>&1 > /tmp/miniconda_wget-${ID}.out
+    mkdir -p ${PWD}/tmp
+    nohup wget --no-check-certificate ${conda_repo} -O ${PWD}/tmp/miniconda-${ID}.sh 2>&1 > ${PWD}/tmp/miniconda_wget-${ID}.out
     rm -rf ${install_dir}
     mkdir -p $(dirname ${install_dir})
-    nohup bash /tmp/miniconda-${ID}.sh -b -p ${install_dir} 2>&1 > /tmp/miniconda_sh-${ID}.out
+    nohup bash ${PWD}/tmp/miniconda-${ID}.sh -b -p ${install_dir} 2>&1 > ${PWD}/tmp/miniconda_sh-${ID}.out
 }
 
 f_set_up_conda_from_yaml() {

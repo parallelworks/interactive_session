@@ -354,6 +354,7 @@ elif [[ "${service_vnc_type}" == "SingularityTurboVNC" ]]; then
     # Start service
     mkdir -p ~/.vnc
     export TMPDIR=${PWD}/tmp
+    export SINGULARITY_TMPDIR=${PWD}/tmp
     mkdir -p $TMPDIR
     ${singularity_exec} ${PW_PARENT_JOB_DIR}/vncserver.sh | tee -a vncserver.out &
     #echo "kill $! # singularity run" >> cancel.sh
@@ -663,6 +664,8 @@ HERE
         echo "Running singularity container ${service_nginx_sif}"
         # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
         # and other users cannot use the node. Was not able to change this in the config.conf.
+        export TMPDIR=${PWD}/tmp
+        export SINGULARITY_TMPDIR=${PWD}/tmp
         mkdir -p ./tmp
         # Need to overwrite default configuration!
         touch empty

@@ -141,6 +141,9 @@ else
     WRITABLE_TMPFS_FLAG="--writable-tmpfs"
 fi
 
+export TMPDIR=${PWD}/tmp
+export SINGULARITY_TMPDIR=${PWD}/tmp
+mkdir -p ${PWD}/tmp
 mkdir -p $PWD/container_tmp
 
 set -x

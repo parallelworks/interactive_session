@@ -175,11 +175,12 @@ if [ -n "${xauthority_file}" ]; then
     echo "$(date): Setting XAUTHORITY to ${XAUTHORITY}"
 fi
 
+xterm_cmd="$(which xterm 2>/dev/null || echo ${service_parent_install_dir}/xterm)"
 export DISPLAY=":${XdisplayNumber}"
 run_xterm_loop(){
     while true; do
-        echo "$(date): Starting xterm"
-        ${service_parent_install_dir}/xterm -fa "DejaVu Sans Mono" -fs 12 -e bash -c '
+        echo "$(date): Starting xterm with ${xterm_cmd}"
+        ${xterm_cmd} -fa "DejaVu Sans Mono" -fs 12 -e bash -c '
 printf "\033[1;36m"
 printf "╔══════════════════════════════════════════════════════════════╗\n"
 printf "║              Welcome to your Remote Desktop Session          ║\n"

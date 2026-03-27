@@ -150,11 +150,12 @@ sudo chown "$USER" "/tmp/.xauth${XdisplayNumber}" || chown "$USER" "/tmp/.xauth$
 echo "rm /tmp/.xauth${XdisplayNumber}" >> cancel.sh
 export XAUTHORITY=/tmp/.xauth${XdisplayNumber}
 
+xterm_cmd="$(which xterm 2>/dev/null || echo ${service_parent_install_dir}/xterm)"
 echo "$(date) Starting xterm on the host..."
 run_xterm_loop(){
     while true; do
         echo "$(date): Starting xterm"
-        ${service_parent_install_dir}/xterm -fa "DejaVu Sans Mono" -fs 12 -e bash -c '
+        ${xterm_cmd} -fa "DejaVu Sans Mono" -fs 12 -e bash -c '
 printf "\033[1;36m"
 printf "╔══════════════════════════════════════════════════════════════╗\n"
 printf "║              Welcome to your Remote Desktop Session          ║\n"

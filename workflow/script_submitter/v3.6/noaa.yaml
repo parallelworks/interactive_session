@@ -45,6 +45,7 @@ jobs:
       - name: Create SLURM Headers
         if: ${{ inputs.slurm.is_enabled == true }}
         run: |
+          set -x
           # Need to evaluate the env variables here
           cat <<EOF > headers.sh
           #SBATCH --job-name=${PW_JOB_ID}

@@ -154,7 +154,7 @@ xterm_cmd="$(which xterm 2>/dev/null || echo ${service_parent_install_dir}/xterm
 echo "$(date) Starting xterm on the host..."
 run_xterm_loop(){
     while true; do
-        echo "$(date): Starting xterm"
+        echo "$(date): Starting xterm with ${xterm_cmd}"
         ${xterm_cmd} -fa "DejaVu Sans Mono" -fs 12 -e bash -c '
 printf "\033[1;36m"
 printf "╔══════════════════════════════════════════════════════════════╗\n"

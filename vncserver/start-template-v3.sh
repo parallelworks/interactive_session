@@ -377,7 +377,10 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     # KasmVNC #
     ###########
     export kasmvnc_port=$(pw agent open-port)
-    export XDG_RUNTIME_DIR=""
+    mkdir -p /tmp/.X11-unix
+    mkdir -p ${HOME}/.run
+    chmod 700 ${HOME}/.run
+    export XDG_RUNTIME_DIR=${HOME}/.run
 
     if [ "${service_set_password}" != true ]; then
         service_password=password

@@ -169,7 +169,13 @@ echo "KasmVNC container started with PID ${kasmvnc_container_pid}"
 
 sleep 30  # Allow container to start
 
-export DISPLAY=":${XdisplayNumber}" 
+xauthority_file=$(find container_tmp -name .Xauthority 2>/dev/null | head -1)
+if [ -n "${xauthority_file}" ]; then
+    export XAUTHORITY="${PWD}/${xauthority_file}"
+    echo "$(date): Setting XAUTHORITY to ${XAUTHORITY}"
+fi
+
+export DISPLAY=":${XdisplayNumber}"
 run_xterm_loop(){
     while true; do
         echo "$(date): Starting xterm"

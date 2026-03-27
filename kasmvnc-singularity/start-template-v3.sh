@@ -168,8 +168,16 @@ echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
 echo "KasmVNC container started with PID ${kasmvnc_container_pid}"
 
 sleep 30  # Allow container to start
+ls container_tmp
+ls container_tmp/gstefan_home
+find container_tmp -name .Xauthority 
+xauthority_file=$(find container_tmp -name .Xauthority 2>/dev/null | head -1)
+if [ -n "${xauthority_file}" ]; then
+    export XAUTHORITY="${PWD}/${xauthority_file}"
+    echo "$(date): Setting XAUTHORITY to ${XAUTHORITY}"
+fi
 
-export DISPLAY=":${XdisplayNumber}" 
+export DISPLAY=":${XdisplayNumber}"
 run_xterm_loop(){
     while true; do
         echo "$(date): Starting xterm"

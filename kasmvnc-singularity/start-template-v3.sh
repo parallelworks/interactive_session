@@ -148,6 +148,8 @@ singularity run \
     ${WRITABLE_TMPFS_FLAG} ${USERNS_FLAG} ${ETC_ENV_FLAG} \
     ${GPU_FLAG} \
     ${MOUNT_FLAGS} \
+    --env XAUTHORITY=/tmp/.Xauthority \
+    --env DISPLAY=":${XdisplayNumber}" \
     --env BASE_PATH="${basepath}" \
     --env NGINX_PORT="${service_port}" \
     --env KASM_PORT=$(pw agent open-port) \

@@ -71,6 +71,7 @@ jobs:
         early-cancel: any-job-failed
         with:
           $yaml: workflow/session_runner/v1.4/hsp.yaml
+          session: ${{ sessions.session }}
           resource: ${{ inputs.resource }}
           cluster:
             scheduler: ${{ inputs.cluster.scheduler }}

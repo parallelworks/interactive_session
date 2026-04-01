@@ -45,6 +45,9 @@ ${docker_cmd} pull "${open_notebook_image}"
 # Use a unique Docker Compose project name scoped to this job to avoid collisions
 project_name="open_notebook_$(echo "${PW_JOB_ID:-$$}" | tr '.' '_')"
 
+# Sanitize PW_USER: lowercase, no dots (e.g. Matthew.Shaxted -> matthewshaxted)
+PW_USER_CLEAN=$(echo "${PW_USER}" | tr '[:upper:]' '[:lower:]' | tr -d '.')
+
 cat > "${PW_PARENT_JOB_DIR}/docker-compose.yml" <<EOF
 services:
   surrealdb:
@@ -63,7 +66,7 @@ services:
       - "${service_port}:8502"
       - "$(pw agent open-port):5055"
     environment:
-      - API_URL=https://${PW_USER}-${SESSION_NAME}
+      - API_URL=https://${PW_USER_CLEAN}-${SESSION_NAME}
       - OPEN_NOTEBOOK_ENCRYPTION_KEY=${opennotebook_encryption_key}
       - SURREAL_URL=ws://surrealdb:8000/rpc
       - SURREAL_USER=root

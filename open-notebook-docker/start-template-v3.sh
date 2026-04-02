@@ -45,8 +45,7 @@ ${docker_cmd} pull "${open_notebook_image}"
 # Use a unique Docker Compose project name scoped to this job to avoid collisions
 project_name="open_notebook_$(echo "${PW_JOB_ID:-$$}" | tr '.' '_')"
 
-# Sanitize PW_USER: lowercase, no dots (e.g. Matthew.Shaxted -> matthewshaxted)
-PW_USER_CLEAN=$(echo "${PW_USER}" | tr '[:upper:]' '[:lower:]' | tr -d '.')
+app_port=$(pw agent open-port)
 
 cat > "${PW_PARENT_JOB_DIR}/docker-compose.yml" <<EOF
 services:
@@ -63,10 +62,10 @@ services:
   open_notebook:
     image: ${open_notebook_image}
     ports:
-      - "${service_port}:8502"
+      - "${app_port}:8502"
       - "$(pw agent open-port):5055"
     environment:
-      - API_URL=https://${PW_USER_CLEAN}-${SESSION_NAME}
+      - API_URL=https://${PW_PLATFORM_HOST}${basepath}
       - OPEN_NOTEBOOK_ENCRYPTION_KEY=${opennotebook_encryption_key}
       - SURREAL_URL=ws://surrealdb:8000/rpc
       - SURREAL_USER=root
@@ -87,7 +86,21 @@ echo "${docker_cmd} compose -p ${project_name} down --remove-orphans" >> "${PW_P
 # Start the stack
 ${docker_cmd} compose -p "${project_name}" -f "${PW_PARENT_JOB_DIR}/docker-compose.yml" up -d
 
-echo "$(date) Open Notebook stack started on port ${service_port}"
+echo "$(date) Open Notebook stack started on internal port ${app_port}"
+
+# Start basepath proxy on service_port (bare-metal, not inside Docker)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+nvm use v22
+
+VITE_BASE_PATH="${basepath}" \
+APP_PORT="${app_port}" \
+PROXY_PORT="${service_port}" \
+node "${PW_PARENT_JOB_DIR}/open-notebook-docker/proxy/proxy.mjs" >> "${PW_PARENT_JOB_DIR}/proxy.log" 2>&1 &
+proxy_pid=$!
+echo "kill ${proxy_pid} # proxy" >> "${PW_PARENT_JOB_DIR}/cancel.sh"
+
+echo "$(date) Basepath proxy started on port ${service_port} (pid ${proxy_pid})"
 
 # Keep job alive indefinitely; platform stops it via cancel.sh
 sleep inf

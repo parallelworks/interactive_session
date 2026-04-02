@@ -5,7 +5,7 @@ sessions:
   session:
     useTLS: false
     redirect: true
-    useCustomDomain: true
+    useCustomDomain: false
 jobs:
   preprocessing:
     ssh:
@@ -28,7 +28,6 @@ jobs:
           # Write input form variables and ensure the pw agent is in the PATH
           cat <<'EOF' >> inputs.sh
           basepath=/me/session/${PW_USER}/${{ sessions.session }}
-          SESSION_NAME=${{ sessions.session }}.activate.pw
           PATH=$HOME/pw:$PATH
           open_notebook_image="${{ inputs.service.open_notebook_image }}"
           opennotebook_encryption_key="${{ inputs.service.opennotebook_encryption_key }}"

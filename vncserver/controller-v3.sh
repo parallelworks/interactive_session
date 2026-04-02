@@ -27,7 +27,6 @@ download_and_install_novnc() {
 
     # 2. Navigate into the repository directory
     cd interactive_session
-    #git checkout download-dependencies
 
     # 3. Initialize sparse-checkout
     git sparse-checkout init
@@ -36,8 +35,8 @@ download_and_install_novnc() {
     service_novnc_tgz_repo_path="downloads/vnc/${service_novnc_tgz_basename}"
     echo "${service_novnc_tgz_repo_path}" > .git/info/sparse-checkout
 
-    # 5. Perform the checkout
-    git checkout
+    # 5. Perform the checkout from the legacy tag (downloads/ was removed from main)
+    git checkout legacy
 
     # 6. Extract tgz
     tar -zxf ${service_novnc_tgz_repo_path} -C ${service_parent_install_dir}
@@ -45,7 +44,7 @@ download_and_install_novnc() {
     # 7. Clean
     cd ../
     rm -rf interactive_session
-    
+
 }
 
 download_singularity_container() {
@@ -59,7 +58,6 @@ download_singularity_container() {
 
     # 2. Navigate into the repository directory
     cd interactive_session
-    #git checkout download-dependencies
 
     # 3. Initialize sparse-checkout
     git sparse-checkout init
@@ -67,15 +65,15 @@ download_singularity_container() {
     # 4. Configure sparse-checkout to include only the desired file
     echo ${repo_path} > .git/info/sparse-checkout
 
-    # 5. Perform the checkout
-    git checkout
+    # 5. Perform the checkout from the legacy tag (downloads/ was removed from main)
+    git checkout legacy
 
-    # 6. Extract tgz
+    # 6. Move
     mv ${repo_path} ${host_path}
 
     # 7. Clean
     cd ../
-    rm -rf interactive_session    
+    rm -rf interactive_session
 }
 
 download_oras(){

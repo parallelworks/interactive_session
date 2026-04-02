@@ -38,7 +38,7 @@ download_and_install() {
     echo "${service_novnc_tgz_repo_path}" > .git/info/sparse-checkout
 
     # 5. Perform the checkout
-    git checkout
+    git checkout legacy
 
     # 6. Extract tgz
     tar -zxf ${service_novnc_tgz_repo_path} -C ${service_parent_install_dir}
@@ -46,7 +46,7 @@ download_and_install() {
     # 7. Clean
     cd ../
     rm -rf interactive_session
-    
+
 }
 
 # Juice: Remote GPU access service (https://docs.juicelabs.co/docs/juice/intro)

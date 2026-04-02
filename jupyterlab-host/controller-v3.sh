@@ -86,7 +86,6 @@ download_singularity_container() {
 
     # 2. Navigate into the repository directory
     cd interactive_session
-    #git checkout download-dependencies
 
     # 3. Initialize sparse-checkout
     git sparse-checkout init
@@ -94,8 +93,8 @@ download_singularity_container() {
     # 4. Configure sparse-checkout to include only the desired file
     echo downloads/jupyter/nginx-unprivileged.sif > .git/info/sparse-checkout
 
-    # 5. Perform the checkout
-    git checkout
+    # 5. Perform the checkout from the legacy tag (downloads/ was removed from main)
+    git checkout legacy
 
     # 6. Move
     mv downloads/jupyter/nginx-unprivileged.sif ${service_nginx_sif}
@@ -103,7 +102,7 @@ download_singularity_container() {
     # 7. Clean
     cd ../
     rm -rf interactive_session
-    
+
 }
 
 # Juice: Remote GPU access service (https://docs.juicelabs.co/docs/juice/intro)

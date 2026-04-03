@@ -170,13 +170,20 @@ jobs:
                 ignore: ${{ 'existing' != inputs.cluster.resource.provider }}
                 hidden: ${{ .ignore }}
               mem:
-                type: string
+                type: dropdown
                 label: Minimum total memory required
                 default: 8GB
                 tooltip: '--mem=value slurm directive'
                 hidden: ${{ 'existing' != inputs.cluster.resource.provider }}
                 ignore: ${{ .hidden }}
-                optional: true
+                options:
+                   - 8GB
+                   - 16GB
+                   - 32GB
+                   - 64GB
+                   - 128GB
+                   - 256GB
+                   - 512GB
               gres_gpu_default:
                 type: number
                 label: Number of GPUs

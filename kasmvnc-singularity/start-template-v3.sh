@@ -173,6 +173,7 @@ kasmvnc_container_pid=$!
 set +x
 
 echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
+echo "chmod -R u+rwX ${container_dir}" >> cancel.sh
 echo "KasmVNC container started with PID ${kasmvnc_container_pid}"
 
 sleep 45  # Allow container to start

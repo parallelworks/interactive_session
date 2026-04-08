@@ -196,8 +196,10 @@ if sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
     sudo docker logs ${container_name}
 elif which singularity >/dev/null 2>&1; then
     echo "Running singularity container ${service_nginx_sif}"
-    # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
+    # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid
     # and other users cannot use the node. Was not able to change this in the config.conf.
+    export TMPDIR=${PWD}/tmp
+    export SINGULARITY_TMPDIR=${PWD}/tmp
     mkdir -p ./tmp
     # Need to overwrite default configuration!
     touch empty

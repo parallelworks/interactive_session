@@ -354,6 +354,7 @@ elif [[ "${service_vnc_type}" == "SingularityTurboVNC" ]]; then
     # Start service
     mkdir -p ~/.vnc
     export TMPDIR=${PWD}/tmp
+    export SINGULARITY_TMPDIR=${PWD}/tmp
     mkdir -p $TMPDIR
     ${singularity_exec} ${PW_PARENT_JOB_DIR}/vncserver.sh | tee -a vncserver.out &
     #echo "kill $! # singularity run" >> cancel.sh
@@ -376,7 +377,10 @@ elif [[ "${service_vnc_type}" == "KasmVNC" ]]; then
     # KasmVNC #
     ###########
     export kasmvnc_port=$(pw agent open-port)
-    export XDG_RUNTIME_DIR=""
+    mkdir -p ${PWD}/tmp/.X11-unix
+    mkdir -p ${PWD}/.run
+    chmod 700 ${PWD}/.run
+    export XDG_RUNTIME_DIR=${PWD}/.run
 
     if [ "${service_set_password}" != true ]; then
         service_password=password
@@ -500,7 +504,8 @@ sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
     vncserver_cmd="${service_vnc_exec} ${DISPLAY} ${disableBasicAuth} \
         ${desktop_arg} \
         -websocketPort ${kasmvnc_port} \
-        -rfbport ${displayPort}"
+        -rfbport ${displayPort} \
+        -tmpdir ${PWD}/tmp"
 
     echo Running:
     echo ${vncserver_cmd}
@@ -663,6 +668,8 @@ HERE
         echo "Running singularity container ${service_nginx_sif}"
         # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
         # and other users cannot use the node. Was not able to change this in the config.conf.
+        export TMPDIR=${PWD}/tmp
+        export SINGULARITY_TMPDIR=${PWD}/tmp
         mkdir -p ./tmp
         # Need to overwrite default configuration!
         touch empty

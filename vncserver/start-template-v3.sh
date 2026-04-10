@@ -18,24 +18,26 @@ start_rootless_docker() {
     fi
 
     # Wait for Docker daemon to be ready
+    echo "::group::Waiting for Docker daemon to start"
     until docker info > /dev/null 2>&1; do
         if [ $ATTEMPT -le $MAX_RETRIES ]; then
-            echo "::debug::Attempt $ATTEMPT of $MAX_RETRIES: Waiting for Docker daemon to start..."
+            echo "Attempt $ATTEMPT of $MAX_RETRIES: waiting for Docker daemon..."
             sleep $RETRY_INTERVAL
             ((ATTEMPT++))
         else
+            echo "::endgroup::"
             echo "::error title=Error::Docker daemon failed to start after $MAX_RETRIES attempts."
             return 1
         fi
     done
-
+    echo "::endgroup::"
     echo "::notice::Docker daemon is ready!"
     return 0
 }
 
 run_xterm_loop(){
     while true; do
-        echo "::debug::Starting xterm"
+        echo "::notice::Starting xterm"
         ${service_parent_install_dir}/xterm -fa "DejaVu Sans Mono" -fs 12
         sleep 1
     done
@@ -58,7 +60,6 @@ start_gnome_session_with_retries() {
     k=1
     while true; do
         if xset q >/dev/null 2>&1; then
-            echo "::debug::X server on $DISPLAY is alive."
             sleep $((k*10))
         else
             echo "::warning::X server on $DISPLAY is unresponsive."
@@ -98,7 +99,7 @@ kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
 
 # Deactive default conda environments (required for emed)
 export $(env | grep CONDA_PREFIX)
-echo "::debug::CONDA_PREFIX=${CONDA_PREFIX}"
+echo "::notice::CONDA_PREFIX=${CONDA_PREFIX}"
 
 if ! [ -z "${CONDA_PREFIX}" ]; then
     echo "::notice::Deactivating conda environment"
@@ -503,8 +504,7 @@ sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
         -websocketPort ${kasmvnc_port} \
         -rfbport ${displayPort}"
 
-    echo "::notice::Running vncserver command:"
-    echo "::debug::${vncserver_cmd}"
+    echo "::notice::Running vncserver: ${vncserver_cmd}"
 
     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
         ${vncserver_cmd}

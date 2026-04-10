@@ -106,14 +106,16 @@ jobs:
         early-cancel: any-job-failed
         run: |
           set -x
+          echo "::group::Waiting for job to start"
           while [ ! -f job.started ]; do
             if [ -f job.ended ]; then
+              echo "::endgroup::"
               echo "::error title=Error::Job ended before it started. Exiting."
               exit 1
             fi
-            echo "::debug::Waiting for job to start..."
             sleep 5
           done
+          echo "::endgroup::"
       - name: Get Hostname
         early-cancel: any-job-failed
         run: |
@@ -159,20 +161,20 @@ jobs:
               return $?
           }
 
-          # Main loop
+          echo "::group::Waiting for server to respond"
           attempt=1
           while true; do
-              echo "::debug::Attempt $attempt: Checking if server is listening on ${remote_host}:${remote_port}..."
-              
               if check_server; then
+                  echo "::endgroup::"
                   echo "::notice::Server is listening on ${remote_host}:${remote_port}!"
                   sleep 3
                   exit 0
               elif [ -f job.ended ]; then
+                  echo "::endgroup::"
                   echo "::notice::Job was completed. Exiting..."
                   exit 0
               else
-                  echo "::debug::Server not responding. Retrying in ${RETRY_INTERVAL} seconds..."
+                  echo "Attempt $attempt: server not yet ready, retrying in ${RETRY_INTERVAL}s..."
                   sleep "$RETRY_INTERVAL"
                   ((attempt++))
               fi

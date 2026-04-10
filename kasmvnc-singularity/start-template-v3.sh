@@ -107,7 +107,7 @@ build_mount_flags() {
 
 # Build mount flags for existing directories
 MOUNT_FLAGS=$(build_mount_flags "${mount_directories}")
-echo "::debug::Mount flags: ${MOUNT_FLAGS}"
+echo "::notice::Mount flags: ${MOUNT_FLAGS}"
 
 # Start KasmVNC container
 echo "::notice::Starting Singularity container..."
@@ -186,7 +186,7 @@ xterm_cmd="$(which xterm 2>/dev/null || echo ${service_parent_install_dir}/xterm
 export DISPLAY=":${XdisplayNumber}"
 run_xterm_loop(){
     while true; do
-        echo "::debug::Starting xterm with ${xterm_cmd}"
+        echo "::notice::Starting xterm with ${xterm_cmd}"
         ${xterm_cmd} -fa "DejaVu Sans Mono" -fs 12 -e bash -c '
 printf "\033[1;36m"
 printf "╔══════════════════════════════════════════════════════════════╗\n"

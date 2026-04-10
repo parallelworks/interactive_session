@@ -64,7 +64,7 @@ download_and_install_juice() {
         echo "::error title=Error::Download URL is empty"
         exit 1
     fi
-    echo "::debug::Found download URL: $download"
+    echo "::notice::Found download URL: $download"
 
     # Step 2: Prepare install directory
     mkdir -p "${juice_install_dir}"

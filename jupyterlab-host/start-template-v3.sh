@@ -25,17 +25,19 @@ start_rootless_docker() {
     PATH=/usr/bin:/sbin:/usr/sbin:$PATH dockerd-rootless.sh --exec-opt native.cgroupdriver=cgroupfs > docker-rootless.log 2>&1 & #--data-root /docker-rootless/docker-rootless/
 
     # Wait for Docker daemon to be ready
+    echo "::group::Waiting for Docker daemon to start"
     until docker info > /dev/null 2>&1; do
         if [ $ATTEMPT -le $MAX_RETRIES ]; then
-            echo "::debug::Attempt $ATTEMPT of $MAX_RETRIES: Waiting for Docker daemon to start..."
+            echo "Attempt $ATTEMPT of $MAX_RETRIES: waiting for Docker daemon..."
             sleep $RETRY_INTERVAL
             ((ATTEMPT++))
         else
+            echo "::endgroup::"
             echo "::error title=Error::Docker daemon failed to start after $MAX_RETRIES attempts."
             return 1
         fi
     done
-
+    echo "::endgroup::"
     echo "::notice::Docker daemon is ready!"
     return 0
 }

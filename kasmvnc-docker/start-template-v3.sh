@@ -97,7 +97,7 @@ build_mount_flags() {
 
 # Build mount flags for existing directories
 MOUNT_FLAGS=$(build_mount_flags "${mount_directories}")
-echo "::debug::Mount flags: ${MOUNT_FLAGS}"
+echo "::notice::Mount flags: ${MOUNT_FLAGS}"
 
 # Pull KasmVNC container
 echo "::notice::Pulling Docker container..."
@@ -134,16 +134,17 @@ echo "${docker_cmd} stop ${container_name} #kasmvnc_container" >> cancel.sh
 echo "kill ${kasmvnc_container_pid} | true #kasmvnc_container_pid" >> cancel.sh
 echo "::notice::KasmVNC container started with PID ${kasmvnc_container_pid}"
 
-echo "::notice::Copying .Xauthority from container to host..."
+echo "::group::Copying .Xauthority from container to host"
 for i in $(seq 1 30); do
     if ${docker_cmd} cp "${container_name}:/home/packer/.Xauthority" "/tmp/.xauth${XdisplayNumber}" \
        || ${docker_cmd} cp "${container_name}:/home/metauser/.Xauthority" "/tmp/.xauth${XdisplayNumber}"
     then
         break
     fi
-    echo "::debug::Attempt $i/30 failed, retrying in 2s..."
+    echo "Attempt $i/30 failed, retrying in 2s..."
     sleep 2
 done
+echo "::endgroup::"
 sudo chown "$USER" "/tmp/.xauth${XdisplayNumber}" || chown "$USER" "/tmp/.xauth${XdisplayNumber}"
 echo "rm /tmp/.xauth${XdisplayNumber}" >> cancel.sh
 export XAUTHORITY=/tmp/.xauth${XdisplayNumber}
@@ -152,7 +153,7 @@ xterm_cmd="$(which xterm 2>/dev/null || echo ${service_parent_install_dir}/xterm
 echo "::notice::Starting xterm on the host..."
 run_xterm_loop(){
     while true; do
-        echo "::debug::Starting xterm with ${xterm_cmd}"
+        echo "::notice::Starting xterm with ${xterm_cmd}"
         ${xterm_cmd} -fa "DejaVu Sans Mono" -fs 12 -e bash -c '
 printf "\033[1;36m"
 printf "╔══════════════════════════════════════════════════════════════╗\n"

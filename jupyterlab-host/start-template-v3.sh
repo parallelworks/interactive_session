@@ -27,16 +27,16 @@ start_rootless_docker() {
     # Wait for Docker daemon to be ready
     until docker info > /dev/null 2>&1; do
         if [ $ATTEMPT -le $MAX_RETRIES ]; then
-            echo "::notice::$(date) Attempt $ATTEMPT of $MAX_RETRIES: Waiting for Docker daemon to start..."
+            echo "$(date) Attempt $ATTEMPT of $MAX_RETRIES: Waiting for Docker daemon to start..."
             sleep $RETRY_INTERVAL
             ((ATTEMPT++))
         else
-            echo "::error::$(date) Docker daemon failed to start after $MAX_RETRIES attempts."
+            echo "$(date) ERROR: Docker daemon failed to start after $MAX_RETRIES attempts." >&2
             return 1
         fi
     done
 
-    echo "::notice::$(date) Docker daemon is ready!"
+    echo  "$(date): Docker daemon is ready!"
     return 0
 }
 
@@ -71,16 +71,16 @@ else
 fi
 
 if [ -z $(which jupyter-lab 2> /dev/null) ]; then
-    echo "::error::$(date) jupyter-lab command not found"
+    echo "$(date) ERROR: jupyter-lab command not found" >&2
     exit 1
 fi
 
 # Generate sha:
 if [ -z "${service_password}" ]; then
-    echo "::notice::No password was specified"
+    echo "No password was specified"
     sha=""
 else
-    echo "::notice::Generating sha"
+    echo "Generating sha"
     sha=$(python3 -c "from notebook.auth.security import passwd; print(passwd('${service_password}', algorithm = 'sha1'))")
 fi
 # Set the launch directory for JupyterHub
@@ -93,17 +93,16 @@ fi
 #######################
 # START NGINX WRAPPER #
 #######################
-echo "::group::nginx-wrapper"
 
 proxy_port=${jupyterlab_port}
 proxy_host="127.0.0.1"
 if which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]]; then
     if ! dockerd-rootless-setuptool.sh check; then
-        echo "::error::$(date) Rootless docker is NOT support on this system"
+        echo "$(date) ERROR: Rootless docker is NOT support on this system" >&2
         exit 1
     fi
     if ! which socat >/dev/null 2>&1; then
-        echo "::error::$(date) socat is not installed"
+        echo "$(date) ERROR: socat is not installed" >&2
         exit 1
     fi
     start_rootless_docker
@@ -115,7 +114,7 @@ if which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]];
     echo "kill ${pid} #socat" >> cancel.sh
 fi
 
-echo "::notice::Starting nginx wrapper on service port ${service_port}"
+echo "Starting nginx wrapper on service port ${service_port}"
 
 # Write config file
 cat >> config.conf <<HERE
@@ -219,7 +218,7 @@ elif sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
     # Print logs
     sudo docker logs ${container_name}
 elif which singularity >/dev/null 2>&1; then
-    echo "::notice::Running singularity container ${service_nginx_sif}"
+    echo "Running singularity container ${service_nginx_sif}"
     # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
     # and other users cannot use the node. Was not able to change this in the config.conf.
     mkdir -p ./tmp
@@ -229,16 +228,14 @@ elif which singularity >/dev/null 2>&1; then
     pid=$!
     echo "kill ${pid}" >> cancel.sh
 else
-    echo "::error::$(date) Need Docker or Singularity to start NGINX proxy"
+    echo "$(date) ERROR: Need Docker or Singularity to start NGINX proxy" >&2
     exit 1
 fi
 
 
-echo "::endgroup::"
 ####################
 # START JUPYTERLAB #
 ####################
-echo "::group::jupyterlab"
 export XDG_RUNTIME_DIR=""
 
 if [ -z ${service_notebook_dir} ]; then
@@ -268,10 +265,10 @@ cd ${service_notebook_dir}
 # JUICE https://docs.juicelabs.co/docs/juice/intro
 juice_cmd=""  # Initialize to empty
 if [[ "${juice_use_juice}" == "true" ]]; then
-    echo "::notice::$(date) Enabling Juice for remote GPU access"
+    echo "$(date) INFO: Enabling Juice for remote GPU access"
     if [ -z "${juice_exec}" ]; then
         juice_exec=${service_parent_install_dir}/juice/juice
-        echo "::notice::$(date) Set Juice executable path to ${juice_exec}"
+        echo "$(date) INFO: Set Juice executable path to ${juice_exec}"
     fi
     
     if ! [ -z "${juice_vram}" ]; then
@@ -281,10 +278,10 @@ if [[ "${juice_use_juice}" == "true" ]]; then
         pool_ids_arg="--pool-ids ${juice_pool_ids}"
     fi
     juice_cmd="${juice_exec} run ${juice_cmd_args} ${vram_arg} ${pool_ids_arg}"
-    echo "::notice::$(date) Prepared Juice command: ${juice_cmd}"
-    echo "::notice::$(date) Logging into Juice with provided token"
+    echo "$(date) INFO: Prepared Juice command: ${juice_cmd}"
+    echo "$(date) INFO: Logging into Juice with provided token"
     ${juice_exec} login -t "${JUICE_TOKEN}" || {
-        echo "::error::$(date) Failed to log into Juice"
+        echo "$(date) ERROR: Failed to log into Juice" >&2
         exit 1
     }
 fi
@@ -298,5 +295,4 @@ ${juice_cmd} jupyter-lab --port=${jupyterlab_port} --no-browser --config=${PW_PA
 
 # Keep container alive indefinitely
 # Using 'inf' which is bash-specific shorthand for infinity
-echo "::endgroup::"
 sleep inf

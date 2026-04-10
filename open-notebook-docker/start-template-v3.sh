@@ -23,23 +23,23 @@ sudo systemctl start docker || true
 # Detect docker command: prefer without sudo, fall back to sudo docker
 if docker info &>/dev/null; then
     docker_cmd="docker"
-    echo "::notice::$(date) Docker is accessible without sudo"
+    echo "$(date) Docker is accessible without sudo"
 elif sudo docker info &>/dev/null; then
     docker_cmd="sudo docker"
-    echo "::notice::$(date) Docker requires sudo"
+    echo "$(date) Docker requires sudo"
 else
-    echo "::error::$(date) Docker is not available on this system"
+    echo "$(date) ERROR: Docker is not available on this system" >&2
     exit 1
 fi
-echo "::notice::$(date) Using docker command: ${docker_cmd}"
+echo "$(date) Using docker command: ${docker_cmd}"
 
 # Pull images on the node where the job runs.
 # Images are NOT pre-pulled on the controller because controller and compute
 # nodes do not share a Docker image cache.
-echo "::notice::$(date) Pulling ${surrealdb_image} ..."
+echo "$(date) Pulling ${surrealdb_image} ..."
 ${docker_cmd} pull "${surrealdb_image}"
 
-echo "::notice::$(date) Pulling ${open_notebook_image} ..."
+echo "$(date) Pulling ${open_notebook_image} ..."
 ${docker_cmd} pull "${open_notebook_image}"
 
 # Use a unique Docker Compose project name scoped to this job to avoid collisions
@@ -85,11 +85,9 @@ EOF
 echo "${docker_cmd} compose -p ${project_name} down --remove-orphans" >> "${PW_PARENT_JOB_DIR}/cancel.sh"
 
 # Start the stack
-echo "::group::open-notebook"
 ${docker_cmd} compose -p "${project_name}" -f "${PW_PARENT_JOB_DIR}/docker-compose.yml" up -d
 
-echo "::notice::$(date) Open Notebook stack started on port ${service_port}"
+echo "$(date) Open Notebook stack started on port ${service_port}"
 
 # Keep job alive indefinitely; platform stops it via cancel.sh
-echo "::endgroup::"
 sleep inf

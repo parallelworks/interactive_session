@@ -75,7 +75,7 @@ jobs:
           define_cleanup_script: true
           cleanup_script_path: ${{ inputs.service.rundir }}/cancel.sh
           scheduler: ${{ inputs.cluster.scheduler }}
-          use_scheduler_agent: true
+          use_scheduler_agent: false
           slurm:
             is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
             account: ${{ inputs.cluster.slurm.account }}

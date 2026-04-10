@@ -5,9 +5,9 @@
 
 set -ex
 
-echo "::notice::=========================================="
-echo "::notice::Desktop Service Starting (Compute Node)"
-echo "::notice::=========================================="
+echo "=========================================="
+echo "Desktop Service Starting (Compute Node)"
+echo "=========================================="
 
 if [ -z ${service_parent_install_dir} ]; then
     service_parent_install_dir=${HOME}/pw/software
@@ -66,26 +66,26 @@ done
 # Load singularity/apptainer if not already in PATH
 if ! command -v singularity &> /dev/null; then
     if module load apptainer 2>/dev/null; then
-        echo "::notice::$(date) Loaded apptainer module"
+        echo "$(date) Loaded apptainer module"
     elif module load singularity 2>/dev/null; then
-        echo "::notice::$(date) Loaded singularity module"
+        echo "$(date) Loaded singularity module"
     else
-        echo "::error::$(date) singularity/apptainer not found in PATH and could not be loaded via module"
+        echo "$(date) ERROR: singularity/apptainer not found in PATH and could not be loaded via module" >&2
         exit 1
     fi
 else
-    echo "::notice::$(date) singularity already available in PATH"
+    echo "$(date) singularity already available in PATH"
 fi
 
-echo "::notice::$(date) Starting KasmVNC Container ..."
+echo "$(date) Starting KasmVNC Container ..."
 
 # GPU flag
 GPU_FLAG=""
 if [[ "${enable_gpu}" == "true" ]]; then
     GPU_FLAG="--nv"
-    echo "::notice::GPU support enabled (--nv)"
+    echo "GPU support enabled (--nv)"
 else
-    echo "::notice::GPU support disabled"
+    echo "GPU support disabled"
 fi
 
 mount_directories="${HOME} /p/work /p/work1 /p/app /p/cwfs /scratch /run/munge /etc/pbs.conf /var/spool/pbs /opt/pbs ${container_mount_paths}"
@@ -98,21 +98,21 @@ build_mount_flags() {
     for dir in ${directories}; do
         if [ -e "${dir}" ]; then
             flags="${flags} --bind ${dir}"
-            echo "::notice::Mount: ${dir} exists, adding to bind mounts"
+            echo "Mount: ${dir} exists, adding to bind mounts"  >&2
         else
-            echo "::notice::Mount: ${dir} does not exist, skipping"
+            echo "Mount: ${dir} does not exist, skipping"  >&2
         fi
     done
 
-    echo "::notice::${flags}"
+    echo "${flags}"
 }
 
 # Build mount flags for existing directories
 MOUNT_FLAGS=$(build_mount_flags "${mount_directories}")
-echo "::notice::Mount flags: ${MOUNT_FLAGS}"
+echo "Mount flags: ${MOUNT_FLAGS}"
 
 # Start KasmVNC container
-echo "::notice::Starting Singularity container..."
+echo "Starting Singularity container..."
 touch empty
 chmod 644 empty
 touch error.log
@@ -135,7 +135,7 @@ ETC_ENV_FLAG=""
 if [ -f /etc/environment ] && ! grep -qE '^\s*(if|for|while|case|do|then|function)\b' /etc/environment 2>/dev/null; then
     ETC_ENV_FLAG="--bind /etc/environment:/etc/environment:ro"
 else
-    echo "::warning::$(date) Skipping /etc/environment bind (file missing or contains shell syntax)"
+    echo "$(date) WARNING: Skipping /etc/environment bind (file missing or contains shell syntax)"
 fi
 
 
@@ -174,21 +174,21 @@ set +x
 
 echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
 echo "chmod -R u+rwX ${container_dir}" >> cancel.sh
-echo "::notice::KasmVNC container started with PID ${kasmvnc_container_pid}"
+echo "KasmVNC container started with PID ${kasmvnc_container_pid}"
 
 sleep 45  # Allow container to start
 
 xauthority_file=$(find container_tmp -name .Xauthority 2>/dev/null | head -1)
 if [ -n "${xauthority_file}" ]; then
     export XAUTHORITY="${PWD}/${xauthority_file}"
-    echo "::notice::$(date) Setting XAUTHORITY to ${XAUTHORITY}"
+    echo "$(date): Setting XAUTHORITY to ${XAUTHORITY}"
 fi
 
 xterm_cmd="$(which xterm 2>/dev/null || echo ${service_parent_install_dir}/xterm)"
 export DISPLAY=":${XdisplayNumber}"
 run_xterm_loop(){
     while true; do
-        echo "::notice::$(date) Starting xterm with ${xterm_cmd}"
+        echo "$(date): Starting xterm with ${xterm_cmd}"
         ${xterm_cmd} -fa "DejaVu Sans Mono" -fs 12 -e bash -c '
 printf "\033[1;36m"
 printf "╔══════════════════════════════════════════════════════════════╗\n"
@@ -215,7 +215,7 @@ run_xterm_pid=$!
 echo "kill ${run_xterm_pid} || true # run_xterm_loop" >> cancel.sh
 
 if [ -n "${startup_command}" ]; then
-    echo "::notice::$(date) Running startup command: ${startup_command}"
+    echo "$(date) Running startup command: ${startup_command}"
     eval ${startup_command} &
     startup_command_pid=$!
     echo "kill ${startup_command_pid} || true # startup_command" >> cancel.sh
@@ -223,7 +223,7 @@ fi
 
 # Wait for container to exit
 wait ${kasmvnc_container_pid}
-echo "::notice::$(date) Exiting job"
+echo "$(date) Exiting job"
 kill ${run_xterm_pid}
 rm cancel.sh
 exit 1

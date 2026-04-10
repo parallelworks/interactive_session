@@ -31,7 +31,7 @@ fi
 f_install_miniconda() {
     install_dir=$1
     if [[ "${service_install_instructions}" == "latest" ]]; then
-        echo "::notice::Installing Miniconda3-latest-Linux-x86_64.sh"
+        echo "Installing Miniconda3-latest-Linux-x86_64.sh"
         conda_repo="https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"
     else
         conda_repo="https://repo.anaconda.com/miniconda/Miniconda3-py312_24.9.2-0-Linux-x86_64.sh"
@@ -56,23 +56,23 @@ f_set_up_conda_from_yaml() {
     sed -i -e '/^name:/d' -e '/^prefix:/d' -e '/^$/d' ${CONDA_YAML} 
     
     if [ ! -d "${CONDA_DIR}" ]; then
-        echo "::notice::Conda directory <${CONDA_DIR}> not found. Installing conda..."
+        echo "Conda directory <${CONDA_DIR}> not found. Installing conda..."
         f_install_miniconda ${CONDA_DIR}
     fi
     
-    echo "::notice::Sourcing Conda SH <${CONDA_SH}>"
+    echo "Sourcing Conda SH <${CONDA_SH}>"
     source ${CONDA_SH}
 
     # Check if Conda environment exists
     if ! conda env list | grep -q "${CONDA_ENV}"; then
-        echo "::notice::Creating Conda Environment <${CONDA_ENV}>"
+        echo "Creating Conda Environment <${CONDA_ENV}>"
         conda create --name ${CONDA_ENV}
     fi
     
-    echo "::notice::Activating Conda Environment <${CONDA_ENV}>"
+    echo "Activating Conda Environment <${CONDA_ENV}>"
     conda activate ${CONDA_ENV}
     
-    echo "::notice::Installing condda environment from YAML"
+    echo "Installing condda environment from YAML"
     conda env update -n ${CONDA_ENV} -f ${CONDA_YAML}
 }
 
@@ -112,15 +112,15 @@ download_and_install_juice() {
     local OUTPUT_FILE="juice.tgz"
 
     # Step 1: Get download URL from JuiceLabs API
-    echo "::notice::Fetching JuiceLabs download URL..."
+    echo "Fetching JuiceLabs download URL..."
     download=$(curl -s 'https://electra.juicelabs.co/v2/public/download/linux' | python3 -c "import sys, json; print(json.load(sys.stdin)['url'])")
 
 
     if [ -z "$download" ]; then
-        echo "::error::$(date) Download URL is empty"
+        echo "$(date) ERROR: Download URL is empty" >&2
         exit 1
     fi
-    echo "::notice::Found download URL: $download"
+    echo "Found download URL: $download"
 
     # Step 2: Prepare install directory
     mkdir -p "${juice_install_dir}"
@@ -128,42 +128,42 @@ download_and_install_juice() {
 
     # Step 3: Install prerequisites
     sudo dnf install -y wget libatomic numactl-libs || {
-        echo "::error::$(date) Failed to install dependencies"
+        echo "$(date) ERROR: Failed to install dependencies" >&2
         exit 1
     }
 
     # Step 4: Download Juice agent
-    echo "::notice::Downloading Juice agent..."
+    echo "Downloading Juice agent..."
     wget -O "$OUTPUT_FILE" "$download" || {
-        echo "::error::$(date) Failed to download file"
+        echo "$(date) ERROR: Failed to download file" >&2
         exit 1
     }
 
     # Step 5: Extract archive
-    echo "::notice::Extracting Juice agent..."
+    echo "Extracting Juice agent..."
     tar -xzvf "$OUTPUT_FILE" || {
-        echo "::error::$(date) Failed to extract $OUTPUT_FILE"
+        echo "$(date) ERROR: Failed to extract $OUTPUT_FILE" >&2
         exit 1
     }
 
-    echo "::notice::Juice agent successfully installed in ${juice_install_dir}"
+    echo "Juice agent successfully installed in ${juice_install_dir}"
 }
 
 
 if [[ "${service_conda_install}" == "true" ]]; then
-    echo "::group::conda-setup"
+
     if [[ "${service_install_instructions}" == "install_command" ]]; then
-        echo "::notice::Running install command ${service_install_command}"
+        echo "Running install command ${service_install_command}"
         eval ${service_install_command}
     elif [[ "${service_install_instructions}" == "yaml" ]]; then
-        echo "::notice::Installing custom conda environment"
+        echo "Installing custom conda environment"
         printf "%b" "${service_yaml}" > conda.yaml
         cat conda.yaml
         f_set_up_conda_from_yaml ${service_parent_install_dir}/${service_conda_install_dir} ${service_conda_env} conda.yaml
         # Update service_load_env to use the correct path after installation
         service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
     elif [[ "${service_install_instructions}" == "latest" ]]; then
-        echo "::notice::Installing latest"
+        echo "Installing latest"
         {
             source ${service_conda_sh}
         } || {
@@ -189,12 +189,11 @@ if [[ "${service_conda_install}" == "true" ]]; then
             fi
         fi
     else
-        echo "::notice::Installing conda environment ${service_install_instructions}.yaml"
+        echo "Installing conda environment ${service_install_instructions}.yaml"
         f_set_up_conda_from_yaml ${service_parent_install_dir}/${service_conda_install_dir} ${service_conda_env} ${service_install_instructions}.yaml
         # Update service_load_env to use the correct path after installation
         service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
     fi
-    echo "::endgroup::"
 fi
 # Always set service_load_env to use the correct conda path if conda was installed
 if [[ "${service_conda_install}" == "true" ]]; then
@@ -203,17 +202,15 @@ fi
 eval "${service_load_env}"
 
 if [ -z $(which jupyter-lab 2> /dev/null) ]; then
-    echo "::error::$(date) jupyter-lab command not found"
+    echo "$(date) ERROR: jupyter-lab command not found"
     exit 1
 fi
 
 
 # Download singularity container if required
 if ! [ -f "${service_nginx_sif}" ]; then
-    echo "::group::Downloading nginx singularity"
-    echo "::notice::Downloading nginx singularity from Github"
+    echo; echo "Downloading nginx singularity from Github"
     download_singularity_container
-    echo "::endgroup::"
 fi
 
 # Juice
@@ -222,14 +219,12 @@ if [[ "${juice_use_juice}" == "true" ]]; then
         juice_install_dir=${service_parent_install_dir}/juice
         juice_exec=${service_parent_install_dir}/juice/juice
         if ! [ -f ${juice_exec} ]; then
-            echo "::group::juice-setup"
-            echo "::notice::$(date) Installing Juice"
+            echo "$(date) INFO: Installing Juice"
             mkdir -p ${juice_install_dir}
             download_and_install_juice
-            echo "::endgroup::"
         fi
         if ! [ -f ${juice_exec} ]; then
-            echo "::error::$(date) Juice installation failed"
+            echo "$(date) ERROR: Juice installation failed" >&2
             exit 1
         fi
     fi

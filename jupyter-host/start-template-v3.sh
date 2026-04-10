@@ -19,20 +19,20 @@ fi
 eval "${service_load_env}"
 
 if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
-    echo "::error::$(date) jupyter-notebook command not found"
+    echo "$(date) ERROR: jupyter-notebook command not found"
     exit 1
 fi
 
-echo "::notice::starting notebook on $service_port..."
+echo "starting notebook on $service_port..."
 
 export XDG_RUNTIME_DIR=""
 
 # Generate sha:
 if [ -z "${service_password}" ]; then
-    echo "::notice::No password was specified"
+    echo "No password was specified"
     sha=""
 else
-    echo "::notice::Generating sha"
+    echo "Generating sha"
     sha=$(python3 -c "from notebook.auth.security import passwd; print(passwd('${service_password}', algorithm = 'sha1'))")
 fi
 # Set the launch directory for JupyterHub
@@ -44,7 +44,8 @@ fi
 
 jupyter_major_version=$(jupyter notebook --version | cut -d'.' -f1)
 
-echo "::notice::Jupyter version is $(jupyter notebook --version)" 
+echo "Jupyter version is"
+jupyter notebook --version 
 
 if [ "${jupyter_major_version}" -lt 7 ]; then
 
@@ -107,9 +108,8 @@ jupyterserver_port=$(pw agent open-port)
 #######################
 # START NGINX WRAPPER #
 #######################
-echo "::group::nginx-wrapper"
 
-echo "::notice::Starting nginx wrapper on service port ${service_port}"
+echo "Starting nginx wrapper on service port ${service_port}"
 
 # Write config file
 cat >> config.conf <<HERE
@@ -195,7 +195,7 @@ if sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
     # Print logs
     sudo docker logs ${container_name}
 elif which singularity >/dev/null 2>&1; then
-    echo "::notice::Running singularity container ${service_nginx_sif}"
+    echo "Running singularity container ${service_nginx_sif}"
     # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
     # and other users cannot use the node. Was not able to change this in the config.conf.
     mkdir -p ./tmp
@@ -205,12 +205,11 @@ elif which singularity >/dev/null 2>&1; then
     pid=$!
     echo "kill ${pid}" >> cancel.sh
 else
-    echo "::notice::Need Docker or Singularity to start NGINX proxy"
+    echo "Need Docker or Singularity to start NGINX proxy"
 fi
-echo "::endgroup::"
 
 
-echo "::group::jupyter"
+
 export JUPYTER_CONFIG_DIR=${PWD}
 jupyter notebook --generate-config
 
@@ -290,5 +289,4 @@ jupyter-notebook --port=${jupyterserver_port} --no-browser --config=${PWD}/jupyt
 fi
 
 
-echo "::endgroup::"
 sleep 999999999

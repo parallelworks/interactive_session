@@ -11,4 +11,4 @@ set -o pipefail
 # Called by: Workflow preprocessing step
 ################################################################################
 
-echo "::notice::$(date) Controller setup complete. No controller-side actions required."
+echo "$(date) INFO: Controller setup complete. No controller-side actions required."

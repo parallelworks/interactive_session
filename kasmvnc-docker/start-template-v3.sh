@@ -5,9 +5,9 @@
 
 set -ex
 
-echo "::notice::=========================================="
-echo "::notice::$(date) Desktop Service Starting (Compute Node)"
-echo "::notice::=========================================="
+echo "=========================================="
+echo "$(date) Desktop Service Starting (Compute Node)"
+echo "=========================================="
 
 if [ -z ${service_parent_install_dir} ]; then
     service_parent_install_dir=${HOME}/pw/software
@@ -54,25 +54,25 @@ sudo systemctl start docker || true
 # Detect docker command and ensure the service is running
 if docker info &>/dev/null; then
     docker_cmd="docker"
-    echo "::notice::$(date) Docker is accessible without sudo"
+    echo "$(date) Docker is accessible without sudo"
 elif sudo docker info &>/dev/null; then
     docker_cmd="sudo docker"
-    echo "::notice::$(date) Docker requires sudo"
+    echo "$(date) Docker requires sudo"
 else
-    echo "::error::$(date) Docker is not available on this system"
+    echo "$(date) ERROR: Docker is not available on this system" >&2
     exit 1
 fi
-echo "::notice::$(date) Using docker command: ${docker_cmd}"
+echo "$(date) Using docker command: ${docker_cmd}"
 
-echo "::notice::$(date) Starting KasmVNC Container ..."
+echo "$(date) Starting KasmVNC Container ..."
 
 # GPU flag
 GPU_FLAG=""
 if [[ "${enable_gpu}" == "true" ]]; then
     GPU_FLAG="--gpus all"
-    echo "::notice::$(date) GPU support enabled (--gpus all)"
+    echo "$(date) GPU support enabled (--gpus all)"
 else
-    echo "::notice::$(date) GPU support disabled"
+    echo "$(date) GPU support disabled"
 fi
 
 container_image="parallelworks/kasmvnc-${kasmvnc_os}"
@@ -88,25 +88,25 @@ build_mount_flags() {
     for dir in ${directories}; do
         if [ -e "${dir}" ]; then
             flags="${flags} -v ${dir}:${dir}"
-            echo "::notice::$(date) Mount: ${dir} exists, adding to bind mounts"
+            echo "$(date) Mount: ${dir} exists, adding to bind mounts"  >&2
         else
-            echo "::notice::$(date) Mount: ${dir} does not exist, skipping"
+            echo "$(date) Mount: ${dir} does not exist, skipping"  >&2
         fi
     done
 
-    echo "::notice::${flags}"
+    echo "${flags}"
 }
 
 # Build mount flags for existing directories
 MOUNT_FLAGS=$(build_mount_flags "${mount_directories}")
-echo "::notice::$(date) Mount flags: ${MOUNT_FLAGS}"
+echo "$(date) Mount flags: ${MOUNT_FLAGS}"
 
 # Pull KasmVNC container
-echo "::notice::$(date) Pulling Docker container..."
+echo "$(date) Pulling Docker container..."
 ${docker_cmd} pull "${container_image}"
 
 # Start KasmVNC container
-echo "::notice::$(date) Starting Docker container..."
+echo "$(date) Starting Docker container..."
 touch empty
 chmod 644 empty
 touch error.log
@@ -134,16 +134,16 @@ set +x
 
 echo "${docker_cmd} stop ${container_name} #kasmvnc_container" >> cancel.sh
 echo "kill ${kasmvnc_container_pid} | true #kasmvnc_container_pid" >> cancel.sh
-echo "::notice::$(date) KasmVNC container started with PID ${kasmvnc_container_pid}"
+echo "$(date) KasmVNC container started with PID ${kasmvnc_container_pid}"
 
-echo "::notice::$(date) Copy .Xauthority from container to host..."
+echo "$(date) Copy .Xauthority from container to host..."
 for i in $(seq 1 30); do
     if ${docker_cmd} cp "${container_name}:/home/packer/.Xauthority" "/tmp/.xauth${XdisplayNumber}" \
        || ${docker_cmd} cp "${container_name}:/home/metauser/.Xauthority" "/tmp/.xauth${XdisplayNumber}"
     then
         break
     fi
-    echo "::notice::$(date) Attempt $i/30 failed, retrying in 2s..."
+    echo "$(date) Attempt $i/30 failed, retrying in 2s..."
     sleep 2
 done
 sudo chown "$USER" "/tmp/.xauth${XdisplayNumber}" || chown "$USER" "/tmp/.xauth${XdisplayNumber}"
@@ -151,10 +151,10 @@ echo "rm /tmp/.xauth${XdisplayNumber}" >> cancel.sh
 export XAUTHORITY=/tmp/.xauth${XdisplayNumber}
 
 xterm_cmd="$(which xterm 2>/dev/null || echo ${service_parent_install_dir}/xterm)"
-echo "::notice::$(date) Starting xterm on the host..."
+echo "$(date) Starting xterm on the host..."
 run_xterm_loop(){
     while true; do
-        echo "::notice::$(date) Starting xterm with ${xterm_cmd}"
+        echo "$(date): Starting xterm with ${xterm_cmd}"
         ${xterm_cmd} -fa "DejaVu Sans Mono" -fs 12 -e bash -c '
 printf "\033[1;36m"
 printf "╔══════════════════════════════════════════════════════════════╗\n"
@@ -180,7 +180,7 @@ run_xterm_pid=$!
 echo "kill ${run_xterm_pid} | true # run_xterm_loop" >> cancel.sh
 
 if [ -n "${startup_command}" ]; then
-    echo "::notice::$(date) Running startup command: ${startup_command}"
+    echo "$(date) Running startup command: ${startup_command}"
     eval ${startup_command} &
     startup_command_pid=$!
     echo "kill ${startup_command_pid} | true # startup_command" >> cancel.sh
@@ -188,7 +188,7 @@ fi
 
 # Wait for container to exit
 wait ${kasmvnc_container_pid}
-echo "::notice::$(date) Exiting job"
+echo "$(date) Exiting job"
 kill ${run_xterm_pid}
 bash cancel.sh
 exit 1

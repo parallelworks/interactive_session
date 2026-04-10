@@ -56,15 +56,15 @@ download_and_install_juice() {
     local OUTPUT_FILE="juice.tgz"
 
     # Step 1: Get download URL from JuiceLabs API
-    echo "::notice::Fetching JuiceLabs download URL..."
+    echo "Fetching JuiceLabs download URL..."
     download=$(curl -s 'https://electra.juicelabs.co/v2/public/download/linux' | python3 -c "import sys, json; print(json.load(sys.stdin)['url'])")
 
 
     if [ -z "$download" ]; then
-        echo "::error::$(date) Download URL is empty"
+        echo "$(date) ERROR: Download URL is empty" >&2
         exit 1
     fi
-    echo "::notice::Found download URL: $download"
+    echo "Found download URL: $download"
 
     # Step 2: Prepare install directory
     mkdir -p "${juice_install_dir}"
@@ -72,25 +72,25 @@ download_and_install_juice() {
 
     # Step 3: Install prerequisites
     sudo dnf install -y wget libatomic numactl-libs || {
-        echo "::error::$(date) Failed to install dependencies"
+        echo "$(date) ERROR: Failed to install dependencies" >&2
         exit 1
     }
 
     # Step 4: Download Juice agent
-    echo "::notice::Downloading Juice agent..."
+    echo "Downloading Juice agent..."
     wget -O "$OUTPUT_FILE" "$download" || {
-        echo "::error::$(date) Failed to download file"
+        echo "$(date) ERROR: Failed to download file" >&2
         exit 1
     }
 
     # Step 5: Extract archive
-    echo "::notice::Extracting Juice agent..."
+    echo "Extracting Juice agent..."
     tar -xzvf "$OUTPUT_FILE" || {
-        echo "::error::$(date) Failed to extract $OUTPUT_FILE"
+        echo "$(date) ERROR: Failed to extract $OUTPUT_FILE" >&2
         exit 1
     }
 
-    echo "::notice::Juice agent successfully installed in ${juice_install_dir}"
+    echo "Juice agent successfully installed in ${juice_install_dir}"
 }
 
 echo; echo
@@ -101,15 +101,13 @@ service_novnc_tgz_stem=$(echo ${service_novnc_tgz_basename} | sed "s|.tar.gz||g"
 service_novnc_install_dir=${service_parent_install_dir}/${service_novnc_tgz_stem}
 
 if ! [ -d "${service_novnc_install_dir}" ]; then
-    echo "::group::novnc-install"
-    echo "::notice::Downloading and installing ${service_novnc_install_dir}"
+    echo "Downloading and installing ${service_novnc_install_dir}"
     download_and_install
-    echo "::endgroup::"
 fi
 
 if ! [ -d "${service_novnc_install_dir}" ]; then
     echo
-    echo "::error::$(date) Failed to install ${service_novnc_install_dir}"
+    echo "$(date) ERROR: Failed to install ${service_novnc_install_dir}"
     exit 1
 fi
 
@@ -117,7 +115,7 @@ fi
 # Check if the file exists
 if ! [ -f "${service_novnc_install_dir}/ttyd.x86_64" ]; then
     echo
-    echo "::error::$(date) Missing file ${service_novnc_install_dir}/ttyd.x86_64"
+    echo "$(date) ERROR: Missing file ${service_novnc_install_dir}/ttyd.x86_64"
     exit 1
 else
     chmod +x "${service_novnc_install_dir}/ttyd.x86_64" 
@@ -130,14 +128,12 @@ if [[ "${juice_use_juice}" == "true" ]]; then
         juice_install_dir=${service_parent_install_dir}/juice
         juice_exec=${service_parent_install_dir}/juice/juice
         if ! [ -f ${juice_exec} ]; then
-            echo "::group::juice-setup"
-            echo "::notice::$(date) Installing Juice"
+            echo "$(date) INFO: Installing Juice"
             mkdir -p ${juice_install_dir}
             download_and_install_juice
-            echo "::endgroup::"
         fi
         if ! [ -f ${juice_exec} ]; then
-            echo "::error::$(date) Juice installation failed"
+            echo "$(date) ERROR: Juice installation failed" >&2
             exit 1
         fi
     fi

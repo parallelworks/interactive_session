@@ -44,10 +44,10 @@ fi
 # JUICE https://docs.juicelabs.co/docs/juice/intro
 juice_cmd=""  # Initialize to empty
 if [[ "${juice_use_juice}" == "true" ]]; then
-    echo "::notice::$(date) Enabling Juice for remote GPU access"
+    echo "$(date) INFO: Enabling Juice for remote GPU access"
     if [ -z "${juice_exec}" ]; then
         juice_exec=${service_parent_install_dir}/juice/juice
-        echo "::notice::$(date) Set Juice executable path to ${juice_exec}"
+        echo "$(date) INFO: Set Juice executable path to ${juice_exec}"
     fi
     
     if ! [ -z "${juice_vram}" ]; then
@@ -57,10 +57,10 @@ if [[ "${juice_use_juice}" == "true" ]]; then
         pool_ids_arg="--pool-ids ${juice_pool_ids}"
     fi
     juice_cmd="${juice_exec} run ${juice_cmd_args} ${vram_arg} ${pool_ids_arg}"
-    echo "::notice::$(date) Prepared Juice command: ${juice_cmd}"
-    echo "::notice::$(date) Logging into Juice with provided token"
+    echo "$(date) INFO: Prepared Juice command: ${juice_cmd}"
+    echo "$(date) INFO: Logging into Juice with provided token"
     ${juice_exec} login -t "${JUICE_TOKEN}" || {
-        echo "::error::$(date) Failed to log into Juice"
+        echo "$(date) ERROR: Failed to log into Juice" >&2
         exit 1
     }
 fi
@@ -80,7 +80,6 @@ export NEXT_TELEMETRY_DISABLED=1
 export GOTELEMETRY=off
 
 # START SERVICE
-echo "::group::openvscode"
 echo ${juice_cmd} ${service_exec} --bind-addr=${HOSTNAME}:${service_port} ${password_flag} ${service_directory}
 
 ${juice_cmd} ${service_exec} \
@@ -90,11 +89,10 @@ ${juice_cmd} ${service_exec} \
     ${service_directory}
 
 if [ $? -ne 0 ]; then
-    echo "::error::$(date) Command failed"
+    echo "$(date) ERROR: Command failed" >&2
     exit 1
 fi
 
 # Keep container alive indefinitely (999999999 seconds ≈ 31 years)
 # Using numeric value instead of 'infinity' for broader compatibility
-echo "::endgroup::"
 sleep 999999999

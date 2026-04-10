@@ -86,9 +86,9 @@ build_mount_flags() {
     for dir in ${directories}; do
         if [ -e "${dir}" ]; then
             flags="${flags} -v ${dir}:${dir}"
-            echo "::debug::Mount: ${dir} exists, adding to bind mounts"
+            echo "::debug::Mount: ${dir} exists, adding to bind mounts" >&2
         else
-            echo "::debug::Mount: ${dir} does not exist, skipping"
+            echo "::debug::Mount: ${dir} does not exist, skipping" >&2
         fi
     done
 

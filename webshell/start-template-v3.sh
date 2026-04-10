@@ -28,10 +28,10 @@ rm -rf ${PWD}/service.pid
 # JUICE https://docs.juicelabs.co/docs/juice/intro
 juice_cmd=""  # Initialize to empty
 if [[ "${juice_use_juice}" == "true" ]]; then
-    echo "$(date) INFO: Enabling Juice for remote GPU access"
+    echo "::notice::$(date) Enabling Juice for remote GPU access"
     if [ -z "${juice_exec}" ]; then
         juice_exec=${service_parent_install_dir}/juice/juice
-        echo "$(date) INFO: Set Juice executable path to ${juice_exec}"
+        echo "::notice::$(date) Set Juice executable path to ${juice_exec}"
     fi
     
     if ! [ -z "${juice_vram}" ]; then
@@ -41,14 +41,15 @@ if [[ "${juice_use_juice}" == "true" ]]; then
         pool_ids_arg="--pool-ids ${juice_pool_ids}"
     fi
     juice_cmd="${juice_exec} run ${juice_cmd_args} ${vram_arg} ${pool_ids_arg}"
-    echo "$(date) INFO: Prepared Juice command: ${juice_cmd}"
-    echo "$(date) INFO: Logging into Juice with provided token"
+    echo "::notice::$(date) Prepared Juice command: ${juice_cmd}"
+    echo "::notice::$(date) Logging into Juice with provided token"
     ${juice_exec} login -t "${JUICE_TOKEN}" || {
-        echo "$(date) ERROR: Failed to log into Juice" >&2
+        echo "::error::$(date) Failed to log into Juice"
         exit 1
     }
 fi
 
+echo "::group::ttyd"
 set -x
 # Start ttyd terminal service
 # -p: port number, -s: signal to send on exit (2=SIGINT for graceful shutdown)
@@ -65,4 +66,5 @@ fi
 
 # Keep container alive indefinitely
 # Using 'inf' which is bash-specific shorthand for infinity
+echo "::endgroup::"
 sleep inf

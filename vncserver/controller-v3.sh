@@ -100,19 +100,23 @@ service_novnc_tgz_stem=$(echo ${service_novnc_tgz_basename} | sed "s|.tar.gz||g"
 service_novnc_install_dir=${service_parent_install_dir}/${service_novnc_tgz_stem}
 
 if ! [ -d "${service_novnc_install_dir}" ]; then
-    echo "Downloading and installing ${service_novnc_install_dir}"
+    echo "::group::novnc-install"
+    echo "::notice::Downloading and installing ${service_novnc_install_dir}"
     download_and_install_novnc
+    echo "::endgroup::"
 fi
 
 # Download nginx singularity container
 if ! [ -f "${service_nginx_sif}" ]; then
-    echo; echo "Downloading nginx singularity from Github"
+    echo "::group::nginx-singularity"
+    echo "::notice::Downloading nginx singularity from Github"
     download_singularity_container downloads/jupyter/nginx-unprivileged.sif ${service_nginx_sif}
+    echo "::endgroup::"
 fi
 
 if ! [ -d "${service_novnc_install_dir}" ]; then
     echo
-    echo "$(date) ERROR: Failed to install ${service_novnc_install_dir}"
+    echo "::error::$(date) Failed to install ${service_novnc_install_dir}"
     exit 1
 fi
 
@@ -126,15 +130,17 @@ fi
 # - Some compute nodes don't have access to the internet
 if [[ ${service_download_vncserver_container} == "true" ]]; then
     if ! [ -d "${service_vncserver_singularity_dir}" ]; then
-        echo "$(date) WARNING: Failed to download file ${service_vncserver_singularity_tgz} from GitHub repository"
-        echo "$(date)          Using GitHub registry to download file"
+        echo "::group::vncserver-container"
+        echo "::warning::$(date) Failed to download file ${service_vncserver_singularity_tgz} from GitHub repository"
+        echo "::notice::$(date) Using GitHub registry to download file"
         download_oras
         oras_pull_file ghcr.io/avidalto/vncserver:2.0 vncserver.tgz ${service_vncserver_singularity_tgz}
         if [ ! -s ${service_vncserver_singularity_tgz} ]; then
-            echo "$(date) ERROR: Failed to download file ${service_vncserver_singularity_tgz}"
+            echo "::error::$(date) Failed to download file ${service_vncserver_singularity_tgz}"
             exit 1
         fi
         tar -xzf ${service_vncserver_singularity_tgz} -C $(dirname ${service_vncserver_singularity_dir})
+        echo "::endgroup::"
     fi
 
     xterm_path=$(which xterm)

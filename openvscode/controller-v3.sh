@@ -49,15 +49,15 @@ download_and_install_juice() {
     local OUTPUT_FILE="juice.tgz"
 
     # Step 1: Get download URL from JuiceLabs API
-    echo "Fetching JuiceLabs download URL..."
+    echo "::notice::Fetching JuiceLabs download URL..."
     download=$(curl -s 'https://electra.juicelabs.co/v2/public/download/linux' | python3 -c "import sys, json; print(json.load(sys.stdin)['url'])")
 
 
     if [ -z "$download" ]; then
-        echo "$(date) ERROR: Download URL is empty" >&2
+        echo "::error::$(date) Download URL is empty"
         exit 1
     fi
-    echo "Found download URL: $download"
+    echo "::notice::Found download URL: $download"
 
     # Step 2: Prepare install directory
     mkdir -p "${juice_install_dir}"
@@ -65,32 +65,32 @@ download_and_install_juice() {
 
     # Step 3: Install prerequisites
     sudo dnf install -y wget libatomic numactl-libs || {
-        echo "$(date) ERROR: Failed to install dependencies" >&2
+        echo "::error::$(date) Failed to install dependencies"
         exit 1
     }
 
     # Step 4: Download Juice agent
-    echo "Downloading Juice agent..."
+    echo "::notice::Downloading Juice agent..."
     wget -O "$OUTPUT_FILE" "$download" || {
-        echo "$(date) ERROR: Failed to download file" >&2
+        echo "::error::$(date) Failed to download file"
         exit 1
     }
 
     # Step 5: Extract archive
-    echo "Extracting Juice agent..."
+    echo "::notice::Extracting Juice agent..."
     tar -xzvf "$OUTPUT_FILE" || {
-        echo "$(date) ERROR: Failed to extract $OUTPUT_FILE" >&2
+        echo "::error::$(date) Failed to extract $OUTPUT_FILE"
         exit 1
     }
 
-    echo "Juice agent successfully installed in ${juice_install_dir}"
+    echo "::notice::Juice agent successfully installed in ${juice_install_dir}"
 }
 
 . /etc/os-release
 # Check if the ID or NAME variable indicates CentOS
 if [[ "$ID" == "centos" || "$NAME" == *"CentOS"* ]]; then
     echo; echo
-    echo "$(date) ERROR: Code Server is no longer supported on CentOS 7" >&2
+    echo "::error::$(date) Code Server is no longer supported on CentOS 7"
     exit 1
 fi
 
@@ -111,9 +111,11 @@ service_exec=${service_install_dir}/bin/code-server
 service_copilot_vsix_path=${service_parent_install_dir}/GitHub.copilot-latest.vsix
 
 if [ ! -f ${service_exec} ]; then
-    echo "Executable ${service_exec} not found"
-    echo "Installing code server"
+    echo "::group::code-server-install"
+    echo "::notice::Executable ${service_exec} not found"
+    echo "::notice::Installing code server"
     install_code_server
+    echo "::endgroup::"
 fi
 
 
@@ -122,10 +124,12 @@ fi
 # Note: Pinned to version 1.388.0 for stability - newer versions may have breaking changes
 copilot_extension_path=${service_parent_install_dir}/github.copilot-1.388.0.vsix
 if [ ! -f ${copilot_extension_path} ]; then
-    echo "Extension ${copilot_extension_path} not found"
-    echo "Downloading and installing extension ${copilot_extension_path}"
+    echo "::group::copilot-extension"
+    echo "::notice::Extension ${copilot_extension_path} not found"
+    echo "::notice::Downloading and installing extension ${copilot_extension_path}"
     curl -L -o ${copilot_extension_path} "https://github.gallery.vsassets.io/_apis/public/gallery/publisher/github/extension/copilot/1.388.0/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage"
     ${service_exec} --install-extension ${copilot_extension_path} --extensions-dir ${HOME}/.local/share/code-server/extensions
+    echo "::endgroup::"
 fi
 
 # Copilot chat extension
@@ -139,7 +143,7 @@ fi
 
 
 if [ ! -f ${service_exec} ]; then
-    echo "$(date) ERROR: missing ${service_exec}" >&2
+    echo "::error::$(date) missing ${service_exec}"
     exit 1
 fi
 
@@ -149,12 +153,14 @@ if [[ "${juice_use_juice}" == "true" ]]; then
         juice_install_dir=${service_parent_install_dir}/juice
         juice_exec=${service_parent_install_dir}/juice/juice
         if ! [ -f ${juice_exec} ]; then
-            echo "$(date) INFO: Installing Juice"
+            echo "::group::juice-setup"
+            echo "::notice::$(date) Installing Juice"
             mkdir -p ${juice_install_dir}
             download_and_install_juice
+            echo "::endgroup::"
         fi
         if ! [ -f ${juice_exec} ]; then
-            echo "$(date) ERROR: Juice installation failed" >&2
+            echo "::error::$(date) Juice installation failed"
             exit 1
         fi
     fi

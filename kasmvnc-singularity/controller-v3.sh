@@ -32,15 +32,17 @@ mkdir -p ${service_parent_install_dir}
 # - vncserver can be installed in the compute nodes but not in the controlle nodes
 # - Some compute nodes don't have access to the internet
 if ! [ -d "${container_dir}" ]; then
-    echo "$(date) Using GitHub registry to download file"
+    echo "::group::kasmvnc-container"
+    echo "::notice::$(date) Using GitHub registry to download file"
     download_oras
     oras_pull_file ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}:1.0 kasmvnc-${kasmvnc_os}.tgz ${container_tgz}
     if [ ! -s ${container_tgz} ]; then
-        echo "$(date) ERROR: Failed to download file ${container_tgz}"
+        echo "::error::$(date) Failed to download file ${container_tgz}"
         exit 1
     fi
     tar -xzf ${container_tgz} -C $(dirname ${container_dir})
     rm ${container_tgz}
+    echo "::endgroup::"
 fi
 
 

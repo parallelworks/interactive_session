@@ -18,7 +18,7 @@ fi
 f_install_miniconda() {
     install_dir=$1
     if [[ "${service_install_instructions}" == "latest" ]]; then
-        echo "Installing Miniconda3-latest-Linux-x86_64.sh"
+        echo "::notice::Installing Miniconda3-latest-Linux-x86_64.sh"
         conda_repo="https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"
     else
         conda_repo="https://repo.anaconda.com/miniconda/Miniconda3-py312_24.9.2-0-Linux-x86_64.sh"
@@ -40,23 +40,23 @@ f_set_up_conda_from_yaml() {
     sed -i -e '/^name:/d' -e '/^prefix:/d' -e '/^$/d' ${CONDA_YAML} 
     
     if [ ! -d "${CONDA_DIR}" ]; then
-        echo "Conda directory <${CONDA_DIR}> not found. Installing conda..."
+        echo "::notice::Conda directory <${CONDA_DIR}> not found. Installing conda..."
         f_install_miniconda ${CONDA_DIR}
     fi
     
-    echo "Sourcing Conda SH <${CONDA_SH}>"
+    echo "::notice::Sourcing Conda SH <${CONDA_SH}>"
     source ${CONDA_SH}
 
     # Check if Conda environment exists
     if ! conda env list | grep -q "${CONDA_ENV}"; then
-        echo "Creating Conda Environment <${CONDA_ENV}>"
+        echo "::notice::Creating Conda Environment <${CONDA_ENV}>"
         conda create --name ${CONDA_ENV}
     fi
     
-    echo "Activating Conda Environment <${CONDA_ENV}>"
+    echo "::notice::Activating Conda Environment <${CONDA_ENV}>"
     conda activate ${CONDA_ENV}
     
-    echo "Installing condda environment from YAML"
+    echo "::notice::Installing condda environment from YAML"
     conda env update -n ${CONDA_ENV} -f ${CONDA_YAML}
 }
 
@@ -92,19 +92,19 @@ download_singularity_container() {
 
 
 if [[ "${service_conda_install}" == "true" ]]; then
-    
+    echo "::group::conda-setup"
     ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Installing"
 
     if [[ "${service_install_instructions}" == "install_command" ]]; then
-        echo "Running install command ${service_install_command}"
+        echo "::notice::Running install command ${service_install_command}"
         eval ${service_install_command}
     elif [[ "${service_install_instructions}" == "yaml" ]]; then
-        echo "Installing custom conda environment"
+        echo "::notice::Installing custom conda environment"
         printf "%b" "${service_yaml}" > conda.yaml
         cat conda.yaml
         f_set_up_conda_from_yaml ${service_parent_install_dir}/${service_conda_install_dir} ${service_conda_env} conda.yaml
     elif [[ "${service_install_instructions}" == "latest" ]]; then
-        echo "Installing latest"
+        echo "::notice::Installing latest"
         {
             source ${service_conda_sh}
         } || {
@@ -126,12 +126,13 @@ if [[ "${service_conda_install}" == "true" ]]; then
             conda install conda-forge::jinja2 -y
         fi
     else
-        echo "Installing conda environment ${service_install_instructions}.yaml"
+        echo "::notice::Installing conda environment ${service_install_instructions}.yaml"
         f_set_up_conda_from_yaml ${service_parent_install_dir}/${service_conda_install_dir} ${service_conda_env} ${service_install_instructions}.yaml
     fi
     if [ -z "${service_load_env}" ]; then
         service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
     fi
+    echo "::endgroup::"
 fi
 
 eval "${service_load_env}"
@@ -145,19 +146,20 @@ eval "${service_load_env}"
 
 
 if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
-    echo "$(date) ERROR: jupyter-notebook command not found"
+    echo "::error::$(date) jupyter-notebook command not found"
     exit 1
 fi
 
 # Download singularity container if required
 jupyter_major_version=$(jupyter notebook --version | cut -d'.' -f1)
-echo "Jupyter version is"
-jupyter notebook --version 
+echo "::notice::Jupyter version is $(jupyter notebook --version)"
 
 if [ "${jupyter_major_version}" -ge 7 ]; then
     if ! [ -f "${service_nginx_sif}" ]; then
-        echo; echo "Downloading nginx singularity from Github"
+        echo "::group::Downloading nginx singularity"
+        echo "::notice::Downloading nginx singularity from Github"
         download_singularity_container
+        echo "::endgroup::"
     fi
 fi
 

@@ -10,32 +10,32 @@ start_rootless_docker() {
 
     # Run Docker rootless daemon — use screen if available, otherwise run in background
     if command -v screen >/dev/null 2>&1; then
-        echo "$(date): Starting Docker rootless daemon in a screen session..."
+        echo "::notice::Starting Docker rootless daemon in a screen session..."
         screen -dmS docker-rootless bash -c "PATH=/usr/bin:/sbin:/usr/sbin:\$PATH dockerd-rootless.sh --exec-opt native.cgroupdriver=cgroupfs > ~/docker-rootless.log 2>&1"
     else
-        echo "$(date): 'screen' not found, starting Docker rootless daemon in background..."
+        echo "::notice::'screen' not found, starting Docker rootless daemon in background..."
         PATH=/usr/bin:/sbin:/usr/sbin:$PATH dockerd-rootless.sh --exec-opt native.cgroupdriver=cgroupfs > ~/docker-rootless.log 2>&1 &
     fi
 
     # Wait for Docker daemon to be ready
     until docker info > /dev/null 2>&1; do
         if [ $ATTEMPT -le $MAX_RETRIES ]; then
-            echo "$(date) Attempt $ATTEMPT of $MAX_RETRIES: Waiting for Docker daemon to start..."
+            echo "::debug::Attempt $ATTEMPT of $MAX_RETRIES: Waiting for Docker daemon to start..."
             sleep $RETRY_INTERVAL
             ((ATTEMPT++))
         else
-            echo "$(date) ERROR: Docker daemon failed to start after $MAX_RETRIES attempts."
+            echo "::error title=Error::Docker daemon failed to start after $MAX_RETRIES attempts."
             return 1
         fi
     done
 
-    echo "$(date): Docker daemon is ready!"
+    echo "::notice::Docker daemon is ready!"
     return 0
 }
 
 run_xterm_loop(){
     while true; do
-        echo "$(date): Starting xterm"
+        echo "::debug::Starting xterm"
         ${service_parent_install_dir}/xterm -fa "DejaVu Sans Mono" -fs 12
         sleep 1
     done
@@ -58,18 +58,18 @@ start_gnome_session_with_retries() {
     k=1
     while true; do
         if xset q >/dev/null 2>&1; then
-            echo "$(date) X server on $DISPLAY is alive."
+            echo "::debug::X server on $DISPLAY is alive."
             sleep $((k*10))
         else
-            echo "$(date) X server on $DISPLAY is unresponsive."
+            echo "::warning::X server on $DISPLAY is unresponsive."
             if [ $k -gt 1 ]; then
-                echo "$(date) Restarting vncserver"
+                echo "::notice::Restarting vncserver"
                 ${service_vnc_exec} -kill ${DISPLAY}
                 sleep 3
                 ${service_vnc_exec} ${DISPLAY} -SecurityTypes VncAuth -PasswordFile ${PW_PARENT_JOB_DIR}/.vncpasswd
             fi
             sleep 2
-            echo "$(date) Starting gnome-session"
+            echo "::notice::Starting gnome-session"
             gnome-session --debug
             sleep $((k*10))
         fi
@@ -98,10 +98,10 @@ kernel_version=$(uname -r | tr '[:upper:]' '[:lower:]')
 
 # Deactive default conda environments (required for emed)
 export $(env | grep CONDA_PREFIX)
-echo ${CONDA_PREFIX}
+echo "::debug::CONDA_PREFIX=${CONDA_PREFIX}"
 
 if ! [ -z "${CONDA_PREFIX}" ]; then
-    echo "Deactivating conda environment"
+    echo "::notice::Deactivating conda environment"
     source ${CONDA_PREFIX}/etc/profile.d/conda.sh
     conda deactivate
     export LD_LIBRARY_PATH=$(echo "$LD_LIBRARY_PATH" | tr ':' '\n' | grep -v 'conda' | tr '\n' ':' | sed 's/:$//')
@@ -150,17 +150,17 @@ fi
 
 if [ -z ${service_vnc_exec} ] || ! [ -f "${service_vnc_exec}" ]; then
     if [[ ${service_download_vncserver_container} != "true" ]]; then
-        echo "$(date) ERROR: No vncserver command found"
+        echo "::error title=Error::No vncserver command found"
         exit 1
     fi
 fi
 
 if [[ ${service_download_vncserver_container} == "true" ]]; then
     if ! which singularity > /dev/null 2>&1; then
-        echo "$(date) ERROR: No vncserver or singularity command found"
+        echo "::error title=Error::No vncserver or singularity command found"
         exit 1
     fi
-    echo "$(date): vncserver is not installed. Using singularity container..."
+    echo "::notice::vncserver is not installed. Using singularity container..."
     set -x
     singularity_exec="singularity run --writable-tmpfs --bind /tmp/.X11-unix:/tmp/.X11-unix --bind ${HOME}:${HOME} ${service_vncserver_singularity_dir}"
     service_vnc_exec="${singularity_exec} vncserver"
@@ -203,7 +203,7 @@ if [ -z ${service_vnc_type} ]; then
 fi
 
 if [ -z ${service_vnc_type} ]; then
-    echo "$(date) ERROR: vncserver type not found. Supported type are TigerVNC, TurboVNC and KasmVNC"
+    echo "::error title=Error::vncserver type not found. Supported types: TigerVNC, TurboVNC, KasmVNC"
     exit 1
 fi
 
@@ -251,7 +251,7 @@ if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
     #########
     # NoVNC #
     #########
-    echo; echo "DESKTOP ENVIRONMENT"
+    echo "::group::Desktop Environment"
     if ! [ -z "${service_desktop}" ]; then
         true
     elif  ! [ -z $(which gnome-session) ]; then
@@ -269,9 +269,10 @@ if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
         service_desktop=gnome
     else
         # Exit script here
-        echo "$(date) ERROR: No desktop environment was found! Tried gnome-session, mate-session, xfce4-session and gnome"
+        echo "::error title=Error::No desktop environment found. Tried: gnome-session, mate-session, xfce4-session, gnome"
         exit 1
     fi
+    echo "::endgroup::"
 
 
     # This is only required for turbovnc:
@@ -310,7 +311,7 @@ if [[ "${service_vnc_type}" == "TigerVNC" ]]; then
 
     if [[ "${HOSTNAME}" == gaea* && -f /usr/lib/vncserver ]]; then
         # FIXME: Change ~/.vnc/config
-        echo "$(date) ${service_vnc_exec} ${DISPLAY} &> ${PW_PARENT_JOB_DIR}/vncserver.log &"
+        echo "::notice::Starting vncserver: ${service_vnc_exec} ${DISPLAY}"
         ${service_vnc_exec} ${DISPLAY} &> ${PW_PARENT_JOB_DIR}/vncserver.log &
         vncserver_pid=$!
         echo ${vncserver_pid} > ${PW_PARENT_JOB_DIR}/vncserver.pid
@@ -470,7 +471,7 @@ EOF
 
     chmod 0755 "${XSTARTUP_PATH}"
 
-    echo "Kasm xstartup wrapper installed at ${XSTARTUP_PATH}"
+    echo "::notice::Kasm xstartup wrapper installed at ${XSTARTUP_PATH}"
 fi
 
 # FIXME: REMOVE THIS CODE WHEN ROCKY 9 IMAGE IS UPDATED!
@@ -502,16 +503,16 @@ sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
         -websocketPort ${kasmvnc_port} \
         -rfbport ${displayPort}"
 
-    echo Running:
-    echo ${vncserver_cmd}
+    echo "::notice::Running vncserver command:"
+    echo "::debug::${vncserver_cmd}"
 
     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
         ${vncserver_cmd}
         if [ $? -eq 0 ]; then
-            echo "KasmVNC server started successfully."
+            echo "::notice::KasmVNC server started successfully."
             break
         else
-            echo "KasmVNC server failed to start. Retrying in $RETRY_DELAY seconds..."
+            echo "::warning::KasmVNC server failed to start. Retrying in $RETRY_DELAY seconds..."
             ls -l /etc/pki/tls/private/kasmvnc.pem
             sleep $RETRY_DELAY
         fi
@@ -522,7 +523,7 @@ sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
     rm -rf ${portFile}
 
     if ! [ -f "${HOME}/.vnc/$(hostname)${DISPLAY}.pid" ]; then
-        echo $(date): "KasmVNC server failed to start. Exiting workflow."
+        echo "::error title=Error::KasmVNC server failed to start. Exiting workflow."
         exit 1
     fi
 
@@ -540,11 +541,11 @@ sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
     proxy_host="127.0.0.1"
     if which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]]; then
         if ! dockerd-rootless-setuptool.sh check; then
-            echo "$(date) ERROR: Rootless docker is NOT support on this system"
+            echo "::error title=Error::Rootless docker is not supported on this system"
             exit 1
         fi
         if ! which socat >/dev/null 2>&1; then
-            echo "$(date) ERROR: socat is not installed"
+            echo "::error title=Error::socat is not installed"
             exit 1
         fi
         start_rootless_docker
@@ -556,7 +557,8 @@ sudo chmod +x /usr/lib/kasmvncserver/select-de.sh
         pid=$!
         echo "kill ${pid} #socat" >> cancel.sh
     fi
-    echo "Starting nginx wrapper on service port ${service_port}"
+    echo "::group::Nginx Proxy"
+    echo "::notice::Starting nginx wrapper on service port ${service_port}"
 
     # Write config file
     cat >> config.conf <<HERE
@@ -660,7 +662,7 @@ HERE
         # Print logs
         sudo docker logs ${container_name}
     elif which singularity >/dev/null 2>&1; then
-        echo "Running singularity container ${service_nginx_sif}"
+        echo "::notice::Running singularity container ${service_nginx_sif}"
         # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
         # and other users cannot use the node. Was not able to change this in the config.conf.
         mkdir -p ./tmp
@@ -670,9 +672,10 @@ HERE
         pid=$!
         echo "kill ${pid}" >> cancel.sh
     else
-        echo "$(date) ERROR: Need Docker or Singularity to start NGINX proxy"
+        echo "::error title=Error::Need Docker or Singularity to start NGINX proxy"
         exit 1
     fi
+    echo "::endgroup::"
 fi
 
 
@@ -687,10 +690,10 @@ eval "${service_load_env}"
 cd
 if ! [ -z "${service_bin}" ]; then
     if [[ ${service_background} == "False" ]]; then
-        echo "Running ${service_bin}"
+        echo "::notice::Running ${service_bin}"
         eval ${service_bin}
     else
-        echo "Running ${service_bin} in the background"
+        echo "::notice::Running ${service_bin} in the background"
         eval ${service_bin} &
         echo $! >> ${PW_PARENT_JOB_DIR}/service.pid
     fi

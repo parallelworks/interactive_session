@@ -24,23 +24,23 @@ oras_pull_file(){
     mv ${repo_path} ${host_path}
 }
 
-echo; echo
-
 mkdir -p ${service_parent_install_dir}
 
 # The reason we need service_download_vncserver_container is:
 # - vncserver can be installed in the compute nodes but not in the controlle nodes
 # - Some compute nodes don't have access to the internet
 if ! [ -d "${container_dir}" ]; then
-    echo "$(date) Using GitHub registry to download file"
+    echo "::group::KasmVNC Container Download"
+    echo "::notice::Using GitHub registry to download file"
     download_oras
     oras_pull_file ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}:1.0 kasmvnc-${kasmvnc_os}.tgz ${container_tgz}
     if [ ! -s ${container_tgz} ]; then
-        echo "$(date) ERROR: Failed to download file ${container_tgz}"
+        echo "::error title=Error::Failed to download file ${container_tgz}"
         exit 1
     fi
     tar -xzf ${container_tgz} -C $(dirname ${container_dir})
     rm ${container_tgz}
+    echo "::endgroup::"
 fi
 
 

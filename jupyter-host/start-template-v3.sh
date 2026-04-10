@@ -19,20 +19,20 @@ fi
 eval "${service_load_env}"
 
 if [ -z $(which jupyter-notebook 2> /dev/null) ]; then
-    echo "$(date) ERROR: jupyter-notebook command not found"
+    echo "::error title=Error::jupyter-notebook command not found"
     exit 1
 fi
 
-echo "starting notebook on $service_port..."
+echo "::notice::Starting notebook on port ${service_port}..."
 
 export XDG_RUNTIME_DIR=""
 
 # Generate sha:
 if [ -z "${service_password}" ]; then
-    echo "No password was specified"
+    echo "::notice::No password was specified"
     sha=""
 else
-    echo "Generating sha"
+    echo "::notice::Generating password hash"
     sha=$(python3 -c "from notebook.auth.security import passwd; print(passwd('${service_password}', algorithm = 'sha1'))")
 fi
 # Set the launch directory for JupyterHub
@@ -44,8 +44,8 @@ fi
 
 jupyter_major_version=$(jupyter notebook --version | cut -d'.' -f1)
 
-echo "Jupyter version is"
-jupyter notebook --version 
+echo "::notice::Jupyter version:"
+jupyter notebook --version
 
 if [ "${jupyter_major_version}" -lt 7 ]; then
 
@@ -109,7 +109,8 @@ jupyterserver_port=$(pw agent open-port)
 # START NGINX WRAPPER #
 #######################
 
-echo "Starting nginx wrapper on service port ${service_port}"
+echo "::group::Nginx Proxy"
+echo "::notice::Starting nginx wrapper on service port ${service_port}"
 
 # Write config file
 cat >> config.conf <<HERE
@@ -195,7 +196,7 @@ if sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
     # Print logs
     sudo docker logs ${container_name}
 elif which singularity >/dev/null 2>&1; then
-    echo "Running singularity container ${service_nginx_sif}"
+    echo "::notice::Running singularity container ${service_nginx_sif}"
     # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
     # and other users cannot use the node. Was not able to change this in the config.conf.
     mkdir -p ./tmp
@@ -205,8 +206,9 @@ elif which singularity >/dev/null 2>&1; then
     pid=$!
     echo "kill ${pid}" >> cancel.sh
 else
-    echo "Need Docker or Singularity to start NGINX proxy"
+    echo "::error title=Error::Need Docker or Singularity to start NGINX proxy"
 fi
+echo "::endgroup::"
 
 
 

@@ -152,8 +152,7 @@ fi
 
 # Download singularity container if required
 jupyter_major_version=$(jupyter notebook --version | cut -d'.' -f1)
-echo "::notice::Jupyter version is"
-jupyter notebook --version 
+echo "::notice::Jupyter version is $(jupyter notebook --version)"
 
 if [ "${jupyter_major_version}" -ge 7 ]; then
     if ! [ -f "${service_nginx_sif}" ]; then

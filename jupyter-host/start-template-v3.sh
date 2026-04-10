@@ -44,8 +44,7 @@ fi
 
 jupyter_major_version=$(jupyter notebook --version | cut -d'.' -f1)
 
-echo "::notice::Jupyter version is"
-jupyter notebook --version 
+echo "::notice::Jupyter version is $(jupyter notebook --version)" 
 
 if [ "${jupyter_major_version}" -lt 7 ]; then
 

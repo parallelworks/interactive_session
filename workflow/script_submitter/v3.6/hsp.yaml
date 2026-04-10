@@ -280,7 +280,7 @@ jobs:
             if [ -z "${job_status}" ]; then
               job_status=$(sacct -j ${jobid}  --format=state | tail -n1)
               echo "::notice::Job exited with status ${job_status}"
-              break
+              exit 0
             fi
           done
         cleanup: |

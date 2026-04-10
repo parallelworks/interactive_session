@@ -44,12 +44,13 @@ fi
 # JUICE https://docs.juicelabs.co/docs/juice/intro
 juice_cmd=""  # Initialize to empty
 if [[ "${juice_use_juice}" == "true" ]]; then
-    echo "$(date) INFO: Enabling Juice for remote GPU access"
+    echo "::group::Juice Setup"
+    echo "::notice title=Info::Enabling Juice for remote GPU access"
     if [ -z "${juice_exec}" ]; then
         juice_exec=${service_parent_install_dir}/juice/juice
-        echo "$(date) INFO: Set Juice executable path to ${juice_exec}"
+        echo "::notice title=Info::Set Juice executable path to ${juice_exec}"
     fi
-    
+
     if ! [ -z "${juice_vram}" ]; then
         vram_arg="--vram ${juice_vram}"
     fi
@@ -57,12 +58,13 @@ if [[ "${juice_use_juice}" == "true" ]]; then
         pool_ids_arg="--pool-ids ${juice_pool_ids}"
     fi
     juice_cmd="${juice_exec} run ${juice_cmd_args} ${vram_arg} ${pool_ids_arg}"
-    echo "$(date) INFO: Prepared Juice command: ${juice_cmd}"
-    echo "$(date) INFO: Logging into Juice with provided token"
+    echo "::notice title=Info::Prepared Juice command: ${juice_cmd}"
+    echo "::notice title=Info::Logging into Juice with provided token"
     ${juice_exec} login -t "${JUICE_TOKEN}" || {
-        echo "$(date) ERROR: Failed to log into Juice" >&2
+        echo "::error title=Error::Failed to log into Juice"
         exit 1
     }
+    echo "::endgroup::"
 fi
 
 # DISABLE EXTENSION TELEMETRY
@@ -80,7 +82,8 @@ export NEXT_TELEMETRY_DISABLED=1
 export GOTELEMETRY=off
 
 # START SERVICE
-echo ${juice_cmd} ${service_exec} --bind-addr=${HOSTNAME}:${service_port} ${password_flag} ${service_directory}
+echo "::group::Start Service"
+echo "::notice::Starting code-server: ${juice_cmd} ${service_exec} --bind-addr=${HOSTNAME}:${service_port} ${password_flag} ${service_directory}"
 
 ${juice_cmd} ${service_exec} \
     --bind-addr=${HOSTNAME}:${service_port} \
@@ -89,9 +92,10 @@ ${juice_cmd} ${service_exec} \
     ${service_directory}
 
 if [ $? -ne 0 ]; then
-    echo "$(date) ERROR: Command failed" >&2
+    echo "::error title=Error::code-server command failed"
     exit 1
 fi
+echo "::endgroup::"
 
 # Keep container alive indefinitely (999999999 seconds ≈ 31 years)
 # Using numeric value instead of 'infinity' for broader compatibility

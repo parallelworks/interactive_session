@@ -20,7 +20,7 @@ jobs:
           set -x
           if [[ "${{ inputs.use_existing_script }}" == true ]]; then
             if [ ! -f "${{ inputs.script_path }}" ]; then
-                echo "(date) ERROR: File ${{ inputs.script_path }} does not exist or is not a regular file." >&2
+                echo "(date) ERROR: File ${{ inputs.script_path }} does not exist or is not a regular file."
                 exit 1
             fi
             cp ${{ inputs.script_path }} run-template.sh
@@ -113,22 +113,22 @@ jobs:
       - name: Submit Script
         run: |
           set -x
-          echo "$(date) Executing script"
+          echo "::notice::Executing script"
           ./run.sh > run.${PW_JOB_ID}.out 2>&1
         cleanup: |
           set -x
 
           if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
-              echo "$(date) INFO: No cleanup script provided."
+              echo "::notice::No cleanup script provided."
               exit 0
           fi
 
           if [ ! -f "${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}" ]; then
               # This is warning and not an error because the job could be canceled before the main script creates the cancel script
-              echo "$(date) WARNING: No cleanup script found in path ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}."
+              echo "::warning::No cleanup script found in path ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}."
               exit 0
           else
-              echo "$(date) INFO: Running cleanup script"
+              echo "::notice::Running cleanup script"
               chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
               timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
           fi
@@ -148,7 +148,7 @@ jobs:
       - name: Create PBS Script
         run: |
           set -x
-          echo "$(date) Creating PBS script"
+          echo "::notice::Creating PBS script"
           echo '${{ inputs.shebang }}' > run.sh
           cat headers.sh >> run.sh
           echo "cd ${PWD}" >> run.sh
@@ -159,11 +159,11 @@ jobs:
       - name: Submit PBS Script
         run: |
           set -x
-          echo "$(date) Submitting PBS Job"
+          echo "::notice::Submitting PBS Job"
           jobid=$(qsub run.sh)
           jobid=$(echo "$jobid" | cut -d'.' -f1)
           if ! [[ "${jobid}" =~ ^[0-9]+$ ]]; then
-            echo "$(date) Job submission failed: invalid jobid '${jobid}'"
+            echo "::error title=Error::Job submission failed: invalid jobid '${jobid}'"
             exit 1
           fi
           echo "jobid=${jobid}"  | tee -a $OUTPUTS
@@ -171,7 +171,7 @@ jobs:
       - name: Monitor PBS Job
         run: |
           jobid=${{ needs.pbs_job.outputs.jobid }}
-          echo "$(date) Monitoring PBS job ${jobid}"
+          echo "::notice::Monitoring PBS job ${jobid}"
           get_pbs_job_status() {
             # Get the header line to determine the column index corresponding to the job status
             if [ -z "${QSTAT_HEADER}" ]; then
@@ -195,13 +195,13 @@ jobs:
           set -x
 
           if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
-            echo "$(date) INFO: No cleanup script provided."
+            echo "::notice::No cleanup script provided."
             exit 0
           fi
 
           if [ ! -f "HOSTNAME" ]; then
             # This is warning and not an error because the job could be canceled before the main script creates the HOSTNAME file
-            echo "$(date) WARNING: No hostname found"
+            echo "::warning::No hostname found"
             exit 0
           fi
           compute_node="$(cat HOSTNAME | cut -d'.' -f1)"
@@ -209,10 +209,10 @@ jobs:
 
           if [ ! -f "${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}" ]; then
               # This is warning and not an error because the job could be canceled before the main script creates the cancel script
-              echo "$(date) WARNING: No cleanup script found in path ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}."
+              echo "::warning::No cleanup script found in path ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}."
               exit 0
           else
-              echo "$(date) INFO: Running cleanup script"
+              echo "::notice::Running cleanup script"
               chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
               ${sshcmd} timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
           fi
@@ -243,10 +243,10 @@ jobs:
       - name: Submit SLURM Script
         run: |
           set -x
-          echo "$(date) Submitting SLURM Job"
+          echo "::notice::Submitting SLURM Job"
           jobid=$(sbatch run.sh | tail -1 | awk -F ' ' '{print $4}')
           if ! [[ "${jobid}" =~ ^[0-9]+$ ]]; then
-            echo "$(date) Job submission failed: invalid jobid '${jobid}'"
+            echo "::error title=Error::Job submission failed: invalid jobid '${jobid}'"
             exit 1
           fi
           echo "jobid=${jobid}"  | tee -a $OUTPUTS
@@ -254,7 +254,7 @@ jobs:
       - name: Monitor SLURM Job
         run: |
           jobid=${{ needs.slurm_job.outputs.jobid }}
-          echo "$(date) Monitoring SLURM job ${jobid}"
+          echo "::notice::Monitoring SLURM job ${jobid}"
 
           get_slurm_job_status() {
               # Get the header line to determine the column index corresponding to the job status
@@ -273,7 +273,7 @@ jobs:
             get_slurm_job_status
             if [ -z "${job_status}" ]; then
               job_status=$(sacct -j ${jobid}  --format=state | tail -n1)
-              echo "$(date) Job exited with status ${job_status}"
+              echo "::notice::Job exited with status ${job_status}"
               break
             fi
           done
@@ -281,13 +281,13 @@ jobs:
           set -x
 
           if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
-            echo "$(date) INFO: No cleanup script provided."
+            echo "::notice::No cleanup script provided."
             exit 0
           fi
 
           if [ ! -f "HOSTNAME" ]; then
             # This is warning and not an error because the job could be canceled before the main script creates the HOSTNAME file
-            echo "$(date) WARNING: No hostname found"
+            echo "::warning::No hostname found"
             exit 0
           fi
           compute_node="$(cat HOSTNAME | cut -d'.' -f1)"
@@ -295,10 +295,10 @@ jobs:
 
           if [ ! -f "${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}" ]; then
               # This is warning and not an error because the job could be canceled before the main script creates the cancel script
-              echo "$(date) WARNING: No cleanup script found in path ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}."
+              echo "::warning::No cleanup script found in path ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}."
               exit 0
           else
-              echo "$(date) INFO: Running cleanup script"
+              echo "::notice::Running cleanup script"
               chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
               ${sshcmd} timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
           fi
@@ -341,7 +341,7 @@ jobs:
           remoteHost: ${{ needs.scheduler_agent_job.steps.waitstep.outputs.remoteHost }}:${{ needs.scheduler_agent_job.steps.waitstep.outputs.sshPort }}
         run: |
           set -x
-          echo "$(date) Executing script"
+          echo "::notice::Executing script"
           ./run.sh > run.${PW_JOB_ID}.out 2>&1
 
 'on':

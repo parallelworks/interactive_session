@@ -171,6 +171,10 @@ kasmvnc_container_pid=$!
 set +x
 
 echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
+echo "pkill -TERM -f \"Xvnc :${XdisplayNumber}\"" >> cancel.sh
+echo "sleep 3" >> cancel.sh
+echo "pkill -KILL -f \"Xvnc :${XdisplayNumber}\"" >> cancel.sh
+
 echo "chmod -R u+rwX ${container_dir}" >> cancel.sh
 echo "::notice::KasmVNC container started with PID ${kasmvnc_container_pid}"
 

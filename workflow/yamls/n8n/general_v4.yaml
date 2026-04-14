@@ -27,7 +27,7 @@ jobs:
             sed -i 's/=\(.*\)/="\1"/' inputs.sh
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
-            basepath=/me/session/${PW_USER}/${{ sessions.session }}
+            basepath="/me/session/${PW_USER}/${{ sessions.session }}/"
             PATH=$HOME/pw:$PATH
             n8n_image_tag="${{ inputs.service.n8n_image_tag }}"
             n8n_data_dir="${{ inputs.service.n8n_data_dir }}"

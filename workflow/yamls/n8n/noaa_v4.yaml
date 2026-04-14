@@ -1,0 +1,200 @@
+# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
+permissions:
+  - '*'
+sessions:
+  session:
+    useTLS: false
+    redirect: true
+
+jobs:
+  preprocessing:
+      ssh:
+        remoteHost: ${{ inputs.resource.ip }}
+      steps:
+        - name: Checkout
+          uses: parallelworks/checkout
+          with:
+            repo: https://github.com/parallelworks/interactive_session.git
+            branch: main
+            sparse_checkout:
+              - ${{ inputs.service.name }}
+        - name: Create Inputs
+          run: |
+            set -x
+            # Write PW variables
+            env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+            # Encase values between quotes
+            sed -i 's/=\(.*\)/="\1"/' inputs.sh
+            # Write input form variables and ensure the pw agent is in the PATH
+            cat <<'EOF' >> inputs.sh
+            basepath=/me/session/${PW_USER}/${{ sessions.session }}
+            PATH=$HOME/pw:$PATH
+            service_n8n_image_tag="${{ inputs.service.n8n_image_tag }}"
+            service_rundir="${{ inputs.service.rundir }}"
+            service_rootless_docker="${{ inputs.service.rootless_docker }}"
+            EOF
+            if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
+              echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
+            fi
+            # Remove empty variables
+            sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+            sed -i '/=""/d' inputs.sh # remove var=""
+            # Add export= to all lines
+            sed -i 's/^/export /' inputs.sh
+            # Copy YAMLs to job directory
+            cp ${{ inputs.service.name }}/*.yaml .
+
+
+  session_runner:
+    needs:
+      - preprocessing
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - uses: github/parallelworks/interactive_session@main
+        early-cancel: any-job-failed
+        with:
+          $yaml: workflow/session_runner/v1.4/noaa.yaml
+          session: ${{ sessions.session }}
+          resource: ${{ inputs.resource }}
+          cluster:
+            scheduler: ${{ inputs.cluster.scheduler }}
+            slurm:
+              is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
+              account: ${{ inputs.cluster.slurm.account }}
+              partition: ${{ inputs.cluster.slurm.partition }}
+              qos: ${{ inputs.cluster.slurm.qos }}
+              ntasks: ${{ inputs.cluster.slurm.ntasks }}
+              nodes: ${{ inputs.cluster.slurm.nodes }}
+              scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+              time: ${{ inputs.cluster.slurm.time }}
+            pbs:
+              is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
+              scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+          service:
+            start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/start-template-v3.sh
+            controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/controller-v3.sh
+            inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
+            slug: ""
+            rundir: ${PW_PARENT_JOB_DIR}
+
+'on':
+  execute:
+    inputs:
+      resource:
+        type: compute-clusters
+        label: Service host
+        include-workspace: false
+        tooltip: Resource to host the service
+      cluster:
+        hidden: ${{ inputs.resource.schedulerType == '' }}
+        ignore: ${{ inputs.resource.schedulerType == '' }}
+        type: group
+        label: Compute Cluster Settings
+        items:
+          scheduler:
+            type: boolean
+            default: false
+            label: Schedule Job?
+            tooltip: |
+              Yes → Job is submitted to the scheduler using sbatch, qsub, etc
+              No  → Job is executed in the controller or login node instead
+          slurm:
+            type: group
+            label: SLURM Directives
+            hidden: ${{ inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            items:
+              is_enabled:
+                type: boolean
+                hidden: true
+                default: true
+                label: Is SLURM enabled? Yes, unless the slurm section is hidden and ignored
+              account:
+                label: SLURM account
+                type: slurm-accounts
+                resource: ${{ inputs.resource }}
+                tooltip: '--account=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              partition:
+                type: slurm-partitions
+                label: SLURM partition
+                optional: true
+                resource: ${{ inputs.resource }}
+                tooltip: '--partition=value SLURM directive'
+              qos:
+                label: Quality of Service [QoS]
+                type: slurm-qos
+                resource: ${{ inputs.resource }}
+                tooltip: '--qos=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              ntasks:
+                label: Number of tasks
+                type: number
+                default: 1
+                tooltip: '--ntasks=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              nodes:
+                label: Number of nodes
+                type: number
+                default: 1
+                tooltip: '--nodes=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: true
+              time:
+                label: Walltime
+                type: string
+                default: '01:00:00'
+                tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
+              scheduler_directives:
+                type: editor
+                optional: true
+                tooltip: |
+                  Add extra SLURM directives, one per line, using the #SBATCH prefix. For example:
+                  #SBATCH --exclusive
+                  #SBATCH --nodelist=<node-name>
+          pbs:
+            type: group
+            label: PBS Directives
+            hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            items:
+              is_enabled:
+                type: boolean
+                hidden: true
+                default: true
+                label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
+              scheduler_directives:
+                label: Scheduler Directives
+                type: editor
+                tooltip: |
+                  Add extra PBS directives, one per line, using the #PBS prefix. For example:
+                  #PBS -l mem=16gb
+                  #PBS -l ngpus=1
+
+      service:
+        type: group
+        label: n8n Settings
+        items:
+          name:
+            type: string
+            hidden: true
+            default: n8n
+          n8n_image_tag:
+            label: n8n Image Tag
+            type: string
+            default: '1.123.4'
+            tooltip: n8n Docker image version tag (e.g. 1.123.4 or latest)
+          rootless_docker:
+            label: Use Rootless Docker?
+            type: boolean
+            default: false
+            hidden: true
+          rundir:
+            label: n8n Data Directory
+            type: string
+            default: ${HOME}/n8n
+            tooltip: Directory where n8n stores its data (workflows, credentials). Persists between sessions if on a shared filesystem.

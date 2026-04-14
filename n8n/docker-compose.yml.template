@@ -1,0 +1,20 @@
+services:
+  n8n:
+    image: docker.io/n8nio/n8n:__N8N_IMAGE_TAG__
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "__PORT__:__PORT__"
+    environment:
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
+      - GENERIC_TIMEZONE=UTC
+      - N8N_HOST=localhost
+      - N8N_PORT=__PORT__
+      - N8N_PROTOCOL=http
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_VERSION_NOTIFICATIONS_ENABLED=false
+      - N8N_PATH=__BASE_PATH__
+      - N8N_EDITOR_BASE_URL=https://activate.parallel.works__BASE_PATH__
+      - WEBHOOK_URL=https://activate.parallel.works__BASE_PATH__
+    volumes:
+      - ${PW_PARENT_JOB_DIR}/n8n_data:/home/node/.n8n

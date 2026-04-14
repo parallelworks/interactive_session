@@ -81,6 +81,13 @@ jobs:
             label: Service host
             include-workspace: false
             tooltip: Resource to host the service
+            provider:
+              - gclusterv2
+              - pclusterv2
+              - azclusterv2
+              - aws-slurm
+              - google-slurm
+              - azure-slurm
           scheduler:
             type: boolean
             default: false

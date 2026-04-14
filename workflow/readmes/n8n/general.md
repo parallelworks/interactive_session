@@ -2,9 +2,13 @@
 
 [n8n](https://n8n.io) is a workflow automation platform that lets you connect applications, APIs, and services through a visual node editor — without writing code.
 
+## Container Runtime
+
+You can run n8n using **Docker** or **Singularity** — select the runtime in the form before launching. Use Singularity on clusters where Docker is not available or not permitted.
+
 ## Accessing the Session
 
-Once the session starts, click the session URL in the Activate platform. Your browser will open the n8n editor at the session base path. The first time you visit you will be prompted to create an owner account.
+Once the session starts, click the session URL in the Activate platform. Your browser will open the n8n editor at the session base path. The first time you visit, n8n will prompt you to enter your **name, email, and password** to create an owner account.
 
 ## n8n Data Directory
 
@@ -23,4 +27,4 @@ The default n8n image tag is `1.123.4`. You can change it in the **n8n Image Tag
 
 ## Stopping the Session
 
-Cancel the session from the Activate platform. The running Docker container and its associated volumes will be cleaned up automatically via the `cancel.sh` script.
+Cancel the session from the Activate platform. The running container and its associated resources will be cleaned up automatically via the `cancel.sh` script.

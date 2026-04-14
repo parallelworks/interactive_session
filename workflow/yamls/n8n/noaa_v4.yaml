@@ -17,7 +17,7 @@ jobs:
             repo: https://github.com/parallelworks/interactive_session.git
             branch: main
             sparse_checkout:
-              - ${{ inputs.service.name }}
+              - ${{ inputs.service.container_runtime }}
         - name: Create Inputs
           run: |
             set -x
@@ -67,8 +67,8 @@ jobs:
               is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
               scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
           service:
-            start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/start-template-v3.sh
-            controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/controller-v3.sh
+            start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.container_runtime }}/start-template-v3.sh
+            controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.container_runtime }}/controller-v3.sh
             inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
             slug: ""
             rundir: ${PW_PARENT_JOB_DIR}
@@ -86,13 +86,6 @@ jobs:
         ignore: ${{ inputs.resource.schedulerType == '' }}
         type: group
         label: Compute Cluster Settings
-        provider:
-          - gclusterv2
-          - pclusterv2
-          - azclusterv2
-          - aws-slurm
-          - google-slurm
-          - azure-slurm
         items:
           scheduler:
             type: boolean
@@ -181,10 +174,16 @@ jobs:
         type: group
         label: n8n Settings
         items:
-          name:
-            type: string
-            hidden: true
-            default: n8n-docker
+          container_runtime:
+            type: dropdown
+            label: Run container using
+            default: n8n-singularity
+            tooltip: Select which container runtime will be used to launch the n8n container (e.g., Docker or Singularity).
+            options:
+              - label: Docker
+                value: n8n-docker
+              - label: Singularity
+                value: n8n-singularity
           n8n_image_tag:
             label: n8n Image Tag
             type: string

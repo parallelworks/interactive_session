@@ -45,6 +45,10 @@ if [ -z ${n8n_image_tag} ]; then
     n8n_image_tag=1.123.4
 fi
 
+# Unique container name per session — prevents conflicts when multiple
+# sessions run on the same host (service_port is unique per session).
+container_name="n8n_${service_port}"
+
 # Initialize cancel script
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
@@ -78,34 +82,39 @@ echo "Docker command: ${docker_cmd}"
 echo "::endgroup::"
 
 
-# Generate docker-compose.yml from template by substituting placeholders
-sed \
-    -e "s|__BASE_PATH__|${basepath}|g" \
-    -e "s|__PORT__|${service_port}|g" \
-    -e "s|__N8N_IMAGE_TAG__|${n8n_image_tag}|g" \
-    -e "s|__N8N_DATA_DIR__|${n8n_data_dir}|g" \
-    ${PW_PARENT_JOB_DIR}/n8n-docker/docker-compose.yml.template > docker-compose.yml
-
-echo "::group::docker-compose.yml"
-cat docker-compose.yml
-echo "::endgroup::"
-
 # Write cancel script before starting containers
 cat >> cancel.sh <<EOF
-${docker_cmd} compose down --volumes
+${docker_cmd} stop ${container_name} 2>/dev/null || true
+${docker_cmd} rm ${container_name} 2>/dev/null || true
 EOF
 
 echo "::group::Starting n8n"
-$docker_cmd compose pull
-$docker_cmd compose down 2>/dev/null || true  # clean up any stale containers
-$docker_cmd compose up -d
-$docker_cmd compose ps
+$docker_cmd pull docker.io/n8nio/n8n:${n8n_image_tag}
+$docker_cmd stop ${container_name} 2>/dev/null || true  # clean up any stale containers
+$docker_cmd rm ${container_name} 2>/dev/null || true
+$docker_cmd run -d \
+    --name "${container_name}" \
+    --restart unless-stopped \
+    -p "${service_port}:${service_port}" \
+    -e N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false \
+    -e GENERIC_TIMEZONE=UTC \
+    -e N8N_HOST=localhost \
+    -e N8N_PORT="${service_port}" \
+    -e N8N_PROTOCOL=http \
+    -e N8N_DIAGNOSTICS_ENABLED=false \
+    -e N8N_VERSION_NOTIFICATIONS_ENABLED=false \
+    -e N8N_PATH="${basepath}" \
+    -e N8N_EDITOR_BASE_URL="https://activate.parallel.works${basepath}" \
+    -e WEBHOOK_URL="https://activate.parallel.works${basepath}" \
+    -v "${n8n_data_dir}:/home/node/.n8n" \
+    docker.io/n8nio/n8n:${n8n_image_tag}
+$docker_cmd ps --filter "name=${container_name}"
 echo "::endgroup::"
 
 echo "::notice::n8n is up → http://localhost:${service_port}${basepath}"
 
 echo "::group::n8n logs"
-$docker_cmd compose logs -f &
+$docker_cmd logs -f "${container_name}" &
 logs_pid=$!
 echo "kill ${logs_pid} #docker-logs" >> cancel.sh
 echo "::endgroup::"

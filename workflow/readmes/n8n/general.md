@@ -8,7 +8,7 @@ Once the session starts, click the session URL in the Activate platform. Your br
 
 ## n8n Data Directory
 
-Workflows, credentials, and settings are stored in the **n8n Data Directory** you configure in the form (default: `~/n8n`). If this path is on a shared or persistent filesystem, your data will survive across sessions. To reuse data from a previous session, set the same directory when launching a new one.
+Workflows, credentials, and settings are stored in the **n8n Data Directory** you configure in the form (default: `~/pw/n8n`). If this path is on a shared or persistent filesystem, your data will survive across sessions. To reuse data from a previous session, set the same directory when launching a new one.
 
 ## Importing and Exporting Workflows
 

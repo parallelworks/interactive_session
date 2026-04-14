@@ -205,7 +205,7 @@ jobs:
           name:
             type: string
             hidden: true
-            default: n8n
+            default: n8n-docker
           n8n_image_tag:
             label: n8n Image Tag
             type: string

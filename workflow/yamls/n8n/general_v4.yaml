@@ -29,19 +29,16 @@ jobs:
             cat <<'EOF' >> inputs.sh
             basepath=/me/session/${PW_USER}/${{ sessions.session }}
             PATH=$HOME/pw:$PATH
-            service_n8n_image_tag="${{ inputs.service.n8n_image_tag }}"
+            n8n_image_tag="${{ inputs.service.n8n_image_tag }}"
             n8n_data_dir="${{ inputs.service.n8n_data_dir }}"
             EOF
-            if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
-              echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
-            fi
+
             # Remove empty variables
             sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
             sed -i '/=""/d' inputs.sh # remove var=""
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
-            # Copy YAMLs to job directory
-            cp ${{ inputs.service.name }}/*.yaml .
+
 
   session_runner:
     needs:

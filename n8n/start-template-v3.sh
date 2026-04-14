@@ -8,12 +8,6 @@ set -o pipefail
 # Runs on: Controller or compute node
 # Called by: Workflow after controller setup
 #
-# Required Environment Variables (from inputs.sh):
-#   - service_port: Allocated port (from session_runner)
-#   - basepath: Session base path (e.g. /me/session/user/session-id/)
-#   - service_n8n_image_tag: n8n Docker image tag (default: 1.123.4)
-#   - service_parent_install_dir: Install directory (default: ${HOME}/pw/software)
-#   - service_rootless_docker: Use rootless Docker (default: false)
 ################################################################################
 
 start_rootless_docker() {
@@ -47,8 +41,8 @@ if [ -z ${service_parent_install_dir} ]; then
     service_parent_install_dir=${HOME}/pw/software
 fi
 
-if [ -z ${service_n8n_image_tag} ]; then
-    service_n8n_image_tag=1.123.4
+if [ -z ${n8n_image_tag} ]; then
+    n8n_image_tag=1.123.4
 fi
 
 # Initialize cancel script
@@ -91,7 +85,7 @@ chmod 777 "${PW_PARENT_JOB_DIR}/n8n_data" -Rf
 sed \
     -e "s|__BASE_PATH__|${basepath}|g" \
     -e "s|__PORT__|${service_port}|g" \
-    -e "s|__N8N_IMAGE_TAG__|${service_n8n_image_tag}|g" \
+    -e "s|__N8N_IMAGE_TAG__|${n8n_image_tag}|g" \
     ${PW_PARENT_JOB_DIR}/n8n/docker-compose.yml.template > docker-compose.yml
 
 echo "::group::docker-compose.yml"

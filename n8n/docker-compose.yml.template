@@ -17,4 +17,4 @@ services:
       - N8N_EDITOR_BASE_URL=https://activate.parallel.works__BASE_PATH__
       - WEBHOOK_URL=https://activate.parallel.works__BASE_PATH__
     volumes:
-      - ${PW_PARENT_JOB_DIR}/n8n_data:/home/node/.n8n
+      - __N8N_DATA_DIR__:/home/node/.n8n

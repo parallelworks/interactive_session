@@ -77,15 +77,13 @@ fi
 echo "Docker command: ${docker_cmd}"
 echo "::endgroup::"
 
-# Create n8n data directory
-mkdir -p "${PW_PARENT_JOB_DIR}/n8n_data"
-chmod 777 "${PW_PARENT_JOB_DIR}/n8n_data" -Rf
 
 # Generate docker-compose.yml from template by substituting placeholders
 sed \
     -e "s|__BASE_PATH__|${basepath}|g" \
     -e "s|__PORT__|${service_port}|g" \
     -e "s|__N8N_IMAGE_TAG__|${n8n_image_tag}|g" \
+    -e "s|__N8N_DATA_DIR__|${n8n_data_dir}|g" \
     ${PW_PARENT_JOB_DIR}/n8n/docker-compose.yml.template > docker-compose.yml
 
 echo "::group::docker-compose.yml"

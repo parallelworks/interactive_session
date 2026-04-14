@@ -30,8 +30,7 @@ jobs:
             basepath=/me/session/${PW_USER}/${{ sessions.session }}
             PATH=$HOME/pw:$PATH
             service_n8n_image_tag="${{ inputs.service.n8n_image_tag }}"
-            service_rundir="${{ inputs.service.rundir }}"
-            service_rootless_docker="${{ inputs.service.rootless_docker }}"
+            n8n_data_dir="${{ inputs.service.n8n_data_dir }}"
             EOF
             if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
               echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
@@ -156,13 +155,8 @@ jobs:
             type: string
             default: '1.123.4'
             tooltip: n8n Docker image version tag (e.g. 1.123.4 or latest)
-          rootless_docker:
-            label: Use Rootless Docker?
-            type: boolean
-            default: false
-            hidden: true
-          rundir:
+          n8n_data_dir:
             label: n8n Data Directory
             type: string
-            default: ${HOME}/n8n
+            default: ${HOME}/pw/n8n
             tooltip: Directory where n8n stores its data (workflows, credentials). Persists between sessions if on a shared filesystem.

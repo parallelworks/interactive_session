@@ -112,4 +112,10 @@ echo "::endgroup::"
 
 echo "::notice::n8n is up → http://localhost:${service_port}${basepath}"
 
+echo "::group::n8n logs"
+$docker_cmd compose logs -f &
+logs_pid=$!
+echo "kill ${logs_pid} #docker-logs" >> cancel.sh
+echo "::endgroup::"
+
 sleep inf

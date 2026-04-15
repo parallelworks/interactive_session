@@ -118,12 +118,12 @@ fi
 
 # Copilot extension
 # Note: Pinned to version 1.388.0 for stability - newer versions may have breaking changes
-copilot_extension_path=${service_parent_install_dir}/github.copilot-1.388.0.vsix
-if [ ! -f ${copilot_extension_path} ]; then
-    echo "::notice::Copilot extension not found, downloading and installing..."
-    curl -L -o ${copilot_extension_path} "https://github.gallery.vsassets.io/_apis/public/gallery/publisher/github/extension/copilot/1.388.0/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage"
-    ${service_exec} --install-extension ${copilot_extension_path} --extensions-dir ${HOME}/.local/share/code-server/extensions
-fi
+#copilot_extension_path=${service_parent_install_dir}/github.copilot-1.388.0.vsix
+#if [ ! -f ${copilot_extension_path} ]; then
+#    echo "::notice::Copilot extension not found, downloading and installing..."
+#    curl -L -o ${copilot_extension_path} "https://github.gallery.vsassets.io/_apis/public/gallery/publisher/github/extension/copilot/1.388.0/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage"
+#    ${service_exec} --install-extension ${copilot_extension_path} --extensions-dir ${HOME}/.local/share/code-server/extensions
+#fi
 echo "::endgroup::"
 
 # Copilot chat extension

@@ -40,7 +40,10 @@ if ! [ -d "${container_dir}" ]; then
         echo "::error title=Error::Failed to download file ${container_tgz}"
         exit 1
     fi
-    tar -xzf ${container_tgz} -C $(dirname ${container_dir})
+    if ! tar -xzf ${container_tgz} -C $(dirname ${container_dir}); then
+        echo "::error title=Error::Failed to extract ${container_tgz}"
+        exit 1
+    fi
     chmod -R u+rwX ${container_dir}
     rm ${container_tgz}
     echo "::endgroup::"

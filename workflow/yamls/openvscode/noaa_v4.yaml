@@ -1,54 +1,51 @@
-# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
 permissions:
   - '*'
 sessions:
   session:
     useTLS: false
     redirect: true
-
 jobs:
   preprocessing:
-      ssh:
-        remoteHost: ${{ inputs.resource.ip }}
-      steps:
-        - name: Checkout
-          uses: parallelworks/checkout
-          with:
-            repo: https://github.com/parallelworks/interactive_session.git
-            branch: main
-            sparse_checkout:
-              - ${{ inputs.service.name }}
-        - name: Create Inputs
-          run: |
-            set -x
-            # Write PW variables
-            env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
-            # Encase values between quotes
-            sed -i 's/=\(.*\)/="\1"/' inputs.sh
-            # Write input form variables and ensure the pw agent is in the PATH
-            cat <<'EOF' >> inputs.sh
-            PATH=$HOME/pw:$PATH
-            service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
-            service_download_url="${{ inputs.service.download_url }}"
-            service_password="${{ inputs.service.password }}"
-            service_directory="${{ inputs.service.directory }}"
-            juice_use_juice="${{ inputs.juice.use_juice }}"
-            juice_pool_ids="${{ inputs.juice.pool_ids }}"
-            juice_vram="${{ inputs.juice.vram }}"
-            juice_cmd_args="${{ inputs.juice.cmd_args }}"
-            JUICE_TOKEN="${{ org.JUICE_TOKEN }}"
-            EOF
-            if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
-              echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
-            fi
-            # Remove empty variables
-            sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
-            sed -i '/=""/d' inputs.sh # remove var=""
-            # Add export= to all lines
-            sed -i 's/^/export /' inputs.sh
-            # Create slug
-            echo "slug=?folder=${{ inputs.service.directory }}" | tee -a $OUTPUTS
-
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Checkout
+        uses: parallelworks/checkout
+        with:
+          repo: https://github.com/parallelworks/interactive_session.git
+          branch: main
+          sparse_checkout:
+            - ${{ inputs.service.name }}
+      - name: Create Inputs
+        run: |
+          set -x
+          # Write PW variables
+          env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+          # Encase values between quotes
+          sed -i 's/=\(.*\)/="\1"/' inputs.sh
+          # Write input form variables and ensure the pw agent is in the PATH
+          cat <<'EOF' >> inputs.sh
+          PATH=$HOME/pw:$PATH
+          service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
+          service_download_url="${{ inputs.service.download_url }}"
+          service_password="${{ inputs.password }}"
+          service_directory="${{ inputs.service.directory }}"
+          juice_use_juice="${{ inputs.juice.use_juice }}"
+          juice_pool_ids="${{ inputs.juice.pool_ids }}"
+          juice_vram="${{ inputs.juice.vram }}"
+          juice_cmd_args="${{ inputs.juice.cmd_args }}"
+          JUICE_TOKEN="${{ org.JUICE_TOKEN }}"
+          EOF
+          if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
+            echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
+          fi
+          # Remove empty variables
+          sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+          sed -i '/=""/d' inputs.sh # remove var=""
+          # Add export= to all lines
+          sed -i 's/^/export /' inputs.sh
+          # Create slug
+          echo "slug=?folder=${{ inputs.service.directory }}" | tee -a $OUTPUTS
   session_runner:
     needs:
       - preprocessing
@@ -81,10 +78,13 @@ jobs:
             inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
             slug: ${{ needs.preprocessing.outputs.slug }}
             rundir: ${PW_PARENT_JOB_DIR}
-
 'on':
   execute:
     inputs:
+      password:
+        label: Password for IDE session
+        type: password
+        tooltip: Enter password or leave blank for no password
       resource:
         type: compute-clusters
         label: Service host
@@ -178,7 +178,6 @@ jobs:
                   Add extra PBS directives, one per line, using the #PBS prefix. For example:
                   #PBS -l mem=16gb
                   #PBS -l ngpus=1
-
       service:
         type: group
         label: VS Code Settings
@@ -198,11 +197,6 @@ jobs:
             type: string
             default: https://github.com/coder/code-server/releases/download/v4.105.1/code-server-4.105.1-linux-amd64.tar.gz
             tooltip: Downloads or uses the code-server server version specified in the URL
-          password:
-            label: Password for IDE session
-            type: password
-            optional: true
-            tooltip: Enter password or leave blank for no password
           directory:
             label: Directory to open in VS Code
             type: string

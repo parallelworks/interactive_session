@@ -172,7 +172,7 @@ jobs:
               time:
                 label: Walltime
                 type: string
-                default: '01:00:00'
+                optional: true
                 tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
               scheduler_directives:
                 type: editor

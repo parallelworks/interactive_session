@@ -48,7 +48,6 @@ jobs:
           # Need to evaluate the env variables here
           cat <<EOF > headers.sh
           #SBATCH --job-name=${PW_JOB_ID}
-          #SBATCH --time=${{ inputs.slurm.time }}
           #SBATCH --chdir=${PWD}
           #SBATCH -o ${PWD}/run.${PW_JOB_ID}.out
           #SBATCH -e ${PWD}/run.${PW_JOB_ID}.out
@@ -62,6 +61,10 @@ jobs:
           # The scheduler directives parameter is always optional
           if ! [ -z "${{ inputs.slurm.scheduler_directives }}" ]; then
             echo "${{ inputs.slurm.scheduler_directives }}" >> headers.sh
+          fi
+
+          if ! [ -z "${{ inputs.slurm.time }}" ]; then
+            echo "#SBATCH --time=${{ inputs.slurm.time }}" >> headers.sh
           fi
 
           if [[ ${{ inputs.resource.provider }} == 'existing' ]]; then

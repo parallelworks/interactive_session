@@ -40,6 +40,11 @@ if ! [ -d "${container_dir}" ]; then
     fi
     tar -xzf ${container_tgz} -C $(dirname ${container_dir})
     rm ${container_tgz}
+    # Ensure the extracted sandbox is fully readable/executable by the current user.
+    # Singularity sandbox tarballs often contain root-owned files with restrictive
+    # permissions; without this, --writable-tmpfs overlayfs setup fails on the first
+    # run, causing Python/Perl errors inside the container.
+    chmod -R u+rwX ${container_dir}
     echo "::endgroup::"
 fi
 

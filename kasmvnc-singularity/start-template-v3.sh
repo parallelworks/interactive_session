@@ -147,8 +147,6 @@ fi
 
 mkdir -p $PWD/container_tmp
 
-env
-
 set -x
 singularity run \
     ${WRITABLE_TMPFS_FLAG} ${USERNS_FLAG} ${ETC_ENV_FLAG} \

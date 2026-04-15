@@ -147,6 +147,8 @@ fi
 
 mkdir -p $PWD/container_tmp
 
+env
+
 set -x
 singularity run \
     ${WRITABLE_TMPFS_FLAG} ${USERNS_FLAG} ${ETC_ENV_FLAG} \
@@ -174,8 +176,6 @@ echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
 echo "pkill -TERM -f \"Xvnc :${XdisplayNumber}\"" >> cancel.sh
 echo "sleep 3" >> cancel.sh
 echo "pkill -KILL -f \"Xvnc :${XdisplayNumber}\"" >> cancel.sh
-
-echo "chmod -R u+rwX ${container_dir}" >> cancel.sh
 echo "::notice::KasmVNC container started with PID ${kasmvnc_container_pid}"
 
 sleep 45  # Allow container to start

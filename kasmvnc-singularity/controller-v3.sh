@@ -20,7 +20,7 @@ container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}
 container_tgz=${container_dir}.tgz
 
 download_oras(){
-    if [ -d "${service_parent_install_dir}/tools/oras" ]; then
+    if [ -d "${service_parent_install_dir}/tools/oras/oras" ]; then
         return
     fi
     VER="1.2.0"   # example — replace with newest

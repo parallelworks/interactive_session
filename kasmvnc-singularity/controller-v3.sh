@@ -12,8 +12,9 @@ else
     service_parent_install_dir=${HOME}/pw/software
 fi
 # FIXME: REMOVE THE NEXT LINE. It's only here to clean leftovers form previous versions of this workflow
-rm -rf ${service_parent_install_dir}/kasmvnc-${kasmvnc_os} ${service_parent_install_dir}/oras
+rm -rf ${service_parent_install_dir}/kasmvnc-${kasmvnc_os} ${service_parent_install_dir}/oras ${service_parent_install_dir}/xterm
 mkdir -p ${service_parent_install_dir}/containers ${service_parent_install_dir}/tools
+chmod a+rX ${service_parent_install_dir}/containers ${service_parent_install_dir}/tools
 
 container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}
 container_tgz=${container_dir}.tgz
@@ -71,6 +72,6 @@ if [ -z "${xterm_path}" ]; then
     xterm_path=$(which xterm 2>/dev/null)
 fi
 if [ -n "${xterm_path}" ]; then
-    cp ${xterm_path} ${service_parent_install_dir}/xterm
-    chmod +x ${service_parent_install_dir}/xterm
+    cp ${xterm_path} ${service_parent_install_dir}/tools/xterm
+    chmod a+x ${service_parent_install_dir}/tools/xterm
 fi

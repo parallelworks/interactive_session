@@ -192,7 +192,7 @@ if [ -n "${xauthority_file}" ]; then
     echo "::notice::Setting XAUTHORITY to ${XAUTHORITY}"
 fi
 
-xterm_cmd="$(which xterm 2>/dev/null || echo ${service_parent_install_dir}/xterm)"
+xterm_cmd="$(which xterm 2>/dev/null || echo ${service_parent_install_dir}/tools/xterm)"
 export DISPLAY=":${XdisplayNumber}"
 run_xterm_loop(){
     while true; do

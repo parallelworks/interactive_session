@@ -7,6 +7,24 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
+      - name: Set Install Parent Directory
+        run: |
+          source inputs.sh
+          set -x
+          # This script prepares the target host and always runs in the controller node
+          if [ -n "${service_parent_install_dir}" ]; then
+            echo "::notice title=Install Directory::Using provided service_parent_install_dir: ${service_parent_install_dir}"
+          elif [ -d "${PROJECTS_HOME}/hsp" ]; then
+            echo "::notice title=Install Directory::Using PROJECTS_HOME: ${PROJECTS_HOME}/hsp"
+            echo "service_parent_install_dir=${PROJECTS_HOME}/hsp" >> inputs.sh
+          elif [ -d "${GLOBAL}/hsp" ]; then
+            echo "::notice title=Install Directory::Using GLOBAL: ${GLOBAL}/hsp"
+            echo "service_parent_install_dir=${GLOBAL}/hsp" >> inputs.sh
+          else
+            # The service install directory defaults to the workflows default, typically ${HOME}/pw/software
+            echo "::notice title=Install Directory::Neither \${PROJECTS_HOME}/hsp nor \${GLOBAL}/hsp found."
+          fi
+
       - name: Controller Preprocessing
         run: | 
           set -x

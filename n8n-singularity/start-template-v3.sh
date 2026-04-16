@@ -7,7 +7,13 @@ set -ex
 
 echo "::group::n8n Service Starting (Compute Node)"
 
-if [ -z ${service_parent_install_dir} ]; then
+if [ -n "${service_parent_install_dir}" ]; then
+    container_dir=${service_parent_install_dir}/n8n
+    if ! [ -d "${container_dir}" ] && ! [ -w "${service_parent_install_dir}" ]; then
+        echo "::warning::container_dir ${container_dir} does not exist and no write permission to ${service_parent_install_dir}. Resetting to ${HOME}/pw/software."
+        service_parent_install_dir=${HOME}/pw/software
+    fi
+else
     service_parent_install_dir=${HOME}/pw/software
 fi
 

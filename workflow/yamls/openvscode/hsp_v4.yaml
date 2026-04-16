@@ -38,6 +38,7 @@ jobs:
             service_download_url="${{ inputs.service.download_url }}"
             service_password="${{ inputs.service.password }}"
             service_directory="${{ inputs.service.directory }}"
+            service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
             EOF
             echo basepath=${basepath} >> inputs.sh
             echo password=${password} >> inputs.sh
@@ -227,3 +228,11 @@ jobs:
             type: string
             default: ${HOME}
             tooltip: Directory to open in VS code
+          parent_install_dir:
+            label: Parent Install Directory
+            type: string
+            default: ${HOME}/pw/software
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
+            tooltip: Software dependencies are installed in this directory. Ensure the directory has sufficient space!
+

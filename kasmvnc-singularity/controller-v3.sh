@@ -1,12 +1,19 @@
 set -o pipefail
 set -x
 
-if [ -z ${service_parent_install_dir} ]; then
+
+if [ -n "${service_parent_install_dir}" ]; then
+    container_dir=${service_parent_install_dir}/kasmvnc-${kasmvnc_os}
+    if ! [ -d "${container_dir}" ] && ! [ -w "${service_parent_install_dir}" ]; then
+        echo "::warning::container_dir ${container_dir} does not exist and no write permission to ${service_parent_install_dir}. Resetting to ${HOME}/pw/software."
+        service_parent_install_dir=${HOME}/pw/software
+    fi
+else
     service_parent_install_dir=${HOME}/pw/software
 fi
 
-container_tgz=${service_parent_install_dir}/kasmvnc-${kasmvnc_os}.tgz
 container_dir=${service_parent_install_dir}/kasmvnc-${kasmvnc_os}
+container_tgz=${container_dir}.tgz
 
 download_oras(){
     if [ -d "${service_parent_install_dir}/oras" ]; then

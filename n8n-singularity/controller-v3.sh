@@ -13,6 +13,7 @@ fi
 # FIXME: REMOVE THE NEXT LINE. It's only here to clean leftovers form previous versions of this workflow
 rm -rf ${service_parent_install_dir}/n8n ${service_parent_install_dir}/oras
 mkdir -p ${service_parent_install_dir}/containers ${service_parent_install_dir}/tools
+chmod a+rX ${service_parent_install_dir}/containers ${service_parent_install_dir}/tools
 
 container_dir=${service_parent_install_dir}/containers/n8n
 container_tgz=${container_dir}.tgz

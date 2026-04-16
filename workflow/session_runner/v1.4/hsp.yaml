@@ -10,8 +10,11 @@ jobs:
       - name: Set Install Parent Directory
         run: |
           set -x
+          source inputs.sh
           # This script prepares the target host and always runs in the controller node
-          if [ -d "${PROJECTS_HOME}/hsp" ]; then
+          if [ -n "${service_parent_install_dir}" ]; then
+            echo "::notice title=Install Directory::Using provided service_parent_install_dir: ${service_parent_install_dir}"
+          elif [ -d "${PROJECTS_HOME}/hsp" ]; then
             echo "::notice title=Install Directory::Using PROJECTS_HOME: ${PROJECTS_HOME}/hsp"
             echo "service_parent_install_dir=${PROJECTS_HOME}/hsp" >> inputs.sh
           elif [ -d "${GLOBAL}/hsp" ]; then

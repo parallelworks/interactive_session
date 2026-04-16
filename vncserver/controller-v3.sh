@@ -77,7 +77,10 @@ download_singularity_container() {
 }
 
 download_oras(){
-    VER="1.2.0"   # example — replace with newest                                                                                    
+    if [ -d "${service_parent_install_dir}/oras" ]; then
+        return
+    fi
+    VER="1.2.0"   # example — replace with newest
     wget https://github.com/oras-project/oras/releases/download/v${VER}/oras_${VER}_linux_amd64.tar.gz
     mkdir -p ${service_parent_install_dir}/oras
     tar -xvf oras_${VER}_linux_amd64.tar.gz -C ${service_parent_install_dir}/oras

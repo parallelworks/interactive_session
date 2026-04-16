@@ -15,6 +15,9 @@ mkdir -p "${n8n_data_dir}"
 chmod 777 "${n8n_data_dir}" -Rf || true
 
 download_oras(){
+    if [ -d "${service_parent_install_dir}/oras" ]; then
+        return
+    fi
     VER="1.2.0"
     wget https://github.com/oras-project/oras/releases/download/v${VER}/oras_${VER}_linux_amd64.tar.gz
     mkdir -p ${service_parent_install_dir}/oras

@@ -161,10 +161,11 @@ jobs:
         run: |
           set -x
           echo "::notice::Submitting PBS Job"
-          jobid=$(qsub run.sh)
-          jobid=$(echo "$jobid" | cut -d'.' -f1)
+          qsub_output=$(qsub run.sh 2>&1)
+          jobid=$(echo "${qsub_output}" | head -1 | cut -d'.' -f1)
           if ! [[ "${jobid}" =~ ^[0-9]+$ ]]; then
-            echo "::error title=Error::Job submission failed: invalid jobid '${jobid}'"
+            qsub_error=$(echo "${qsub_output}" | tr '\n' ' ')
+            echo "::error title=Error::Job submission failed: ${qsub_error}"
             exit 1
           fi
           echo "jobid=${jobid}"  | tee -a $OUTPUTS

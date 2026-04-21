@@ -1,48 +1,47 @@
-# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
 permissions:
   - '*'
 sessions:
   session:
     useTLS: false
     redirect: true
-
 jobs:
   preprocessing:
-      ssh:
-        remoteHost: ${{ inputs.cluster.resource.ip }}
-      steps:
-        - name: Checkout
-          uses: parallelworks/checkout
-          with:
-            repo: https://github.com/parallelworks/interactive_session.git
-            branch: main
-            sparse_checkout:
-              - ${{ inputs.service.container_runtime }}
-        - name: Create Inputs
-          run: |
-            set -x
-            # Write PW variables
-            env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
-            # Encase values between quotes
-            sed -i 's/=\(.*\)/="\1"/' inputs.sh
-            # Write input form variables and ensure the pw agent is in the PATH
-            cat <<'EOF' >> inputs.sh
-            basepath="/me/session/${PW_USER}/${{ sessions.session }}/"
-            PATH=$HOME/pw:$PATH
-            n8n_image_tag="${{ inputs.service.n8n_image_tag }}"
-            n8n_data_dir="${{ inputs.service.n8n_data_dir }}"
-            EOF
+    ssh:
+      remoteHost: ${{ inputs.cluster.resource.ip }}
+    steps:
+      - name: Checkout
+        uses: parallelworks/checkout
+        with:
+          repo: https://github.com/parallelworks/interactive_session.git
+          branch: main
+          sparse_checkout:
+            - ${{ inputs.service.container_runtime }}
+      - name: Create Inputs
+        run: |
+          set -x
+          # Write PW variables
+          env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+          # Encase values between quotes
+          sed -i 's/=\(.*\)/="\1"/' inputs.sh
+          # Write input form variables and ensure the pw agent is in the PATH
+          cat <<'EOF' >> inputs.sh
+          basepath="/me/session/${PW_USER}/${{ sessions.session }}/"
+          PATH=$HOME/pw:$PATH
+          n8n_image_tag="${{ inputs.service.n8n_image_tag }}"
+          n8n_data_dir="${{ inputs.service.n8n_data_dir }}"
+          service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
+          EOF
 
-            # Remove empty variables
-            sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
-            sed -i '/=""/d' inputs.sh # remove var=""
-            # Add export= to all lines
-            sed -i 's/^/export /' inputs.sh
+          # Remove empty variables
+          sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+          sed -i '/=""/d' inputs.sh # remove var=""
+          # Add export= to all lines
+          sed -i 's/^/export /' inputs.sh
   session_runner:
     needs:
       - preprocessing
     ssh:
-        remoteHost: ${{ inputs.cluster.resource.ip }}
+      remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
       - uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
@@ -70,10 +69,8 @@ jobs:
             start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.container_runtime }}/start-template-v3.sh
             controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.container_runtime }}/controller-v3.sh
             inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
-            slug: ""
+            slug: ''
             rundir: ${PW_PARENT_JOB_DIR}
-
-
 'on':
   execute:
     inputs:
@@ -109,7 +106,7 @@ jobs:
                 options:
                   - value: ''
                     label: Default
-                  - value: 'hpc4'
+                  - value: hpc4
                     label: HPC4
               is_enabled:
                 type: boolean
@@ -161,13 +158,13 @@ jobs:
                 hidden: ${{ 'existing' != inputs.cluster.resource.provider }}
                 ignore: ${{ .hidden }}
                 options:
-                   - 8GB
-                   - 16GB
-                   - 32GB
-                   - 64GB
-                   - 128GB
-                   - 256GB
-                   - 512GB
+                  - 8GB
+                  - 16GB
+                  - 32GB
+                  - 64GB
+                  - 128GB
+                  - 256GB
+                  - 512GB
               gres_gpu_default:
                 type: number
                 label: Number of GPUs
@@ -217,11 +214,14 @@ jobs:
                   Add extra PBS directives, one per line, using the #PBS prefix. For example:
                   #PBS -l mem=16gb
                   #PBS -l ngpus=1
-
       service:
         type: group
         label: n8n Settings
         items:
+          parent_install_dir:
+            type: string
+            hidden: true
+            default: /public/codelab/singularity
           container_runtime:
             type: string
             hidden: true
@@ -229,7 +229,7 @@ jobs:
           n8n_image_tag:
             label: n8n Image Tag
             type: string
-            default: '1.123.4'
+            default: 1.123.4
             tooltip: n8n Docker image version tag (e.g. 1.123.4 or latest)
           n8n_data_dir:
             label: n8n Data Directory

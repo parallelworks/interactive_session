@@ -64,7 +64,8 @@ jobs:
           if ! [ -z "${{ inputs.slurm.scheduler_directives }}" ]; then
             echo "${{ inputs.slurm.scheduler_directives }}" >> headers.sh
           fi
-
+          # Remove lines that don't start with #
+          sed -i '/^#/!d' headers.sh
           echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
           echo "SCHEDULER_TYPE=slurm" | tee -a $OUTPUTS
       - name: Create PBS Headers
@@ -81,7 +82,8 @@ jobs:
           if ! [ -z "${{ inputs.pbs.scheduler_directives }}" ]; then
             echo "${{ inputs.pbs.scheduler_directives }}" >> headers.sh
           fi
-
+          # Remove lines that don't start with #
+          sed -i '/^#/!d' headers.sh
           echo "HEADERS=$(cat headers.sh | sed ':a;N;$!ba;s/\n/\\n/g' )" | tee -a $OUTPUTS
           echo "SCHEDULER_TYPE=pbs" | tee -a $OUTPUTS
   ssh_job:

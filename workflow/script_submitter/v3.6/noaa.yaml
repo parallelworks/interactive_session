@@ -216,7 +216,7 @@ jobs:
           else
               echo "::notice::Running cleanup script"
               chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
-              ${sshcmd} timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
+              ${sshcmd} timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }} || true
           fi
       - name: Cancel Streaming
         uses: parallelworks/cancel-jobs
@@ -303,7 +303,7 @@ jobs:
           else
               echo "::notice::Running cleanup script"
               chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
-              ${sshcmd} timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
+              ${sshcmd} timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }} || true
           fi
       - name: Cancel Streaming
         uses: parallelworks/cancel-jobs

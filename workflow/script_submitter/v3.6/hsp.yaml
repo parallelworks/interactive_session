@@ -1,528 +1,1356 @@
 # yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
+---
+# ==============================================================================
+# ACTIVATE RAG + vLLM Deployment Workflow
+# ==============================================================================
+# Deploys vLLM inference server with optional RAG (Retrieval-Augmented Generation)
+# capabilities on HPC clusters using Apptainer/Singularity containers.
+#
+# Features:
+#   - vLLM inference with tensor parallelism for multi-GPU deployments
+#   - Optional RAG stack with ChromaDB vector store and document indexing
+#   - HuggingFace model cloning via git-lfs or local model path support
+#   - OpenAI-compatible API endpoint for IDE integration (Cline, Continue, etc.)
+#   - Unified SLURM/PBS/SSH job submission via job_runner marketplace action
+#
+# Organized Input Sections:
+#   1. Resource Selection          - Compute cluster target
+#   2. Scheduler Options           - SLURM/PBS configuration for HPC execution
+#   3. Container Runtime           - Apptainer / Singularity or Docker
+#   4. Model Configuration         - HuggingFace or local model paths
+#   5. vLLM Settings               - GPU count, memory, context length, dtype
+#   6. RAG Settings                - Documents directory, system prompt
+#   7. Container Options           - Container source (lfs, path, pull, build)
+#   8. Advanced Settings           - Ports, API keys, repository branch
+#
+# Usage:
+#   Deploy vLLM-only for code assistance or full vLLM+RAG stack for document QA.
+#   Connects to VS Code/IDE via OpenAI-compatible session endpoint.
+# ==============================================================================
+
+permissions:
+  - "*"
+sessions:
+  session:
+    redirect: false
+    openAI: true
+
+# ==============================================================================
+# JOB DEFINITIONS
+# ==============================================================================
 jobs:
-  stream_output:
-    working-directory: ${{ inputs.rundir }}
+  # ============================================================================
+  # Setup: Clone Repository and Create Environment
+  # ============================================================================
+  setup:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - name: Stream Output
+      - name: Clone Repository
         early-cancel: any-job-failed
         run: |
-          touch run.${PW_JOB_ID}.out
-          tail -f run.${PW_JOB_ID}.out 
-  preprocessing:
-    working-directory: ${{ inputs.rundir }}
+          set -x
+          RUNDIR="${{ inputs.advanced_settings.rundir }}"
+          RUNDIR="${RUNDIR/#\~/$HOME}"
+
+          mkdir -p "$(dirname $RUNDIR)"
+
+          if [[ -d "$RUNDIR/.git" ]]; then
+            echo "Repository exists, updating..."
+            cd "$RUNDIR"
+            git fetch origin
+            git checkout ${{ inputs.advanced_settings.repository_branch }}
+            git reset --hard origin/${{ inputs.advanced_settings.repository_branch }}
+          else
+            echo "Cloning fresh repository..."
+            git clone -b ${{ inputs.advanced_settings.repository_branch }} ${{ inputs.advanced_settings.repository }} "$RUNDIR"
+          fi
+
+          cd "$RUNDIR"
+          rm -f jobid SESSION_PORT job.started job.ended run.out HOSTNAME
+          rm -rf logs
+
+          # Create cache directories (needed for bind mounts even if not used)
+          mkdir -p cache/tiktoken_encodings
+
+          # Required by session_runner preprocessing
+          touch inputs.sh
+          touch controller.sh
+
+          echo "rundir=$RUNDIR" >> $OUTPUTS
+
+      - name: Set Cache Directory 
+        run: |
+          set -x
+          
+          MODEL_CACHE_DIR=${{ inputs.model.cache_dir }}
+          EMBEDDING_MODEL_CACHE_DIR=${{ inputs.rag.embedding_model_cache_dir }}
+
+          DEFAULT_CACHE_DIR=${WORKDIR}
+
+          if [ -d "${GLOBAL}/hsp" ]; then
+            DEFAULT_CACHE_DIR=${GLOBAL}/hsp/models
+          elif [ -d "${PROJECTS_HOME}/hsp" ]; then
+            DEFAULT_CACHE_DIR=${PROJECTS_HOME}/hsp/models
+          fi
+
+          mkdir -p "${DEFAULT_CACHE_DIR}"
+          chmod 755 "${DEFAULT_CACHE_DIR}"
+
+          if [ -z "${MODEL_CACHE_DIR}" ]; then
+            MODEL_CACHE_DIR=${DEFAULT_CACHE_DIR}
+          fi
+
+          if [ -z "${EMBEDDING_MODEL_CACHE_DIR}" ]; then
+            EMBEDDING_MODEL_CACHE_DIR=${DEFAULT_CACHE_DIR}
+          fi
+
+          echo "MODEL_CACHE_DIR=${MODEL_CACHE_DIR}" | tee -a $OUTPUTS
+          echo "EMBEDDING_MODEL_CACHE_DIR=${EMBEDDING_MODEL_CACHE_DIR}" | tee -a $OUTPUTS
+
+      - name: Set Singularity Directory
+        run: |
+          set -x
+          
+          VLLM_PATH="${{ inputs.container.vllm_path }}"
+          VLLM_PATH="${VLLM_PATH/#\~/$HOME}"
+          RAG_PATH="${{ inputs.container.rag_path }}"
+          RAG_PATH="${RAG_PATH/#\~/$HOME}"
+
+          DEFAULT_SINGULARITY_DIR="${{ needs.setup.outputs.rundir }}"
+
+          if [ -d "${PROJECTS_HOME}/hsp" ]; then
+            DEFAULT_SINGULARITY_DIR=${PROJECTS_HOME}/hsp/containers
+          elif [ -d "${GLOBAL}/hsp" ]; then
+            DEFAULT_SINGULARITY_DIR=${GLOBAL}/hsp/containers
+          fi
+
+          mkdir -p "${DEFAULT_SINGULARITY_DIR}"
+          chmod 755 "${DEFAULT_SINGULARITY_DIR}"
+
+          if [ -z "${VLLM_PATH}" ]; then
+            VLLM_PATH=${DEFAULT_SINGULARITY_DIR}/vllm.sif
+          fi
+
+          if [ -z "${RAG_PATH}" ]; then
+            RAG_PATH=${DEFAULT_SINGULARITY_DIR}/rag.sif
+          fi
+
+          echo "VLLM_PATH=${VLLM_PATH}" | tee -a $OUTPUTS
+          echo "RAG_PATH=${RAG_PATH}" | tee -a $OUTPUTS
+
+
+      - name: Create Environment File
+        id: create_env
+        early-cancel: any-job-failed
+        run: |
+          set -x
+          cd ${{ needs.setup.outputs.rundir }}
+
+          # Core configuration
+          cat > .run.env << 'ENVEOF'
+          export RUNMODE=${{ inputs.runmode }}
+          export RUNTYPE=${{ inputs.runtype }}
+          export SYSTEM_PROMPT="${{ inputs.rag.systemprompt }}"
+          export HF_TOKEN=${{ inputs.model.hf_token }}
+          export API_KEY=${{ inputs.advanced_settings.apikey }}
+          export DOCS_DIR=${{ inputs.rag.docsdir }}
+          ENVEOF
+
+          if [[ "${{ inputs.rag.embedding_model_source }}" == "local" ]]; then
+            echo "export EMBEDDING_MODEL=${{ inputs.rag.embedding_model_path }}" >> .run.env
+          else
+            echo "export EMBEDDING_MODEL=${{ inputs.rag.embedding_model_id }}" >> .run.env
+            echo "export EMBEDDING_CACHE_DIR=${{ needs.setup.outputs.EMBEDDING_MODEL_CACHE_DIR }}" >> .run.env
+          fi
+
+          # Build vLLM extra args from structured inputs
+          if [[ "${{ inputs.vllm.dtype }}" == "custom" ]]; then
+            VLLM_ARGS="--tensor-parallel-size ${{ inputs.vllm.num_gpus }} --gpu-memory-utilization ${{ inputs.vllm.gpu_memory }}"
+          else
+            VLLM_ARGS="--dtype ${{ inputs.vllm.dtype }} --tensor-parallel-size ${{ inputs.vllm.num_gpus }} --gpu-memory-utilization ${{ inputs.vllm.gpu_memory }}"
+          fi
+          [[ "${{ inputs.vllm.max_model_len }}" != "auto" ]] && VLLM_ARGS="$VLLM_ARGS --max-model-len ${{ inputs.vllm.max_model_len }}"
+          [[ -n "${{ inputs.vllm.extra_args }}" ]] && VLLM_ARGS="$VLLM_ARGS ${{ inputs.vllm.extra_args }}"
+          echo "export VLLM_EXTRA_ARGS=\"$VLLM_ARGS\"" >> .run.env
+
+          # Model configuration
+          echo "export MODEL_SOURCE=${{ inputs.model.source }}" >> .run.env
+          if [[ "${{ inputs.model.source }}" == "local" ]]; then
+            echo "export MODEL_NAME=${{ inputs.model.local_path }}" >> .run.env
+            echo "export MODEL_PATH=${{ inputs.model.local_path }}" >> .run.env
+            echo "export TRANSFORMERS_OFFLINE=1" >> .run.env
+          else
+            echo "export MODEL_NAME=${{ inputs.model.hf_model_id }}" >> .run.env
+            echo "export HF_MODEL_ID=${{ inputs.model.hf_model_id }}" >> .run.env
+            echo "export MODEL_CACHE_BASE=${{ needs.setup.outputs.MODEL_CACHE_DIR }}" >> .run.env
+          fi
+
+          # Container paths
+          echo "export VLLM_CONTAINER_PATH=${{ needs.setup.outputs.VLLM_PATH }}" >> .run.env
+          echo "export RAG_CONTAINER_PATH=${{ needs.setup.outputs.RAG_PATH }}" >> .run.env
+
+          # Additional settings
+          [[ -n "${{ inputs.advanced_settings.vllm_attention_backend }}" ]] && echo "export VLLM_ATTENTION_BACKEND=${{ inputs.advanced_settings.vllm_attention_backend }}" >> .run.env
+          if [[ "${{ inputs.advanced_settings.tiktoken_encodings }}" == "true" ]]; then
+            echo "export TIKTOKEN_ENCODINGS_BASE=/root/.cache/tiktoken_encodings" >> .run.env
+            echo "export TIKTOKEN_RS_CACHE_DIR=/root/.cache/tiktoken_encodings" >> .run.env
+          fi
+
+          echo "Environment file created"
+
+
+
+
+  # ============================================================================
+  # Prepare Containers (Apptainer/Singularity)
+  # ============================================================================
+  prepare_containers:
+    needs: [setup]
+    if: ${{ inputs.runmode == 'singularity' }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - name: Create Script Template
+      - name: Verify Singularity Available
+        id: verify_singularity
+        early-cancel: any-job-failed
         run: |
           set -x
-          if [[ "${{ inputs.use_existing_script }}" == true ]]; then
-            if [ ! -f "${{ inputs.script_path }}" ]; then
-                echo "(date) ERROR: File ${{ inputs.script_path }} does not exist or is not a regular file."
-                exit 1
+          command -v singularity >/dev/null 2>&1 || command -v apptainer >/dev/null 2>&1 || { echo "ERROR: singularity/apptainer not found"; exit 1; }
+          singularity --version || apptainer --version
+          echo "Singularity/Apptainer ready"
+
+      - name: Pull Containers from Bucket
+        id: pull_containers
+        if: ${{ inputs.container.source == 'pull' }}
+        early-cancel: any-job-failed
+        run: |
+          set -x
+          RUNDIR="${{ needs.setup.outputs.rundir }}"
+          cd "$RUNDIR"
+
+          VLLM_PATH="${{ needs.setup.outputs.VLLM_PATH }}"
+          RAG_PATH="${{ needs.setup.outputs.RAG_PATH }}"
+
+          mkdir -p "$(dirname "$VLLM_PATH")"
+          chmod 755 "$(dirname "$VLLM_PATH")"
+          if [[ ! -f "$VLLM_PATH" ]]; then
+            pw bucket cp "${{ inputs.container.bucket }}/vllm.sif" "$VLLM_PATH"
+            chmod 644 "$VLLM_PATH"
+          else
+            echo "vllm.sif already exists at $VLLM_PATH"
+          fi
+
+          if [[ "${{ inputs.runtype }}" == "all" ]]; then
+            mkdir -p "$(dirname "$RAG_PATH")"
+            chmod 755 "$(dirname "$RAG_PATH")"
+            if [[ ! -f "$RAG_PATH" ]]; then
+              pw bucket cp "${{ inputs.container.bucket }}/rag.sif" "$RAG_PATH"
+              chmod 644 "$RAG_PATH"
+            else
+              echo "rag.sif already exists at $RAG_PATH"
             fi
-            cp ${{ inputs.script_path }} run-template.sh
-          else
-          # Do not remove this indentation
-          cat <<'EOF' > run-template.sh
-          ${{ inputs.script }}
-          EOF
           fi
-          cat run-template.sh
-      - name: Prepare Cleanup Script
+
+          [[ "$VLLM_PATH" != "$RUNDIR/vllm.sif" ]] && ln -sf "$VLLM_PATH" "$RUNDIR/vllm.sif"
+          [[ "${{ inputs.runtype }}" == "all" && "$RAG_PATH" != "$RUNDIR/rag.sif" ]] && ln -sf "$RAG_PATH" "$RUNDIR/rag.sif"
+
+          echo "Container pull complete"
+
+      - name: Pull Containers from LFS Repo
+        id: pull_containers_lfs
+        if: ${{ inputs.container.source == 'lfs' }}
+        early-cancel: any-job-failed
         run: |
-          set -x
-          if [[ "${{ inputs.define_cleanup_script }}" == "true" ]]; then
-            CLEANUP_SCRIPT_PATH="${{ inputs.cleanup_script_path }}"
-            # Ensure the path is absolute
-            [[ "${CLEANUP_SCRIPT_PATH}" = /* ]] || CLEANUP_SCRIPT_PATH="$PWD/${CLEANUP_SCRIPT_PATH}"
-          else
-            CLEANUP_SCRIPT_PATH=""
-          fi
-          echo "CLEANUP_SCRIPT_PATH=${CLEANUP_SCRIPT_PATH}" | tee -a $OUTPUTS
-      - name: Create SLURM Headers
-        if: ${{ inputs.slurm.is_enabled == true }}
-        run: |
-          # Need to evaluate the env variables here
-          cat <<EOF > headers.sh
-          #SBATCH --job-name=${PW_JOB_ID}
-          #SBATCH --chdir=${PWD}
-          #SBATCH -o ${PWD}/run.${PW_JOB_ID}.out
-          #SBATCH -e ${PWD}/run.${PW_JOB_ID}.out
-          EOF
+          set -euo pipefail
+          RUNDIR="${{ needs.setup.outputs.rundir }}"
+          cd "$RUNDIR"
 
-          # The partitions directive parameter is always optional
-          if ! [ -z "${{ inputs.slurm.partition }}" ]; then
-            echo "#SBATCH --partition=${{ inputs.slurm.partition }}" >> headers.sh
-          fi
+          command -v git >/dev/null 2>&1 || { echo "ERROR: git not found"; exit 1; }
+          git lfs version >/dev/null 2>&1 || { echo "ERROR: git-lfs not found"; exit 1; }
+          export GIT_LFS_SKIP_SMUDGE=1
 
-          # The scheduler directives parameter is always optional
-          if ! [ -z "${{ inputs.slurm.scheduler_directives }}" ]; then
-            echo "${{ inputs.slurm.scheduler_directives }}" >> headers.sh
-          fi
+          LFS_REPO="${{ inputs.container.lfs_repo }}"
+          LFS_BRANCH="${{ inputs.container.lfs_branch }}"
+          LFS_DIR=".lfs_containers"
+          REV_FILE=".lfs_containers_rev"
 
-          if ! [ -z "${{ inputs.slurm.time }}" ]; then
-            echo "#SBATCH --time=${{ inputs.slurm.time }}" >> headers.sh
-          fi
+          VLLM_PATH="${{ needs.setup.outputs.VLLM_PATH }}"
+          RAG_PATH="${{ needs.setup.outputs.RAG_PATH }}"
 
-          if [[ ${{ inputs.resource.provider }} == 'existing' ]]; then
-            echo "#SBATCH --account=${{ inputs.slurm.account }}" >> headers.sh
-            echo "#SBATCH --qos=${{ inputs.slurm.qos }}" >> headers.sh
-            echo "#SBATCH --cpus-per-task=${{ inputs.slurm.cpus_per_task }}" >> headers.sh
-            echo "#SBATCH --nodes=${{ inputs.slurm.nodes }}" >> headers.sh
-            GPUS="${{ inputs.slurm.gpus }}"
-            if [[ "${GPUS:-0}" != "0" ]]; then
-              echo "#SBATCH --gres=gpu:${GPUS}" >> headers.sh
-            fi
-          fi
-          # Remove lines that don't start with #
-          sed -i '/^#/!d' headers.sh
-          echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
-          echo "SCHEDULER_TYPE=slurm" | tee -a $OUTPUTS
+          need_vllm=true
+          need_rag=false
+          [[ -f "$VLLM_PATH" ]] && need_vllm=false
+          [[ "${{ inputs.runtype }}" == "all" ]] && { [[ ! -f "$RAG_PATH" ]] && need_rag=true; }
 
-      - name: Create PBS Headers
-        if: ${{ inputs.pbs.is_enabled == true }}
-        run: |
-          set -x
-          cat <<EOF > headers.sh
-          #PBS -A ${{ inputs.pbs.account }}
-          #PBS -N ${PW_JOB_ID}
-          #PBS -o ${PWD}/run.${PW_JOB_ID}.out
-          #PBS -j oe
-          EOF
-
-          # The scheduler directives parameter is always optional
-          if ! [ -z "${{ inputs.pbs.scheduler_directives }}" ]; then
-            echo "${{ inputs.pbs.scheduler_directives }}" >> headers.sh
-          fi
-          # Remove lines that don't start with #
-          sed -i '/^#/!d' headers.sh
-          echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
-          echo "SCHEDULER_TYPE=pbs" | tee -a $OUTPUTS
-
-  ssh_job:
-    needs:
-      - preprocessing
-    if: ${{ inputs.slurm.is_enabled != true && inputs.pbs.is_enabled != true && inputs.use_scheduler_agent != true }}
-    working-directory: ${{ inputs.rundir }}
-    ssh:
-      remoteHost: ${{ inputs.resource.ip }}
-    steps:
-      - name: Create Script
-        run: |
-          set -x
-          cat <<EOF > run.sh
-          ${{ inputs.shebang }}
-          cd ${PWD}
-          EOF
-          cat run-template.sh >> run.sh
-          chmod +x run.sh
-          cat run.sh
-      - name: Submit Script
-        run: |
-          set -x
-          echo "::notice::Executing script"
-          ./run.sh > run.${PW_JOB_ID}.out 2>&1
-        cleanup: |
-          set -x
-
-          if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
-              echo "::notice::No cleanup script provided."
-              exit 0
-          fi
-
-          if [ ! -f "${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}" ]; then
-              # This is warning and not an error because the job could be canceled before the main script creates the cancel script
-              echo "::warning::No cleanup script found in path ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}."
-              exit 0
-          else
-              echo "::notice::Running cleanup script"
-              chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
-              timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
-          fi
-      - name: Cancel Streaming
-        uses: parallelworks/cancel-jobs
-        with:
-          jobs:
-            - stream_output
-  pbs_job:
-    needs:
-      - preprocessing
-    if: ${{ inputs.pbs.is_enabled == true && inputs.use_scheduler_agent != true }}
-    working-directory: ${{ inputs.rundir }}
-    ssh:
-      remoteHost: ${{ inputs.resource.ip }}
-    steps:
-      - name: Create PBS Script
-        run: |
-          set -x
-          echo "::notice::Creating PBS script"
-          echo '${{ inputs.shebang }}' > run.sh
-          cat headers.sh >> run.sh
-          echo "cd ${PWD}" >> run.sh
-          echo "hostname > HOSTNAME" >> run.sh
-          cat run-template.sh >> run.sh
-          chmod +x run.sh
-          cat run.sh
-      - name: Submit PBS Script
-        run: |
-          set -x
-          echo "::notice::Submitting PBS Job"
-          qsub_output=$(qsub run.sh 2>&1)
-          jobid=$(echo "${qsub_output}" | head -1 | cut -d'.' -f1)
-          if ! [[ "${jobid}" =~ ^[0-9]+$ ]]; then
-            qsub_error=$(echo "${qsub_output}" | tr '\n' ' ')
-            echo "::error title=Error::Job submission failed: ${qsub_error}"
+          remote_rev=$(git ls-remote "$LFS_REPO" "$LFS_BRANCH" | awk '{print $1}')
+          if [[ -z "$remote_rev" ]]; then
+            echo "ERROR: Could not resolve $LFS_BRANCH in $LFS_REPO"
             exit 1
           fi
-          echo "jobid=${jobid}"  | tee -a $OUTPUTS
-        cleanup: qdel "${{ needs.pbs_job.outputs.jobid }}"
-      - name: Monitor PBS Job
-        run: |
-          jobid=${{ needs.pbs_job.outputs.jobid }}
-          echo "::notice::Monitoring PBS job ${jobid}"
-          get_pbs_job_status() {
-            # Get the header line to determine the column index corresponding to the job status
-            if [ -z "${QSTAT_HEADER}" ]; then
-              export QSTAT_HEADER="$(qstat | awk 'NR==1')"
+          stored_rev=""
+          [[ -f "$REV_FILE" ]] && stored_rev=$(cat "$REV_FILE" || true)
+
+          if [[ "$need_vllm" == "false" && "$need_rag" == "false" ]]; then
+            if [[ -n "$remote_rev" && "$remote_rev" == "$stored_rev" ]]; then
+              echo "Containers already present and match remote revision $remote_rev; skipping LFS pull."
+            else
+              echo "Containers already present; remote revision is $remote_rev (stored: $stored_rev)."
+              echo "Skipping LFS pull to avoid re-download. Remove containers to force refresh."
             fi
-            status_response=$(qstat 2>/dev/null | grep "\<${jobid}\>")
-            echo "${QSTAT_HEADER}"
-            echo "${status_response}"
-            export job_status="$(qstat -f ${jobid} 2>/dev/null  | grep job_state | cut -d'=' -f2 | tr -d ' ')"
-          }
+            exit 0
+          fi
+
+          if [[ -d "$LFS_DIR/.git" ]]; then
+            git -C "$LFS_DIR" fetch origin "$LFS_BRANCH"
+          else
+            GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 --branch "$LFS_BRANCH" "$LFS_REPO" "$LFS_DIR"
+          fi
+
+          git -C "$LFS_DIR" checkout -f "$LFS_BRANCH"
+          git -C "$LFS_DIR" reset --hard "origin/$LFS_BRANCH"
+          git -C "$LFS_DIR" lfs install --local
+
+          git -C "$LFS_DIR" sparse-checkout init --no-cone
+          patterns=("vllm/vllm.*.sif" "vllm/vllm.sif.part_*" "vllm/vllm.sif" "vllm.*.sif" "vllm.sif.part_*" "vllm.sif" "scripts/sif_parts.sh")
+          if [[ "${{ inputs.runtype }}" == "all" ]]; then
+            patterns+=("rag/rag.*.sif" "rag/rag.sif.part_*" "rag/rag.sif" "rag.*.sif" "rag.sif.part_*" "rag.sif")
+          fi
+          git -C "$LFS_DIR" sparse-checkout set --no-cone "${patterns[@]}"
+
+          lfs_include="vllm/vllm.*.sif,vllm/vllm.sif.part_*,vllm/vllm.sif,vllm.*.sif,vllm.sif.part_*,vllm.sif"
+          if [[ "${{ inputs.runtype }}" == "all" ]]; then
+            lfs_include="${lfs_include},rag/rag.*.sif,rag/rag.sif.part_*,rag/rag.sif,rag.*.sif,rag.sif.part_*,rag.sif"
+          fi
+          git -C "$LFS_DIR" config lfs.concurrenttransfers 4
+          git -C "$LFS_DIR" config lfs.transfer.maxretries 10
+          git -C "$LFS_DIR" config lfs.transfer.maxretrydelay 30
+          git -C "$LFS_DIR" config lfs.fetchinclude "$lfs_include"
+          git -C "$LFS_DIR" config lfs.fetchexclude ""
+          attempt=1
+          max_attempts=2
           while true; do
-            sleep 15
-            get_pbs_job_status
-            if [[ "${job_status}" == "C" ]]; then
-              break
-            elif [ -z "${job_status}" ]; then
+            echo "LFS pull attempt ${attempt}/${max_attempts}..."
+            echo "Downloading container files (this may take a while for large files)..."
+            if git -C "$LFS_DIR" lfs fetch; then
               break
             fi
+            if [[ $attempt -ge $max_attempts ]]; then
+              echo "ERROR: LFS pull failed after ${max_attempts} attempts"
+              exit 1
+            fi
+            sleep $((attempt * 5))
+            ((attempt++))
           done
-        cleanup: |
-          set -x
+          echo "Checking out LFS files..."
+          git -C "$LFS_DIR" lfs checkout
 
-          if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
-            echo "::notice::No cleanup script provided."
-            exit 0
-          fi
+          assemble_sif() {
+            local prefix=$1
+            local target=$2
+            local dir_prefix="$LFS_DIR/${prefix}"
+            local full_sub="$dir_prefix/${prefix}.sif"
+            local full_root="$LFS_DIR/${prefix}.sif"
+            mkdir -p "$(dirname "$target")"
 
-          if [ ! -f "HOSTNAME" ]; then
-            # This is warning and not an error because the job could be canceled before the main script creates the HOSTNAME file
-            echo "::warning::No hostname found"
-            exit 0
-          fi
-          compute_node="$(cat HOSTNAME | cut -d'.' -f1)"
-          sshcmd="ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${compute_node}"
+            if [[ -f "$full_sub" ]]; then
+              cp "$full_sub" "$target"
+              return 0
+            fi
+            if [[ -f "$full_root" ]]; then
+              cp "$full_root" "$target"
+              return 0
+            fi
 
-          if [ ! -f "${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}" ]; then
-              # This is warning and not an error because the job could be canceled before the main script creates the cancel script
-              echo "::warning::No cleanup script found in path ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}."
-              exit 0
-          else
-              echo "::notice::Running cleanup script"
-              chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
-              ${sshcmd} timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
-          fi
-      - name: Cancel Streaming
-        uses: parallelworks/cancel-jobs
-        with:
-          jobs:
-            - stream_output
-
-
-  slurm_job:
-    needs:
-      - preprocessing
-    if: ${{ inputs.slurm.is_enabled == true && inputs.use_scheduler_agent != true }}
-    working-directory: ${{ inputs.rundir }}
-    ssh:
-      remoteHost: ${{ inputs.resource.ip }}
-    steps:
-      - name: Create SLURM Script
-        run: |
-          set -x
-          echo '${{ inputs.shebang }}' > run.sh
-          cat headers.sh >> run.sh
-          cat run-template.sh >> run.sh
-          echo "hostname > HOSTNAME" >> run.sh
-          chmod +x run.sh
-          cat run.sh
-      - name: Submit SLURM Script
-        run: |
-          set -x
-          echo "::notice::Submitting SLURM Job"
-          sbatch_output=$(sbatch run.sh 2>&1)
-          jobid=$(echo "${sbatch_output}" | tail -1 | awk -F ' ' '{print $4}')
-          if ! [[ "${jobid}" =~ ^[0-9]+$ ]]; then
-            echo "::error title=Error::Job submission failed: ${sbatch_output}."
-            exit 1
-          fi
-          echo "jobid=${jobid}"  | tee -a $OUTPUTS
-        cleanup: scancel ${{ needs.slurm_job.outputs.jobid }}
-      - name: Monitor SLURM Job
-        run: |
-          jobid=${{ needs.slurm_job.outputs.jobid }}
-          echo "::notice::Monitoring SLURM job ${jobid}"
-
-          get_slurm_job_status() {
-              # Get the header line to determine the column index corresponding to the job status
-              if [ -z "${SQUEUE_HEADER}" ]; then
-                  export SQUEUE_HEADER="$(eval squeue | awk 'NR==1')"
+            local script="$LFS_DIR/scripts/sif_parts.sh"
+            shopt -s nullglob
+            local numeric_parts_sub=("$dir_prefix/${prefix}."[0-9][0-9][0-9][0-9][0-9].sif)
+            local numeric_parts_root=("$LFS_DIR/${prefix}."[0-9][0-9][0-9][0-9][0-9].sif)
+            shopt -u nullglob
+            if [[ -x "$script" ]]; then
+              if [[ ${#numeric_parts_sub[@]} -gt 0 ]]; then
+                bash "$script" join --prefix "$prefix" --in-dir "$dir_prefix" --output "$target"
+                return 0
               fi
-              status_column=$(echo "${SQUEUE_HEADER}" | awk '{ for (i=1; i<=NF; i++) if ($i ~ /^S/) { print i; exit } }')
-              status_response=$(eval squeue | awk -v jobid="${jobid}" '$1 == jobid')
-              echo "${SQUEUE_HEADER}"
-              echo "${status_response}"
-              export job_status=$(echo ${status_response} | awk -v id="${jobid}" -v col="$status_column" '{print $col}')
+              if [[ ${#numeric_parts_root[@]} -gt 0 ]]; then
+                bash "$script" join --prefix "$prefix" --in-dir "$LFS_DIR" --output "$target"
+                return 0
+              fi
+            fi
+
+            shopt -s nullglob
+            local parts=("$dir_prefix/${prefix}."[0-9][0-9][0-9][0-9][0-9].sif "$dir_prefix/${prefix}.sif.part_"*)
+            if ((${#parts[@]} == 0)); then
+              parts=("$LFS_DIR/${prefix}."[0-9][0-9][0-9][0-9][0-9].sif "$LFS_DIR/${prefix}.sif.part_"*)
+            fi
+            shopt -u nullglob
+
+            if ((${#parts[@]} == 0)); then
+              echo "ERROR: No parts found for ${prefix} in ${dir_prefix} or ${LFS_DIR}"
+              exit 1
+            fi
+
+            mapfile -t parts_sorted < <(printf "%s\n" "${parts[@]}" | LC_ALL=C sort)
+            cat "${parts_sorted[@]}" > "$target"
           }
 
-          while true; do
-            sleep 15
-            get_slurm_job_status
-            if [ -z "${job_status}" ]; then
-              job_status=$(sacct -j ${jobid}  --format=state | tail -n1)
-              echo "::notice::Job exited with status ${job_status}"
-              exit 0
-            fi
-          done
-        cleanup: |
+          if [[ "$need_vllm" == "true" ]]; then
+            echo "Assembling vLLM container to $VLLM_PATH"
+            assemble_sif vllm "$VLLM_PATH"
+            chmod 644 "$VLLM_PATH"
+          fi
+          if [[ "$need_rag" == "true" ]]; then
+            echo "Assembling RAG container to $RAG_PATH"
+            assemble_sif rag "$RAG_PATH"
+            chmod 644 "$RAG_PATH"
+          fi
+
+          [[ "$VLLM_PATH" != "$RUNDIR/vllm.sif" ]] && ln -sf "$VLLM_PATH" "$RUNDIR/vllm.sif"
+          [[ "${{ inputs.runtype }}" == "all" && "$RAG_PATH" != "$RUNDIR/rag.sif" ]] && ln -sf "$RAG_PATH" "$RUNDIR/rag.sif"
+
+          [[ -n "$remote_rev" ]] && echo "$remote_rev" > "$REV_FILE"
+          echo "LFS container pull complete"
+
+      - name: Link Existing Containers
+        id: link_containers
+        if: ${{ inputs.container.source == 'path' }}
+        early-cancel: any-job-failed
+        run: |
           set -x
+          RUNDIR="${{ needs.setup.outputs.rundir }}"
+          cd "$RUNDIR"
 
-          if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
-            echo "::notice::No cleanup script provided."
-            exit 0
+          VLLM_PATH="${{ needs.setup.outputs.VLLM_PATH }}"
+
+          [[ -f "$VLLM_PATH" ]] || { echo "ERROR: vLLM container not found at $VLLM_PATH"; exit 1; }
+          [[ "$VLLM_PATH" != "$RUNDIR/vllm.sif" ]] && ln -sf "$VLLM_PATH" "$RUNDIR/vllm.sif"
+          echo "Linked vllm.sif from $VLLM_PATH"
+
+          if [[ "${{ inputs.runtype }}" == "all" ]]; then
+            RAG_PATH="${{ needs.setup.outputs.RAG_PATH }}"
+            [[ -f "$RAG_PATH" ]] || { echo "ERROR: RAG container not found at $RAG_PATH"; exit 1; }
+            [[ "$RAG_PATH" != "$RUNDIR/rag.sif" ]] && ln -sf "$RAG_PATH" "$RUNDIR/rag.sif"
+            echo "Linked rag.sif from $RAG_PATH"
           fi
 
-          if [ ! -f "HOSTNAME" ]; then
-            # This is warning and not an error because the job could be canceled before the main script creates the HOSTNAME file
-            echo "::warning::No hostname found"
-            exit 0
-          fi
-          compute_node="$(cat HOSTNAME | cut -d'.' -f1)"
-          sshcmd="ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${compute_node}"
+      - name: Build Containers from Source
+        id: build_containers
+        if: ${{ inputs.container.source == 'build' }}
+        early-cancel: any-job-failed
+        run: |
+          set -x
+          RUNDIR="${{ needs.setup.outputs.rundir }}"
+          cd "$RUNDIR"
 
-          if [ ! -f "${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}" ]; then
-              # This is warning and not an error because the job could be canceled before the main script creates the cancel script
-              echo "::warning::No cleanup script found in path ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}."
-              exit 0
-          else
-              echo "::notice::Running cleanup script"
-              chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
-              ${sshcmd} timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }} || true
-          fi
-      - name: Cancel Streaming
-        uses: parallelworks/cancel-jobs
-        with:
-          jobs:
-            - stream_output
+          VLLM_PATH="${{ needs.setup.outputs.VLLM_PATH }}"
+          RAG_PATH="${{ needs.setup.outputs.RAG_PATH }}"
 
-  scheduler_agent_job:
-    needs:
-      - preprocessing
-    if: ${{ inputs.use_scheduler_agent == true }}
-    working-directory: ${{ inputs.rundir }}
+          echo "Building Apptainer containers (requires sudo or fakeroot)..."
+          echo "vLLM container will be built to: $VLLM_PATH"
+          echo "RAG container will be built to: $RAG_PATH"
+
+          build_container() {
+            local target=$1 def=$2
+            [[ -f "$target" ]] && { echo "$target exists, skipping"; return 0; }
+            echo "Building $target from $def..."
+            mkdir -p "$(dirname "$target")"
+            chmod 755 "$(dirname "$target")"
+            if sudo -n true 2>/dev/null; then
+              sudo singularity build "$target" "$def"
+            else
+              singularity build --fakeroot "$target" "$def"
+            fi
+            chmod 644 "$target"
+          }
+
+          build_container "$VLLM_PATH" singularity/Singularity.vllm
+          [[ "${{ inputs.runtype }}" == "all" ]] && build_container "$RAG_PATH" singularity/Singularity.rag
+
+          [[ "$VLLM_PATH" != "$RUNDIR/vllm.sif" ]] && ln -sf "$VLLM_PATH" "$RUNDIR/vllm.sif"
+          [[ "${{ inputs.runtype }}" == "all" && "$RAG_PATH" != "$RUNDIR/rag.sif" ]] && ln -sf "$RAG_PATH" "$RUNDIR/rag.sif"
+
+          echo "Container build complete"
+
+  # ============================================================================
+  # Prepare Model
+  # ============================================================================
+  prepare_model:
+    needs: [setup]
+    if: ${{ inputs.model.source == 'huggingface' }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - name: Create Script
+      - name: Clone HuggingFace Model
+        id: clone_model
+        early-cancel: any-job-failed
         run: |
           set -x
-          echo '${{ inputs.shebang }}' > run.sh
-          cat run-template.sh >> run.sh
-          chmod +x run.sh
-          cat run.sh
-      - uses: parallelworks/scheduler-agent
-        id: slurmstep
-        with:
-          scheduler-type: ${{ needs.preprocessing.outputs.SCHEDULER_TYPE }}
-          script-headers: |
-            ${{ needs.preprocessing.outputs.HEADERS }}
-          wait: false
-      - uses: parallelworks/wait-for-agent
-        id: waitstep
-        with:
-          agentId: ${{ needs.scheduler_agent_job.steps.slurmstep.outputs.agentId }}
-      - name: Run Script
-        ssh:
-          jumpNodeHost: ${{ inputs.resource.ip }}
-          remoteHost: ${{ needs.scheduler_agent_job.steps.waitstep.outputs.remoteHost }}:${{ needs.scheduler_agent_job.steps.waitstep.outputs.sshPort }}
-        run: |
-          set -x
-          echo "::notice::Executing script"
-          ./run.sh > run.${PW_JOB_ID}.out 2>&1
-        cleanup: |
-          set -x
-          echo "::notice::Running cleanup"
+          RUNDIR="${{ needs.setup.outputs.rundir }}"
+          cd "$RUNDIR"
 
-          if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
-              echo "::notice::No cleanup script provided."
-              exit 0
+          MODEL_ID="${{ inputs.model.hf_model_id }}"
+          CACHE_DIR="${{ needs.setup.outputs.MODEL_CACHE_DIR }}"
+          CACHE_DIR="${CACHE_DIR/#\~/$HOME}"
+          HF_TOKEN="${{ inputs.model.hf_token }}"
+
+          mkdir -p "$CACHE_DIR"
+          MODEL_BASENAME="${MODEL_ID##*/}"
+          LEGACY_DIR="$CACHE_DIR/${MODEL_ID//\//__}"
+          TARGET_DIR="$CACHE_DIR/$MODEL_BASENAME"
+
+          if [[ -d "$LEGACY_DIR" && ! -d "$TARGET_DIR" ]]; then
+            echo "Renaming legacy cache dir $LEGACY_DIR to $TARGET_DIR"
+            mv "$LEGACY_DIR" "$TARGET_DIR"
           fi
 
-          if [ ! -f "${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}" ]; then
-              # This is warning and not an error because the job could be canceled before the main script creates the cancel script
-              echo "::warning::No cleanup script found in path ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}."
-              exit 0
+          # Function to validate model weights are complete (not LFS pointers)
+          validate_weights() {
+            local dir=$1
+            [[ ! -f "$dir/config.json" ]] && return 1
+            # Check for safetensors or bin weight files
+            local weight_file=""
+            if [[ -f "$dir/model.safetensors" ]]; then
+              weight_file="$dir/model.safetensors"
+            elif ls "$dir"/model*.safetensors 1>/dev/null 2>&1; then
+              weight_file=$(ls "$dir"/model*.safetensors | head -1)
+            elif ls "$dir"/*.bin 1>/dev/null 2>&1; then
+              weight_file=$(ls "$dir"/*.bin | head -1)
+            else
+              echo "No weight files found"
+              return 1
+            fi
+            local size=$(stat -c%s "$weight_file" 2>/dev/null || stat -f%z "$weight_file" 2>/dev/null)
+            if [[ $size -lt 1000000 ]]; then
+              echo "Weight file $weight_file appears to be LFS pointer (size: $size bytes)"
+              return 1
+            fi
+            return 0
+          }
+
+          # Check if already cached AND weights are valid
+          if [[ -d "$TARGET_DIR" ]] && validate_weights "$TARGET_DIR"; then
+            echo "Model already cached and validated at $TARGET_DIR"
           else
-              echo "::notice::Running cleanup script"
-              chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
-              timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
-          fi
-      - name: Cancel Streaming
-        uses: parallelworks/cancel-jobs
-        with:
-          jobs:
-            - stream_output
+            # Remove incomplete cache if exists
+            if [[ -d "$TARGET_DIR" ]]; then
+              echo "Cached model at $TARGET_DIR appears incomplete, removing..."
+              rm -rf "$TARGET_DIR"
+            fi
+            echo "Cloning model $MODEL_ID to $TARGET_DIR"
+            
+            # Ensure git-lfs is available
+            if ! git lfs version >/dev/null 2>&1; then
+              echo "Installing git-lfs locally..."
+              mkdir -p $HOME/.local
+              cd /tmp
+              LFS_URL=$(curl -s https://api.github.com/repos/git-lfs/git-lfs/releases/latest | grep browser_download_url | grep linux-amd64 | head -1 | cut -d '"' -f 4)
+              [[ -z "$LFS_URL" ]] && { echo "ERROR: Could not find git-lfs download URL"; exit 1; }
+              wget -q "$LFS_URL" -O git-lfs-linux-amd64.tar.gz
+              tar -xzf git-lfs-linux-amd64.tar.gz
+              ./git-lfs-*/install.sh --local
+              rm -rf git-lfs-*
+              export PATH="$HOME/.local/bin:$PATH"
+              cd ${{ needs.setup.outputs.rundir }}
+              git lfs version >/dev/null 2>&1 || { echo "ERROR: Failed to install git-lfs"; exit 1; }
+            fi
 
-'on':
+            git lfs install
+
+            # Build clone URL
+            REPO_URL="https://huggingface.co/$MODEL_ID"
+            [[ -n "$HF_TOKEN" ]] && REPO_URL="https://user:${HF_TOKEN}@huggingface.co/$MODEL_ID"
+
+            # Clone without LFS or checkout, then sparse-checkout only safetensors
+            GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 --no-checkout "$REPO_URL" "$TARGET_DIR"
+            cd "$TARGET_DIR"
+
+            # Sparse checkout: exclude bin/gguf/onnx/pth to only get safetensors weights
+            git sparse-checkout init --no-cone
+            git sparse-checkout set '/*' '!*.bin' '!*.gguf' '!*.onnx' '!consolidated*.pth'
+            git checkout
+
+            # Configure LFS for reliability with large models
+            git lfs install --local
+            git config lfs.concurrenttransfers 4
+            git config lfs.transfer.maxretries 10
+            git config lfs.transfer.maxretrydelay 30
+
+            # Fetch only safetensors LFS objects with progress and retry logic
+            attempt=1
+            max_attempts=3
+            while true; do
+              echo "LFS fetch attempt ${attempt}/${max_attempts}..."
+              if git lfs fetch --include="*.safetensors"; then
+                break
+              fi
+              if [[ $attempt -ge $max_attempts ]]; then
+                echo "ERROR: LFS fetch failed after ${max_attempts} attempts"
+                exit 1
+              fi
+              sleep $((attempt * 5))
+              ((attempt++))
+            done
+            echo "Checking out LFS files..."
+            git lfs checkout --include="*.safetensors"
+
+            # Fallback: if model only ships bin weights, re-include and fetch those
+            if ! ls *.safetensors 1>/dev/null 2>&1; then
+              echo "No safetensors files found, falling back to bin weights..."
+              git sparse-checkout set '/*'
+              git checkout
+              git lfs fetch --include="*.bin"
+              git lfs checkout --include="*.bin"
+            fi
+
+            cd "$RUNDIR"
+
+            # Verify model weights exist (not just LFS pointers)
+            if [[ -f "$TARGET_DIR/model.safetensors" ]]; then
+              actual_size=$(stat -c%s "$TARGET_DIR/model.safetensors" 2>/dev/null || stat -f%z "$TARGET_DIR/model.safetensors" 2>/dev/null)
+              [[ $actual_size -lt 1000000 ]] && { echo "ERROR: model.safetensors appears to be an LFS pointer, not actual weights"; exit 1; }
+            elif ls "$TARGET_DIR"/model*.safetensors 1>/dev/null 2>&1; then
+              # Multiple sharded safetensors files
+              for f in "$TARGET_DIR"/model*.safetensors; do
+                actual_size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)
+                [[ $actual_size -lt 1000000 ]] && { echo "ERROR: $f appears to be an LFS pointer, not actual weights"; exit 1; }
+                break  # Just check the first one
+              done
+            fi
+            
+            [[ ! -f "$TARGET_DIR/config.json" ]] && { echo "ERROR: Model clone incomplete - missing config.json"; exit 1; }
+
+            chmod -R a+rX "$TARGET_DIR"
+          fi
+
+          # Update environment file
+          cat >> .run.env << EOF
+          export MODEL_PATH=$TARGET_DIR
+          export MODEL_NAME=$TARGET_DIR
+          export TRANSFORMERS_OFFLINE=1
+          EOF
+
+          echo "model_path=$TARGET_DIR" >> $OUTPUTS
+          echo "Model ready at $TARGET_DIR"
+
+  # ============================================================================
+  # Prepare Embedding Model (RAG)
+  # ============================================================================
+  prepare_embedding_model:
+    needs: [setup]
+    if: ${{ inputs.runtype == 'all' && (inputs.rag.embedding_model_source == 'huggingface' || inputs.rag.embedding_model_source == 'bucket') }}
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Clone Embedding Model
+        id: clone_embedding
+        early-cancel: any-job-failed
+        run: |
+          set -x
+          RUNDIR="${{ needs.setup.outputs.rundir }}"
+          cd "$RUNDIR"
+
+          SOURCE="${{ inputs.rag.embedding_model_source }}"
+          MODEL_ID="${{ inputs.rag.embedding_model_id }}"
+          CACHE_DIR="${{ needs.setup.outputs.EMBEDDING_MODEL_CACHE_DIR }}"
+          if [[ -z "$CACHE_DIR" || "$CACHE_DIR" == "undefined" ]]; then
+            CACHE_DIR="${{ needs.setup.outputs.MODEL_CACHE_DIR }}"
+          fi
+          if [[ -z "$CACHE_DIR" || "$CACHE_DIR" == "undefined" ]]; then
+            CACHE_DIR="~/pw/models"
+          fi
+          CACHE_DIR="${CACHE_DIR/#\~/$HOME}"
+          HF_TOKEN="${{ inputs.model.hf_token }}"
+
+          mkdir -p "$CACHE_DIR"
+          MODEL_BASENAME="${MODEL_ID##*/}"
+          SAFE_MODEL_ID="${MODEL_ID//\//__}"
+          LEGACY_DIR="$CACHE_DIR/$SAFE_MODEL_ID"
+          TARGET_DIR="$CACHE_DIR/$MODEL_BASENAME"
+
+          if [[ -d "$LEGACY_DIR" && ! -d "$TARGET_DIR" ]]; then
+            echo "Renaming legacy cache dir $LEGACY_DIR to $TARGET_DIR"
+            mv "$LEGACY_DIR" "$TARGET_DIR"
+          fi
+
+          # Function to validate embedding model (check for config and model files)
+          validate_embedding() {
+            local dir=$1
+            [[ ! -f "$dir/config.json" ]] && return 1
+            # Check for pytorch_model.bin, model.safetensors, or any .bin/.safetensors files
+            if [[ -f "$dir/pytorch_model.bin" || -f "$dir/model.safetensors" ]]; then
+              local weight_file="$dir/pytorch_model.bin"
+              [[ -f "$dir/model.safetensors" ]] && weight_file="$dir/model.safetensors"
+              local size=$(stat -c%s "$weight_file" 2>/dev/null || stat -f%z "$weight_file" 2>/dev/null)
+              [[ $size -lt 100000 ]] && return 1  # Embedding models are smaller, use 100KB threshold
+            fi
+            return 0
+          }
+
+          # Check if already cached AND valid
+          if [[ -d "$TARGET_DIR" ]] && validate_embedding "$TARGET_DIR"; then
+            echo "Embedding model already cached and validated at $TARGET_DIR"
+          else
+            # Remove incomplete cache if exists
+            if [[ -d "$TARGET_DIR" ]]; then
+              echo "Cached embedding model at $TARGET_DIR appears incomplete, removing..."
+              rm -rf "$TARGET_DIR"
+            fi
+            if [[ "$SOURCE" == "bucket" ]]; then
+              BUCKET="${{ inputs.rag.embedding_model_bucket }}"
+              if [[ -z "$BUCKET" || "$BUCKET" == "undefined" ]]; then
+                BUCKET="pw://mshaxted/codeassist"
+              fi
+              BUCKET="${BUCKET%/}"
+              echo "Pulling embedding model from ${BUCKET} to ${TARGET_DIR}"
+              pulled=false
+              if pw bucket cp -r "${BUCKET}/${MODEL_BASENAME}" "$CACHE_DIR" 2>/dev/null; then
+                pulled=true
+              elif pw bucket cp -r "${BUCKET}/${SAFE_MODEL_ID}" "$CACHE_DIR" 2>/dev/null; then
+                pulled=true
+              elif pw bucket cp "${BUCKET}/${MODEL_BASENAME}" "$TARGET_DIR" 2>/dev/null; then
+                pulled=true
+              elif pw bucket cp "${BUCKET}/${SAFE_MODEL_ID}" "$LEGACY_DIR" 2>/dev/null; then
+                pulled=true
+              fi
+              
+              if [[ "$pulled" != "true" ]]; then
+                echo "ERROR: Failed to pull embedding model from bucket"
+                exit 1
+              fi
+              
+              if [[ -d "$LEGACY_DIR" && ! -d "$TARGET_DIR" ]]; then
+                echo "Renaming legacy cache dir $LEGACY_DIR to $TARGET_DIR"
+                mv "$LEGACY_DIR" "$TARGET_DIR"
+              fi
+            else
+              echo "Cloning embedding model $MODEL_ID to $TARGET_DIR"
+
+              # Ensure git-lfs is available
+              if ! git lfs version >/dev/null 2>&1; then
+                echo "Installing git-lfs locally..."
+                mkdir -p $HOME/.local
+                cd /tmp
+                LFS_URL=$(curl -s https://api.github.com/repos/git-lfs/git-lfs/releases/latest | grep browser_download_url | grep linux-amd64 | head -1 | cut -d '"' -f 4)
+                [[ -z "$LFS_URL" ]] && { echo "ERROR: Could not find git-lfs download URL"; exit 1; }
+                wget -q "$LFS_URL" -O git-lfs-linux-amd64.tar.gz
+                tar -xzf git-lfs-linux-amd64.tar.gz
+                ./git-lfs-*/install.sh --local
+                rm -rf git-lfs-*
+                export PATH="$HOME/.local/bin:$PATH"
+                cd ${{ needs.setup.outputs.rundir }}
+                git lfs version >/dev/null 2>&1 || { echo "ERROR: Failed to install git-lfs"; exit 1; }
+              fi
+
+              git lfs install
+
+              # Build clone URL
+              REPO_URL="https://huggingface.co/$MODEL_ID"
+              [[ -n "$HF_TOKEN" ]] && REPO_URL="https://user:${HF_TOKEN}@huggingface.co/$MODEL_ID"
+
+              # Clone with LFS and pull large files
+              GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 "$REPO_URL" "$TARGET_DIR"
+              cd "$TARGET_DIR"
+              git lfs pull
+              cd "$RUNDIR"
+            fi
+
+            [[ ! -f "$TARGET_DIR/config.json" ]] && { echo "ERROR: Embedding model download incomplete - missing config.json"; exit 1; }
+
+            chmod -R a+rX "$TARGET_DIR"
+          fi
+
+          # Update environment file
+          cat >> .run.env << EOF
+          export EMBEDDING_MODEL=$TARGET_DIR
+          export EMBEDDING_CACHE_DIR=$CACHE_DIR
+          export TRANSFORMERS_OFFLINE=1
+          EOF
+
+          echo "embedding_model_path=$TARGET_DIR" >> $OUTPUTS
+          echo "Embedding model ready at $TARGET_DIR"
+
+  # ============================================================================
+  # Prepare Tiktoken Encodings (Optional)
+  # ============================================================================
+  prepare_tiktoken:
+    needs: [setup]
+    if: ${{ inputs.advanced_settings.tiktoken_encodings == true }}
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Download Tiktoken Encodings
+        id: download_tiktoken
+        early-cancel: any-job-failed
+        run: |
+          set -x
+          cd ${{ needs.setup.outputs.rundir }}
+          mkdir -p cache/tiktoken_encodings
+
+          # Method 1: Try direct download from OpenAI public URL
+          echo "Attempting download from openaipublic.blob.core.windows.net..."
+          wget --tries=2 --timeout=30 -O cache/tiktoken_encodings/o200k_base.tiktoken "https://openaipublic.blob.core.windows.net/encodings/o200k_base.tiktoken" 2>/dev/null || true
+          wget --tries=2 --timeout=30 -O cache/tiktoken_encodings/cl100k_base.tiktoken "https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken" 2>/dev/null || true
+
+          # Method 2: If wget failed or files are empty, fallback to PW bucket
+          if [[ ! -s cache/tiktoken_encodings/o200k_base.tiktoken ]] || [[ ! -s cache/tiktoken_encodings/cl100k_base.tiktoken ]]; then
+            echo "Direct download failed or files empty, falling back to PW bucket..."
+            rm -f cache/tiktoken_encodings/*.tiktoken 2>/dev/null || true
+            pw bucket cp "pw://mshaxted/codeassist/o200k_base.tiktoken" cache/tiktoken_encodings/
+            pw bucket cp "pw://mshaxted/codeassist/cl100k_base.tiktoken" cache/tiktoken_encodings/
+          fi
+
+          # Final verification
+          if [[ ! -s cache/tiktoken_encodings/o200k_base.tiktoken ]]; then
+            echo "ERROR: o200k_base.tiktoken download failed or file is empty"
+            exit 1
+          fi
+          if [[ ! -s cache/tiktoken_encodings/cl100k_base.tiktoken ]]; then
+            echo "ERROR: cl100k_base.tiktoken download failed or file is empty"
+            exit 1
+          fi
+
+          ls -la cache/tiktoken_encodings/
+          echo "Tiktoken encodings downloaded and verified"
+
+  # ============================================================================
+  # Session Runner
+  # ============================================================================
+  session_runner:
+    working-directory: ${{ needs.setup.outputs.rundir }}
+    needs:
+      - setup
+      - prepare_containers
+      - prepare_model
+      - prepare_embedding_model
+      - prepare_tiktoken
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - uses: github/parallelworks/interactive_session@main
+        early-cancel: any-job-failed
+        with:
+          $yaml: workflow/session_runner/v1.4/hsp.yaml
+          session: ${{ sessions.session }}
+          resource: ${{ inputs.resource }}
+          cluster:
+            scheduler: ${{ inputs.submit_to_scheduler }}
+            slurm:
+              is_enabled: ${{ inputs.slurm.is_enabled }}
+              account: ${{ inputs.slurm.account }}
+              partition: ${{ inputs.slurm.partition }}
+              qos: ${{ inputs.slurm.qos }}
+              cpus_per_task: ${{ inputs.slurm.cpus_per_task }}
+              nodes: ${{ inputs.slurm.nodes }}
+              gpus: ${{ inputs.vllm.num_gpus }}
+              time: ${{ inputs.slurm.time }}
+              scheduler_directives: ${{ inputs.slurm.scheduler_directives }}
+            pbs:
+              is_enabled: ${{ inputs.pbs.is_enabled }}
+              account: ${{ inputs.pbs.account }}
+              scheduler_directives: ${{ inputs.pbs.scheduler_directives }}
+          service:
+            start_service_script: ${{ needs.setup.outputs.rundir }}/start_service.sh
+            controller_script: ${{ needs.setup.outputs.rundir }}/controller.sh
+            inputs_sh: ${{ needs.setup.outputs.rundir }}/inputs.sh
+            rundir: ${{ needs.setup.outputs.rundir }}
+
+# ==============================================================================
+# INPUT DEFINITIONS
+# ==============================================================================
+"on":
   execute:
     inputs:
+      # ========================================================================
+      # Resource Selection
+      # ========================================================================
       resource:
-        label: Resource Target
         type: compute-clusters
+        label: GPU Cluster
         autoselect: true
-        optional: false
-      shebang:
-        label: Shebang
-        type: string
-        default: '#!/bin/bash'
-      rundir:
-        label: Run Directory
-        type: string
-        default: ${PWD}
-        tooltip: The directory in which the script will be executed. Defaults to the job’s current working directory ($PWD).
-      use_existing_script:
+        include-workspace: false
+        tooltip: Resource to run the service
+
+      # ========================================================================
+      # Deployment Type
+      # ========================================================================
+      runtype:
+        label: Deployment Type
+        type: dropdown
+        default: vllm
+        tooltip: Deploy vLLM only or full vLLM+RAG stack
+        options:
+          - value: vllm
+            label: vLLM Only
+          - value: all
+            label: vLLM + RAG (Chroma)
+
+      # ========================================================================
+      # Scheduler Submission
+      # ========================================================================
+      submit_to_scheduler:
         type: boolean
-        default: false
-        label: Use Existing Script?
-        tooltip: |
-          Yes → Provide path to an existing script on the target resource.
-          No  → Type the script
-      script:
-        label: Type Script
-        type: editor
-        hidden: ${{ inputs.use_existing_script == true }}
-        ignore: ${{ .hidden }}
-        tooltip: Type the script to run without shebang and scheduler directives.
-        default: |
-          echo "$(date) Running in directory ${PWD} on ${HOSTNAME}"
-      script_path:
-        label: Script Path
-        type: string
-        hidden: ${{ inputs.use_existing_script == false }}
-        ignore: ${{ .hidden }}
-        tooltip: Provide path to an existing script on the target resource.
-      scheduler:
-        type: boolean
-        default: false
-        label: Schedule Job?
-        hidden: ${{ inputs.resource.schedulerType == '' }}
-        ignore: ${{ .hidden }}
-        tooltip: |
-          Yes → Job is submitted to the scheduler using sbatch, qsub, etc
-          No  → Job is executed in the controller or login node instead
-      use_scheduler_agent:
-        type: boolean
-        ignore: ${{ inputs.scheduler == false }}
-        hidden: ${{ .ignore }}
-        default: false
-        label: Use parallelworks/scheduler-agent?
-        tooltip: |
-          Yes → Provision the compute node using parallelworks/scheduler-agent
-          No  → Directly use sbatch, qsub, etc to submit the job
+        label: Submit to Job Scheduler
+        tooltip: Enable to submit job via SLURM or PBS scheduler (detected automatically from resource). Disable for direct SSH execution.
+        default: true
+        hidden: true
+
+      # ========================================================================
+      # Model Configuration
+      # ========================================================================
+      model:
+        type: group
+        label: Model Configuration
+        items:
+          source:
+            type: dropdown
+            label: Model Source
+            default: huggingface
+            tooltip: Use a pre-downloaded model (local) or clone from HuggingFace using git-lfs
+            options:
+              - value: local
+                label: "📁 Local Path (pre-staged weights)"
+              - value: huggingface
+                label: "🤗 HuggingFace Clone (git-lfs)"
+
+          local_path:
+            type: string
+            label: Model Path
+            placeholder: /path/to/model/weights
+            default: /models/Llama-3_3-Nemotron-Super-49B-v1_5
+            prefillDefault: true
+            tooltip: Full path to directory containing model weights
+            hidden: ${{ inputs.model.source != 'local' }}
+            ignore: ${{ inputs.model.source != 'local' }}
+
+          hf_model_id:
+            type: string
+            label: HuggingFace Model ID
+            placeholder: openai/gpt-oss-20b
+            default: openai/gpt-oss-20b
+            prefillDefault: true
+            tooltip: Model ID to clone from HuggingFace. Default is gpt-oss-20b, a 20B MoE model compatible with the openai tool call parser.
+            hidden: ${{ inputs.model.source != 'huggingface' }}
+            ignore: ${{ inputs.model.source != 'huggingface' }}
+
+          hf_token:
+            label: HuggingFace Token
+            optional: true
+            default: ${{ org.HF_TOKEN }}
+            type: password
+            tooltip: Required for gated models (Llama, etc.)
+            hidden: ${{ inputs.model.source != 'huggingface' }}
+            ignore: ${{ inputs.model.source != 'huggingface' }}
+
+          cache_dir:
+            type: string
+            label: Model Cache Directory
+            optional: true
+            tooltip: Directory to clone model into. Model is cloned once and reused for subsequent runs. Ensure sufficient disk space. If not specified, defaults to $GLOBAL/hsp/models, then $PROJECTS_HOME/hsp/models, then $WORKDIR.
+            hidden: ${{ inputs.model.source != 'huggingface' }}
+            ignore: ${{ inputs.model.source != 'huggingface' }}
+
+      # ========================================================================
+      # SLURM Configuration
+      # ========================================================================
       slurm:
         type: group
-        label: SLURM Directives
-        hidden: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
-        ignore: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        label: SLURM Configuration
+        hidden: ${{ inputs.submit_to_scheduler != true || inputs.resource.schedulerType != 'slurm' }}
+        collapsed: true
         items:
           is_enabled:
             type: boolean
             hidden: true
             default: true
             label: Is SLURM Enabled? Yes, unless the slurm section is hidden and ignored
+
           account:
-            label: SLURM account
+            label: Account
             type: slurm-accounts
             resource: ${{ inputs.resource }}
-            tooltip: '--account=value slurm directive'
-            ignore: ${{ 'existing' != inputs.resource.provider }}
-            hidden: ${{ .ignore }}
+            tooltip: SLURM account for job submission (--account)
+            optional: true
+            ignore: ${{ inputs.submit_to_scheduler != true || inputs.resource.schedulerType != 'slurm' }}
+
           partition:
             type: slurm-partitions
-            label: SLURM partition
+            label: Partition
             optional: true
             resource: ${{ inputs.resource }}
-            tooltip: '--qos=partition slurm directive'
+            tooltip: Partition for job submission (--partition)
+            ignore: ${{ inputs.submit_to_scheduler != true || inputs.resource.schedulerType != 'slurm' }}
+
           qos:
-            label: Quality of Service [QoS]
+            label: Quality of Service (QoS)
             type: slurm-qos
             resource: ${{ inputs.resource }}
-            tooltip: '--qos=value slurm directive'
-            ignore: ${{ 'existing' != inputs.resource.provider }}
-            hidden: ${{ .ignore }}
+            tooltip: SLURM QoS setting (--qos)
+            optional: true
+            ignore: ${{ inputs.submit_to_scheduler != true || inputs.resource.schedulerType != 'slurm' }}
+
           cpus_per_task:
-            label: CPUs per task
             type: number
+            label: CPUs per Task
+            min: 1
+            max: 256
             default: 1
-            tooltip: '--cpus-per-task= SLURM directive to set the number of CPUs per task'
-            ignore: ${{ 'existing' != inputs.resource.provider }}
-            hidden: ${{ .ignore }}
+            tooltip: Number of CPUs for the job (--cpus-per-task)
+            ignore: ${{ inputs.submit_to_scheduler != true || inputs.resource.schedulerType != 'slurm' }}
+
           nodes:
-            label: Number of Nodes
+            label: Number of nodes
             type: number
             default: 1
-            tooltip: '--nodes=value slurm directive'
-            ignore: ${{ 'existing' != inputs.resource.provider }}
-            hidden: ${{ .ignore }}
-          gpus:
-            label: Number of GPUs
-            type: number
-            default: 0
-            tooltip: '--gres=gpu:value slurm directive'
-            ignore: ${{ 'existing' != inputs.resource.provider }}
-            hidden: ${{ .ignore }}
+            tooltip: "--nodes=value slurm directive"
+            ignore: ${{ inputs.submit_to_scheduler != true || inputs.resource.schedulerType != 'slurm' }}
+
           time:
             label: Walltime
             type: string
-            default: 00:30:00
-            tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job (format: D-HH:MM:SS or HH:MM:SS, e.g. 7-00:00:00 or 01:00:00)'
+            default: 01:00:00
+            prefillDefault: true
+            tooltip: Maximum job duration, e.g., 01:00:00 (--time)
+            ignore: ${{ inputs.submit_to_scheduler != true || inputs.resource.schedulerType != 'slurm' }}
+
           scheduler_directives:
             type: editor
+            label: Additional Directives
             optional: true
-            tooltip: |
-              Add extra SLURM directives, one per line, using the #SBATCH prefix. For example:
-              #SBATCH --exclusive
-              #SBATCH --nodelist=<node-name>
-            default: |
-              ##SBATCH --constraint=mla # uncomment for Navy and AFRL DSRC systems
+            tooltip: Additional SLURM directives (include #SBATCH prefix)
+            default: "##SBATCH --constraint=mla # uncomment for Navy and AFRL DSRC systems"
+            ignore: ${{ inputs.submit_to_scheduler != true || inputs.resource.schedulerType != 'slurm' }}
+
+      # ========================================================================
+      # PBS Configuration
+      # ========================================================================
       pbs:
         type: group
-        label: PBS Directives
-        hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
-        ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+        label: PBS Configuration
+        hidden: ${{ inputs.submit_to_scheduler != true || inputs.resource.schedulerType != 'pbs' }}
+        collapsed: true
         items:
           is_enabled:
             type: boolean
             hidden: true
             default: true
             label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
+
           account:
             label: Account
             type: string
+            optional: true
+            tooltip: PBS account for job submission (-A)
+            ignore: ${{ inputs.submit_to_scheduler != true || inputs.resource.schedulerType != 'pbs' }}
+
           scheduler_directives:
-            label: Scheduler Directives
+            label: Additional Directives
             type: editor
-            tooltip: |
-              Add extra PBS directives, one per line, using the #PBS prefix. For example:
-              #PBS -l mem=16gb
-              #PBS -l ngpus=1
-            default: |
-              #PBS -q HIE
-              #PBS -l select=1:ncpus=92:mpiprocs=1:ngpus=1
-              #PBS -l walltime=01:00:00
-              #PBS -V
+            tooltip: Additional PBS directives (include #PBS prefix)
+            optional: true
+            ignore: ${{ inputs.submit_to_scheduler != true || inputs.resource.schedulerType != 'pbs' }}
+
+      runmode:
+        label: Container Type
+        type: dropdown
+        default: singularity
+        tooltip: Apptainer/Singularity is recommended for HPC environments
+        hidden: true
+        options:
+          - value: singularity
+            label: Apptainer / Singularity
+          - value: docker
+            label: Docker
+
+      # ========================================================================
+      # vLLM Configuration
+      # ========================================================================
+      vllm:
+        type: group
+        label: vLLM Settings
+        collapsed: true
+        items:
+          num_gpus:
+            type: dropdown
+            label: Number of GPUs
+            default: "4"
+            tooltip: Number of GPUs for tensor parallelism (must match available GPUs)
+            options:
+              - value: "1"
+                label: "1 GPU"
+              - value: "2"
+                label: "2 GPUs"
+              - value: "4"
+                label: "4 GPUs"
+              - value: "8"
+                label: "8 GPUs"
+
+          gpu_memory:
+            type: dropdown
+            label: GPU Memory Utilization
+            default: "0.90"
+            tooltip: Fraction of GPU memory to use (lower if OOM errors occur)
+            options:
+              - value: "0.95"
+                label: "95% (Maximum)"
+              - value: "0.90"
+                label: "90%"
+              - value: "0.85"
+                label: "85% (Recommended)"
+              - value: "0.80"
+                label: "80%"
+              - value: "0.70"
+                label: "70% (Conservative)"
+
+          max_model_len:
+            type: dropdown
+            label: Max Context Length
+            default: "auto"
+            tooltip: Maximum sequence length. Lower values reduce memory usage.
+            options:
+              - value: "auto"
+                label: "Auto (use model default)"
+              - value: "4096"
+                label: "4K tokens"
+              - value: "8192"
+                label: "8K tokens"
+              - value: "16384"
+                label: "16K tokens"
+              - value: "32768"
+                label: "32K tokens"
+              - value: "65536"
+                label: "64K tokens"
+              - value: "131072"
+                label: "128K tokens"
+
+          dtype:
+            type: dropdown
+            label: Data Type
+            default: bfloat16
+            tooltip: Model precision. Select 'Custom' to specify via extra arguments.
+            options:
+              - value: bfloat16
+                label: "bfloat16 (Recommended for A100/H100)"
+              - value: float16
+                label: "float16 (Better compatibility)"
+              - value: auto
+                label: "Auto (model default)"
+              - value: custom
+                label: "Custom (specify in extra args)"
+
+          extra_args:
+            type: string
+            label: Additional Arguments
+            default: "--trust_remote_code --async-scheduling --enable-auto-tool-choice --tool-call-parser openai"
+            prefillDefault: true
+            placeholder: "--trust_remote_code --async-scheduling --enable-auto-tool-choice --tool-call-parser openai"
+            tooltip: Additional vLLM arguments. If dtype is 'Custom', include --dtype here.
+            optional: true
+
+      # ========================================================================
+      # RAG Configuration
+      # ========================================================================
+      rag:
+        type: group
+        label: RAG Settings
+        hidden: ${{ inputs.runtype != 'all' }}
+        collapsed: true
+        items:
+          docsdir:
+            label: Documents Directory
+            optional: true
+            default: ./docs
+            type: string
+            tooltip: Directory containing documents to index for RAG
+
+          embedding_model_source:
+            label: Embedding Model Source
+            type: dropdown
+            default: huggingface
+            tooltip: How to load the embedding model for RAG
+            options:
+              - value: local
+                label: "📁 Local Path (pre-staged weights)"
+              - value: huggingface
+                label: "🤗 HuggingFace Clone (git-lfs)"
+              - value: bucket
+                label: "📥 Pull from bucket"
+
+          embedding_model_id:
+            label: Embedding Model ID
+            type: string
+            default: sentence-transformers/all-MiniLM-L6-v2
+            tooltip: HuggingFace model ID for embeddings (also used to resolve bucket folder name)
+            hidden: ${{ inputs.rag.embedding_model_source == 'local' }}
+            ignore: ${{ inputs.rag.embedding_model_source == 'local' }}
+
+          embedding_model_path:
+            label: Embedding Model Path
+            type: string
+            optional: true
+            tooltip: Local path to an embedding model directory
+            hidden: ${{ inputs.rag.embedding_model_source != 'local' }}
+            ignore: ${{ inputs.rag.embedding_model_source != 'local' }}
+
+          embedding_model_cache_dir:
+            label: Embedding Model Cache Directory
+            type: string
+            optional: true
+            tooltip: Directory to store the embedding model (HuggingFace or bucket). If not specified, defaults to $GLOBAL/hsp/models, then $PROJECTS_HOME/hsp/models, then $WORKDIR.
+            hidden: ${{ inputs.rag.embedding_model_source == 'local' }}
+            ignore: ${{ inputs.rag.embedding_model_source == 'local' }}
+
+          embedding_model_bucket:
+            label: Embedding Model Bucket
+            type: string
+            default: pw://mshaxted/codeassist
+            tooltip: Bucket base path containing embedding models by safe ID (e.g., sentence-transformers__all-MiniLM-L6-v2)
+            hidden: ${{ inputs.rag.embedding_model_source != 'bucket' }}
+            ignore: ${{ inputs.rag.embedding_model_source != 'bucket' }}
+
+          systemprompt:
+            type: string
+            label: System Prompt
+            textarea: true
+            optional: true
+            default: You are a careful assistant. Use ONLY the provided context blocks to answer. Each block is numbered [1], [2], … and includes source metadata. When you use information from a block, you MUST cite it inline with [n]. At the end of your response, include a 'References' section with one reference per line formatted as [n] file_path (chunk index). Do not invent citations or sources. If the context does not contain the answer, say so briefly.
+
+      # ========================================================================
+      # Container Configuration
+      # ========================================================================
+      container:
+        type: group
+        label: Container Options
+        hidden: ${{ inputs.runmode != 'singularity' }}
+        collapsed: true
+        items:
+          source:
+            type: dropdown
+            label: Container Source
+            default: pull
+            tooltip: How to obtain Apptainer/Singularity containers
+            options:
+              - value: lfs
+                label: "🧬 Git LFS repo"
+              - value: path
+                label: "📂 Use existing path"
+              - value: pull
+                label: "📥 Pull from bucket (default)"
+              - value: build
+                label: "🔨 Build from source (requires sudo/fakeroot)"
+
+          lfs_repo:
+            label: LFS Repo
+            type: string
+            default: https://github.com/parallelworks/singularity-containers.git
+            tooltip: Git repo containing LFS SIF parts (vllm.*.sif or vllm/vllm.*.sif; rag.*.sif or rag/rag.*.sif)
+            hidden: ${{ inputs.container.source != 'lfs' }}
+            ignore: ${{ inputs.container.source != 'lfs' }}
+
+          lfs_branch:
+            label: LFS Branch
+            type: string
+            default: main
+            tooltip: Branch to pull from the LFS repo
+            hidden: ${{ inputs.container.source != 'lfs' }}
+            ignore: ${{ inputs.container.source != 'lfs' }}
+
+          bucket:
+            label: Container Bucket
+            type: string
+            default: pw://mshaxted/codeassist
+            prefillDefault: true
+            tooltip: Bucket containing vllm.sif and rag.sif containers
+            hidden: ${{ inputs.container.source != 'pull' }}
+            ignore: ${{ inputs.container.source != 'pull' }}
+
+          vllm_path:
+            label: vLLM Container Path
+            type: string
+            optional: true
+            tooltip: Path to vllm.sif container (use existing or build destination). If not specified, defaults to $PROJECTS_HOME/hsp/containers/vllm.sif, then $GLOBAL/hsp/containers/vllm.sif, then ${RUNDIR}/vllm.sif.
+            hidden: ${{ inputs.container.source == 'pull' }}
+            ignore: ${{ inputs.container.source == 'pull' }}
+
+          rag_path:
+            label: RAG Container Path
+            type: string
+            optional: true
+            tooltip: Path to rag.sif container (typically same directory as vllm.sif; only needed for vLLM+RAG mode). If not specified, defaults to $PROJECTS_HOME/hsp/containers/rag.sif, then $GLOBAL/hsp/containers/rag.sif, then ${RUNDIR}/rag.sif.
+            hidden: ${{ inputs.container.source == 'pull' || inputs.runtype != 'all' }}
+            ignore: ${{ inputs.container.source == 'pull' || inputs.runtype != 'all' }}
+
+      # ========================================================================
+      # Advanced Settings
+      # ========================================================================
+      advanced_settings:
+        type: group
+        label: Advanced Settings
+        collapsed: true
+        items:
+          localport:
+            label: Local Port
+            default: "5555"
+            tooltip: Port in your workspace to access the service
+            type: string
+
+          session_timeout:
+            label: Session Wait Timeout (seconds)
+            default: 0
+            tooltip: How long to wait for server to start (0 = wait indefinitely until canceled)
+            type: number
+
+          apikey:
+            label: vLLM API Key
+            optional: true
+            tooltip: Optional API key for vLLM server. Can be any value (e.g., 'dummy') - Cline and other IDEs require a value but do not validate it.
+            type: password
+
+          rundir:
+            label: Run Directory
+            default: ~/pw/activate-rag-vllm
+            type: string
+            tooltip: Directory where the service will be deployed
+
+          repository:
+            type: string
+            label: Repository
+            default: https://github.com/parallelworks/activate-rag-vllm.git
+
+          repository_branch:
+            type: string
+            label: Repository Branch
+            default: main
+
+          tiktoken_encodings:
+            label: Download Tiktoken Encodings
+            tooltip: Download tiktoken encodings for offline use (required for some models)
+            type: boolean
+            default: true
+
+          vllm_attention_backend:
+            type: dropdown
+            label: vLLM Attention Backend
+            default: TRITON_ATTN
+            tooltip: Attention implementation used by vLLM
+            options:
+              [
+                FLASH_ATTN,
+                TRITON_ATTN,
+                FLASHINFER,
+                FLASHINFER_MLA,
+                TRITON_MLA,
+                CUTLASS_MLA,
+                FLASHMLA,
+                FLASHMLA_SPARSE,
+                FLASH_ATTN_MLA,
+                TORCH_SDPA,
+                ROCM_ATTN,
+                ROCM_AITER_MLA,
+                ROCM_AITER_TRITON_MLA,
+                ROCM_AITER_FA,
+                PALLAS,
+                IPEX,
+                CPU_ATTN,
+                NO_ATTENTION,
+                CUSTOM,
+              ]

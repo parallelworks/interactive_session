@@ -95,6 +95,7 @@ fi
 #######################
 # START NGINX WRAPPER #
 #######################
+module load singularity 2>/dev/null || module load apptainer 2>/dev/null || true
 
 proxy_port=${jupyterlab_port}
 proxy_host="127.0.0.1"

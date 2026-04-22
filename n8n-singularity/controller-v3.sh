@@ -40,7 +40,7 @@ oras_pull_file(){
     repo_path=$2
     host_path=$3
     #if ! ${service_parent_install_dir}/tools/oras/oras pull ${repo}; then
-    if ! ./kasmvnc-singularity/oras/oras pull ${repo}; then
+    if ! ./n8n-singularity/oras/oras pull ${repo}; then
         echo "::error title=Error::oras pull failed for ${repo}"
         exit 1
     fi

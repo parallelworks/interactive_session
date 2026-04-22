@@ -53,6 +53,9 @@ for port in $(seq ${minPort} ${maxPort} | shuf); do
     if ss -xl 2>/dev/null | grep -qE "\.X11-unix/X${XdisplayNumber}$"; then
         continue
     fi
+    if pgrep -f "(Xvnc|Xorg|Xvfb) :${XdisplayNumber}( |$)" > /dev/null 2>&1; then
+        continue
+    fi
     
     # To prevent multiple users from using the same available port --> Write file to reserve it
     portFile="/tmp/${port}.port.used"

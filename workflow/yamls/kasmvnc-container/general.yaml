@@ -9,13 +9,21 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - name: Checkout
+      - name: Checkout ${{ inputs.container_runtime }}
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
           branch: main
           sparse_checkout:
             - ${{ inputs.container_runtime }}
+      - name: Checkout Oras
+        uses: parallelworks/checkout
+        if: ${{ inputs.container_runtime == 'kasmvnc-singularity' }}
+        with:
+          repo: https://github.com/parallelworks/interactive_session.git
+          branch: main
+          sparse_checkout:
+            - tools/oras
       - name: Create Inputs
         run: |
           set -x
@@ -81,6 +89,11 @@ jobs:
             inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
             slug: ${{ needs.preprocessing.outputs.slug }}
             rundir: ${PW_PARENT_JOB_DIR}
+        cleanup: |
+          set -x
+          rm -rf tools/oras
+
+
 'on':
   execute:
     inputs:

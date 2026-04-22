@@ -40,7 +40,8 @@ oras_pull_file(){
     repo=$1
     repo_path=$2
     host_path=$3
-    if ! ${service_parent_install_dir}/tools/oras/oras pull ${repo}; then
+    # if ! ${service_parent_install_dir}/tools/oras/oras pull ${repo}; then
+    if ! ./kasmvnc-singularity/oras/oras pull ${repo}; then
         echo "::error title=Error::oras pull failed for ${repo}"
         exit 1
     fi
@@ -53,7 +54,7 @@ oras_pull_file(){
 if ! [ -d "${container_dir}" ]; then
     echo "::group::KasmVNC Container Download"
     echo "::notice::Using GitHub registry to download file"
-    download_oras
+    #download_oras
     oras_pull_file ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}:1.0 kasmvnc-${kasmvnc_os}.tgz ${container_tgz}
     if [ ! -s ${container_tgz} ]; then
         echo "::error title=Error::Failed to download file ${container_tgz}"

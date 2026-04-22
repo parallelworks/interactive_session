@@ -39,7 +39,8 @@ oras_pull_file(){
     repo=$1
     repo_path=$2
     host_path=$3
-    if ! ${service_parent_install_dir}/tools/oras/oras pull ${repo}; then
+    #if ! ${service_parent_install_dir}/tools/oras/oras pull ${repo}; then
+    if ! ./kasmvnc-singularity/oras/oras pull ${repo}; then
         echo "::error title=Error::oras pull failed for ${repo}"
         exit 1
     fi
@@ -54,7 +55,7 @@ chmod 777 "${n8n_data_dir}" -Rf || true
 if ! [ -d "${container_dir}" ]; then
     echo "::group::n8n Singularity Container Download"
     echo "::notice::Using GitHub registry to download file"
-    download_oras
+    #download_oras
     oras_pull_file ghcr.io/parallelworks/n8n:1.0 n8n.tgz ${container_tgz}
     if [ ! -s ${container_tgz} ]; then
         echo "::error title=Error::Failed to download file ${container_tgz}"

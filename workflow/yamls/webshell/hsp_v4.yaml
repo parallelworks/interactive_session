@@ -200,7 +200,6 @@ jobs:
                   #PBS -l mem=16gb
                   #PBS -l ngpus=1
                 default: |
-                  #!/bin/bash
                   #PBS -q HIE
                   #PBS -l select=1:ncpus=92:mpiprocs=1:ngpus=1
                   #PBS -l walltime=01:00:00

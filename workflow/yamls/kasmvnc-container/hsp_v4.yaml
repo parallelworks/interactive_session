@@ -102,6 +102,7 @@ jobs:
             slug: ${{ needs.preprocessing.outputs.slug }}
             rundir: ${PW_PARENT_JOB_DIR}
         cleanup: |
+          set -x
           rm -rf tools/oras
 
 'on':

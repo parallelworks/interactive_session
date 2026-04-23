@@ -26,6 +26,10 @@ jobs:
           fi
 
       - name: Controller Preprocessing
+        retry:
+          max-retries: 5
+          interval: "10s"
+          timeout: "1d"
         run: | 
           set -x
           # This script prepares the target host and always runs in the controller node

@@ -142,7 +142,8 @@ jobs:
         early-cancel: any-job-failed
         run: |
           set -x
-          HOSTNAME=$(cat HOSTNAME | cut -d'.' -f1)
+          #HOSTNAME=$(cat HOSTNAME | cut -d'.' -f1)
+          HOSTNAME=$(cat HOSTNAME)
           echo "HOSTNAME=${HOSTNAME}" | tee -a $OUTPUTS
 
           if [ -z "${HOSTNAME}" ]; then

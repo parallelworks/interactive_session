@@ -50,7 +50,7 @@ if [ -z "${xterm_path}" ]; then
     sudo -n dnf install xterm -y 2>/dev/null || true
     xterm_path=$(which xterm 2>/dev/null)
 fi
-if [ -n "${xterm_path}" ]; then
+if [ -n "${xterm_path}" ] && [ ! -f "${service_parent_install_dir}/tools/xterm" ]; then
     cp ${xterm_path} ${service_parent_install_dir}/tools/xterm
     chmod a+x ${service_parent_install_dir}/tools/xterm
 fi

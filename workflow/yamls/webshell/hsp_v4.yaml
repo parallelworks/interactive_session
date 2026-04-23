@@ -200,10 +200,17 @@ jobs:
                   #PBS -l mem=16gb
                   #PBS -l ngpus=1
                 default: |
-                  #PBS -q HIE
-                  #PBS -l select=1:ncpus=92:mpiprocs=1:ngpus=1
-                  #PBS -l walltime=01:00:00
+                  # Parameters that apply to all sites
+                  #PBS -l walltime=00:30:00
                   #PBS -V
+                  #PBS -q standard
+                  # Remove first # to activate specific lines
+                  #=====Ruth (Lustre, only vis has NVIDIA)=====
+                  ##PBS -l select=1:ncpus=128:mpiprocs=128:ngpus=1
+                  #=====Warhawk (Lustre)====
+                  ##PBS -l select=1:ncpus=128:mpiprocs=128:ngpus=2
+                  #=====Wheat (WEKA, nmlas=4|6)====
+                  ##PBS -l select=1:ncpus=92:mpiprocs=92:nmlas=4
 
       service:
         type: group

@@ -21,7 +21,7 @@ jobs:
           set -x
           if [[ "${{ inputs.use_existing_script }}" == true ]]; then
             if [ ! -f "${{ inputs.script_path }}" ]; then
-                echo "(date) ERROR: File ${{ inputs.script_path }} does not exist or is not a regular file."
+                echo "::error title=Error::File ${{ inputs.script_path }} does not exist or is not a regular file."
                 exit 1
             fi
             cp ${{ inputs.script_path }} run-template.sh

@@ -184,6 +184,7 @@ jobs:
           }
 
           echo "::group::Waiting for server to respond"
+          echo "curl --silent --connect-timeout \"$TIMEOUT\" \"http://${remote_host}:${remote_port}\""
           attempt=1
           while true; do
               if check_server; then

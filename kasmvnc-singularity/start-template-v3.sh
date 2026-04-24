@@ -192,17 +192,28 @@ while [ $attempt -lt $max_attempts ]; do
     kill -0 "${kasmvnc_container_pid}" 2>/dev/null && break
 done
 
-sleep 45
+sleep 5
 
 if ! kill -0 "${kasmvnc_container_pid}" 2>/dev/null; then
     echo "::error::KasmVNC failed to start after ${max_attempts} attempts"
     exit 1
 fi
 
-xauthority_file=$(find container_tmp -name .Xauthority 2>/dev/null | head -1)
+xauthority_file=""
+echo "::notice::Waiting for .Xauthority file"
+for i in $(seq 1 10); do
+    xauthority_file=$(find container_tmp -name .Xauthority 2>/dev/null | head -1)
+    if [ -n "${xauthority_file}" ]; then
+        break
+    fi
+    echo "Waiting for .Xauthority file (attempt ${i}/10)..."
+    sleep 5
+done
 if [ -n "${xauthority_file}" ]; then
     export XAUTHORITY="${PWD}/${xauthority_file}"
     echo "::notice::Setting XAUTHORITY to ${XAUTHORITY}"
+else
+    echo "::warning::.Xauthority file not found after 10 attempts"
 fi
 
 xterm_cmd="$(which xterm 2>/dev/null || echo ${service_parent_install_dir}/tools/xterm)"

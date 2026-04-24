@@ -192,6 +192,8 @@ while [ $attempt -lt $max_attempts ]; do
     kill -0 "${kasmvnc_container_pid}" 2>/dev/null && break
 done
 
+sleep 45
+
 if ! kill -0 "${kasmvnc_container_pid}" 2>/dev/null; then
     echo "::error::KasmVNC failed to start after ${max_attempts} attempts"
     exit 1

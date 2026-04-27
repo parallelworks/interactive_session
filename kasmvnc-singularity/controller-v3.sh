@@ -1,6 +1,14 @@
 set -o pipefail
 set -x
 
+cleanup() {
+    if [ -d tools/oras ]; then
+        echo "Removing tools/oras"
+        rm -rf tools/oras
+    fi
+}
+trap cleanup EXIT
+
 source tools/oras/libs.sh
 
 

@@ -83,7 +83,10 @@ jobs:
             rundir: ${PW_PARENT_JOB_DIR}
         cleanup: |
           set -x
-          rm -rf tools/oras
+          if [ -d tools/oras ]; then
+            echo "Removing tools/oras"
+            rm -rf tools/oras
+          fi
 
 'on':
   execute:

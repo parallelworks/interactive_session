@@ -32,7 +32,10 @@ EOL
 install_code_server() {
     mkdir -p ${service_parent_install_dir}
     # Install code server
-    wget -P ${service_parent_install_dir} ${service_download_url}
+    wget -P ${service_parent_install_dir} ${service_download_url} || {
+        echo "::error title=Error::Failed to download ${service_download_url}"
+        exit 1
+    }
     tar -zxf ${service_tgz_path} -C ${service_parent_install_dir}
 
     # Initialize default settings

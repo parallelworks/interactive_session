@@ -1,5 +1,5 @@
 ## RStudio Interactive Session
-This workflow launches RStudio in a remote desktop [interactive session](https://github.com/parallelworks/interactive_session/blob/main/README.md) accessible via a web browser on a **Compute Cluster** (SLURM or PBS) or as a container on a **Kubernetes Cluster** using the official RStudio docker [image](https://hub.docker.com/r/rocker/rstudio).
+This workflow launches RStudio in a remote desktop [interactive session](../../../README.md) accessible via a web browser on a **Compute Cluster** (SLURM or PBS) or as a container on a **Kubernetes Cluster** using the official RStudio docker [image](https://hub.docker.com/r/rocker/rstudio).
 
 Use the `Target Type` input to select your environment.
 

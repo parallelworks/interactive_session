@@ -93,8 +93,6 @@ download_singularity_container() {
 
 if [[ "${service_conda_install}" == "true" ]]; then
     echo "::group::Conda Installation"
-    ${sshusercontainer} "${pw_job_dir}/utils/notify.sh Installing"
-
     if [[ "${service_install_instructions}" == "install_command" ]]; then
         echo "::notice::Running install command ${service_install_command}"
         eval ${service_install_command}

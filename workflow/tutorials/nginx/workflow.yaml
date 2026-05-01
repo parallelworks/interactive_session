@@ -1,0 +1,59 @@
+permissions:
+  - '*'
+sessions:
+  nginx:
+    useTLS: false
+jobs:
+  start_nginx:
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Start docker
+        run: sudo systemctl start docker
+      - name: Write index.html
+        run: echo "${{ inputs.msg }} from ${PW_JOB_ID}" > index.html
+      - name: Choose Remote Port
+        run: |
+          PORT=$(pw agent open-port)
+          echo "PORT=${PORT}" | tee -a $OUTPUTS
+      - name: Start Nginx
+        run: |
+          # Run nginx container and mount the custom file
+          sudo docker run -d \
+            -p ${{ needs.start_nginx.outputs.PORT }}:80 \
+            --name nginx-hello-${{ needs.start_nginx.outputs.PORT }} \
+            -v $(pwd)/index.html:/usr/share/nginx/html/index.html \
+            nginx
+  stream_logs:
+    if: ${{ always }}
+    needs:
+      - start_nginx
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Stream Logs
+        run: sudo docker logs -f nginx-hello-${{ needs.start_nginx.outputs.PORT }}
+        cleanup: |
+          sudo docker stop nginx-hello-${{ needs.start_nginx.outputs.PORT }}
+          sudo docker rm nginx-hello-${{ needs.start_nginx.outputs.PORT }}
+  session:
+    needs:
+      - start_nginx
+    steps:
+      - name: Create Session
+        uses: parallelworks/update-session
+        with:
+          remotePort: ${{ needs.start_nginx.outputs.PORT }}
+          target: ${{ inputs.resource.id }}
+          name: ${{ sessions.nginx }}
+'on':
+  execute:
+    inputs:
+      resource:
+        label: Resource Target
+        type: compute-clusters
+        autoselect: true
+        optional: false
+      msg:
+        label: Message
+        type: string

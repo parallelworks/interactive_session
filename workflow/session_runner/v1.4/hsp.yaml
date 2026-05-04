@@ -11,6 +11,7 @@ jobs:
         run: |
           source inputs.sh
           set -x
+          source /etc/profile
           # This script prepares the target host and always runs in the controller node
           if [ -n "${service_parent_install_dir}" ]; then
             echo "::notice title=Install Directory::Using provided service_parent_install_dir: ${service_parent_install_dir}"

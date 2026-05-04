@@ -1,16 +1,7 @@
 set -o pipefail
 set -x
 
-cleanup() {
-    if [ -d tools/oras ]; then
-        echo "Removing tools/oras"
-        rm -rf tools/oras
-    fi
-}
-trap cleanup EXIT
-
 source tools/oras/libs.sh
-
 
 if [ -n "${service_parent_install_dir}" ]; then
     container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}

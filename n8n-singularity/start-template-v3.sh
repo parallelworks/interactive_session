@@ -24,7 +24,7 @@ echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
 # Load singularity/apptainer if not already in PATH
-if ! command -v singularity &> /dev/null; then
+if ! which singularity &> /dev/null; then
     if module load apptainer 2>/dev/null; then
         echo "::notice::Loaded apptainer module"
     elif module load singularity 2>/dev/null; then

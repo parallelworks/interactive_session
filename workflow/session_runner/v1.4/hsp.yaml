@@ -204,6 +204,8 @@ jobs:
                   ((attempt++))
               fi
           done
+          # Sleep some extra time to give the service enough time to properly start
+          sleep 10
       - name: Update Session
         uses: parallelworks/update-session
         with:

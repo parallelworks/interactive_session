@@ -49,6 +49,7 @@ echo "rm -rf $PWD/container_tmp" >> cancel.sh
 echo "::endgroup::"
 echo "::group::Starting n8n"
 
+env > env.log
 set -x
 singularity run \
     --writable-tmpfs \

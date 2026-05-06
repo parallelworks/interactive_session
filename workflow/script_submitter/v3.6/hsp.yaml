@@ -1,4 +1,73 @@
 # yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
+configurations:
+  Ruth:
+    inputs:
+      shebang: ''
+      rundir: ''
+      use_existing_script: false
+      script: echo "$(date) Running in directory ${PWD} on ${HOSTNAME}"
+      scheduler: true
+      use_scheduler_agent: false
+      pbs:
+        is_enabled: true
+        account: ''
+        scheduler_directives: |
+          # Parameters that apply to all sites
+          #PBS -l walltime=00:30:00
+          #PBS -V
+          #PBS -q standard
+          #PBS -l select=1:ncpus=128:mpiprocs=128
+  Warhawk:
+    inputs:
+      shebang: ''
+      rundir: ''
+      use_existing_script: false
+      script: echo "$(date) Running in directory ${PWD} on ${HOSTNAME}"
+      scheduler: true
+      use_scheduler_agent: false
+      pbs:
+        is_enabled: true
+        account: ''
+        scheduler_directives: |
+          # Parameters that apply to all sites
+          #PBS -l walltime=00:30:00
+          #PBS -V
+          #PBS -q standard
+          #PBS -l select=1:ncpus=128:mpiprocs=128
+  Wheat:
+    inputs:
+      shebang: ''
+      rundir: ''
+      use_existing_script: false
+      script: echo "$(date) Running in directory ${PWD} on ${HOSTNAME}"
+      scheduler: true
+      use_scheduler_agent: false
+      pbs:
+        is_enabled: true
+        account: ''
+        scheduler_directives: |
+          # Parameters that apply to all sites
+          #PBS -l walltime=00:30:00
+          #PBS -V
+          #PBS -q standard
+          #PBS -l select=1:ncpus=92:mpiprocs=92:nmlas=4
+  Carpenter:
+    inputs:
+      shebang: ''
+      rundir: ''
+      use_existing_script: false
+      script: echo "$(date) Running in directory ${PWD} on ${HOSTNAME}"
+      scheduler: true
+      use_scheduler_agent: false
+      pbs:
+        is_enabled: true
+        account: ''
+        scheduler_directives: |
+          # Parameters that apply to all sites
+          #PBS -l walltime=00:30:00
+          #PBS -V
+          #PBS -q standard
+          #PBS -l select=1:ncpus=192:mpiprocs=192
 jobs:
   stream_output:
     working-directory: ${{ inputs.rundir }}
@@ -81,7 +150,6 @@ jobs:
           sed -i '/^#/!d' headers.sh
           echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
           echo "SCHEDULER_TYPE=slurm" | tee -a $OUTPUTS
-
       - name: Create PBS Headers
         if: ${{ inputs.pbs.is_enabled == true }}
         run: |
@@ -101,7 +169,6 @@ jobs:
           sed -i '/^#/!d' headers.sh
           echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
           echo "SCHEDULER_TYPE=pbs" | tee -a $OUTPUTS
-
   ssh_job:
     needs:
       - preprocessing
@@ -178,7 +245,7 @@ jobs:
             exit 1
           fi
           echo "jobid=${jobid}"  | tee -a $OUTPUTS
-        cleanup: qdel "${{ needs.pbs_job.outputs.jobid }}"
+        cleanup: qdel "${{ needs.pbs_job.outputs.jobid }}" || true
       - name: Monitor PBS Job
         run: |
           jobid=${{ needs.pbs_job.outputs.jobid }}
@@ -232,8 +299,6 @@ jobs:
         with:
           jobs:
             - stream_output
-
-
   slurm_job:
     needs:
       - preprocessing
@@ -319,7 +384,6 @@ jobs:
         with:
           jobs:
             - stream_output
-
   scheduler_agent_job:
     needs:
       - preprocessing
@@ -377,7 +441,6 @@ jobs:
         with:
           jobs:
             - stream_output
-
 'on':
   execute:
     inputs:
@@ -489,7 +552,7 @@ jobs:
           time:
             label: Walltime
             type: string
-            default: 00:30:00
+            default: '00:30:00'
             tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job (format: D-HH:MM:SS or HH:MM:SS, e.g. 7-00:00:00 or 01:00:00)'
           scheduler_directives:
             type: editor
@@ -528,8 +591,10 @@ jobs:
               #PBS -q standard
               # Remove first # to activate specific lines
               #=====Ruth (Lustre, only vis has NVIDIA)=====
-              ##PBS -l select=1:ncpus=128:mpiprocs=128:ngpus=1
+              ##PBS -l select=1:ncpus=128:mpiprocs=128
               #=====Warhawk (Lustre)====
-              ##PBS -l select=1:ncpus=128:mpiprocs=128:ngpus=2
+              ##PBS -l select=1:ncpus=128:mpiprocs=128
               #=====Wheat (WEKA, nmlas=4|6)====
               ##PBS -l select=1:ncpus=92:mpiprocs=92:nmlas=4
+              #=====Carpentera 
+              ##PBS -l select=1:ncpus=192:mpiprocs=192:nmlas=4

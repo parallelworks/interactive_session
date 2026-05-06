@@ -2,15 +2,12 @@
 configurations:
   Carpenter:
     inputs:
-      shebang: ''
-      rundir: ''
       use_existing_script: false
       script: echo "$(date) Running in directory ${PWD} on ${HOSTNAME}"
       scheduler: true
       use_scheduler_agent: false
       pbs:
         is_enabled: true
-        account: ''
         scheduler_directives: |
           # Parameters that apply to all sites
           #PBS -l walltime=00:30:00
@@ -19,15 +16,12 @@ configurations:
           #PBS -l select=1:ncpus=192:mpiprocs=192
   Ruth:
     inputs:
-      shebang: ''
-      rundir: ''
       use_existing_script: false
       script: echo "$(date) Running in directory ${PWD} on ${HOSTNAME}"
       scheduler: true
       use_scheduler_agent: false
       pbs:
         is_enabled: true
-        account: ''
         scheduler_directives: |
           # Parameters that apply to all sites
           #PBS -l walltime=00:30:00
@@ -36,15 +30,12 @@ configurations:
           #PBS -l select=1:ncpus=128:mpiprocs=128
   Warhawk:
     inputs:
-      shebang: ''
-      rundir: ''
       use_existing_script: false
       script: echo "$(date) Running in directory ${PWD} on ${HOSTNAME}"
       scheduler: true
       use_scheduler_agent: false
       pbs:
         is_enabled: true
-        account: ''
         scheduler_directives: |
           # Parameters that apply to all sites
           #PBS -l walltime=00:30:00
@@ -53,8 +44,6 @@ configurations:
           #PBS -l select=1:ncpus=128:mpiprocs=128
   Wheat:
     inputs:
-      shebang: ''
-      rundir: ''
       use_existing_script: false
       script: echo "$(date) Running in directory ${PWD} on ${HOSTNAME}"
       scheduler: true

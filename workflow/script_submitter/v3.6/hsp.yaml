@@ -1,5 +1,22 @@
 # yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
 configurations:
+  Carpenter:
+    inputs:
+      shebang: ''
+      rundir: ''
+      use_existing_script: false
+      script: echo "$(date) Running in directory ${PWD} on ${HOSTNAME}"
+      scheduler: true
+      use_scheduler_agent: false
+      pbs:
+        is_enabled: true
+        account: ''
+        scheduler_directives: |
+          # Parameters that apply to all sites
+          #PBS -l walltime=00:30:00
+          #PBS -V
+          #PBS -q standard
+          #PBS -l select=1:ncpus=192:mpiprocs=192
   Ruth:
     inputs:
       shebang: ''
@@ -51,23 +68,7 @@ configurations:
           #PBS -V
           #PBS -q standard
           #PBS -l select=1:ncpus=92:mpiprocs=92:nmlas=4
-  Carpenter:
-    inputs:
-      shebang: ''
-      rundir: ''
-      use_existing_script: false
-      script: echo "$(date) Running in directory ${PWD} on ${HOSTNAME}"
-      scheduler: true
-      use_scheduler_agent: false
-      pbs:
-        is_enabled: true
-        account: ''
-        scheduler_directives: |
-          # Parameters that apply to all sites
-          #PBS -l walltime=00:30:00
-          #PBS -V
-          #PBS -q standard
-          #PBS -l select=1:ncpus=192:mpiprocs=192
+
 jobs:
   stream_output:
     working-directory: ${{ inputs.rundir }}

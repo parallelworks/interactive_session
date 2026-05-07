@@ -32,7 +32,7 @@ jobs:
         - name: Create Inputs
           run: |
             set -x
-            PW_PLATFORM_HOST=hpcmp.hsp.mil
+            PW_PLATFORM_HOST=activate.hpc.mil
             # Write PW variables
             env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
             # Encase values between quotes

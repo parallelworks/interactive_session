@@ -167,6 +167,7 @@ while [ $attempt -lt $max_attempts ]; do
         ${WRITABLE_TMPFS_FLAG} ${USERNS_FLAG} ${ETC_ENV_FLAG} \
         ${GPU_FLAG} \
         ${MOUNT_FLAGS} \
+        --env PATH="${HOME}/pw:${PATH}" \
         --env XAUTHORITY=/tmp/.Xauthority \
         --env DISPLAY=":${XdisplayNumber}" \
         --env BASE_PATH="${basepath}" \
@@ -175,6 +176,7 @@ while [ $attempt -lt $max_attempts ]; do
         --env VNC_DISPLAY="${XdisplayNumber}" \
         --bind /etc/passwd:/etc/passwd:ro \
         --bind /etc/group:/etc/group:ro \
+        --bind /etc/ssl/certs:/etc/ssl/certs:ro \
         --bind $PWD/empty:/etc/nginx/conf.d/default.conf \
         --bind $PWD/error.log:/var/log/nginx/error.log \
         --bind $PWD/container_tmp:/tmp \

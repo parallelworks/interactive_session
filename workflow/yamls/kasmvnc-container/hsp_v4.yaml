@@ -33,7 +33,7 @@ jobs:
           run: |
             set -x
             if [ -z "${PW_PLATFORM_HOST}" ]; then
-              PW_PLATFORM_HOST=hpcmp.hsp.mil
+              PW_PLATFORM_HOST=activate.hpc.mil
             fi
             PW_PLATFORM_HOST="${PW_PLATFORM_HOST#https://}"            # Write PW variables
             env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh

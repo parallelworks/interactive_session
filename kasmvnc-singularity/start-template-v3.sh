@@ -167,7 +167,6 @@ while [ $attempt -lt $max_attempts ]; do
         ${WRITABLE_TMPFS_FLAG} ${USERNS_FLAG} ${ETC_ENV_FLAG} \
         ${GPU_FLAG} \
         ${MOUNT_FLAGS} \
-        --env PATH="${HOME}/pw:${PATH}" \
         --env XAUTHORITY=/tmp/.Xauthority \
         --env DISPLAY=":${XdisplayNumber}" \
         --env BASE_PATH="${basepath}" \

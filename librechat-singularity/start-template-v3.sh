@@ -1,0 +1,193 @@
+#!/bin/bash
+set -e
+
+if [ -n "${service_parent_install_dir}" ]; then
+    container_dir=${service_parent_install_dir}/containers/librechat
+    if ! [ -d "${container_dir}" ] && ! [ -w "${service_parent_install_dir}" ]; then
+        echo "::warning::container_dir ${container_dir} does not exist and no write permission to ${service_parent_install_dir}. Resetting to ${HOME}/pw/software."
+        service_parent_install_dir=${HOME}/pw/software
+    fi
+else
+    service_parent_install_dir=${HOME}/pw/software
+fi
+
+SIF=${service_parent_install_dir}/containers/librechat
+
+BASE="${LibreChat}/LibreChat"
+DATA="$BASE/singularity-data"
+PID_DIR="$DATA/pids"
+LOG_DIR="$DATA/logs"
+
+mkdir -p "$DATA/mongodb" "$DATA/meili" "$DATA/pgdata" \
+         "$BASE/images" "$BASE/uploads" "$BASE/logs" \
+         "$PID_DIR" "$LOG_DIR"
+
+# ── Sanitized env file (Apptainer --env-file can't handle bash math exprs) ───
+
+CLEAN_ENV="$DATA/apptainer.env"
+grep -Ev '^\s*(#|$)' "$BASE/.env" \
+  | grep -E '^[A-Za-z_][A-Za-z0-9_]+=' \
+  | grep -Ev '[*()&|`]' \
+  > "$CLEAN_ENV" || true
+# Precomputed values for JS math expressions that would break --env-file
+echo 'BAN_DURATION=7200000'          >> "$CLEAN_ENV"   # 1000 * 60 * 60 * 2
+echo 'SESSION_EXPIRY=900000'         >> "$CLEAN_ENV"   # 1000 * 60 * 15
+echo 'REFRESH_TOKEN_EXPIRY=604800000' >> "$CLEAN_ENV"  # (1000*60*60*24) * 7
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+wait_for_port() {
+  local port="$1" label="$2"
+  printf "Waiting for %s (port %s)" "$label" "$port"
+  local attempts=0
+  until bash -c ">/dev/tcp/localhost/$port" 2>/dev/null; do
+    printf "."
+    sleep 1
+    attempts=$((attempts + 1))
+    if [ "$attempts" -ge 60 ]; then
+      echo " TIMEOUT"
+      echo "ERROR: $label did not start within 60s. Check $LOG_DIR/${label,,}.log"
+      exit 1
+    fi
+  done
+  echo " ready"
+}
+
+run_bg() {
+  local name="$1"; shift
+  nohup "$@" > "$LOG_DIR/$name.log" 2>&1 &
+  echo $! > "$PID_DIR/$name.pid"
+  echo "Started $name (PID $!)"
+}
+
+stop_existing() {
+  local name="$1"
+  local pidfile="$PID_DIR/$name.pid"
+  if [ -f "$pidfile" ]; then
+    local pid
+    pid=$(cat "$pidfile")
+    if kill -0 "$pid" 2>/dev/null; then
+      kill "$pid" && echo "Stopped existing $name (PID $pid)"
+      sleep 1
+    fi
+    rm -f "$pidfile"
+  fi
+}
+
+# ── Stop any leftover processes ───────────────────────────────────────────────
+
+for svc in librechat ragapi pgvector meilisearch mongodb; do
+  stop_existing "$svc"
+done
+
+# ── MongoDB ──────────────────────────────────────────────────────────────────
+
+echo "Starting MongoDB..."
+run_bg mongodb \
+  singularity exec \
+    --writable-tmpfs \
+    --bind "$DATA/mongodb:/data/db" \
+    "$SIF/mongodb.sif" \
+    mongod --noauth --dbpath /data/db --bind_ip_all
+
+wait_for_port 27017 "MongoDB"
+
+# ── MeiliSearch ───────────────────────────────────────────────────────────────
+
+echo "Starting MeiliSearch..."
+MEILI_KEY="$(grep ^MEILI_MASTER_KEY "$BASE/.env" | cut -d= -f2-)"
+run_bg meilisearch \
+  singularity exec \
+    --writable-tmpfs \
+    --bind "$DATA/meili:/meili_data" \
+    --env MEILI_NO_ANALYTICS=true \
+    --env "MEILI_MASTER_KEY=$MEILI_KEY" \
+    "$SIF/meilisearch.sif" \
+    /bin/meilisearch --db-path /meili_data/data.ms
+
+wait_for_port 7700 "MeiliSearch"
+
+# ── PostgreSQL + pgvector ─────────────────────────────────────────────────────
+
+echo "Starting PostgreSQL/pgvector..."
+
+if [ ! -f "$DATA/pgdata/PG_VERSION" ]; then
+  echo "Initializing PostgreSQL data directory..."
+  singularity exec \
+    --bind "$DATA/pgdata:/var/lib/postgresql/data" \
+    "$SIF/pgvector.sif" \
+    /usr/lib/postgresql/15/bin/initdb \
+      -D /var/lib/postgresql/data \
+      -U myuser \
+      --auth-host=trust \
+      --auth-local=trust
+fi
+
+run_bg pgvector \
+  singularity exec \
+    --writable-tmpfs \
+    --bind "$DATA/pgdata:/var/lib/postgresql/data" \
+    "$SIF/pgvector.sif" \
+    /usr/lib/postgresql/15/bin/postgres \
+      -D /var/lib/postgresql/data \
+      -c "unix_socket_directories=/tmp"
+
+wait_for_port 5432 "PostgreSQL"
+
+# Create database if it does not exist yet
+singularity exec \
+  --bind "$DATA/pgdata:/var/lib/postgresql/data" \
+  "$SIF/pgvector.sif" \
+  /usr/lib/postgresql/15/bin/psql \
+    -h localhost -U myuser -d postgres \
+    -c "SELECT 1 FROM pg_database WHERE datname='mydatabase'" \
+  | grep -q 1 || \
+singularity exec \
+  --bind "$DATA/pgdata:/var/lib/postgresql/data" \
+  "$SIF/pgvector.sif" \
+  /usr/lib/postgresql/15/bin/psql \
+    -h localhost -U myuser -d postgres \
+    -c "CREATE DATABASE mydatabase;"
+
+# ── RAG API ───────────────────────────────────────────────────────────────────
+
+echo "Starting RAG API..."
+run_bg ragapi \
+  singularity exec \
+    --cleanenv \
+    --writable-tmpfs \
+    --pwd /app \
+    --env-file "$CLEAN_ENV" \
+    --env DB_HOST=localhost \
+    --env RAG_PORT=8000 \
+    "$SIF/rag_api.sif" \
+    python main.py
+
+wait_for_port 8000 "RAG API"
+
+# ── LibreChat ─────────────────────────────────────────────────────────────────
+
+echo "Starting LibreChat..."
+run_bg librechat \
+  singularity exec \
+    --writable-tmpfs \
+    --pwd /app \
+    --bind "$BASE/.env:/app/.env" \
+    --bind "$BASE/images:/app/client/public/images" \
+    --bind "$BASE/uploads:/app/uploads" \
+    --bind "$BASE/logs:/app/logs" \
+    --env HOST=0.0.0.0 \
+    --env MONGO_URI=mongodb://localhost:27017/LibreChat \
+    --env MEILI_HOST=http://localhost:7700 \
+    --env RAG_API_URL=http://localhost:8000 \
+    "$SIF/librechat.sif" \
+    npm run backend
+
+wait_for_port 3080 "LibreChat"
+
+# ── Done ──────────────────────────────────────────────────────────────────────
+
+echo ""
+echo "All services running. PIDs in $PID_DIR/"
+echo "Logs in $LOG_DIR/"
+echo "Stop: $BASE/singularity-stop.sh"

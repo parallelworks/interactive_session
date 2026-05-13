@@ -216,7 +216,8 @@ if [ -n "${xauthority_file}" ]; then
 else
     echo "::warning::.Xauthority file not found after 10 attempts"
 fi
-
+# Wait some time for display to be ready
+sleep 20
 xterm_cmd="$(which xterm 2>/dev/null || echo ${service_parent_install_dir}/tools/xterm)"
 export DISPLAY=":${XdisplayNumber}"
 run_xterm_loop(){

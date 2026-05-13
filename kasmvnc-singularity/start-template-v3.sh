@@ -223,19 +223,18 @@ run_xterm_loop(){
     while true; do
         echo "::notice::Starting xterm with ${xterm_cmd}"
         ${xterm_cmd} -fa "DejaVu Sans Mono" -fs 12 -e bash -c '
-printf "\033[1;36m"
 printf "╔══════════════════════════════════════════════════════════════╗\n"
 printf "║              Welcome to your Remote Desktop Session          ║\n"
 printf "╚══════════════════════════════════════════════════════════════╝\n"
-printf "\033[0m\n"
-printf "\033[1mThis terminal runs directly on the cluster node\033[0m — not inside the\n"
+printf "\n"
+printf "This terminal runs directly on the cluster node — not inside the\n"
 printf "desktop environment. If you close it, it will automatically reopen.\n\n"
-printf "\033[1mThe desktop you see in your browser runs inside a container\033[0m\n"
+printf "The desktop you see in your browser runs inside a container\n"
 printf "(an isolated software environment). Applications started from\n"
 printf "this terminal run on the host node instead.\n\n"
-printf "\033[1mTip:\033[0m You can launch host applications here. The \033[1m&\033[0m keeps your\n"
+printf "Tip: You can launch host applications here. The & keeps your\n"
 printf "terminal free while the app runs. Example:\n\n"
-printf "  \033[1;32mfirefox &\033[0m\n\n"
+printf "  firefox &\n\n"
 printf "────────────────────────────────────────────────────────────────\n\n"
 exec bash'
         sleep 1

@@ -21,10 +21,10 @@ oras_pull_file(){
     repo=$1
     repo_path=$2
     host_path=$3
-    #if ! ${service_parent_install_dir}/tools/oras/oras pull ${repo}; then
-    if ! ./tools/oras/oras pull ${repo}; then
+    local output_dir
+    output_dir=$(dirname ${host_path})
+    if ! ./tools/oras/oras pull ${repo} -o ${output_dir}; then
         echo "::error title=Error::oras pull failed for ${repo}"
         exit 1
     fi
-    mv ${repo_path} ${host_path}
 }

@@ -3,6 +3,7 @@ set -x
 
 source tools/oras/libs.sh
 
+mkdir -p "${service_parent_install_dir}" || true
 if [ -n "${service_parent_install_dir}" ]; then
     container_dir=${service_parent_install_dir}/containers/n8n
     if ! [ -d "${container_dir}" ] && ! [ -w "${service_parent_install_dir}" ]; then

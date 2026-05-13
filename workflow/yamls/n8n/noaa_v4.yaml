@@ -39,6 +39,7 @@ jobs:
             PATH=$HOME/pw:$PATH
             n8n_image_tag="${{ inputs.service.n8n_image_tag }}"
             n8n_data_dir="${{ inputs.service.n8n_data_dir }}"
+            service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
             EOF
 
             # Remove empty variables
@@ -203,6 +204,11 @@ jobs:
             type: string
             default: '1.123.4'
             tooltip: n8n Docker image version tag (e.g. 1.123.4 or latest)
+          parent_install_dir:
+            label: Install Directory
+            type: string
+            optional: true
+            tooltip: "Parent directory for software installation. Default: ${HOME}/pw/software. Ensure you have ~2 GB of free quota available."
           n8n_data_dir:
             label: n8n Data Directory
             type: string

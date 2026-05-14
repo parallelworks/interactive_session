@@ -34,6 +34,20 @@ echo 'BAN_DURATION=7200000'          >> "$CLEAN_ENV"   # 1000 * 60 * 60 * 2
 echo 'SESSION_EXPIRY=900000'         >> "$CLEAN_ENV"   # 1000 * 60 * 15
 echo 'REFRESH_TOKEN_EXPIRY=604800000' >> "$CLEAN_ENV"  # (1000*60*60*24) * 7
 
+# ── Port allocation ──────────────────────────────────────────────────────────
+
+echo "::group::Allocating ports"
+MONGODB_PORT=$(pw agent open-port)
+echo "::notice::MongoDB port: $MONGODB_PORT"
+MEILI_PORT=$(pw agent open-port)
+echo "::notice::MeiliSearch port: $MEILI_PORT"
+PG_PORT=$(pw agent open-port)
+echo "::notice::PostgreSQL port: $PG_PORT"
+RAG_PORT=$(pw agent open-port)
+echo "::notice::RAG API port: $RAG_PORT"
+echo "::notice::LibreChat port: $service_port"
+echo "::endgroup::"
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 wait_for_port() {
@@ -112,9 +126,9 @@ run_bg mongodb \
     --writable-tmpfs \
     --bind "$DATA/mongodb:/data/db" \
     "$SIF/mongodb.sif" \
-    mongod --noauth --dbpath /data/db --bind_ip_all
+    mongod --noauth --dbpath /data/db --bind_ip_all --port $MONGODB_PORT
 
-wait_for_port 27017 "MongoDB"
+wait_for_port $MONGODB_PORT "MongoDB"
 
 # ── MeiliSearch ───────────────────────────────────────────────────────────────
 
@@ -127,9 +141,9 @@ run_bg meilisearch \
     --env MEILI_NO_ANALYTICS=true \
     --env "MEILI_MASTER_KEY=$MEILI_KEY" \
     "$SIF/meilisearch.sif" \
-    /bin/meilisearch --db-path /meili_data/data.ms
+    /bin/meilisearch --db-path /meili_data/data.ms --http-addr 0.0.0.0:$MEILI_PORT
 
-wait_for_port 7700 "MeiliSearch"
+wait_for_port $MEILI_PORT "MeiliSearch"
 
 # ── PostgreSQL + pgvector ─────────────────────────────────────────────────────
 
@@ -154,23 +168,24 @@ run_bg pgvector \
     "$SIF/pgvector.sif" \
     /usr/lib/postgresql/15/bin/postgres \
       -D /var/lib/postgresql/data \
-      -c "unix_socket_directories=/tmp"
+      -c "unix_socket_directories=/tmp" \
+      -c "port=$PG_PORT"
 
-wait_for_port 5432 "PostgreSQL"
+wait_for_port $PG_PORT "PostgreSQL"
 
 # Create database if it does not exist yet
 singularity exec \
   --bind "$DATA/pgdata:/var/lib/postgresql/data" \
   "$SIF/pgvector.sif" \
   /usr/lib/postgresql/15/bin/psql \
-    -h localhost -U myuser -d postgres \
+    -h localhost -p $PG_PORT -U myuser -d postgres \
     -c "SELECT 1 FROM pg_database WHERE datname='mydatabase'" \
   | grep -q 1 || \
 singularity exec \
   --bind "$DATA/pgdata:/var/lib/postgresql/data" \
   "$SIF/pgvector.sif" \
   /usr/lib/postgresql/15/bin/psql \
-    -h localhost -U myuser -d postgres \
+    -h localhost -p $PG_PORT -U myuser -d postgres \
     -c "CREATE DATABASE mydatabase;"
 
 # ── RAG API ───────────────────────────────────────────────────────────────────
@@ -183,11 +198,11 @@ run_bg ragapi \
     --pwd /app \
     --env-file "$CLEAN_ENV" \
     --env DB_HOST=localhost \
-    --env RAG_PORT=8000 \
+    --env RAG_PORT=$RAG_PORT \
     "$SIF/rag_api.sif" \
     python main.py
 
-wait_for_port 8000 "RAG API"
+wait_for_port $RAG_PORT "RAG API"
 
 # ── LibreChat ─────────────────────────────────────────────────────────────────
 
@@ -203,9 +218,9 @@ run_bg librechat \
     --env HOST=0.0.0.0 \
     --env PORT=$service_port \
     --env DOMAIN_SERVER=http://localhost:$service_port \
-    --env MONGO_URI=mongodb://localhost:27017/LibreChat \
-    --env MEILI_HOST=http://localhost:7700 \
-    --env RAG_API_URL=http://localhost:8000 \
+    --env MONGO_URI=mongodb://localhost:$MONGODB_PORT/LibreChat \
+    --env MEILI_HOST=http://localhost:$MEILI_PORT \
+    --env RAG_API_URL=http://localhost:$RAG_PORT \
     "$SIF/librechat.sif" \
     npm run backend
 

@@ -45,6 +45,7 @@ jobs:
             # Write input form variables and ensure the pw agent is in the PATH
             cat <<'EOF' >> inputs.sh
             PATH=$HOME/pw:$PATH
+            librechat_dir="${{ inputs.service.librechat_dir }}"
             EOF
             echo basepath=${basepath} >> inputs.sh
             echo password=${password} >> inputs.sh
@@ -230,3 +231,13 @@ jobs:
                   ##PBS -l select=1:ncpus=128:mpiprocs=128:ngpus=2
                   #=====Wheat (WEKA, nmlas=4|6)====
                   ##PBS -l select=1:ncpus=92:mpiprocs=92:nmlas=4
+      service:
+        type: group
+        label: LibreChat Settings
+        collapsed: true
+        items:
+          librechat_dir:
+            type: string
+            label: LibreChat directory
+            default: ${HOME}/pw/LibreChat
+            tooltip: Path where the LibreChat repository is cloned. Defaults to a shared location so chat history and uploads persist across sessions.

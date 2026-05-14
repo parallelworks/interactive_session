@@ -43,6 +43,7 @@ jobs:
           # Write input form variables and ensure the pw agent is in the PATH
           cat <<'EOF' >> inputs.sh
           PATH=$HOME/pw:$PATH
+          librechat_dir="${{ inputs.service.librechat_dir }}"
           EOF
           echo basepath=${basepath} >> inputs.sh
           echo password=${password} >> inputs.sh
@@ -168,3 +169,13 @@ jobs:
                   Add extra PBS directives, one per line, using the #PBS prefix. For example:
                   #PBS -l mem=16gb
                   #PBS -l ngpus=1
+      service:
+        type: group
+        label: LibreChat Settings
+        collapsed: true
+        items:
+          librechat_dir:
+            type: string
+            label: LibreChat directory
+            default: ${HOME}/pw/LibreChat
+            tooltip: Path where the LibreChat repository is cloned. Defaults to a shared location so chat history and uploads persist across sessions.

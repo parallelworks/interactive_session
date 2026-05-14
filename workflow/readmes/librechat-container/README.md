@@ -45,8 +45,9 @@ On HSP clusters, configure your SLURM account, QoS, and node count as required b
 ## Getting Started
 
 1. Select your resource and scheduler settings
-2. Launch the session — the controller will download the container images on first run (this may take a few minutes)
-3. Once the session is ready, click the link to open LibreChat in your browser
-4. On first launch, register a local account and configure your AI provider API keys under **Settings → API Keys**
+2. Optionally expand **LibreChat Settings** to change the clone directory (defaults to `~/pw/LibreChat`)
+3. Launch the session — the controller will download the container images on first run (this may take a few minutes)
+4. Once the session is ready, click the link to open LibreChat in your browser
+5. On first launch, register a local account and configure your AI provider API keys under **Settings → API Keys**
 
-The session will run until cancelled or the walltime expires. Chat history and uploaded files persist across sessions in `~/pw/jobs/<job-dir>/LibreChat/singularity-data/`.
+The session will run until cancelled or the walltime expires. Chat history, uploads, and database files are stored under `<librechat_dir>/singularity-data/` and persist across sessions and job restarts as long as the directory is not deleted. Multiple users on the same cluster can share a single deployment by pointing to the same `librechat_dir`.

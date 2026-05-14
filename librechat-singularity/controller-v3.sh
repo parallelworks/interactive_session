@@ -40,11 +40,12 @@ fi
 
 
 REPO="https://github.com/danny-avila/LibreChat.git"
-DIR="LibreChat"
+DIR="${librechat_dir:-${HOME}/pw/LibreChat}"
 DOMAIN_CLIENT="https://${PW_PLATFORM_HOST}${basepath}"
 
 # ── Clone or pull ─────────────────────────────────────────────────────────────
 
+mkdir -p "$(dirname "$DIR")"
 if [ ! -d "$DIR/.git" ]; then
   echo "::notice::Cloning LibreChat..."
   git clone "$REPO" "$DIR"

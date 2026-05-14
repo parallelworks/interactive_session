@@ -1,4 +1,3 @@
-# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
 permissions:
   - '*'
 sessions:
@@ -55,9 +54,6 @@ jobs:
           sed -i '/=""/d' inputs.sh # remove var=""
           # Add export= to all lines
           sed -i 's/^/export /' inputs.sh
-
-          slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
-          echo "slug=${slug}"  | tee -a $OUTPUTS
   session_runner:
     needs:
       - preprocessing
@@ -84,7 +80,7 @@ jobs:
             start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.container_runtime }}/start-template-v3.sh
             controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.container_runtime }}/controller-v3.sh
             inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
-            slug: ${{ needs.preprocessing.outputs.slug }}
+            slug: login
             rundir: ${PW_PARENT_JOB_DIR}
         cleanup: |
           set -x
@@ -92,8 +88,6 @@ jobs:
             echo "Removing tools/oras"
             rm -rf tools/oras
           fi
-
-
 'on':
   execute:
     inputs:
@@ -174,5 +168,3 @@ jobs:
                   Add extra PBS directives, one per line, using the #PBS prefix. For example:
                   #PBS -l mem=16gb
                   #PBS -l ngpus=1
-
-

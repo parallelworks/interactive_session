@@ -13,7 +13,7 @@ fi
 
 SIF=${service_parent_install_dir}/containers/librechat
 
-BASE="${LibreChat}/LibreChat"
+BASE="${PWD}/LibreChat"
 DATA="$BASE/singularity-data"
 PID_DIR="$DATA/pids"
 LOG_DIR="$DATA/logs"
@@ -38,26 +38,24 @@ echo 'REFRESH_TOKEN_EXPIRY=604800000' >> "$CLEAN_ENV"  # (1000*60*60*24) * 7
 
 wait_for_port() {
   local port="$1" label="$2"
-  printf "Waiting for %s (port %s)" "$label" "$port"
+  echo "::notice::Waiting for $label on port $port..."
   local attempts=0
   until bash -c ">/dev/tcp/localhost/$port" 2>/dev/null; do
-    printf "."
     sleep 1
     attempts=$((attempts + 1))
     if [ "$attempts" -ge 60 ]; then
-      echo " TIMEOUT"
-      echo "ERROR: $label did not start within 60s. Check $LOG_DIR/${label,,}.log"
+      echo "::error::$label did not start within 60s. Check $LOG_DIR/${label,,}.log"
       exit 1
     fi
   done
-  echo " ready"
+  echo "::notice::$label is ready"
 }
 
 run_bg() {
   local name="$1"; shift
   nohup "$@" > "$LOG_DIR/$name.log" 2>&1 &
   echo $! > "$PID_DIR/$name.pid"
-  echo "Started $name (PID $!)"
+  echo "::notice::Started $name (PID $!)"
 }
 
 stop_existing() {
@@ -67,7 +65,7 @@ stop_existing() {
     local pid
     pid=$(cat "$pidfile")
     if kill -0 "$pid" 2>/dev/null; then
-      kill "$pid" && echo "Stopped existing $name (PID $pid)"
+      kill "$pid" && echo "::notice::Stopped existing $name (PID $pid)"
       sleep 1
     fi
     rm -f "$pidfile"
@@ -76,13 +74,19 @@ stop_existing() {
 
 # ── Stop any leftover processes ───────────────────────────────────────────────
 
+echo "::group::Stopping existing processes"
 for svc in librechat ragapi pgvector meilisearch mongodb; do
   stop_existing "$svc"
 done
+echo "::endgroup::"
 
-# ── MongoDB ──────────────────────────────────────────────────────────────────
+# ── Services ──────────────────────────────────────────────────────────────────
 
-echo "Starting MongoDB..."
+echo "::group::Starting services"
+
+# ── MongoDB ───────────────────────────────────────────────────────────────────
+
+echo "::notice::Starting MongoDB..."
 run_bg mongodb \
   singularity exec \
     --writable-tmpfs \
@@ -94,7 +98,7 @@ wait_for_port 27017 "MongoDB"
 
 # ── MeiliSearch ───────────────────────────────────────────────────────────────
 
-echo "Starting MeiliSearch..."
+echo "::notice::Starting MeiliSearch..."
 MEILI_KEY="$(grep ^MEILI_MASTER_KEY "$BASE/.env" | cut -d= -f2-)"
 run_bg meilisearch \
   singularity exec \
@@ -109,10 +113,10 @@ wait_for_port 7700 "MeiliSearch"
 
 # ── PostgreSQL + pgvector ─────────────────────────────────────────────────────
 
-echo "Starting PostgreSQL/pgvector..."
+echo "::notice::Starting PostgreSQL/pgvector..."
 
 if [ ! -f "$DATA/pgdata/PG_VERSION" ]; then
-  echo "Initializing PostgreSQL data directory..."
+  echo "::notice::Initializing PostgreSQL data directory..."
   singularity exec \
     --bind "$DATA/pgdata:/var/lib/postgresql/data" \
     "$SIF/pgvector.sif" \
@@ -151,7 +155,7 @@ singularity exec \
 
 # ── RAG API ───────────────────────────────────────────────────────────────────
 
-echo "Starting RAG API..."
+echo "::notice::Starting RAG API..."
 run_bg ragapi \
   singularity exec \
     --cleanenv \
@@ -167,7 +171,7 @@ wait_for_port 8000 "RAG API"
 
 # ── LibreChat ─────────────────────────────────────────────────────────────────
 
-echo "Starting LibreChat..."
+echo "::notice::Starting LibreChat..."
 run_bg librechat \
   singularity exec \
     --writable-tmpfs \
@@ -185,9 +189,10 @@ run_bg librechat \
 
 wait_for_port 3080 "LibreChat"
 
+echo "::endgroup::"
+
 # ── Done ──────────────────────────────────────────────────────────────────────
 
-echo ""
-echo "All services running. PIDs in $PID_DIR/"
-echo "Logs in $LOG_DIR/"
-echo "Stop: $BASE/singularity-stop.sh"
+echo "::notice::All services running. PIDs in $PID_DIR/"
+echo "::notice::Logs in $LOG_DIR/"
+echo "::notice::Stop script: singularity-stop.sh"

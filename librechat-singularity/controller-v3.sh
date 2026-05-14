@@ -17,7 +17,7 @@ mkdir -p ${service_parent_install_dir}/containers ${service_parent_install_dir}/
 chmod a+rX ${service_parent_install_dir}/containers ${service_parent_install_dir}/tools
 
 container_dir=${service_parent_install_dir}/containers/librechat
-ontainer_tar=${container_dir}.tar
+container_tar=${container_dir}.tar
 
 
 # Download the container only when it is not already present (idempotent)

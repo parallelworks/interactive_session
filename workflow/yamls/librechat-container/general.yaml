@@ -101,6 +101,7 @@ jobs:
         type: dropdown
         label: Run container using
         default: librechat-singularity
+        hidden: true
         tooltip: Select which container runtime will be used to launch the LibreChat containers (e.g., Docker or Singularity).
         options:
           - label: Docker

@@ -5,6 +5,7 @@ source tools/oras/libs.sh
 
 if (( ${PW_WORKFLOW_STEP_CURRENT_RETRY:-0} >= 1 )); then
     service_parent_install_dir=${HOME}/pw/software
+    echo "export service_parent_install_dir=${service_parent_install_dir}" >> inputs.sh
     echo "::warning::Retry attempt ${PW_WORKFLOW_STEP_CURRENT_RETRY}/${PW_WORKFLOW_STEP_MAX_RETRIES} — switching install directory to ${service_parent_install_dir}"
 fi
 

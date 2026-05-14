@@ -20,9 +20,7 @@ from dataclasses import dataclass, field
 # ── defaults ─────────────────────────────────────────────────────────────────
 
 DEFAULT_WORKFLOWS = [
-    "marketplace.desktop.latest",
-    "marketplace.jupyterlab.latest",
-    "marketplace.openvscode.latest"
+    "librechat"
 ]
 
 POLL_INTERVAL = 30   # seconds between status checks

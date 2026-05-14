@@ -30,7 +30,7 @@ fi
 # cause Node to load incompatible native libraries.
 unset PYTHONPATH PYTHONHOME PERL5LIB PERLLIB PERL5OPT PYTHONSTARTUP LD_LIBRARY_PATH
 
-SIF=${service_parent_install_dir}/containers
+SIF=${service_parent_install_dir}/containers/librechat
 
 BASE="${librechat_dir:-${HOME}/pw/LibreChat}"
 DATA="$BASE/singularity-data"

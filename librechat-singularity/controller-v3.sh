@@ -29,7 +29,8 @@ if ! [ -d "${container_dir}" ]; then
         echo "::error title=Error::Failed to download file ${container_tar}"
         exit 1
     fi
-    if ! tar xf ${container_tar} -C $(dirname ${container_dir}); then
+    mkdir -p ${container_dir}
+    if ! tar xf ${container_tar} -C ${container_dir}; then
         echo "::error title=Error::Failed to extract ${container_tar}"
         exit 1
     fi

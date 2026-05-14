@@ -11,6 +11,25 @@ else
     service_parent_install_dir=${HOME}/pw/software
 fi
 
+# Load singularity/apptainer if not already in PATH
+if ! which singularity &> /dev/null; then
+    if module load apptainer 2>/dev/null; then
+        echo "::notice::Loaded apptainer module"
+    elif module load singularity 2>/dev/null; then
+        echo "::notice::Loaded singularity module"
+    else
+        echo "::error title=Error::singularity/apptainer not found in PATH and could not be loaded via module"
+        exit 1
+    fi
+else
+    echo "::notice::singularity already available in PATH"
+fi
+
+# Unset host env vars that can corrupt the container's Node.js/npm runtime.
+# On Cray EX and similar HPC systems, LD_LIBRARY_PATH carries PE paths that
+# cause Node to load incompatible native libraries.
+unset PYTHONPATH PYTHONHOME PERL5LIB PERLLIB PERL5OPT PYTHONSTARTUP LD_LIBRARY_PATH
+
 SIF=${service_parent_install_dir}/containers
 
 BASE="${PWD}/LibreChat"

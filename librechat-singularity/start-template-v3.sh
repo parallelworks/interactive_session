@@ -22,6 +22,10 @@ mkdir -p "$DATA/mongodb" "$DATA/meili" "$DATA/pgdata" \
          "$BASE/images" "$BASE/uploads" "$BASE/logs" \
          "$PID_DIR" "$LOG_DIR"
 
+# Bind file used to hide kernel FIPS flag from containers whose OpenSSL 3.x
+# auto-activates FIPS mode when /proc/sys/crypto/fips_enabled reads 1.
+echo 0 > "$DATA/nofips"
+
 # ── Sanitized env file (Apptainer --env-file can't handle bash math exprs) ───
 
 CLEAN_ENV="$DATA/apptainer.env"
@@ -129,6 +133,7 @@ run_bg mongodb \
   singularity exec \
     --writable-tmpfs \
     --bind "$DATA/mongodb:/data/db" \
+    --bind "$DATA/nofips:/proc/sys/crypto/fips_enabled:ro" \
     "$SIF/mongodb.sif" \
     mongod --noauth --dbpath /data/db --bind_ip_all --port $MONGODB_PORT
 

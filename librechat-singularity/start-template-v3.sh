@@ -201,6 +201,25 @@ run_bg pgvector \
 
 wait_for_port $PG_PORT "PostgreSQL"
 
+# PostgreSQL accepts the TCP connection before finishing recovery; wait until
+# it can actually serve queries before attempting DDL.
+echo "::notice::Waiting for PostgreSQL to accept connections..."
+pg_ready_attempts=0
+until singularity exec \
+  --bind "$DATA/pgdata:/var/lib/postgresql/data" \
+  "$SIF/pgvector.sif" \
+  /usr/lib/postgresql/15/bin/psql \
+    -h localhost -p $PG_PORT -U myuser -d postgres \
+    -c "SELECT 1" >/dev/null 2>&1; do
+  sleep 1
+  pg_ready_attempts=$((pg_ready_attempts + 1))
+  if [ "$pg_ready_attempts" -ge 30 ]; then
+    echo "::error::PostgreSQL did not accept connections within 30s"
+    exit 1
+  fi
+done
+echo "::notice::PostgreSQL is accepting connections"
+
 # Create database if it does not exist yet
 singularity exec \
   --bind "$DATA/pgdata:/var/lib/postgresql/data" \

@@ -37,13 +37,17 @@ echo 'REFRESH_TOKEN_EXPIRY=604800000' >> "$CLEAN_ENV"  # (1000*60*60*24) * 7
 # ── Port allocation ──────────────────────────────────────────────────────────
 
 echo "::group::Allocating ports"
-MONGODB_PORT=$(pw agent open-port)
+MONGODB_PORT=$(pw agent open-port) || { echo "::error title=Error::Failed to allocate MongoDB port"; exit 1; }
+[ -n "$MONGODB_PORT" ] || { echo "::error title=Error::No MongoDB port returned"; exit 1; }
 echo "::notice::MongoDB port: $MONGODB_PORT"
-MEILI_PORT=$(pw agent open-port)
+MEILI_PORT=$(pw agent open-port) || { echo "::error title=Error::Failed to allocate MeiliSearch port"; exit 1; }
+[ -n "$MEILI_PORT" ] || { echo "::error title=Error::No MeiliSearch port returned"; exit 1; }
 echo "::notice::MeiliSearch port: $MEILI_PORT"
-PG_PORT=$(pw agent open-port)
+PG_PORT=$(pw agent open-port) || { echo "::error title=Error::Failed to allocate PostgreSQL port"; exit 1; }
+[ -n "$PG_PORT" ] || { echo "::error title=Error::No PostgreSQL port returned"; exit 1; }
 echo "::notice::PostgreSQL port: $PG_PORT"
-RAG_PORT=$(pw agent open-port)
+RAG_PORT=$(pw agent open-port) || { echo "::error title=Error::Failed to allocate RAG API port"; exit 1; }
+[ -n "$RAG_PORT" ] || { echo "::error title=Error::No RAG API port returned"; exit 1; }
 echo "::notice::RAG API port: $RAG_PORT"
 echo "::notice::LibreChat port: $service_port"
 echo "::endgroup::"
@@ -198,6 +202,10 @@ run_bg ragapi \
     --pwd /app \
     --env-file "$CLEAN_ENV" \
     --env DB_HOST=localhost \
+    --env DB_PORT=$PG_PORT \
+    --env POSTGRES_DB=mydatabase \
+    --env POSTGRES_USER=myuser \
+    --env POSTGRES_PASSWORD=mypassword \
     --env RAG_PORT=$RAG_PORT \
     "$SIF/rag_api.sif" \
     python main.py

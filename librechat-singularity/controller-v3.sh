@@ -3,6 +3,11 @@ set -x
 
 source tools/oras/libs.sh
 
+if (( ${PW_WORKFLOW_STEP_CURRENT_RETRY:-0} >= 1 )); then
+    service_parent_install_dir=${HOME}/pw/software
+    echo "::warning::Retry attempt ${PW_WORKFLOW_STEP_CURRENT_RETRY}/${PW_WORKFLOW_STEP_MAX_RETRIES} — switching install directory to ${service_parent_install_dir}"
+fi
+
 if [ -n "${service_parent_install_dir}" ]; then
     container_dir=${service_parent_install_dir}/containers/librechat
     if ! [ -d "${container_dir}" ] && ! [ -w "${service_parent_install_dir}" ]; then

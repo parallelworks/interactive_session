@@ -11,7 +11,7 @@ else
     service_parent_install_dir=${HOME}/pw/software
 fi
 
-SIF=${service_parent_install_dir}/containers/librechat
+SIF=${service_parent_install_dir}/containers
 
 BASE="${PWD}/LibreChat"
 DATA="$BASE/singularity-data"
@@ -181,13 +181,15 @@ run_bg librechat \
     --bind "$BASE/uploads:/app/uploads" \
     --bind "$BASE/logs:/app/logs" \
     --env HOST=0.0.0.0 \
+    --env PORT=$service_port \
+    --env DOMAIN_SERVER=http://localhost:$service_port \
     --env MONGO_URI=mongodb://localhost:27017/LibreChat \
     --env MEILI_HOST=http://localhost:7700 \
     --env RAG_API_URL=http://localhost:8000 \
     "$SIF/librechat.sif" \
     npm run backend
 
-wait_for_port 3080 "LibreChat"
+wait_for_port $service_port "LibreChat"
 
 echo "::endgroup::"
 
@@ -196,3 +198,5 @@ echo "::endgroup::"
 echo "::notice::All services running. PIDs in $PID_DIR/"
 echo "::notice::Logs in $LOG_DIR/"
 echo "::notice::Stop script: singularity-stop.sh"
+
+wait

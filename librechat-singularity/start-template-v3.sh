@@ -72,6 +72,26 @@ stop_existing() {
   fi
 }
 
+# ── Cancel script ────────────────────────────────────────────────────────────
+
+cat > "${PW_PARENT_JOB_DIR}/cancel.sh" <<EOF
+#!/bin/bash
+echo "::group::Stopping LibreChat services"
+for svc in librechat ragapi pgvector meilisearch mongodb; do
+  pidfile="${PID_DIR}/\${svc}.pid"
+  if [ -f "\$pidfile" ]; then
+    pid=\$(cat "\$pidfile")
+    if kill -0 "\$pid" 2>/dev/null; then
+      kill "\$pid" && echo "::notice::Stopped \${svc} (PID \$pid)"
+      sleep 1
+    fi
+    rm -f "\$pidfile"
+  fi
+done
+echo "::endgroup::"
+EOF
+chmod +x "${PW_PARENT_JOB_DIR}/cancel.sh"
+
 # ── Stop any leftover processes ───────────────────────────────────────────────
 
 echo "::group::Stopping existing processes"

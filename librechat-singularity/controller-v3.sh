@@ -68,3 +68,40 @@ if [[ "${domain_client}" == "ACTIVATE" ]]; then
     sed -i "s|^DOMAIN_CLIENT=.*|DOMAIN_CLIENT=$DOMAIN_CLIENT|" "$DIR/.env"
     echo "::notice::DOMAIN_CLIENT set to $DOMAIN_CLIENT"
 fi
+
+
+
+# ── LibreChat YAML config ─────────────────────────────────────────────────────
+# This is only used if ${librechat_config} is unset
+
+[ -n "${GENAI_MIL_API_KEY}" ] && echo "GENAI_MIL_API_KEY=${GENAI_MIL_API_KEY}" >> "$DIR/.env"
+[ -n "${PW_AUTH_TOKEN}" ]     && echo "PW_AUTH_TOKEN=${PW_AUTH_TOKEN}"           >> "$DIR/.env"
+
+
+
+cat > "$DIR/librechat.yaml" <<YAML_EOF
+version: 1.1.4
+cache: true
+
+endpoints:
+  custom:
+    - name: "GenAI MIL"
+      apiKey: "\${GENAI_MIL_API_KEY}"
+      baseURL: "https://api.genai.mil/v1"
+      models:
+        default: ["gemini-3-flash-preview"]
+        fetch: true
+      titleConvo: true
+      titleModel: "gemini-2.5-flash"
+      summarize: false
+      displayLabelEnabled: true
+    - name: "ACTIVATE"
+      apiKey: "\${PW_AUTH_TOKEN}"
+      baseURL: "https://${PW_PLATFORM_HOST}/api/openai/v1"
+      models:
+        fetch: true
+      titleConvo: true
+      summarize: false
+      displayLabelEnabled: true
+YAML_EOF
+echo "::notice::LibreChat YAML config written to $DIR/librechat.yaml"

@@ -189,7 +189,7 @@ jobs:
             label: LibreChat directory
             default: ${HOME}/pw/LibreChat
             tooltip: Path where the LibreChat repository is cloned. Defaults to a shared location so chat history and uploads persist across sessions.
-        container_runtime:
+        domain_client:
           type: dropdown
           label: Domain Client
           default: ACTIVATE

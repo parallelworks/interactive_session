@@ -260,7 +260,6 @@ jobs:
             type: dropdown
             label: Domain Client
             default: ACTIVATE
-            hidden: true
             tooltip: Select ACTIVATE if LibreChat will be accessed from the Activate platform, or LOCALHOST otherwise (e.g., accessed via localhost or through an SSH tunnel).
             options:
               - label: ACTIVATE

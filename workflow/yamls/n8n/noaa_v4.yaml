@@ -17,13 +17,6 @@ jobs:
           branch: main
           sparse_checkout:
             - ${{ inputs.service.container_runtime }}
-      - name: Checkout Oras
-        uses: parallelworks/checkout
-        if: ${{ inputs.service.container_runtime == 'n8n-singularity' }}
-        with:
-          repo: https://github.com/parallelworks/interactive_session.git
-          branch: main
-          sparse_checkout:
             - tools/oras
       - name: Create Inputs
         run: |

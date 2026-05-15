@@ -57,6 +57,12 @@ echo 'BAN_DURATION=7200000'          >> "$CLEAN_ENV"   # 1000 * 60 * 60 * 2
 echo 'SESSION_EXPIRY=900000'         >> "$CLEAN_ENV"   # 1000 * 60 * 15
 echo 'REFRESH_TOKEN_EXPIRY=604800000' >> "$CLEAN_ENV"  # (1000*60*60*24) * 7
 
+
+# Unset env vars that were passed in as empty strings
+for var in GENAI_MIL_API_KEY JWT_SECRET JWT_REFRESH_SECRET LIBRECHAT_API_KEY LANGFLOW_API_KEY; do
+    [ -z "${!var}" ] && unset "$var"
+done
+
 # ── Port allocation ──────────────────────────────────────────────────────────
 
 echo "::group::Allocating ports"

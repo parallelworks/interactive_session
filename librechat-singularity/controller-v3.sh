@@ -48,7 +48,6 @@ fi
 
 REPO="https://github.com/danny-avila/LibreChat.git"
 DIR="${librechat_dir:-${HOME}/pw/LibreChat}"
-DOMAIN_CLIENT="https://${PW_PLATFORM_HOST}${basepath}"
 
 # ── Clone or pull ─────────────────────────────────────────────────────────────
 
@@ -64,5 +63,8 @@ fi
 # ── Set up .env ───────────────────────────────────────────────────────────────
 cp "$DIR/.env.example" "$DIR/.env"
 
-sed -i "s|^DOMAIN_CLIENT=.*|DOMAIN_CLIENT=$DOMAIN_CLIENT|" "$DIR/.env"
-echo "::notice::DOMAIN_CLIENT set to $DOMAIN_CLIENT"
+if [[ "${domain_client}" == "ACTIVATE" ]]; then
+    DOMAIN_CLIENT="https://${PW_PLATFORM_HOST}${basepath}"
+    sed -i "s|^DOMAIN_CLIENT=.*|DOMAIN_CLIENT=$DOMAIN_CLIENT|" "$DIR/.env"
+    echo "::notice::DOMAIN_CLIENT set to $DOMAIN_CLIENT"
+fi

@@ -6,6 +6,7 @@ permissions:
   - '*'
 
 env:
+  PW_API_KEY: ${PW_API_KEY}
   GENAI_MIL_API_KEY: ${{ inputs.env.GENAI_MIL_API_KEY }}
   JWT_SECRET: ${{ inputs.env.JWT_SECRET }}
   JWT_REFRESH_SECRET: ${{ inputs.env.JWT_REFRESH_SECRET }}

@@ -266,8 +266,10 @@ wait_for_port $RAG_PORT "RAG API"
 # ── LibreChat ─────────────────────────────────────────────────────────────────
 
 echo "::notice::Starting LibreChat..."
+_librechat_yaml="${librechat_config:-$BASE/librechat.yaml}"
 librechat_config_bind=()
-[ -n "$librechat_config" ] && librechat_config_bind=(--bind "$librechat_config:/app/librechat.yaml")
+[ -f "$_librechat_yaml" ] && librechat_config_bind=(--bind "$_librechat_yaml:/app/librechat.yaml")
+
 
 run_bg librechat \
   singularity exec \

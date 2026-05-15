@@ -3,7 +3,6 @@ permissions:
 
 env:
   PW_API_KEY: ${PW_API_KEY}
-  GENAI_MIL_API_KEY: ${{ inputs.env.GENAI_MIL_API_KEY }}
   JWT_SECRET: ${{ inputs.env.JWT_SECRET }}
   JWT_REFRESH_SECRET: ${{ inputs.env.JWT_REFRESH_SECRET }}
   LIBRECHAT_API_KEY: ${{ inputs.env.LIBRECHAT_API_KEY }}
@@ -211,10 +210,6 @@ jobs:
         label: Environment Variables
         collapsed: true
         items:
-          GENAI_MIL_API_KEY:
-            type: password
-            label: GENAI MIL API Key
-            default: ''
           JWT_SECRET:
             type: password
             label: JWT Secret

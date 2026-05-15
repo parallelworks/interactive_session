@@ -1,5 +1,13 @@
 permissions:
   - '*'
+
+env:
+  GENAI_MIL_API_KEY: ${{ inputs.env.GENAI_MIL_API_KEY }}
+  JWT_SECRET: ${{ inputs.env.JWT_SECRET }}
+  JWT_REFRESH_SECRET: ${{ inputs.env.JWT_REFRESH_SECRET }}
+  LIBRECHAT_API_KEY: ${{ inputs.env.LIBRECHAT_API_KEY }}
+  LANGFLOW_API_KEY: ${{ inputs.env.LANGFLOW_API_KEY }}
+
 sessions:
   session:
     redirect: true
@@ -15,13 +23,6 @@ jobs:
           branch: main
           sparse_checkout:
             - ${{ inputs.container_runtime }}
-      - name: Checkout Oras
-        uses: parallelworks/checkout
-        if: ${{ inputs.container_runtime == 'librechat-singularity' }}
-        with:
-          repo: https://github.com/parallelworks/interactive_session.git
-          branch: main
-          sparse_checkout:
             - tools/oras
       - name: Create Inputs
         run: |
@@ -44,6 +45,7 @@ jobs:
           cat <<'EOF' >> inputs.sh
           PATH=$HOME/pw:$PATH
           librechat_dir="${{ inputs.service.librechat_dir }}"
+          domain_client="${{ inputs.service.domain_client }}"
           EOF
           echo basepath=${basepath} >> inputs.sh
           echo password=${password} >> inputs.sh
@@ -180,3 +182,39 @@ jobs:
             label: LibreChat directory
             default: ${HOME}/pw/LibreChat
             tooltip: Path where the LibreChat repository is cloned. Defaults to a shared location so chat history and uploads persist across sessions.
+          domain_client:
+            type: dropdown
+            label: Domain Client
+            default: ACTIVATE
+            hidden: true
+            tooltip: Select ACTIVATE if LibreChat will be accessed from the Activate platform, or LOCALHOST otherwise (e.g., accessed via localhost or through an SSH tunnel).
+            options:
+              - label: ACTIVATE
+                value: ACTIVATE
+              - label: LOCALHOST
+                value: LOCALHOST
+      env:
+        type: group
+        label: Environment Variables
+        collapsed: true
+        items:
+          GENAI_MIL_API_KEY:
+            type: password
+            label: GENAI MIL API Key
+            default: ''
+          JWT_SECRET:
+            type: password
+            label: JWT Secret
+            default: ''
+          JWT_REFRESH_SECRET:
+            type: password
+            label: JWT Refresh Secret
+            default: ''
+          LIBRECHAT_API_KEY:
+            type: password
+            label: LibreChat API Key
+            default: ''
+          LANGFLOW_API_KEY:
+            type: password
+            label: Langflow API Key
+            default: ''

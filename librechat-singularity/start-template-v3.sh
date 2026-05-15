@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -ex
 
 if [ -n "${service_parent_install_dir}" ]; then
     container_dir=${service_parent_install_dir}/containers/librechat
@@ -37,7 +37,9 @@ DATA="$BASE/singularity-data"
 PID_DIR="$DATA/pids"
 LOG_DIR="$DATA/logs"
 
-mkdir -p "$DATA/mongodb" "$DATA/meili" "$DATA/pgdata" \
+MONGO_DATA_DIR="${librechat_db:-$DATA/mongodb}"
+
+mkdir -p "$MONGO_DATA_DIR" "$DATA/meili" "$DATA/pgdata" \
          "$BASE/images" "$BASE/uploads" "$BASE/logs" \
          "$PID_DIR" "$LOG_DIR"
 
@@ -157,7 +159,7 @@ echo "::notice::Starting MongoDB..."
 run_bg mongodb \
   singularity exec \
     --writable-tmpfs \
-    --bind "$DATA/mongodb:/data/db" \
+    --bind "$MONGO_DATA_DIR:/data/db" \
     --bind "$DATA/nofips:/proc/sys/crypto/fips_enabled:ro" \
     "$SIF/mongodb.sif" \
     mongod --noauth --dbpath /data/db --bind_ip_all --port $MONGODB_PORT
@@ -264,11 +266,15 @@ wait_for_port $RAG_PORT "RAG API"
 # ── LibreChat ─────────────────────────────────────────────────────────────────
 
 echo "::notice::Starting LibreChat..."
+librechat_config_bind=()
+[ -n "$librechat_config" ] && librechat_config_bind=(--bind "$librechat_config:/app/librechat.yaml")
+
 run_bg librechat \
   singularity exec \
     --writable-tmpfs \
     --pwd /app \
     --bind "$BASE/.env:/app/.env" \
+    "${librechat_config_bind[@]}" \
     --bind "$BASE/images:/app/client/public/images" \
     --bind "$BASE/uploads:/app/uploads" \
     --bind "$BASE/logs:/app/logs" \
@@ -289,6 +295,5 @@ echo "::endgroup::"
 
 echo "::notice::All services running. PIDs in $PID_DIR/"
 echo "::notice::Logs in $LOG_DIR/"
-echo "::notice::Stop script: singularity-stop.sh"
 
 wait

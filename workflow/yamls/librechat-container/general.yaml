@@ -46,6 +46,8 @@ jobs:
           PATH=$HOME/pw:$PATH
           librechat_dir="${{ inputs.service.librechat_dir }}"
           domain_client="${{ inputs.service.domain_client }}"
+          librechat_db="${{ inputs.service.librechat_db }}"
+          librechat_config="${{ inputs.service.librechat_config }}"
           EOF
           echo basepath=${basepath} >> inputs.sh
           echo password=${password} >> inputs.sh
@@ -182,6 +184,16 @@ jobs:
             label: LibreChat directory
             default: ${HOME}/pw/LibreChat
             tooltip: Path where the LibreChat repository is cloned. Defaults to a shared location so chat history and uploads persist across sessions.
+          librechat_config:
+            type: string
+            label: LibreChat config file
+            optional: true
+            tooltip: Path to the LibreChat YAML configuration file. Defaults to the standard location inside the LibreChat directory.
+          librechat_db:
+            type: string
+            label: LibreChat Database Directory
+            optional: true
+            tooltip: Path to the directory where MongoDB stores its data. Defaults to the standard location inside the LibreChat directory.
           domain_client:
             type: dropdown
             label: Domain Client

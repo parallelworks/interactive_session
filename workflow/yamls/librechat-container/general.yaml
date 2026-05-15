@@ -1,5 +1,13 @@
 permissions:
   - '*'
+
+env:
+  GENAI_MIL_API_KEY: ${{ inputs.env.GENAI_MIL_API_KEY }}
+  JWT_SECRET: ${{ inputs.env.JWT_SECRET }}
+  JWT_REFRESH_SECRET: ${{ inputs.env.JWT_REFRESH_SECRET }}
+  LIBRECHAT_API_KEY: ${{ inputs.env.LIBRECHAT_API_KEY }}
+  LANGFLOW_API_KEY: ${{ inputs.env.LANGFLOW_API_KEY }}
+
 sessions:
   session:
     redirect: true
@@ -192,3 +200,28 @@ jobs:
               value: ACTIVATE
             - label: LOCALHOST
               value: LOCALHOST
+      env:
+        type: group
+        label: Environment Variables
+        collapsed: true
+        items:
+          GENAI_MIL_API_KEY:
+            type: password
+            label: GENAI MIL API Key
+            optional: true
+          JWT_SECRET:
+            type: password
+            label: JWT Secret
+            optional: true
+          JWT_REFRESH_SECRET:
+            type: password
+            label: JWT Refresh Secret
+            optional: true
+          LIBRECHAT_API_KEY:
+            type: password
+            label: LibreChat API Key
+            optional: true
+          LANGFLOW_API_KEY:
+            type: password
+            label: Langflow API Key
+            optional: true

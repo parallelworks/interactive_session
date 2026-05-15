@@ -189,17 +189,17 @@ jobs:
             label: LibreChat directory
             default: ${HOME}/pw/LibreChat
             tooltip: Path where the LibreChat repository is cloned. Defaults to a shared location so chat history and uploads persist across sessions.
-        domain_client:
-          type: dropdown
-          label: Domain Client
-          default: ACTIVATE
-          hidden: true
-          tooltip: Select ACTIVATE if LibreChat will be accessed from the Activate platform, or LOCALHOST otherwise (e.g., accessed via localhost or through an SSH tunnel).
-          options:
-            - label: ACTIVATE
-              value: ACTIVATE
-            - label: LOCALHOST
-              value: LOCALHOST
+          domain_client:
+            type: dropdown
+            label: Domain Client
+            default: ACTIVATE
+            hidden: true
+            tooltip: Select ACTIVATE if LibreChat will be accessed from the Activate platform, or LOCALHOST otherwise (e.g., accessed via localhost or through an SSH tunnel).
+            options:
+              - label: ACTIVATE
+                value: ACTIVATE
+              - label: LOCALHOST
+                value: LOCALHOST
       env:
         type: group
         label: Environment Variables

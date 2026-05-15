@@ -75,7 +75,7 @@ fi
 # This is only used if ${librechat_config} is unset
 
 [ -n "${GENAI_MIL_API_KEY}" ] && echo "GENAI_MIL_API_KEY=${GENAI_MIL_API_KEY}" >> "$DIR/.env"
-[ -n "${PW_AUTH_TOKEN}" ]     && echo "PW_AUTH_TOKEN=${PW_AUTH_TOKEN}"           >> "$DIR/.env"
+[ -n "${PW_API_KEY}" ]     && echo "PW_API_KEY=${PW_API_KEY}"           >> "$DIR/.env"
 
 
 
@@ -96,7 +96,7 @@ endpoints:
       summarize: false
       displayLabelEnabled: true
     - name: "ACTIVATE"
-      apiKey: "\${PW_AUTH_TOKEN}"
+      apiKey: "\${PW_API_KEY}"
       baseURL: "https://${PW_PLATFORM_HOST}/api/openai/v1"
       models:
         fetch: true

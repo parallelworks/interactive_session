@@ -208,20 +208,20 @@ jobs:
           GENAI_MIL_API_KEY:
             type: password
             label: GENAI MIL API Key
-            optional: true
+            default: ''
           JWT_SECRET:
             type: password
             label: JWT Secret
-            optional: true
+            default: ''
           JWT_REFRESH_SECRET:
             type: password
             label: JWT Refresh Secret
-            optional: true
+            default: ''
           LIBRECHAT_API_KEY:
             type: password
             label: LibreChat API Key
-            optional: true
+            default: ''
           LANGFLOW_API_KEY:
             type: password
             label: Langflow API Key
-            optional: true
+            default: ''

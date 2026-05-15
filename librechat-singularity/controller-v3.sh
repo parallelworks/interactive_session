@@ -99,7 +99,7 @@ endpoints:
       apiKey: "\${PW_API_KEY}"
       baseURL: "https://${PW_PLATFORM_HOST}/api/openai/v1"
       models:
-        default: []
+        default: ["gpt-oss-20b"]
         fetch: true
       titleConvo: true
       summarize: false

@@ -37,8 +37,11 @@ jobs:
           cleanup() {
               trap - EXIT INT TERM HUP QUIT USR1 USR2 PIPE
               echo "::notice::Cleaning up..."
-              mv cancel.sh cancel.sh.submitted
-              bash cancel.sh.submitted
+              if [ -f cancel.sh ]; then
+                  mv cancel.sh cancel.sh.submitted
+                  echo "echo Cleanup script was already executed" > cancel.sh
+                  bash cancel.sh.submitted
+              fi
               kill -- -$$
           }
 

@@ -28,7 +28,7 @@ echo "Hello World" > index.html
 sudo docker run -d \
   -p 8080:80 \
   --name nginx-hello \
-  -v index.html:/usr/share/nginx/html/index.html \
+  -v ${PWD}/index.html:/usr/share/nginx/html/index.html \
   nginx
 ```
 

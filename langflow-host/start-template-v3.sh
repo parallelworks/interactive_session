@@ -37,12 +37,20 @@ fi
 mkdir -p "${LANGFLOW_DATA_DIR}"
 
 # ── Patch frontend for base-path access ────────────────────────────────────────
-# The platform strips the basepath prefix before forwarding requests to this node.
-# Langflow's compiled frontend uses root-relative URLs (/assets/..., /api/v1/...)
-# which the browser resolves against the origin without the session prefix → 404.
+# Langflow's Vite frontend is built with BASENAME="" and <base href="/"> hardcoded
+# in index.html. Behind a path-prefixed reverse proxy, this breaks in two ways:
 #
-# Fix: copy the bundled frontend to a session-specific dir, rewrite asset URLs
-# in index.html, and inject a JS interceptor to patch fetch/XHR API calls.
+#  1. Assets: relative paths (assets/index.js) resolve via <base href="/"> to
+#     /assets/index.js — the platform can't route these without the session prefix.
+#
+#  2. React Router: reads window.location.pathname (e.g. /me/session/user/sess/)
+#     with no basename configured, finds no matching route, and navigates to
+#     /login (without the basepath). Subsequent API calls land on the platform
+#     instead of the session service.
+#
+# Fix: copy the frontend to a session dir, patch index.html via Python (sed is
+# unreliable here — & in JS replacement strings expands to the matched text), and
+# inject a shim that fixes both routing and network calls at the browser level.
 echo "::group::Patching frontend for base path: ${basepath}"
 
 ORIGINAL_FRONTEND=$("${LANGFLOW_VENV}/bin/python" -c \
@@ -64,14 +72,64 @@ if [ ! -f "${INDEX_HTML}" ]; then
     exit 1
 fi
 
-# Fix root-relative asset URLs written by the Vite build
-sed -i "s|src=\"/|src=\"${basepath}/|g" "${INDEX_HTML}"
-sed -i "s|href=\"/|href=\"${basepath}/|g" "${INDEX_HTML}"
+# Patch index.html using Python so JS special chars (&&, &, \) are never
+# misinterpreted as sed metacharacters in the replacement string.
+"${LANGFLOW_VENV}/bin/python" - "${INDEX_HTML}" "${basepath}" <<'PYEOF'
+import sys
 
-# Inject JS interceptor that prepends basepath to all root-relative
-# fetch() and XMLHttpRequest calls made by the compiled JS bundle
-INTERCEPTOR="<script>(function(){var b=\"${basepath}\";var f=window.fetch;window.fetch=function(u,o){if(typeof u===\"string\"&&u.charAt(0)===\"/\"&&u.indexOf(b)!==0)u=b+u;return f.call(this,u,o)};var x=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){if(typeof u===\"string\"&&u.charAt(0)===\"/\"&&u.indexOf(b)!==0)arguments[1]=b+u;return x.apply(this,arguments)};})();</script>"
-sed -i "s|</head>|${INTERCEPTOR}</head>|" "${INDEX_HTML}"
+index_path, basepath = sys.argv[1], sys.argv[2].rstrip('/')
+
+with open(index_path) as f:
+    html = f.read()
+
+# Fix the hardcoded <base href="/"> so relative Vite assets (src="assets/...")
+# resolve to basepath/assets/... instead of /assets/...
+html = html.replace('href="/', f'href="{basepath}/')
+html = html.replace('src="/', f'src="{basepath}/')
+
+# Shim injected before </head> so it runs before the React bundle:
+#
+#  - Location.prototype.pathname: strip basepath so React Router sees / instead
+#    of /me/session/user/sess/ and matches its routes correctly.
+#
+#  - history.pushState / replaceState: add basepath so client-side navigation
+#    produces URLs the platform can route back to this session.
+#
+#  - window.fetch / XMLHttpRequest / WebSocket: prepend basepath to all
+#    root-relative calls (/api/v1/...) so they are routed to this session.
+shim = f"""<script>(function(){{
+  var b="{basepath}";
+  // React Router routing fix
+  try{{
+    var pd=Object.getOwnPropertyDescriptor(Location.prototype,"pathname");
+    Object.defineProperty(Location.prototype,"pathname",{{
+      get:function(){{var p=pd.get.call(this);return p===b?"/":(p.startsWith(b+"/")?p.slice(b.length):p);}},
+      configurable:true
+    }});
+  }}catch(e){{}}
+  // Navigation fix
+  function pfx(u){{return typeof u==="string"&&u.charAt(0)==="/"&&u.indexOf(b)!==0?b+u:u;}}
+  var oP=history.pushState,oR=history.replaceState;
+  history.pushState=function(s,t,u){{return oP.call(this,s,t,pfx(u));}};
+  history.replaceState=function(s,t,u){{return oR.call(this,s,t,pfx(u));}};
+  // Network call fixes
+  var oF=window.fetch;
+  window.fetch=function(u,o){{return oF.call(this,typeof u==="string"?pfx(u):u,o);}};
+  var oX=XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open=function(m,u){{if(typeof u==="string")arguments[1]=pfx(u);return oX.apply(this,arguments);}};
+  var oW=window.WebSocket;
+  function PW(url,proto){{return proto?new oW(pfx(url),proto):new oW(pfx(url));}}
+  PW.prototype=oW.prototype;PW.CONNECTING=0;PW.OPEN=1;PW.CLOSING=2;PW.CLOSED=3;
+  window.WebSocket=PW;
+}})();</script>"""
+
+html = html.replace('</head>', shim + '</head>', 1)
+
+with open(index_path, 'w') as f:
+    f.write(html)
+
+print(f"Patched {index_path}")
+PYEOF
 
 export LANGFLOW_FRONTEND_PATH="${SESSION_FRONTEND}"
 export LANGFLOW_ROOT_PATH="${basepath}"

@@ -158,5 +158,5 @@ jobs:
           langflow_data_dir:
             label: Langflow Data Directory
             type: string
-            default: ${HOME}/.langflow
+            default: ${HOME}/pw/.langflow
             tooltip: Directory where Langflow stores its database, flows, and credentials. Persists between sessions if on a shared filesystem.

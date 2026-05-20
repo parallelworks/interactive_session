@@ -35,7 +35,6 @@ jobs:
           cat <<'EOF' >> inputs.sh
           basepath="/me/session/${PW_USER}/${{ sessions.session }}/"
           PATH=$HOME/pw:$PATH
-          service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
           service_langflow_data_dir="${{ inputs.service.langflow_data_dir }}"
           EOF
 
@@ -213,11 +212,6 @@ jobs:
         label: Langflow Settings
         collapsed: true
         items:
-          parent_install_dir:
-            label: Install Directory
-            type: string
-            default: ${HOME}/pw/software
-            tooltip: Directory where the Langflow Singularity container is stored. Shared across sessions on the same cluster.
           langflow_data_dir:
             label: Langflow Data Directory
             type: string

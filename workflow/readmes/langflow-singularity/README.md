@@ -26,6 +26,17 @@ Flows, credentials, and settings are stored in the **Langflow Data Directory** (
 
 - Singularity ≥ 3.x or Apptainer ≥ 1.x must be available on the cluster (either in `PATH` or via `module load apptainer`/`module load singularity`).
 
+## Environment
+
+The session sets the following Langflow environment variables automatically:
+
+| Variable | Value | Effect |
+|---|---|---|
+| `DO_NOT_TRACK` | `true` | Disables telemetry |
+| `LANGFLOW_DO_NOT_TRACK` | `true` | Disables telemetry (fallback) |
+| `LANGFLOW_ALEMBIC_LOG_TO_STDOUT` | `true` | Sends database migration logs to stdout |
+| `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` | `true` | Skips API key check when auto-login is enabled |
+
 ## Stopping the Session
 
 Cancel the session from the Activate platform. The Langflow process is stopped automatically via `cancel.sh`.

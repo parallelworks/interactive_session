@@ -190,6 +190,10 @@ singularity exec \
     --env LANGFLOW_CONFIG_DIR="${LANGFLOW_DATA_DIR}" \
     --env LANGFLOW_FRONTEND_PATH="${FRONTEND_INSIDE}" \
     --env LANGFLOW_ROOT_PATH="${basepath}" \
+    --env DO_NOT_TRACK="true" \
+    --env LANGFLOW_DO_NOT_TRACK="true" \
+    --env LANGFLOW_ALEMBIC_LOG_TO_STDOUT="true" \
+    --env LANGFLOW_SKIP_AUTH_AUTO_LOGIN="true" \
     "${container_dir}" \
     langflow run \
         --host 0.0.0.0 \

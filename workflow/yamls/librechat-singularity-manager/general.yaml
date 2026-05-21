@@ -1,6 +1,9 @@
 permissions:
   - '*'
 
+env:
+  PW_API_KEY: ${PW_API_KEY}
+
 sessions:
   session:
     redirect: true
@@ -31,6 +34,7 @@ jobs:
           sed -i 's/=\(.*\)/="\1"/' inputs.sh
           # Write input form variables
           cat <<'EOF' >> inputs.sh
+          basepath="/me/session/${PW_USER}/${{ sessions.session }}/"
           PATH=$HOME/pw:$PATH
           librechat_dir="${{ inputs.service.librechat_dir }}"
           EOF

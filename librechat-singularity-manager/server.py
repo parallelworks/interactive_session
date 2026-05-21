@@ -12,6 +12,7 @@ from flask import Flask, Response, jsonify, request, stream_with_context
 DATA_DIR = os.environ.get('DATA_DIR', '')
 LIBRECHAT_PORT = os.environ.get('LIBRECHAT_PORT', '')
 MGR_PORT = int(os.environ.get('MGR_PORT', '8080'))
+BASEPATH = os.environ.get('BASEPATH', '').rstrip('/')
 
 PORTS = {
     'mongodb':     os.environ.get('MONGODB_PORT', ''),
@@ -149,11 +150,13 @@ LABELS = {
 def _page(title, body, refresh=None):
     """Wrap body HTML in a full page with shared header/CSS."""
     refresh_tag = f'<meta http-equiv="refresh" content="{refresh}">' if refresh else ''
+    base_tag = f'<base href="{BASEPATH}/">' if BASEPATH else '<base href="/">'
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+{base_tag}
 {refresh_tag}
 <title>{title} — LibreChat Manager</title>
 <style>{CSS}</style>
@@ -291,11 +294,13 @@ def _esc(s):
 
 
 def _page_open(title):
+    base_tag = f'<base href="{BASEPATH}/">' if BASEPATH else '<base href="/">'
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+{base_tag}
 <title>{_esc(title)} — LibreChat Manager</title>
 <style>{CSS}</style>
 </head>

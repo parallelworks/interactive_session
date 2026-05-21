@@ -48,6 +48,7 @@ export MONGODB_PORT=$MONGODB_PORT
 export MEILI_PORT=$MEILI_PORT
 export PG_PORT=$PG_PORT
 export RAG_PORT=$RAG_PORT
+export BASEPATH=${basepath:-}
 
 python3 "$MANAGER_SCRIPTS_DIR/server.py" &
 SERVER_PID=$!

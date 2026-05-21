@@ -62,6 +62,19 @@ jobs:
             sed -i '/=""/d' inputs.sh # remove var=""
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
+        - name: Lock librechat_dir
+          run: |
+            set -e
+            source inputs.sh
+            _dir="${librechat_dir:-${HOME}/pw/LibreChat}"
+            _lock="${_dir}/.librechat.lock"
+            mkdir -p "$_dir"
+            if [ -f "$_lock" ]; then
+              echo "::error title=Directory In Use::librechat_dir ${_dir} is already in use by another session: $(cat $_lock). Stop that session first, or set a different librechat_dir in LibreChat Settings."
+              exit 1
+            fi
+            echo "job=${PW_JOB_ID:-unknown} user=${PW_USER:-unknown} started=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" > "$_lock"
+            echo "::notice::librechat_dir lock created at $_lock"
 
   session_runner:
     needs:
@@ -103,6 +116,9 @@ jobs:
             echo "Removing tools/oras"
             rm -rf tools/oras
           fi
+          source inputs.sh 2>/dev/null || true
+          rm -f "${librechat_dir:-${HOME}/pw/LibreChat}/.librechat.lock" \
+            && echo "::notice::librechat_dir lock removed" || true
 
 'on':
   execute:

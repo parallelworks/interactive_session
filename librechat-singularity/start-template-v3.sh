@@ -1,7 +1,8 @@
 #!/bin/bash
 set -ex
 
-SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPTS_DIR=${PWD}/librechat-singularity
+#"$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ -n "${service_parent_install_dir}" ]; then
     container_dir=${service_parent_install_dir}/containers/librechat

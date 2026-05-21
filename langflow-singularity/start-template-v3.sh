@@ -16,8 +16,17 @@ set -x
 #   - PW_PARENT_JOB_DIR:          Job working directory
 #
 # Optional Environment Variables:
-#   - service_langflow_data_dir:  Langflow data/config directory
-#                                 (default: ${HOME}/pw/.langflow)
+#   - service_langflow_data_dir:        Langflow data directory
+#                                       (default: ${HOME}/pw/.langflow)
+#   - service_langflow_config_dir:      LANGFLOW_CONFIG_DIR inside container;
+#                                       custom components in <dir>/components/ are
+#                                       auto-discovered (default: same as data dir)
+#   - service_langflow_components_path: LANGFLOW_COMPONENTS_PATH — additional
+#                                       custom components directory; bind-mounted
+#                                       only when set (default: unset)
+#   - service_langflow_database_url:    LANGFLOW_DATABASE_URL; for SQLite the
+#                                       database dir is bind-mounted automatically
+#                                       (default: sqlite inside config dir)
 ################################################################################
 
 if [ -n "${service_parent_install_dir}" ]; then
@@ -32,6 +41,7 @@ fi
 
 container_dir=${service_parent_install_dir}/containers/langflow
 LANGFLOW_DATA_DIR="${service_langflow_data_dir:-${HOME}/pw/.langflow}"
+LANGFLOW_CONFIG_DIR="${service_langflow_config_dir:-${LANGFLOW_DATA_DIR}}"
 
 # Initialize cancel script
 echo '#!/bin/bash' > cancel.sh
@@ -67,6 +77,39 @@ unset PYTHONPATH PYTHONHOME PERL5LIB PERLLIB PERL5OPT PYTHONSTARTUP LD_LIBRARY_P
 export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 mkdir -p "${LANGFLOW_DATA_DIR}"
+
+# Config dir — create and bind only when it differs from the data dir
+if [ "${LANGFLOW_CONFIG_DIR}" != "${LANGFLOW_DATA_DIR}" ]; then
+    mkdir -p "${LANGFLOW_CONFIG_DIR}"
+    chmod 777 "${LANGFLOW_CONFIG_DIR}" -Rf || true
+fi
+
+# Build optional --bind / --env arrays for the singularity exec call
+EXTRA_BINDS=()
+EXTRA_ENVS=()
+
+# LANGFLOW_CONFIG_DIR bind (always; duplicate bind with data dir is harmless)
+EXTRA_BINDS+=(--bind "${LANGFLOW_CONFIG_DIR}:${LANGFLOW_CONFIG_DIR}")
+
+# Optional: custom components path
+if [ -n "${service_langflow_components_path}" ]; then
+    mkdir -p "${service_langflow_components_path}"
+    chmod 777 "${service_langflow_components_path}" || true
+    EXTRA_BINDS+=(--bind "${service_langflow_components_path}:${service_langflow_components_path}")
+    EXTRA_ENVS+=(--env "LANGFLOW_COMPONENTS_PATH=${service_langflow_components_path}")
+fi
+
+# Optional: explicit database URL; bind the parent directory for SQLite absolute paths
+if [ -n "${service_langflow_database_url}" ]; then
+    if [[ "${service_langflow_database_url}" == sqlite:////* ]]; then
+        db_path="${service_langflow_database_url#sqlite:///}"   # strips sqlite:/// → /abs/path.db
+        db_dir="$(dirname "${db_path}")"
+        mkdir -p "${db_dir}"
+        chmod 777 "${db_dir}" || true
+        EXTRA_BINDS+=(--bind "${db_dir}:${db_dir}")
+    fi
+    EXTRA_ENVS+=(--env "LANGFLOW_DATABASE_URL=${service_langflow_database_url}")
+fi
 
 # Per-job /tmp prevents cross-user permission conflicts on shared nodes
 mkdir -p "$PWD/container_tmp"
@@ -180,14 +223,19 @@ echo "::endgroup::"
 echo "::group::Starting Langflow"
 echo "::notice::Port: ${service_port}"
 echo "::notice::Data directory: ${LANGFLOW_DATA_DIR}"
+echo "::notice::Config directory: ${LANGFLOW_CONFIG_DIR}"
 echo "::notice::Container: ${container_dir}"
+[ -n "${service_langflow_components_path}" ] && echo "::notice::Components path: ${service_langflow_components_path}"
+[ -n "${service_langflow_database_url}" ]    && echo "::notice::Database URL: ${service_langflow_database_url}"
 
 singularity exec \
     --writable-tmpfs \
     --bind "${LANGFLOW_DATA_DIR}:${LANGFLOW_DATA_DIR}" \
     --bind "${SESSION_FRONTEND}:${FRONTEND_INSIDE}" \
     --bind "$PWD/container_tmp:/tmp" \
-    --env LANGFLOW_CONFIG_DIR="${LANGFLOW_DATA_DIR}" \
+    "${EXTRA_BINDS[@]}" \
+    --env LANGFLOW_CONFIG_DIR="${LANGFLOW_CONFIG_DIR}" \
+    "${EXTRA_ENVS[@]}" \
     --env LANGFLOW_FRONTEND_PATH="${FRONTEND_INSIDE}" \
     --env LANGFLOW_ROOT_PATH="${basepath}" \
     --env DO_NOT_TRACK="true" \

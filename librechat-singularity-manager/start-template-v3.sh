@@ -41,7 +41,7 @@ export MEILI_PORT=$MEILI_PORT
 export PG_PORT=$PG_PORT
 export RAG_PORT=$RAG_PORT
 
-python3 "$MANAGER_SCRIPTS_DIR/server.py" &
+python3 "$MANAGER_SCRIPTS_DIR/librechat-singularity-manager/server.py" &
 SERVER_PID=$!
 echo $SERVER_PID > "${PW_PARENT_JOB_DIR}/manager.pid"
 echo "::notice::Manager server started (PID $SERVER_PID)"

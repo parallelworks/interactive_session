@@ -13,6 +13,28 @@ else
 fi
 unset _src_dir
 
+CONTAINER_DIR="${HOME}/pw/software/containers/librechat-manager"
+
+if [ ! -d "${CONTAINER_DIR}" ]; then
+    echo "::error title=Error::Container not found at ${CONTAINER_DIR}. Run the controller first."
+    exit 1
+fi
+
+# ── Load singularity/apptainer ─────────────────────────────────────────────────
+
+if ! which singularity &>/dev/null; then
+    if module load apptainer 2>/dev/null; then
+        echo "::notice::Loaded apptainer module"
+    elif module load singularity 2>/dev/null; then
+        echo "::notice::Loaded singularity module"
+    else
+        echo "::error title=Error::singularity/apptainer not found in PATH and could not be loaded via module"
+        exit 1
+    fi
+fi
+
+# ── Resolve service ports ──────────────────────────────────────────────────────
+
 # service_port is injected by session_runner as the manager's port.
 # service.env also exports service_port (LibreChat's port) — save it first.
 MANAGER_PORT=$service_port
@@ -39,18 +61,22 @@ pidfile="$(dirname "$0")/manager.pid"
 EOF
 chmod +x "${PW_PARENT_JOB_DIR}/cancel.sh"
 
-# ── Start the manager server ──────────────────────────────────────────────────
+# ── Start the manager server inside the container ─────────────────────────────
 
-export MGR_PORT=$MANAGER_PORT
-export DATA_DIR=$DATA
-export LIBRECHAT_PORT=$LIBRECHAT_PORT
-export MONGODB_PORT=$MONGODB_PORT
-export MEILI_PORT=$MEILI_PORT
-export PG_PORT=$PG_PORT
-export RAG_PORT=$RAG_PORT
-export BASEPATH=${basepath:-}
+singularity exec \
+    --bind "${MANAGER_SCRIPTS_DIR}:${MANAGER_SCRIPTS_DIR}" \
+    --bind "${DATA}:${DATA}" \
+    --env MGR_PORT="${MANAGER_PORT}" \
+    --env DATA_DIR="${DATA}" \
+    --env LIBRECHAT_PORT="${LIBRECHAT_PORT}" \
+    --env MONGODB_PORT="${MONGODB_PORT}" \
+    --env MEILI_PORT="${MEILI_PORT}" \
+    --env PG_PORT="${PG_PORT}" \
+    --env RAG_PORT="${RAG_PORT}" \
+    --env BASEPATH="${basepath:-}" \
+    "${CONTAINER_DIR}" \
+    python3 "${MANAGER_SCRIPTS_DIR}/server.py" &
 
-python3 "$MANAGER_SCRIPTS_DIR/server.py" &
 SERVER_PID=$!
 echo $SERVER_PID > "${PW_PARENT_JOB_DIR}/manager.pid"
 echo "::notice::Manager server started (PID $SERVER_PID)"

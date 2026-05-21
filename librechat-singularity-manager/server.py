@@ -65,7 +65,7 @@ def _run_restart(jid, script_path):
         proc = subprocess.Popen(
             ['bash', script_path],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, bufsize=1,
+            universal_newlines=True, bufsize=1,
         )
         for line in proc.stdout:
             _jobs.append(jid, line.rstrip())
@@ -95,7 +95,7 @@ def _tail_log(svc, n=100):
     log = os.path.join(DATA_DIR, 'logs', f'{svc}.log')
     if not os.path.isfile(log):
         return f'(no log file at {log})'
-    r = subprocess.run(['tail', '-n', str(n), log], capture_output=True, text=True)
+    r = subprocess.run(['tail', '-n', str(n), log], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
     return r.stdout or '(empty)'
 
 

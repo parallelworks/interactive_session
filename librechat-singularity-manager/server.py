@@ -173,6 +173,7 @@ async function fetchStatus(){
     }
     renderGrid();
   }catch(e){appendCon('Status error: '+e+' (url: '+url+')');}
+}
 
 function renderGrid(){
   const g=document.getElementById('grid');
@@ -264,6 +265,8 @@ setInterval(fetchStatus,5000);
 
 
 class Handler(BaseHTTPRequestHandler):
+    protocol_version = 'HTTP/1.1'
+
     def log_message(self, fmt, *args):
         print(f'[{self.address_string()}] {fmt % args}', flush=True)
 

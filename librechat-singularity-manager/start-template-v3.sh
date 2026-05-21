@@ -3,7 +3,15 @@ set -ex
 
 # MANAGER_SCRIPTS_DIR must be saved before service.env is sourced — service.env
 # overwrites SCRIPTS_DIR with the librechat-singularity path.
-MANAGER_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# When session_runner inlines this script into run.sh, BASH_SOURCE[0] resolves to
+# run.sh in the job dir; fall back to PW_PARENT_JOB_DIR/librechat-singularity-manager.
+_src_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$_src_dir/server.py" ]; then
+    MANAGER_SCRIPTS_DIR="$_src_dir"
+else
+    MANAGER_SCRIPTS_DIR="${PW_PARENT_JOB_DIR}/librechat-singularity-manager"
+fi
+unset _src_dir
 
 # service_port is injected by session_runner as the manager's port.
 # service.env also exports service_port (LibreChat's port) — save it first.
@@ -41,7 +49,7 @@ export MEILI_PORT=$MEILI_PORT
 export PG_PORT=$PG_PORT
 export RAG_PORT=$RAG_PORT
 
-python3 "$MANAGER_SCRIPTS_DIR/librechat-singularity-manager/server.py" &
+python3 "$MANAGER_SCRIPTS_DIR/server.py" &
 SERVER_PID=$!
 echo $SERVER_PID > "${PW_PARENT_JOB_DIR}/manager.pid"
 echo "::notice::Manager server started (PID $SERVER_PID)"

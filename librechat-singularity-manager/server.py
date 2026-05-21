@@ -92,69 +92,13 @@ def _tail_log(svc, n=100):
     return r.stdout or '(empty)'
 
 
-HTML = """\
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LibreChat Manager</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#1e1e2e;color:#cdd6f4;min-height:100vh}
-.hdr{background:#181825;padding:1.25rem 2rem;border-bottom:1px solid #313244}
-.hdr h1{font-size:1.3rem;font-weight:600;color:#cba6f7}
-.hdr p{font-size:.82rem;color:#6c7086;margin-top:.2rem}
-.wrap{padding:1.5rem 2rem;max-width:960px}
-.top-bar{display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem}
-.btn{display:inline-flex;align-items:center;gap:.35rem;padding:.38rem .85rem;border:none;border-radius:6px;font-size:.82rem;font-weight:500;cursor:pointer;transition:opacity .15s}
-.btn:hover{opacity:.82}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.btn-primary{background:#cba6f7;color:#1e1e2e}
-.btn-secondary{background:#313244;color:#cdd6f4}
-.btn-logs{background:#89dceb;color:#1e1e2e}
-.tag{font-size:.75rem;padding:.15rem .55rem;border-radius:4px;background:#313244;color:#a6adc8}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;margin-bottom:1.5rem}
-.card{background:#181825;border:1px solid #313244;border-radius:10px;padding:1.1rem}
-.card-head{display:flex;align-items:center;gap:.55rem;margin-bottom:.45rem}
-.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;transition:background .3s}
-.dot.running{background:#a6e3a1;box-shadow:0 0 5px #a6e3a180}
-.dot.stopped{background:#f38ba8}
-.dot.unknown{background:#6c7086}
-.card-name{font-weight:600;font-size:.95rem}
-.card-port{font-size:.73rem;color:#6c7086;margin-bottom:.75rem}
-.card-btns{display:flex;gap:.4rem}
-.console{background:#11111b;border:1px solid #313244;border-radius:8px;padding:1rem}
-.con-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem}
-.con-title{font-size:.88rem;font-weight:600;color:#89b4fa}
-.con-out{font-family:'Fira Code',monospace;font-size:.78rem;line-height:1.55;height:280px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;color:#a6e3a1}
-</style>
-</head>
-<body>
-<div class="hdr">
-  <h1>LibreChat Service Manager</h1>
-  <p id="hdr-dir">Loading…</p>
-</div>
-<div class="wrap">
-  <div class="top-bar">
-    <button class="btn btn-primary" id="btn-all" onclick="restartAll()">↺ Restart All</button>
-    <span class="tag" id="lc-link" style="display:none"></span>
-  </div>
-  <div class="grid" id="grid"></div>
-  <div class="console">
-    <div class="con-head">
-      <span class="con-title" id="con-title">Console</span>
-      <button class="btn btn-secondary" onclick="clearCon()">Clear</button>
-    </div>
-    <div class="con-out" id="con-out">Ready.</div>
-  </div>
-</div>
-<script>
+# JavaScript served as an external file to avoid CSP inline-script restrictions.
+JS_CODE = r"""
 const SVCS=['mongodb','meilisearch','pgvector','ragapi','librechat'];
 const LABELS={mongodb:'MongoDB',meilisearch:'MeiliSearch',pgvector:'PostgreSQL / pgvector',ragapi:'RAG API',librechat:'LibreChat'};
 // Compute base URL once — strip trailing slash so we can always append /path.
 // Works whether the session URL has a trailing slash or not.
-const _BASE=window.location.href.split('?')[0].replace(/\/+$/,'');
+const _BASE=window.location.href.split('?')[0].replace(/\/+$/,'').replace(/\/app\.js$/,'');
 const api=p=>_BASE+'/'+p;
 let status={},ports={},lcDir='',pollTimer=null,jobTimer=null,currentJob=null;
 
@@ -184,14 +128,14 @@ function renderGrid(){
   <div class="card-head"><span class="dot ${st}" id="dot-${s}"></span><span class="card-name">${LABELS[s]}</span></div>
   <div class="card-port">${port}</div>
   <div class="card-btns">
-    <button class="btn btn-primary" onclick="restart('${s}')">↺ Restart</button>
+    <button class="btn btn-primary" onclick="restart('${s}')">&#8635; Restart</button>
     <button class="btn btn-logs" onclick="showLogs('${s}')">Logs</button>
   </div>
 </div>`;}).join('');
 }
 
 async function restart(svc){
-  setConTitle('Restarting '+svc+'…');
+  setConTitle('Restarting '+svc+'...');
   clearCon();
   document.querySelectorAll('.btn').forEach(b=>b.disabled=true);
   try{
@@ -202,7 +146,7 @@ async function restart(svc){
 }
 
 async function restartAll(){
-  setConTitle('Restarting all services…');
+  setConTitle('Restarting all services...');
   clearCon();
   document.querySelectorAll('.btn').forEach(b=>b.disabled=true);
   try{
@@ -246,7 +190,7 @@ async function pollJob(){
 
 function appendCon(line){
   const el=document.getElementById('con-out');
-  el.textContent+=line+'\\n';
+  el.textContent+=line+'\n';
   scrollCon();
 }
 function clearCon(){document.getElementById('con-out').textContent='';}
@@ -254,11 +198,69 @@ function setConTitle(t){document.getElementById('con-title').textContent=t;}
 function scrollCon(){const el=document.getElementById('con-out');el.scrollTop=el.scrollHeight;}
 function enableBtns(){document.querySelectorAll('.btn').forEach(b=>b.disabled=false);}
 
-// Initial load + auto-refresh
 appendCon('API base: '+_BASE);
 fetchStatus();
 setInterval(fetchStatus,5000);
-</script>
+"""
+
+HTML = """\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LibreChat Manager</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#1e1e2e;color:#cdd6f4;min-height:100vh}
+.hdr{background:#181825;padding:1.25rem 2rem;border-bottom:1px solid #313244}
+.hdr h1{font-size:1.3rem;font-weight:600;color:#cba6f7}
+.hdr p{font-size:.82rem;color:#6c7086;margin-top:.2rem}
+.wrap{padding:1.5rem 2rem;max-width:960px}
+.top-bar{display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem}
+.btn{display:inline-flex;align-items:center;gap:.35rem;padding:.38rem .85rem;border:none;border-radius:6px;font-size:.82rem;font-weight:500;cursor:pointer;transition:opacity .15s}
+.btn:hover{opacity:.82}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:#cba6f7;color:#1e1e2e}
+.btn-secondary{background:#313244;color:#cdd6f4}
+.btn-logs{background:#89dceb;color:#1e1e2e}
+.tag{font-size:.75rem;padding:.15rem .55rem;border-radius:4px;background:#313244;color:#a6adc8}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;margin-bottom:1.5rem}
+.card{background:#181825;border:1px solid #313244;border-radius:10px;padding:1.1rem}
+.card-head{display:flex;align-items:center;gap:.55rem;margin-bottom:.45rem}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;transition:background .3s}
+.dot.running{background:#a6e3a1;box-shadow:0 0 5px #a6e3a180}
+.dot.stopped{background:#f38ba8}
+.dot.unknown{background:#6c7086}
+.card-name{font-weight:600;font-size:.95rem}
+.card-port{font-size:.73rem;color:#6c7086;margin-bottom:.75rem}
+.card-btns{display:flex;gap:.4rem}
+.console{background:#11111b;border:1px solid #313244;border-radius:8px;padding:1rem}
+.con-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem}
+.con-title{font-size:.88rem;font-weight:600;color:#89b4fa}
+.con-out{font-family:'Fira Code',monospace;font-size:.78rem;line-height:1.55;height:280px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;color:#a6e3a1}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <h1>LibreChat Service Manager</h1>
+  <p id="hdr-dir">Loading...</p>
+</div>
+<div class="wrap">
+  <div class="top-bar">
+    <button class="btn btn-primary" id="btn-all" onclick="restartAll()">&#8635; Restart All</button>
+    <span class="tag" id="lc-link" style="display:none"></span>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="console">
+    <div class="con-head">
+      <span class="con-title" id="con-title">Console</span>
+      <button class="btn btn-secondary" onclick="clearCon()">Clear</button>
+    </div>
+    <div class="con-out" id="con-out">Ready.</div>
+  </div>
+</div>
+<script src="app.js"></script>
 </body>
 </html>
 """
@@ -287,6 +289,9 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == '' or path == '/':
             self._send(200, 'text/html; charset=utf-8', HTML)
+
+        elif path == '/app.js':
+            self._send(200, 'application/javascript; charset=utf-8', JS_CODE)
 
         elif path == '/status':
             self._json(200, {

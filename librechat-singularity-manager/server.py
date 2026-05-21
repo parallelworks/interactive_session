@@ -159,8 +159,10 @@ const api=p=>_BASE+'/'+p;
 let status={},ports={},lcDir='',pollTimer=null,jobTimer=null,currentJob=null;
 
 async function fetchStatus(){
+  const url=api('status');
   try{
-    const r=await fetch(api('status'));
+    const r=await fetch(url);
+    if(!r.ok){appendCon('Status '+r.status+' from '+url);return;}
     const d=await r.json();
     status=d.status||{};ports=d.ports||{};lcDir=d.librechat_dir||'';
     document.getElementById('hdr-dir').textContent=lcDir?'Directory: '+lcDir:'';
@@ -170,8 +172,7 @@ async function fetchStatus(){
       el.style.display='inline';
     }
     renderGrid();
-  }catch(e){}
-}
+  }catch(e){appendCon('Status error: '+e+' (url: '+url+')');}
 
 function renderGrid(){
   const g=document.getElementById('grid');
@@ -253,6 +254,7 @@ function scrollCon(){const el=document.getElementById('con-out');el.scrollTop=el
 function enableBtns(){document.querySelectorAll('.btn').forEach(b=>b.disabled=false);}
 
 // Initial load + auto-refresh
+appendCon('API base: '+_BASE);
 fetchStatus();
 setInterval(fetchStatus,5000);
 </script>
@@ -263,7 +265,7 @@ setInterval(fetchStatus,5000);
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
-        pass  # suppress access log
+        print(f'[{self.address_string()}] {fmt % args}', flush=True)
 
     def _send(self, code, ctype, body):
         if isinstance(body, str):

@@ -33,6 +33,9 @@ jobs:
           PATH=$HOME/pw:$PATH
           service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
           service_langflow_data_dir="${{ inputs.service.langflow_data_dir }}"
+          service_langflow_config_dir="${{ inputs.service.langflow_config_dir }}"
+          service_langflow_components_path="${{ inputs.service.langflow_components_path }}"
+          service_langflow_database_url="${{ inputs.service.langflow_database_url }}"
           EOF
 
           # Remove empty variables
@@ -159,4 +162,35 @@ jobs:
             label: Langflow Data Directory
             type: string
             default: ${HOME}/pw/.langflow
-            tooltip: Directory where Langflow stores its database, flows, and credentials. Persists between sessions if on a shared filesystem.
+            tooltip: Directory where Langflow stores flows and credentials. Persists between sessions if on a shared filesystem.
+          langflow_config_dir:
+            label: Config Directory
+            type: string
+            optional: true
+            default: ${HOME}/pw/.langflow
+            tooltip: |
+              LANGFLOW_CONFIG_DIR inside the container. Components placed under
+              <config_dir>/components/ are auto-discovered at startup — ideal for
+              personal components stored alongside your flows and data.
+              Defaults to the same location as the data directory.
+          langflow_components_path:
+            label: Custom Components Path
+            type: string
+            optional: true
+            tooltip: |
+              LANGFLOW_COMPONENTS_PATH — points to any directory outside the config
+              dir, e.g. a git-managed repo or a shared team folder on the cluster.
+              The path is bind-mounted into the container.
+              Use this when components are version-controlled or shared across users;
+              use Config Directory/components/ for personal components instead.
+              Leave empty to use built-in components only.
+          langflow_database_url:
+            label: Database URL
+            type: string
+            optional: true
+            default: sqlite:////${HOME}/pw/.langflow/langflow.db
+            tooltip: |
+              LANGFLOW_DATABASE_URL for Langflow (SQLite or PostgreSQL).
+              For SQLite use: sqlite:////absolute/path/to/langflow.db
+              The database directory is bind-mounted automatically.
+              Defaults to a persistent SQLite file in the home directory.

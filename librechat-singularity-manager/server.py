@@ -261,7 +261,7 @@ def logs(svc):
 
     content = _tail_log(svc)
     body = f"""<div class="top-bar">
-  <a class="btn btn-back" href="..">&#8592; Back</a>
+  <a class="btn btn-back" href=".">&#8592; Back</a>
   <span style="color:#6c7086;font-size:.82rem">Last 100 lines — {LABELS.get(svc, svc)}</span>
 </div>
 <div class="console">
@@ -322,7 +322,7 @@ def _page_close():
     return """</div>
 </div>
 <br>
-<a class="btn btn-back" href="..">&#8592; Back to main</a>
+<a class="btn btn-back" href=".">&#8592; Back to main</a>
 </div>
 </body>
 </html>"""

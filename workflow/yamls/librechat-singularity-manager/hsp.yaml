@@ -5,9 +5,6 @@
 permissions:
   - '*'
 
-env:
-  PW_API_KEY: ${PW_API_KEY}
-
 sessions:
   session:
     redirect: true
@@ -78,7 +75,7 @@ jobs:
             start_service_script: ${PW_PARENT_JOB_DIR}/librechat-singularity-manager/start-template-v3.sh
             controller_script: ${PW_PARENT_JOB_DIR}/librechat-singularity-manager/controller-v3.sh
             inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
-            slug: login
+            slug: '/'
             rundir: ${PW_PARENT_JOB_DIR}
 
 'on':

@@ -85,6 +85,33 @@ On HSP clusters, configure your SLURM account, QoS, and node count as required b
 5. Once the session is ready, click the link to open LibreChat in your browser
 6. On first launch, register a local account; the GenAI MIL and ACTIVATE endpoints will already be configured
 
+## Restarting Individual Services
+
+Each `start-*.sh` script calls `stop_existing` before launching, so running it a second time is a clean restart. Each service can be restarted independently while the workflow job continues running — ports are preserved, so LibreChat stays on its original URL.
+
+At session start, convenience shims are written to `<librechat_dir>/singularity-data/` that simply call the corresponding start script:
+
+```bash
+# Restart one service
+bash ~/pw/LibreChat/singularity-data/restart-mongodb.sh
+
+# Restart all services in dependency order
+bash ~/pw/LibreChat/singularity-data/restart-all.sh
+```
+
+Available shims: `restart-mongodb.sh`, `restart-meilisearch.sh`, `restart-pgvector.sh`, `restart-ragapi.sh`, `restart-librechat.sh`, `restart-all.sh`.
+
+You can also invoke the start scripts directly — they auto-load ports and paths from `service.env`:
+
+```bash
+source ~/pw/LibreChat/singularity-data/service.env
+bash $SCRIPTS_DIR/start-mongodb.sh
+```
+
+If you used a custom `librechat_dir`, substitute that path for `~/pw/LibreChat`.
+
+Restarting a service does **not** affect the workflow job or any other running service. Logs are appended to the existing per-service log file in `singularity-data/logs/`.
+
 ## Persistence
 
 All data is stored under `<librechat_dir>/singularity-data/` by default:

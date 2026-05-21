@@ -1,6 +1,8 @@
 #!/bin/bash
 set -ex
 
+SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 if [ -n "${service_parent_install_dir}" ]; then
     container_dir=${service_parent_install_dir}/containers/librechat
     if ! [ -d "${container_dir}" ] && ! [ -w "${service_parent_install_dir}" ]; then
@@ -83,43 +85,9 @@ echo "::notice::RAG API port: $RAG_PORT"
 echo "::notice::LibreChat port: $service_port"
 echo "::endgroup::"
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# ── Helper functions ──────────────────────────────────────────────────────────
 
-wait_for_port() {
-  local port="$1" label="$2"
-  echo "::notice::Waiting for $label on port $port..."
-  local attempts=0
-  until bash -c ">/dev/tcp/localhost/$port" 2>/dev/null; do
-    sleep 1
-    attempts=$((attempts + 1))
-    if [ "$attempts" -ge 60 ]; then
-      echo "::error::$label did not start within 60s. Check $LOG_DIR/${label,,}.log"
-      exit 1
-    fi
-  done
-  echo "::notice::$label is ready"
-}
-
-run_bg() {
-  local name="$1"; shift
-  nohup "$@" > "$LOG_DIR/$name.log" 2>&1 &
-  echo $! > "$PID_DIR/$name.pid"
-  echo "::notice::Started $name (PID $!)"
-}
-
-stop_existing() {
-  local name="$1"
-  local pidfile="$PID_DIR/$name.pid"
-  if [ -f "$pidfile" ]; then
-    local pid
-    pid=$(cat "$pidfile")
-    if kill -0 "$pid" 2>/dev/null; then
-      kill "$pid" && echo "::notice::Stopped existing $name (PID $pid)"
-      sleep 1
-    fi
-    rm -f "$pidfile"
-  fi
-}
+source "$SCRIPTS_DIR/utils.sh"
 
 # ── Cancel script ────────────────────────────────────────────────────────────
 
@@ -149,153 +117,83 @@ for svc in librechat ragapi pgvector meilisearch mongodb; do
 done
 echo "::endgroup::"
 
-# ── Services ──────────────────────────────────────────────────────────────────
+# ── Save runtime state for restart scripts ────────────────────────────────────
+
+cat > "$DATA/service.env" <<ENVEOF
+# LibreChat service runtime state — generated at job start.
+# Source this file before running start-*.sh scripts standalone.
+export SIF="${SIF}"
+export BASE="${BASE}"
+export DATA="${DATA}"
+export PID_DIR="${PID_DIR}"
+export LOG_DIR="${LOG_DIR}"
+export MONGO_DATA_DIR="${MONGO_DATA_DIR}"
+export CLEAN_ENV="${CLEAN_ENV}"
+export SCRIPTS_DIR="${SCRIPTS_DIR}"
+export MONGODB_PORT=${MONGODB_PORT}
+export MEILI_PORT=${MEILI_PORT}
+export PG_PORT=${PG_PORT}
+export RAG_PORT=${RAG_PORT}
+export service_port=${service_port}
+ENVEOF
+
+# ── Start services ────────────────────────────────────────────────────────────
 
 echo "::group::Starting services"
 
-# ── MongoDB ───────────────────────────────────────────────────────────────────
-
-echo "::notice::Starting MongoDB..."
-run_bg mongodb \
-  singularity exec \
-    --writable-tmpfs \
-    --bind "$MONGO_DATA_DIR:/data/db" \
-    --bind "$DATA/nofips:/proc/sys/crypto/fips_enabled:ro" \
-    "$SIF/mongodb.sif" \
-    mongod --noauth --dbpath /data/db --bind_ip_all --port $MONGODB_PORT
-
-wait_for_port $MONGODB_PORT "MongoDB"
-
-# ── MeiliSearch ───────────────────────────────────────────────────────────────
-
-echo "::notice::Starting MeiliSearch..."
-MEILI_KEY="$(grep ^MEILI_MASTER_KEY "$BASE/.env" | cut -d= -f2-)"
-run_bg meilisearch \
-  singularity exec \
-    --writable-tmpfs \
-    --bind "$DATA/meili:/meili_data" \
-    --env MEILI_NO_ANALYTICS=true \
-    --env "MEILI_MASTER_KEY=$MEILI_KEY" \
-    "$SIF/meilisearch.sif" \
-    /bin/meilisearch --db-path /meili_data/data.ms --http-addr 0.0.0.0:$MEILI_PORT
-
-wait_for_port $MEILI_PORT "MeiliSearch"
-
-# ── PostgreSQL + pgvector ─────────────────────────────────────────────────────
-
-echo "::notice::Starting PostgreSQL/pgvector..."
-
-if [ ! -f "$DATA/pgdata/PG_VERSION" ]; then
-  echo "::notice::Initializing PostgreSQL data directory..."
-  singularity exec \
-    --bind "$DATA/pgdata:/var/lib/postgresql/data" \
-    "$SIF/pgvector.sif" \
-    /usr/lib/postgresql/15/bin/initdb \
-      -D /var/lib/postgresql/data \
-      -U myuser \
-      --auth-host=trust \
-      --auth-local=trust
-fi
-
-run_bg pgvector \
-  singularity exec \
-    --writable-tmpfs \
-    --bind "$DATA/pgdata:/var/lib/postgresql/data" \
-    "$SIF/pgvector.sif" \
-    /usr/lib/postgresql/15/bin/postgres \
-      -D /var/lib/postgresql/data \
-      -c "unix_socket_directories=/tmp" \
-      -c "port=$PG_PORT"
-
-wait_for_port $PG_PORT "PostgreSQL"
-
-# PostgreSQL accepts the TCP connection before finishing recovery; wait until
-# it can actually serve queries before attempting DDL.
-echo "::notice::Waiting for PostgreSQL to accept connections..."
-pg_ready_attempts=0
-until singularity exec \
-  --bind "$DATA/pgdata:/var/lib/postgresql/data" \
-  "$SIF/pgvector.sif" \
-  /usr/lib/postgresql/15/bin/psql \
-    -h localhost -p $PG_PORT -U myuser -d postgres \
-    -c "SELECT 1" >/dev/null 2>&1; do
-  sleep 1
-  pg_ready_attempts=$((pg_ready_attempts + 1))
-  if [ "$pg_ready_attempts" -ge 30 ]; then
-    echo "::error::PostgreSQL did not accept connections within 30s"
-    exit 1
-  fi
-done
-echo "::notice::PostgreSQL is accepting connections"
-
-# Create database if it does not exist yet
-singularity exec \
-  --bind "$DATA/pgdata:/var/lib/postgresql/data" \
-  "$SIF/pgvector.sif" \
-  /usr/lib/postgresql/15/bin/psql \
-    -h localhost -p $PG_PORT -U myuser -d postgres \
-    -c "SELECT 1 FROM pg_database WHERE datname='mydatabase'" \
-  | grep -q 1 || \
-singularity exec \
-  --bind "$DATA/pgdata:/var/lib/postgresql/data" \
-  "$SIF/pgvector.sif" \
-  /usr/lib/postgresql/15/bin/psql \
-    -h localhost -p $PG_PORT -U myuser -d postgres \
-    -c "CREATE DATABASE mydatabase;"
-
-# ── RAG API ───────────────────────────────────────────────────────────────────
-
-echo "::notice::Starting RAG API..."
-run_bg ragapi \
-  singularity exec \
-    --cleanenv \
-    --writable-tmpfs \
-    --pwd /app \
-    --env-file "$CLEAN_ENV" \
-    --env DB_HOST=localhost \
-    --env DB_PORT=$PG_PORT \
-    --env POSTGRES_DB=mydatabase \
-    --env POSTGRES_USER=myuser \
-    --env POSTGRES_PASSWORD=mypassword \
-    --env RAG_PORT=$RAG_PORT \
-    "$SIF/rag_api.sif" \
-    python main.py
-
-wait_for_port $RAG_PORT "RAG API"
-
-# ── LibreChat ─────────────────────────────────────────────────────────────────
-
-echo "::notice::Starting LibreChat..."
-_librechat_yaml="${librechat_config:-$BASE/librechat.yaml}"
-librechat_config_bind=()
-[ -f "$_librechat_yaml" ] && librechat_config_bind=(--bind "$_librechat_yaml:/app/librechat.yaml")
-
-
-run_bg librechat \
-  singularity exec \
-    --writable-tmpfs \
-    --pwd /app \
-    --bind "$BASE/.env:/app/.env" \
-    "${librechat_config_bind[@]}" \
-    --bind "$BASE/images:/app/client/public/images" \
-    --bind "$BASE/uploads:/app/uploads" \
-    --bind "$BASE/logs:/app/logs" \
-    --env HOST=0.0.0.0 \
-    --env PORT=$service_port \
-    --env DOMAIN_SERVER=http://localhost:$service_port \
-    --env MONGO_URI=mongodb://localhost:$MONGODB_PORT/LibreChat \
-    --env MEILI_HOST=http://localhost:$MEILI_PORT \
-    --env RAG_API_URL=http://localhost:$RAG_PORT \
-    "$SIF/librechat.sif" \
-    npm run backend
-
-wait_for_port $service_port "LibreChat"
+source "$SCRIPTS_DIR/start-mongodb.sh"
+source "$SCRIPTS_DIR/start-meilisearch.sh"
+source "$SCRIPTS_DIR/start-pgvector.sh"
+source "$SCRIPTS_DIR/start-ragapi.sh"
+source "$SCRIPTS_DIR/start-librechat.sh"
 
 echo "::endgroup::"
+
+# ── Generate per-service restart scripts ──────────────────────────────────────
+# Each restart script sources service.env (for the baked-in ports) then
+# delegates to the canonical start-*.sh in SCRIPTS_DIR. Running a restart
+# script is safe while the workflow job is sleeping — it operates in a
+# separate subprocess and cannot kill the parent sleep.
+
+echo "::notice::Generating restart scripts in $DATA/"
+
+# Each restart script is a 2-line shim: source service.env (to get SCRIPTS_DIR)
+# then exec the canonical start-*.sh, which already calls stop_existing before
+# starting and handles singularity loading in its standalone detection block.
+for _svc in mongodb meilisearch pgvector ragapi librechat; do
+    cat > "$DATA/restart-${_svc}.sh" <<SHIM
+#!/bin/bash
+source "\$(dirname "\${BASH_SOURCE[0]}")/service.env"
+exec bash "\$SCRIPTS_DIR/start-${_svc}.sh"
+SHIM
+    chmod +x "$DATA/restart-${_svc}.sh"
+done
+unset _svc
+
+cat > "$DATA/restart-all.sh" <<'RESTARTALL'
+#!/bin/bash
+# Restarts all LibreChat services in dependency order.
+# Safe to run while the workflow job is active. Ports remain unchanged.
+set -e
+_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+for _svc in mongodb meilisearch pgvector ragapi librechat; do
+    echo "==> Restarting ${_svc}..."
+    bash "$_DIR/restart-${_svc}.sh"
+    echo "==> ${_svc} restarted."
+done
+echo "All services restarted successfully."
+RESTARTALL
+chmod +x "$DATA/restart-all.sh"
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 
 echo "::notice::All services running. PIDs in $PID_DIR/"
 echo "::notice::Logs in $LOG_DIR/"
+echo "::notice::To restart a service:  bash $DATA/restart-mongodb.sh"
+echo "::notice::To restart all:        bash $DATA/restart-all.sh"
+echo "::notice::Service state:         $DATA/service.env"
 
-wait
+# Keep the job alive. Services run as independent background processes;
+# restarting any one of them (via the restart-*.sh scripts) does not kill
+# this process and therefore does not fail the workflow.
+sleep inf

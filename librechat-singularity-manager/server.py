@@ -152,11 +152,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <script>
 const SVCS=['mongodb','meilisearch','pgvector','ragapi','librechat'];
 const LABELS={mongodb:'MongoDB',meilisearch:'MeiliSearch',pgvector:'PostgreSQL / pgvector',ragapi:'RAG API',librechat:'LibreChat'};
+// Compute base URL once — strip trailing slash so we can always append /path.
+// Works whether the session URL has a trailing slash or not.
+const _BASE=window.location.href.split('?')[0].replace(/\/+$/,'');
+const api=p=>_BASE+'/'+p;
 let status={},ports={},lcDir='',pollTimer=null,jobTimer=null,currentJob=null;
 
 async function fetchStatus(){
   try{
-    const r=await fetch('/status');
+    const r=await fetch(api('status'));
     const d=await r.json();
     status=d.status||{};ports=d.ports||{};lcDir=d.librechat_dir||'';
     document.getElementById('hdr-dir').textContent=lcDir?'Directory: '+lcDir:'';
@@ -189,7 +193,7 @@ async function restart(svc){
   clearCon();
   document.querySelectorAll('.btn').forEach(b=>b.disabled=true);
   try{
-    const r=await fetch('/restart/'+svc,{method:'POST'});
+    const r=await fetch(api('restart/'+svc),{method:'POST'});
     const d=await r.json();
     if(d.job_id){currentJob=d.job_id;pollJob();}
   }catch(e){appendCon('ERROR: '+e);enableBtns();}
@@ -200,7 +204,7 @@ async function restartAll(){
   clearCon();
   document.querySelectorAll('.btn').forEach(b=>b.disabled=true);
   try{
-    const r=await fetch('/restart/all',{method:'POST'});
+    const r=await fetch(api('restart/all'),{method:'POST'});
     const d=await r.json();
     if(d.job_id){currentJob=d.job_id;pollJob();}
   }catch(e){appendCon('ERROR: '+e);enableBtns();}
@@ -210,7 +214,7 @@ async function showLogs(svc){
   setConTitle('Logs: '+svc);
   clearCon();
   try{
-    const r=await fetch('/logs/'+svc);
+    const r=await fetch(api('logs/'+svc));
     document.getElementById('con-out').textContent=await r.text();
     scrollCon();
   }catch(e){appendCon('ERROR: '+e);}
@@ -220,7 +224,7 @@ let lastLineCount=0;
 async function pollJob(){
   if(!currentJob)return;
   try{
-    const r=await fetch('/job/'+currentJob);
+    const r=await fetch(api('job/'+currentJob));
     const d=await r.json();
     if(!d){enableBtns();return;}
     const lines=d.lines||[];

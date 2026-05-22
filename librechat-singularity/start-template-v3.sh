@@ -136,6 +136,7 @@ export MEILI_PORT=${MEILI_PORT}
 export PG_PORT=${PG_PORT}
 export RAG_PORT=${RAG_PORT}
 export service_port=${service_port}
+export basepath="${basepath:-}"
 ENVEOF
 
 # ── Start services ────────────────────────────────────────────────────────────

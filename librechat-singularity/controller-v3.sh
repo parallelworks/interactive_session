@@ -81,30 +81,36 @@ fi
 # ── LibreChat YAML config ─────────────────────────────────────────────────────
 # This is only used if ${librechat_config} is unset
 
-[ -n "${GENAI_MIL_API_KEY}" ] && echo "GENAI_MIL_API_KEY=${GENAI_MIL_API_KEY}" >> "$DIR/.env"
-[ -n "${PW_API_KEY}" ]     && echo "PW_API_KEY=${PW_API_KEY}"           >> "$DIR/.env"
+# Set/replace key=value pairs idempotently (upsert: replace if present, append if absent)
+_upsert() {
+    local key="$1" val="$2" file="$3"
+    if grep -q "^${key}=" "$file" 2>/dev/null; then
+        sed -i "s|^${key}=.*|${key}=${val}|" "$file"
+    else
+        echo "${key}=${val}" >> "$file"
+    fi
+}
 
-[ -n "${JWT_SECRET}" ]         && { grep -q '^JWT_SECRET=' "$DIR/.env" \
-    && sed -i "s|^JWT_SECRET=.*|JWT_SECRET=${JWT_SECRET}|" "$DIR/.env" \
-    || echo "JWT_SECRET=${JWT_SECRET}" >> "$DIR/.env"; }
-[ -n "${JWT_REFRESH_SECRET}" ] && { grep -q '^JWT_REFRESH_SECRET=' "$DIR/.env" \
-    && sed -i "s|^JWT_REFRESH_SECRET=.*|JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}|" "$DIR/.env" \
-    || echo "JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}" >> "$DIR/.env"; }
+[ -n "${GENAI_MIL_API_KEY}" ] && _upsert GENAI_MIL_API_KEY "${GENAI_MIL_API_KEY}" "$DIR/.env"
+[ -n "${PW_API_KEY}" ]        && _upsert PW_API_KEY         "${PW_API_KEY}"         "$DIR/.env"
+
+# Registration is enabled by default so users can create their first account
+_upsert ALLOW_REGISTRATION      true  "$DIR/.env"
+_upsert ALLOW_SOCIAL_LOGIN      false "$DIR/.env"
+_upsert ALLOW_SOCIAL_REGISTRATION false "$DIR/.env"
+
+[ -n "${JWT_SECRET}" ]         && _upsert JWT_SECRET         "${JWT_SECRET}"         "$DIR/.env"
+[ -n "${JWT_REFRESH_SECRET}" ] && _upsert JWT_REFRESH_SECRET "${JWT_REFRESH_SECRET}" "$DIR/.env"
 
 # Generate random secrets when not provided — LibreChat refuses to start without them
 for _var in JWT_SECRET JWT_REFRESH_SECRET; do
     _current=$(grep "^${_var}=" "$DIR/.env" 2>/dev/null | cut -d= -f2-)
     if [ -z "$_current" ]; then
-        _random=$(openssl rand -hex 32)
-        if grep -q "^${_var}=" "$DIR/.env" 2>/dev/null; then
-            sed -i "s|^${_var}=.*|${_var}=${_random}|" "$DIR/.env"
-        else
-            echo "${_var}=${_random}" >> "$DIR/.env"
-        fi
+        _upsert "${_var}" "$(openssl rand -hex 32)" "$DIR/.env"
         echo "::notice::Generated random ${_var}"
     fi
 done
-unset _var _current _random
+unset _var _current
 
 
 

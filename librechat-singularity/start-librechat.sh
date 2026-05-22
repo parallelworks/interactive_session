@@ -20,6 +20,13 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   unset PYTHONPATH PYTHONHOME PERL5LIB PERLLIB PERL5OPT PYTHONSTARTUP LD_LIBRARY_PATH
 fi
 
+# dotenv does not override existing env vars, so empty vars passed in by the
+# workflow (e.g. JWT_SECRET='') would shadow the .env file values.
+for _var in GENAI_MIL_API_KEY JWT_SECRET JWT_REFRESH_SECRET LIBRECHAT_API_KEY LANGFLOW_API_KEY; do
+    [ -z "${!_var}" ] && unset "$_var"
+done
+unset _var
+
 echo "::notice::Starting LibreChat..."
 _librechat_yaml="${librechat_config:-$BASE/librechat.yaml}"
 librechat_config_bind=()

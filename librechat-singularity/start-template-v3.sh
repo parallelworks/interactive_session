@@ -92,7 +92,7 @@ source "$SCRIPTS_DIR/utils.sh"
 
 # ── Cancel script ────────────────────────────────────────────────────────────
 
-cat > "${PW_PARENT_JOB_DIR}/cancel.sh" <<EOF
+cat > "./cancel.sh" <<EOF
 #!/bin/bash
 echo "::group::Stopping LibreChat services"
 for svc in librechat ragapi pgvector meilisearch mongodb; do
@@ -108,7 +108,7 @@ for svc in librechat ragapi pgvector meilisearch mongodb; do
 done
 echo "::endgroup::"
 EOF
-chmod +x "${PW_PARENT_JOB_DIR}/cancel.sh"
+chmod +x "./cancel.sh"
 
 # ── Stop any leftover processes ───────────────────────────────────────────────
 

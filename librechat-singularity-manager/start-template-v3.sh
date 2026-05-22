@@ -60,12 +60,12 @@ export service_port=$MANAGER_PORT   # restore manager's port
 
 # ── Cancel script ─────────────────────────────────────────────────────────────
 
-cat > "${PW_PARENT_JOB_DIR}/cancel.sh" <<'EOF'
+cat > "./cancel.sh" <<'EOF'
 #!/bin/bash
 pidfile="$(dirname "$0")/manager.pid"
 [ -f "$pidfile" ] && kill "$(cat "$pidfile")" 2>/dev/null || true
 EOF
-chmod +x "${PW_PARENT_JOB_DIR}/cancel.sh"
+chmod +x "./cancel.sh"
 
 # ── Start the manager server on the host ──────────────────────────────────────
 

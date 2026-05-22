@@ -1,7 +1,7 @@
 #!/bin/bash
 set -ex
 
-SCRIPTS_DIR=${PWD}/librechat-singularity
+SCRIPTS_DIR=${PW_PARENT_JOB_DIR}/librechat-singularity
 #"$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ -n "${service_parent_install_dir}" ]; then

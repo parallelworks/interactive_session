@@ -23,7 +23,7 @@ oras_pull_file(){
     host_path=$3
     local output_dir
     output_dir=$(dirname ${host_path})
-    if ! ./tools/oras/oras pull ${repo} -o ${output_dir}; then
+    if ! ${PW_PARENT_JOB_DIR}/tools/oras/oras pull ${repo} -o ${output_dir}; then
         echo "::error title=Error::oras pull failed for ${repo}"
         exit 1
     fi

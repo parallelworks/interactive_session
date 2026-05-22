@@ -77,6 +77,17 @@ fi
 [ -n "${GENAI_MIL_API_KEY}" ] && echo "GENAI_MIL_API_KEY=${GENAI_MIL_API_KEY}" >> "$DIR/.env"
 [ -n "${PW_API_KEY}" ]     && echo "PW_API_KEY=${PW_API_KEY}"           >> "$DIR/.env"
 
+# JWT secrets — LibreChat fails at startup if these are empty; generate random values when not supplied
+_jwt_secret="${JWT_SECRET:-$(openssl rand -hex 32)}"
+_jwt_refresh="${JWT_REFRESH_SECRET:-$(openssl rand -hex 32)}"
+grep -q '^JWT_SECRET=' "$DIR/.env" \
+    && sed -i "s|^JWT_SECRET=.*|JWT_SECRET=${_jwt_secret}|" "$DIR/.env" \
+    || echo "JWT_SECRET=${_jwt_secret}" >> "$DIR/.env"
+grep -q '^JWT_REFRESH_SECRET=' "$DIR/.env" \
+    && sed -i "s|^JWT_REFRESH_SECRET=.*|JWT_REFRESH_SECRET=${_jwt_refresh}|" "$DIR/.env" \
+    || echo "JWT_REFRESH_SECRET=${_jwt_refresh}" >> "$DIR/.env"
+unset _jwt_secret _jwt_refresh
+
 
 
 cat > "$DIR/librechat.yaml" <<YAML_EOF

@@ -91,6 +91,21 @@ fi
     && sed -i "s|^JWT_REFRESH_SECRET=.*|JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}|" "$DIR/.env" \
     || echo "JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}" >> "$DIR/.env"; }
 
+# Generate random secrets when not provided — LibreChat refuses to start without them
+for _var in JWT_SECRET JWT_REFRESH_SECRET; do
+    _current=$(grep "^${_var}=" "$DIR/.env" 2>/dev/null | cut -d= -f2-)
+    if [ -z "$_current" ]; then
+        _random=$(openssl rand -hex 32)
+        if grep -q "^${_var}=" "$DIR/.env" 2>/dev/null; then
+            sed -i "s|^${_var}=.*|${_var}=${_random}|" "$DIR/.env"
+        else
+            echo "${_var}=${_random}" >> "$DIR/.env"
+        fi
+        echo "::notice::Generated random ${_var}"
+    fi
+done
+unset _var _current _random
+
 
 
 cat > "$DIR/librechat.yaml" <<YAML_EOF

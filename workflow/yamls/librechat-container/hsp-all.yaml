@@ -13,8 +13,7 @@ sessions:
   manager:
     redirect: false
 jobs:
-  librechat_preprocessing:
-    working-directory: ${PW_PARENT_JOB_DIR}/librechat
+  github_checkout:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
@@ -26,6 +25,15 @@ jobs:
           sparse_checkout:
             - ${{ inputs.container_runtime }}
             - tools/oras
+            - librechat-singularity-manager
+  
+  librechat_preprocessing:
+    needs:
+      - github_checkout
+    working-directory: ${PW_PARENT_JOB_DIR}/librechat
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
       - name: Create Inputs
         run: |
           set -x
@@ -114,17 +122,12 @@ jobs:
           rm -f "${librechat_dir:-${HOME}/pw/LibreChat}/.librechat.lock" \
             && echo "::notice::librechat_dir lock removed" || true
   manager_preprocessing:
+    needs:
+      - github_checkout
     working-directory: ${PW_PARENT_JOB_DIR}/manager
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - name: Checkout librechat-singularity-manager
-        uses: parallelworks/checkout
-        with:
-          repo: https://github.com/parallelworks/interactive_session.git
-          branch: main
-          sparse_checkout:
-            - librechat-singularity-manager
       - name: Create Inputs
         run: |
           set -x

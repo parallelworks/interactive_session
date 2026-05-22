@@ -1,10 +1,5 @@
-# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
----
-# LibreChat Container for HSP
-# HSP cluster configuration with FIPS-aware Singularity runtime
 permissions:
   - '*'
-
 env:
   PW_API_KEY: ${PW_API_KEY}
   GENAI_MIL_API_KEY: ${{ inputs.env.GENAI_MIL_API_KEY }}
@@ -12,72 +7,68 @@ env:
   JWT_REFRESH_SECRET: ${{ inputs.env.JWT_REFRESH_SECRET }}
   LIBRECHAT_API_KEY: ${{ inputs.env.LIBRECHAT_API_KEY }}
   LANGFLOW_API_KEY: ${{ inputs.env.LANGFLOW_API_KEY }}
-
 sessions:
   librechat:
     redirect: true
   manager:
     redirect: false
-
-
 jobs:
   librechat_preprocessing:
-      working-directory: ${PW_PARENT_JOB_DIR}/librechat
-      ssh:
-        remoteHost: ${{ inputs.resource.ip }}
-      steps:
-        - name: Checkout ${{ inputs.container_runtime }}
-          uses: parallelworks/checkout
-          with:
-            repo: https://github.com/parallelworks/interactive_session.git
-            branch: main
-            sparse_checkout:
-              - ${{ inputs.container_runtime }}
-              - tools/oras
-        - name: Create Inputs
-          run: |
-            set -x
-            if [ -z "${PW_PLATFORM_HOST}" ]; then
-              PW_PLATFORM_HOST=activate.hpc.mil
-            fi
-            PW_PLATFORM_HOST="${PW_PLATFORM_HOST#https://}"
-            # Write PW variables
-            env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
-            # Encase values between quotes
-            sed -i 's/=\(.*\)/="\1"/' inputs.sh
-            # Password
-            password=$(openssl rand -base64 12 | head -c 12)
-            # basepath
-            basepath=/me/session/${PW_USER}/${{ sessions.librechat }}
-            # Write input form variables and ensure the pw agent is in the PATH
-            cat <<'EOF' >> inputs.sh
-            PATH=$HOME/pw:$PATH
-            librechat_dir="${{ inputs.service.librechat_dir }}"
-            domain_client="${{ inputs.service.domain_client }}"
-            librechat_db="${{ inputs.service.librechat_db }}"
-            librechat_config="${{ inputs.service.librechat_config }}"
-            EOF
-            echo basepath=${basepath} >> inputs.sh
-            echo password=${password} >> inputs.sh
-            # Remove empty variables
-            sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
-            sed -i '/=""/d' inputs.sh # remove var=""
-            # Add export= to all lines
-            sed -i 's/^/export /' inputs.sh
-        - name: Lock librechat_dir
-          run: |
-            set -e
-            source inputs.sh
-            _dir="${librechat_dir:-${HOME}/pw/LibreChat}"
-            _lock="${_dir}/.librechat.lock"
-            mkdir -p "$_dir"
-            if [ -f "$_lock" ]; then
-              echo "::error title=Directory In Use::librechat_dir ${_dir} is already in use by another session: $(cat $_lock). Stop that session first, or set a different librechat_dir in LibreChat Settings."
-              exit 1
-            fi
-            echo "job=${PW_JOB_ID:-unknown} user=${PW_USER:-unknown} started=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" > "$_lock"
-            echo "::notice::librechat_dir lock created at $_lock"
-
+    working-directory: ${PW_PARENT_JOB_DIR}/librechat
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Checkout ${{ inputs.container_runtime }}
+        uses: parallelworks/checkout
+        with:
+          repo: https://github.com/parallelworks/interactive_session.git
+          branch: main
+          sparse_checkout:
+            - ${{ inputs.container_runtime }}
+            - tools/oras
+      - name: Create Inputs
+        run: |
+          set -x
+          if [ -z "${PW_PLATFORM_HOST}" ]; then
+            PW_PLATFORM_HOST=activate.hpc.mil
+          fi
+          PW_PLATFORM_HOST="${PW_PLATFORM_HOST#https://}"
+          # Write PW variables
+          env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+          # Encase values between quotes
+          sed -i 's/=\(.*\)/="\1"/' inputs.sh
+          # Password
+          password=$(openssl rand -base64 12 | head -c 12)
+          # basepath
+          basepath=/me/session/${PW_USER}/${{ sessions.librechat }}
+          # Write input form variables and ensure the pw agent is in the PATH
+          cat <<'EOF' >> inputs.sh
+          PATH=$HOME/pw:$PATH
+          librechat_dir="${{ inputs.service.librechat_dir }}"
+          domain_client="${{ inputs.service.domain_client }}"
+          librechat_db="${{ inputs.service.librechat_db }}"
+          librechat_config="${{ inputs.service.librechat_config }}"
+          EOF
+          echo basepath=${basepath} >> inputs.sh
+          echo password=${password} >> inputs.sh
+          # Remove empty variables
+          sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+          sed -i '/=""/d' inputs.sh # remove var=""
+          # Add export= to all lines
+          sed -i 's/^/export /' inputs.sh
+      - name: Lock librechat_dir
+        run: |
+          set -e
+          source inputs.sh
+          _dir="${librechat_dir:-${HOME}/pw/LibreChat}"
+          _lock="${_dir}/.librechat.lock"
+          mkdir -p "$_dir"
+          if [ -f "$_lock" ]; then
+            echo "::error title=Directory In Use::librechat_dir ${_dir} is already in use by another session: $(cat $_lock). Stop that session first, or set a different librechat_dir in LibreChat Settings."
+            exit 1
+          fi
+          echo "job=${PW_JOB_ID:-unknown} user=${PW_USER:-unknown} started=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" > "$_lock"
+          echo "::notice::librechat_dir lock created at $_lock"
   librechat_session_runner:
     working-directory: ${PW_PARENT_JOB_DIR}/librechat
     needs:
@@ -108,8 +99,8 @@ jobs:
               account: ${{ inputs.cluster.pbs.account }}
               scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
           service:
-            start_service_script: ${PW_PARENT_JOB_DIR}/librechat/${{ inputs.container_runtime }}/start-template-v3.sh
-            controller_script: ${PW_PARENT_JOB_DIR}/librechat/{{ inputs.container_runtime }}/controller-v3.sh
+            start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.container_runtime }}/start-template-v3.sh
+            controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.container_runtime }}/controller-v3.sh
             inputs_sh: ${PW_PARENT_JOB_DIR}/librechat/inputs.sh
             slug: login
             rundir: ${PW_PARENT_JOB_DIR}/librechat
@@ -122,42 +113,40 @@ jobs:
           source inputs.sh 2>/dev/null || true
           rm -f "${librechat_dir:-${HOME}/pw/LibreChat}/.librechat.lock" \
             && echo "::notice::librechat_dir lock removed" || true
-
   manager_preprocessing:
-      working-directory: ${PW_PARENT_JOB_DIR}/manager
-      ssh:
-        remoteHost: ${{ inputs.resource.ip }}
-      steps:
-        - name: Checkout librechat-singularity-manager
-          uses: parallelworks/checkout
-          with:
-            repo: https://github.com/parallelworks/interactive_session.git
-            branch: main
-            sparse_checkout:
-              - librechat-singularity-manager
-        - name: Create Inputs
-          run: |
-            set -x
-            if [ -z "${PW_PLATFORM_HOST}" ]; then
-              PW_PLATFORM_HOST=activate.hpc.mil
-            fi
-            PW_PLATFORM_HOST="${PW_PLATFORM_HOST#https://}"
-            # Write PW variables
-            env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
-            # Encase values between quotes
-            sed -i 's/=\(.*\)/="\1"/' inputs.sh
-            # Write input form variables
-            cat <<'EOF' >> inputs.sh
-            basepath="/me/session/${PW_USER}/${{ sessions.manager }}/"
-            PATH=$HOME/pw:$PATH
-            librechat_dir="${{ inputs.service.librechat_dir }}"
-            EOF
-            # Remove empty variables
-            sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
-            sed -i '/=""/d' inputs.sh
-            # Add export to all lines
-            sed -i 's/^/export /' inputs.sh
-
+    working-directory: ${PW_PARENT_JOB_DIR}/manager
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Checkout librechat-singularity-manager
+        uses: parallelworks/checkout
+        with:
+          repo: https://github.com/parallelworks/interactive_session.git
+          branch: main
+          sparse_checkout:
+            - librechat-singularity-manager
+      - name: Create Inputs
+        run: |
+          set -x
+          if [ -z "${PW_PLATFORM_HOST}" ]; then
+            PW_PLATFORM_HOST=activate.hpc.mil
+          fi
+          PW_PLATFORM_HOST="${PW_PLATFORM_HOST#https://}"
+          # Write PW variables
+          env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+          # Encase values between quotes
+          sed -i 's/=\(.*\)/="\1"/' inputs.sh
+          # Write input form variables
+          cat <<'EOF' >> inputs.sh
+          basepath="/me/session/${PW_USER}/${{ sessions.manager }}/"
+          PATH=$HOME/pw:$PATH
+          librechat_dir="${{ inputs.service.librechat_dir }}"
+          EOF
+          # Remove empty variables
+          sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+          sed -i '/=""/d' inputs.sh
+          # Add export to all lines
+          sed -i 's/^/export /' inputs.sh
   manager_session_runner:
     working-directory: ${PW_PARENT_JOB_DIR}/manager
     needs:
@@ -188,13 +177,11 @@ jobs:
               account: ${{ inputs.cluster.pbs.account }}
               scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
           service:
-            start_service_script: ${PW_PARENT_JOB_DIR}/manager/librechat-singularity-manager/start-template-v3.sh
-            controller_script: ${PW_PARENT_JOB_DIR}/manager/librechat-singularity-manager/controller-v3.sh
+            start_service_script: ${PW_PARENT_JOB_DIR}/librechat-singularity-manager/start-template-v3.sh
+            controller_script: ${PW_PARENT_JOB_DIR}/librechat-singularity-manager/controller-v3.sh
             inputs_sh: ${PW_PARENT_JOB_DIR}/manager/inputs.sh
-            slug: '/'
+            slug: /
             rundir: ${PW_PARENT_JOB_DIR}/manager
-
-
 'on':
   execute:
     inputs:

@@ -1,7 +1,7 @@
 set -o pipefail
 set -x
 
-source tools/oras/libs.sh
+source ${PW_PARENT_DIR}/tools/oras/libs.sh
 
 # Unset any workflow env vars that arrived as empty strings so they don't
 # shadow values already in .env.example or other defaults.

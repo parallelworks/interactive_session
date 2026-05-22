@@ -1,7 +1,7 @@
 #!/bin/bash
 set -ex
 
-SCRIPTS_DIR=${PWD}/librechat-singularity
+SCRIPTS_DIR=${PW_PARENT_JOB_DIR}/librechat-singularity
 #"$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ -n "${service_parent_install_dir}" ]; then
@@ -92,7 +92,7 @@ source "$SCRIPTS_DIR/utils.sh"
 
 # ── Cancel script ────────────────────────────────────────────────────────────
 
-cat > "${PW_PARENT_JOB_DIR}/cancel.sh" <<EOF
+cat > "./cancel.sh" <<EOF
 #!/bin/bash
 echo "::group::Stopping LibreChat services"
 for svc in librechat ragapi pgvector meilisearch mongodb; do
@@ -108,7 +108,7 @@ for svc in librechat ragapi pgvector meilisearch mongodb; do
 done
 echo "::endgroup::"
 EOF
-chmod +x "${PW_PARENT_JOB_DIR}/cancel.sh"
+chmod +x "./cancel.sh"
 
 # ── Stop any leftover processes ───────────────────────────────────────────────
 
@@ -136,6 +136,7 @@ export MEILI_PORT=${MEILI_PORT}
 export PG_PORT=${PG_PORT}
 export RAG_PORT=${RAG_PORT}
 export service_port=${service_port}
+export basepath="${basepath:-}"
 ENVEOF
 
 # ── Start services ────────────────────────────────────────────────────────────

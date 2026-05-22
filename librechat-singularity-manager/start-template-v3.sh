@@ -41,11 +41,17 @@ MANAGER_PORT=$service_port
 
 SVC_ENV="${librechat_dir:-${HOME}/pw/LibreChat}/singularity-data/service.env"
 
-if [ ! -f "$SVC_ENV" ]; then
-    echo "::error title=Error::service.env not found at $SVC_ENV"
-    echo "Is a librechat-singularity session running? Set librechat_dir to the correct path."
-    exit 1
-fi
+_retries=10
+until [ -f "$SVC_ENV" ]; do
+    if [ "$_retries" -le 0 ]; then
+        echo "::error title=Error::service.env not found at $SVC_ENV after 10 minutes"
+        echo "Is a librechat-singularity session running? Set librechat_dir to the correct path."
+        exit 1
+    fi
+    echo "Waiting for service.env ($SVC_ENV) — retries left: $_retries"
+    sleep 60
+    _retries=$(( _retries - 1 ))
+done
 
 source "$SVC_ENV"
 # service_port now holds LibreChat's port; DATA, SCRIPTS_DIR, etc. are set.

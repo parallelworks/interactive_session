@@ -181,38 +181,7 @@ def _html_response(html, status=200, refresh=None):
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
-@app.route('/')
-def index():
-    statuses = {s: _get_status(s) for s in SERVICES}
-
-    lc_tag = ''
-    if LIBRECHAT_PORT:
-        lc_tag = f'<span class="tag">LibreChat port: {LIBRECHAT_PORT}</span>'
-
-    cards = ''
-    for svc in SERVICES:
-        st = statuses[svc]
-        port = f'port {PORTS[svc]}' if PORTS.get(svc) else ''
-        cards += f"""<div class="card">
-  <div class="card-head"><span class="dot {st}"></span><span class="card-name">{LABELS[svc]}</span></div>
-  <div class="card-port">{port}</div>
-  <div class="card-btns">
-    <form method="POST" action="restart/{svc}"><button class="btn btn-primary" type="submit">&#8635; Restart</button></form>
-    <a class="btn btn-logs" href="logs/{svc}">Logs</a>
-  </div>
-</div>"""
-
-    body = f"""<div class="top-bar">
-  <form method="POST" action="restart/all"><button class="btn btn-primary" type="submit">&#8635; Restart All</button></form>
-  {lc_tag}
-</div>
-<div class="grid">{cards}</div>"""
-
-    return _html_response(_page('Status', body, refresh=10))
-
-
-@app.route('/restart/<svc>', methods=['POST'])
-def restart(svc):
+def _restart_response(svc):
     if svc == 'all':
         script = os.path.join(DATA_DIR, 'restart-all.sh')
         label = 'Restart All'
@@ -230,11 +199,10 @@ def restart(svc):
     jid = _jobs.create(label)
     threading.Thread(target=_run_restart, args=(jid, script), daemon=True).start()
 
-    # Stream the job output directly so no JavaScript is needed.
     def generate():
+        import time
         yield _page_open(label)
         sent = 0
-        import time
         while True:
             job = _jobs.get(jid)
             lines = job['lines']
@@ -254,8 +222,7 @@ def restart(svc):
                     headers={'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no'})
 
 
-@app.route('/logs/<svc>')
-def logs(svc):
+def _logs_response(svc):
     if svc not in SERVICES:
         return _html_response(_page('Error', '<p class="notice notice-err">Unknown service.</p>'), 404)
 
@@ -268,6 +235,57 @@ def logs(svc):
   <div class="pre pre-scroll">{_esc(content)}</div>
 </div>"""
     return _html_response(_page(f'Logs: {svc}', body))
+
+
+@app.route('/')
+def index():
+    # Dispatch restart/logs actions via query params so all requests go to the
+    # root path — some reverse proxies (e.g. HSP) only proxy the slug root and
+    # return 404 for any sub-path, so we can't rely on /restart/<svc> being reachable.
+    action = request.args.get('action', '')
+    svc = request.args.get('svc', '')
+    if action == 'restart' and svc:
+        return _restart_response(svc)
+    if action == 'logs' and svc:
+        return _logs_response(svc)
+
+    statuses = {s: _get_status(s) for s in SERVICES}
+
+    lc_tag = ''
+    if LIBRECHAT_PORT:
+        lc_tag = f'<span class="tag">LibreChat port: {LIBRECHAT_PORT}</span>'
+
+    cards = ''
+    for svc in SERVICES:
+        st = statuses[svc]
+        port = f'port {PORTS[svc]}' if PORTS.get(svc) else ''
+        cards += f"""<div class="card">
+  <div class="card-head"><span class="dot {st}"></span><span class="card-name">{LABELS[svc]}</span></div>
+  <div class="card-port">{port}</div>
+  <div class="card-btns">
+    <a class="btn btn-primary" href="?action=restart&amp;svc={svc}">&#8635; Restart</a>
+    <a class="btn btn-logs" href="?action=logs&amp;svc={svc}">Logs</a>
+  </div>
+</div>"""
+
+    body = f"""<div class="top-bar">
+  <a class="btn btn-primary" href="?action=restart&amp;svc=all">&#8635; Restart All</a>
+  {lc_tag}
+</div>
+<div class="grid">{cards}</div>"""
+
+    return _html_response(_page('Status', body, refresh=10))
+
+
+# Keep POST sub-path routes for backward compatibility with direct curl/script callers.
+@app.route('/restart/<svc>', methods=['GET', 'POST'])
+def restart(svc):
+    return _restart_response(svc)
+
+
+@app.route('/logs/<svc>')
+def logs(svc):
+    return _logs_response(svc)
 
 
 @app.route('/status')

@@ -35,9 +35,10 @@ fi
 
 # ── Resolve service ports ──────────────────────────────────────────────────────
 
-# service_port is injected by session_runner as the manager's port.
-# service.env also exports service_port (LibreChat's port) — save it first.
+# service_port and basepath are injected by session_runner for the manager.
+# service.env overwrites both — save them before sourcing.
 MANAGER_PORT=$service_port
+MANAGER_BASEPATH="${basepath:-}"
 
 SVC_ENV="${librechat_dir:-${HOME}/pw/LibreChat}/singularity-data/service.env"
 
@@ -54,9 +55,10 @@ until [ -f "$SVC_ENV" ]; do
 done
 
 source "$SVC_ENV"
-# service_port now holds LibreChat's port; DATA, SCRIPTS_DIR, etc. are set.
+# service_port and basepath now hold LibreChat's values — restore manager's.
 LIBRECHAT_PORT=$service_port
-export service_port=$MANAGER_PORT   # restore manager's port
+export service_port=$MANAGER_PORT
+export basepath="$MANAGER_BASEPATH"
 
 # ── Cancel script ─────────────────────────────────────────────────────────────
 
@@ -76,7 +78,7 @@ MONGODB_PORT="${MONGODB_PORT}" \
 MEILI_PORT="${MEILI_PORT}" \
 PG_PORT="${PG_PORT}" \
 RAG_PORT="${RAG_PORT}" \
-BASEPATH="${basepath:-}" \
+BASEPATH="${MANAGER_BASEPATH}" \
     "${FLASK_ENV}/bin/python" "${MANAGER_SCRIPTS_DIR}/server.py" &
 
 SERVER_PID=$!

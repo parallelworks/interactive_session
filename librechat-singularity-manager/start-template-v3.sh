@@ -67,10 +67,21 @@ export basepath="$MANAGER_BASEPATH"
 LIBRECHAT_JOB_DIR="${librechat_job_dir:-${PW_PARENT_JOB_DIR}/librechat}"
 LIBRECHAT_HOSTNAME_FILE="${LIBRECHAT_JOB_DIR}/HOSTNAME"
 
+_retries=20
+until [ -f "$LIBRECHAT_HOSTNAME_FILE" ]; do
+    if [ "$_retries" -le 0 ]; then
+        echo "::warning::HOSTNAME file not found at ${LIBRECHAT_HOSTNAME_FILE} after retries — restart commands will run locally"
+        break
+    fi
+    echo "Waiting for HOSTNAME file ($LIBRECHAT_HOSTNAME_FILE) — retries left: $_retries"
+    sleep 30
+    _retries=$(( _retries - 1 ))
+done
+unset _retries
+
 if [ -f "$LIBRECHAT_HOSTNAME_FILE" ]; then
     LIBRECHAT_HOSTNAME=$(tr -d '[:space:]' < "$LIBRECHAT_HOSTNAME_FILE")
 else
-    echo "::warning::HOSTNAME file not found at ${LIBRECHAT_HOSTNAME_FILE} — restart commands will run locally"
     LIBRECHAT_HOSTNAME=""
 fi
 

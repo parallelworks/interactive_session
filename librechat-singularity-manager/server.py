@@ -3,6 +3,7 @@
 
 import json
 import os
+import shlex
 import subprocess
 import threading
 import uuid
@@ -13,6 +14,7 @@ DATA_DIR = os.environ.get('DATA_DIR', '')
 LIBRECHAT_PORT = os.environ.get('LIBRECHAT_PORT', '')
 MGR_PORT = int(os.environ.get('MGR_PORT', '8080'))
 BASEPATH = os.environ.get('BASEPATH', '').rstrip('/')
+LIBRECHAT_SSH = os.environ.get('LIBRECHAT_SSH', '').strip()
 
 PORTS = {
     'mongodb':     os.environ.get('MONGODB_PORT', ''),
@@ -62,8 +64,12 @@ _jobs = JobStore()
 
 def _run_restart(jid, script_path):
     try:
+        if LIBRECHAT_SSH:
+            cmd = shlex.split(LIBRECHAT_SSH) + ['bash', script_path]
+        else:
+            cmd = ['bash', script_path]
         proc = subprocess.Popen(
-            ['bash', script_path],
+            cmd,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             universal_newlines=True, bufsize=1,
         )
@@ -295,6 +301,7 @@ def status():
         'ports': PORTS,
         'librechat_dir': LIBRECHAT_DIR,
         'librechat_port': LIBRECHAT_PORT,
+        'librechat_ssh': LIBRECHAT_SSH,
     })
 
 
@@ -355,4 +362,5 @@ if __name__ == '__main__':
 
     print(f'LibreChat Manager listening on port {MGR_PORT}', flush=True)
     print(f'DATA_DIR={DATA_DIR}', flush=True)
+    print(f'LIBRECHAT_SSH={LIBRECHAT_SSH!r}', flush=True)
     app.run(host='0.0.0.0', port=MGR_PORT, threaded=True, debug=False)

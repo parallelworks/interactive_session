@@ -60,6 +60,28 @@ LIBRECHAT_PORT=$service_port
 export service_port=$MANAGER_PORT
 export basepath="$MANAGER_BASEPATH"
 
+# ── Build SSH prefix for running commands on LibreChat's compute node ─────────
+# HOSTNAME is written by the session runner when the librechat job starts, which
+# is before service.env is written, so it is guaranteed to exist here.
+
+LIBRECHAT_JOB_DIR="${librechat_job_dir:-${PW_PARENT_JOB_DIR}/librechat}"
+LIBRECHAT_HOSTNAME_FILE="${LIBRECHAT_JOB_DIR}/HOSTNAME"
+
+if [ -f "$LIBRECHAT_HOSTNAME_FILE" ]; then
+    LIBRECHAT_HOSTNAME=$(tr -d '[:space:]' < "$LIBRECHAT_HOSTNAME_FILE")
+else
+    echo "::warning::HOSTNAME file not found at ${LIBRECHAT_HOSTNAME_FILE} — restart commands will run locally"
+    LIBRECHAT_HOSTNAME=""
+fi
+
+if [ -n "${resource_uri:-}" ] && [ -n "${LIBRECHAT_HOSTNAME:-}" ]; then
+    LIBRECHAT_SSH="pw ssh ${resource_uri} ssh ${LIBRECHAT_HOSTNAME}"
+    echo "::notice::LIBRECHAT_SSH=${LIBRECHAT_SSH}"
+else
+    LIBRECHAT_SSH=""
+    echo "::notice::LIBRECHAT_SSH not set (resource_uri='${resource_uri:-}' hostname='${LIBRECHAT_HOSTNAME:-}') — restart commands will run locally"
+fi
+
 # ── Cancel script ─────────────────────────────────────────────────────────────
 
 cat > "./cancel.sh" <<'EOF'
@@ -79,6 +101,7 @@ MEILI_PORT="${MEILI_PORT}" \
 PG_PORT="${PG_PORT}" \
 RAG_PORT="${RAG_PORT}" \
 BASEPATH="${MANAGER_BASEPATH}" \
+LIBRECHAT_SSH="${LIBRECHAT_SSH}" \
     "${FLASK_ENV}/bin/python" "${MANAGER_SCRIPTS_DIR}/server.py" &
 
 SERVER_PID=$!

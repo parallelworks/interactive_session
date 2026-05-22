@@ -13,14 +13,14 @@ else
 fi
 unset _src_dir
 
-CONTAINER_DIR="${HOME}/pw/software/containers/librechat-manager"
+FLASK_ENV="${service_parent_install_dir:-${HOME}/pw/software}/tools/flask"
 
-if [ ! -d "${CONTAINER_DIR}" ]; then
-    echo "::error title=Error::Container not found at ${CONTAINER_DIR}. Run the controller first."
+if [ ! -f "${FLASK_ENV}/bin/flask" ]; then
+    echo "::error title=Error::Flask venv not found at ${FLASK_ENV}. Run the controller first."
     exit 1
 fi
 
-# ── Load singularity/apptainer ─────────────────────────────────────────────────
+# ── Load singularity/apptainer (needed by the restart scripts Flask calls) ─────
 
 if ! which singularity &>/dev/null; then
     if module load apptainer 2>/dev/null; then
@@ -61,21 +61,17 @@ pidfile="$(dirname "$0")/manager.pid"
 EOF
 chmod +x "${PW_PARENT_JOB_DIR}/cancel.sh"
 
-# ── Start the manager server inside the container ─────────────────────────────
+# ── Start the manager server on the host ──────────────────────────────────────
 
-singularity exec \
-    --bind "${MANAGER_SCRIPTS_DIR}:${MANAGER_SCRIPTS_DIR}" \
-    --bind "${DATA}:${DATA}" \
-    --env MGR_PORT="${MANAGER_PORT}" \
-    --env DATA_DIR="${DATA}" \
-    --env LIBRECHAT_PORT="${LIBRECHAT_PORT}" \
-    --env MONGODB_PORT="${MONGODB_PORT}" \
-    --env MEILI_PORT="${MEILI_PORT}" \
-    --env PG_PORT="${PG_PORT}" \
-    --env RAG_PORT="${RAG_PORT}" \
-    --env BASEPATH="${basepath:-}" \
-    "${CONTAINER_DIR}" \
-    python3 "${MANAGER_SCRIPTS_DIR}/server.py" &
+MGR_PORT="${MANAGER_PORT}" \
+DATA_DIR="${DATA}" \
+LIBRECHAT_PORT="${LIBRECHAT_PORT}" \
+MONGODB_PORT="${MONGODB_PORT}" \
+MEILI_PORT="${MEILI_PORT}" \
+PG_PORT="${PG_PORT}" \
+RAG_PORT="${RAG_PORT}" \
+BASEPATH="${basepath:-}" \
+    "${FLASK_ENV}/bin/python" "${MANAGER_SCRIPTS_DIR}/server.py" &
 
 SERVER_PID=$!
 echo $SERVER_PID > "${PW_PARENT_JOB_DIR}/manager.pid"

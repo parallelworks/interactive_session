@@ -2,29 +2,18 @@
 set -o pipefail
 set -x
 
-source tools/oras/libs.sh
+if [ -z "${service_parent_install_dir}" ]; then
+    service_parent_install_dir="${HOME}/pw/software"
+fi
 
-CONTAINER_DIR="${HOME}/pw/software/containers/librechat-manager"
-CONTAINER_TGZ="${CONTAINER_DIR}.tgz"
+FLASK_ENV="${service_parent_install_dir}/tools/flask"
 
-mkdir -p "${HOME}/pw/software/containers" "${HOME}/pw/software/tools"
-chmod a+rX "${HOME}/pw/software/containers" "${HOME}/pw/software/tools"
-
-if ! [ -d "${CONTAINER_DIR}" ]; then
-    echo "::group::librechat-manager Singularity Container Download"
-    echo "::notice::Using GitHub registry to download file"
-    oras_pull_file ghcr.io/parallelworks/librechat-singularity-manager:1.0 librechat-manager.tgz ${CONTAINER_TGZ}
-    if [ ! -s ${CONTAINER_TGZ} ]; then
-        echo "::error title=Error::Failed to download file ${CONTAINER_TGZ}"
-        exit 1
-    fi
-    if ! tar -xzf ${CONTAINER_TGZ} -C $(dirname ${CONTAINER_DIR}); then
-        echo "::error title=Error::Failed to extract ${CONTAINER_TGZ}"
-        exit 1
-    fi
-    chmod -R a+rX ${CONTAINER_DIR}
-    rm ${CONTAINER_TGZ}
+if [ ! -f "${FLASK_ENV}/bin/flask" ]; then
+    echo "::group::Flask venv setup"
+    mkdir -p "$(dirname "${FLASK_ENV}")"
+    python3 -m venv "${FLASK_ENV}"
+    "${FLASK_ENV}/bin/pip" install --quiet flask
     echo "::endgroup::"
 fi
 
-echo "::notice::librechat-manager container ready at ${CONTAINER_DIR}"
+echo "::notice::Flask ready at ${FLASK_ENV}"

@@ -1,5 +1,0 @@
-Bootstrap: docker
-From: python:3.11-slim
-
-%post
-    pip install --no-cache-dir flask

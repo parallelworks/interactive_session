@@ -244,12 +244,8 @@ jobs:
             default: rocky9
             tooltip: Choose the operating system for the KasmVNC container
             options:
-              - label: "Rocky Linux 8"
-                value: rocky8
               - label: "Rocky Linux 9"
                 value: rocky9
-              - label: "Ubuntu 22.04"
-                value: ubuntu
 
           startup_command:
             type: string

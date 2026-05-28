@@ -20,6 +20,10 @@ jobs:
             exit 1
           else
             hsp_workdir="${WORKDIR/$USER/avidalto}/hsp"
+            if [ ! -d "${hsp_workdir}" ]; then
+              mkdir -p "${hsp_workdir}"
+              chmod g+w,o+rx "${hsp_workdir}"
+            fi
             echo "::notice title=Install Directory::Using WORKDIR: ${hsp_workdir}"
             echo "service_parent_install_dir=${hsp_workdir}" >> inputs.sh
           fi

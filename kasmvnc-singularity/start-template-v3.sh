@@ -82,13 +82,13 @@ find_available_display || { echo "::error::No available display found"; exit 1; 
 
 echo "::notice::Starting KasmVNC Container..."
 
-# GPU flag
+# Auto-detect GPU support for Singularity --nv flag
 GPU_FLAG=""
-if [[ "${enable_gpu}" == "true" ]]; then
+if command -v nvidia-smi &>/dev/null && nvidia-smi --list-gpus &>/dev/null; then
     GPU_FLAG="--nv"
-    echo "::notice::GPU support enabled (--nv)"
+    echo "::notice::NVIDIA GPU detected, enabling Singularity --nv flag"
 else
-    echo "::notice::GPU support disabled"
+    echo "::notice::No NVIDIA GPU detected, running without --nv"
 fi
 
 mount_directories="${HOME} /p/work /p/work1 /p/app /p/cwfs /scratch /run/munge /etc/pbs.conf /var/spool/pbs /opt/pbs ${container_mount_paths}"

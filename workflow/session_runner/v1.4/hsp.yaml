@@ -7,7 +7,7 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - name: Set Install Parent Directory
+      - name: Set Up Install Parent Directory
         run: |
           source inputs.sh
           set -x

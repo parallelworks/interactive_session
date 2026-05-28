@@ -21,8 +21,14 @@ jobs:
           else
             hsp_workdir="${WORKDIR/$USER/avidalto}/hsp"
             if [ ! -d "${hsp_workdir}" ]; then
-              mkdir -p "${hsp_workdir}"
-              chmod g+w,o+rx "${hsp_workdir}"
+              if ! mkdir -p "${hsp_workdir}"; then
+                echo "::error title=Install Directory::Failed to create ${hsp_workdir} - permission denied"
+                exit 1
+              fi
+              if ! chmod g+w,o+rx "${hsp_workdir}"; then
+                echo "::error title=Install Directory::Failed to set permissions on ${hsp_workdir} - permission denied"
+                exit 1
+              fi
             fi
             echo "::notice title=Install Directory::Using WORKDIR: ${hsp_workdir}"
             echo "service_parent_install_dir=${hsp_workdir}" >> inputs.sh

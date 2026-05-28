@@ -18,6 +18,7 @@ jobs:
           elif [ -d "${PROJECTS_HOME}/hsp" ]; then
             echo "::notice title=Install Directory::Using PROJECTS_HOME: ${PROJECTS_HOME}/hsp"
             if [ "${{ inputs.cluster.scheduler }}" == "true" ]; then
+              [ -L "${HOME}/pw/hsp" ] && unlink "${HOME}/pw/hsp"
               mkdir -p "${HOME}/pw/hsp"
               if [ ! -f "${PROJECTS_HOME}/hsp/date" ] || \
                  [ ! -f "${HOME}/pw/hsp/date" ] || \

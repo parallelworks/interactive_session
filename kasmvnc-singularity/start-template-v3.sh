@@ -143,6 +143,8 @@ USERNS_FLAG=""
 WRITABLE_TMPFS_FLAG=""
 if [[ "$(hostname)" == *narwhal* ]]; then
     USERNS_FLAG="--userns"
+elif df -T "${container_dir}" 2>/dev/null | awk 'NR==2{print $2}' | grep -qi lustre; then
+    echo "::notice::Container is on a Lustre filesystem, skipping --writable-tmpfs (overlay not supported)"
 else
     WRITABLE_TMPFS_FLAG="--writable-tmpfs"
 fi

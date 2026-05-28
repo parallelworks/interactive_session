@@ -17,14 +17,14 @@ jobs:
             echo "::notice title=Install Directory::Using provided service_parent_install_dir: ${service_parent_install_dir}"
           elif [ -d "${PROJECTS_HOME}/hsp" ]; then
             echo "::notice title=Install Directory::Using PROJECTS_HOME: ${PROJECTS_HOME}/hsp"
-            # Create a symlink in HOME so compute nodes can resolve the path.
-            # HOME is always NFS-exported to compute nodes; PROJECTS_HOME may not be.
-            mkdir -p "${HOME}/pw"
-            if [ ! -L "${HOME}/pw/hsp" ]; then
-              ln -s "${PROJECTS_HOME}/hsp" "${HOME}/pw/hsp"
-              echo "::notice title=Install Directory::Created symlink ${HOME}/pw/hsp -> ${PROJECTS_HOME}/hsp"
+            if [ "${{ inputs.cluster.scheduler }}" == "true" ]; then
+              echo "::notice title=Install Directory::Scheduler enabled — rsyncing ${PROJECTS_HOME}/hsp to ${HOME}/pw/hsp"
+              mkdir -p "${HOME}/pw/hsp"
+              rsync -a "${PROJECTS_HOME}/hsp/" "${HOME}/pw/hsp/"
+              echo "service_parent_install_dir=${HOME}/pw/hsp" >> inputs.sh
+            else
+              echo "service_parent_install_dir=${PROJECTS_HOME}/hsp" >> inputs.sh
             fi
-            echo "service_parent_install_dir=${HOME}/pw/hsp" >> inputs.sh
           elif [ -d "${GLOBAL}/hsp" ]; then
             echo "::notice title=Install Directory::Using GLOBAL: ${GLOBAL}/hsp"
             echo "service_parent_install_dir=${GLOBAL}/hsp" >> inputs.sh

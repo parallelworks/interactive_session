@@ -181,6 +181,7 @@ jobs:
                 label: Number of GPUs
                 type: number
                 default: 0
+                min: 0
                 tooltip: '--gres=gpu:value slurm directive'
                 ignore: ${{ 'existing' != inputs.resource.provider }}
                 hidden: ${{ .ignore }}

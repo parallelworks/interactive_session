@@ -22,7 +22,7 @@ jobs:
               mkdir -p "${HOME}/pw/hsp"
               if [ ! -f "${PROJECTS_HOME}/hsp/date" ] || \
                  [ ! -f "${HOME}/pw/hsp/date" ] || \
-                 ! diff -q "${PROJECTS_HOME}/hsp/date" "${HOME}/pw/hsp/date" > /dev/null 2>&1; then
+                 [ "$(cat "${PROJECTS_HOME}/hsp/date")" != "$(cat "${HOME}/pw/hsp/date")" ]; then
                 echo "::notice title=Install Directory::Syncing ${PROJECTS_HOME}/hsp to ${HOME}/pw/hsp"
                 rsync -a "${PROJECTS_HOME}/hsp/" "${HOME}/pw/hsp/"
               else

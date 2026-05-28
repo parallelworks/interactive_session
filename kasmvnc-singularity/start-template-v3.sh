@@ -122,7 +122,13 @@ chmod 666 error.log
 # Create a per-job /tmp to avoid cross-user permission conflicts on shared nodes
 # (Singularity bind-mounts host /tmp by default; container entrypoint writes /tmp/env.sh)
 mkdir -p $PWD/container_tmp
+# Pre-create .X11-unix so Xvnc doesn't fail trying to mkdir it as root under --userns
+mkdir -p $PWD/container_tmp/.X11-unix
+# Writable XKB dir: under --userns /var/lib/xkb is read-only inside the image,
+# so xkbcomp can't write the compiled keymap and Xvnc fails to activate the keyboard.
+mkdir -p $PWD/xkb
 echo "rm -rf $PWD/container_tmp" >> cancel.sh
+echo "rm -rf $PWD/xkb" >> cancel.sh
 
 # Unset host env vars that corrupt the container's runtime.
 # On Cray EX systems, LD_LIBRARY_PATH carries PE paths (libsci, mpich, cce) that
@@ -141,8 +147,13 @@ fi
 
 USERNS_FLAG=""
 WRITABLE_TMPFS_FLAG=""
-if [[ "$(hostname)" == *narwhal* ]]; then
+_sing_bin=$(which singularity 2>/dev/null || which apptainer 2>/dev/null)
+if [ -n "${_sing_bin}" ] && ! test -u "${_sing_bin}"; then
+    # No setuid bit: unprivileged installation requires --userns
     USERNS_FLAG="--userns"
+    echo "::notice::Singularity has no setuid bit, enabling --userns"
+elif df -T "${container_dir}" 2>/dev/null | awk 'NR==2{print $2}' | grep -qi lustre; then
+    echo "::notice::Container is on a Lustre filesystem, skipping --writable-tmpfs (overlay not supported)"
 else
     WRITABLE_TMPFS_FLAG="--writable-tmpfs"
 fi
@@ -156,10 +167,12 @@ while [ $attempt -lt $max_attempts ]; do
     attempt=$((attempt + 1))
     if [ $attempt -gt 1 ]; then
         echo "::warning::Attempt $((attempt-1)) failed, finding new display for retry ${attempt}/${max_attempts}..."
-        rm -rf $PWD/container_tmp
+        rm -rf $PWD/container_tmp $PWD/xkb
         find_available_display || { echo "::error::No available display found"; exit 1; }
     fi
     mkdir -p $PWD/container_tmp
+    mkdir -p $PWD/container_tmp/.X11-unix
+    mkdir -p $PWD/xkb
 
     echo "::notice::Starting KasmVNC container (attempt ${attempt}/${max_attempts}) on display :${XdisplayNumber}..."
     set -x
@@ -179,6 +192,7 @@ while [ $attempt -lt $max_attempts ]; do
         --bind $PWD/empty:/etc/nginx/conf.d/default.conf \
         --bind $PWD/error.log:/var/log/nginx/error.log \
         --bind $PWD/container_tmp:/tmp \
+        --bind $PWD/xkb:/var/lib/xkb \
         "${container_dir}" &
     set +x
 

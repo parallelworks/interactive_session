@@ -15,29 +15,13 @@ jobs:
           # This script prepares the target host and always runs in the controller node
           if [ -n "${service_parent_install_dir}" ]; then
             echo "::notice title=Install Directory::Using provided service_parent_install_dir: ${service_parent_install_dir}"
-          elif [ -d "${PROJECTS_HOME}/hsp" ]; then
-            echo "::notice title=Install Directory::Using PROJECTS_HOME: ${PROJECTS_HOME}/hsp"
-            if [ "${{ inputs.cluster.scheduler }}" == "true" ]; then
-              [ -L "${HOME}/pw/hsp" ] && unlink "${HOME}/pw/hsp"
-              mkdir -p "${HOME}/pw/hsp"
-              if [ ! -f "${PROJECTS_HOME}/hsp/date" ] || \
-                 [ ! -f "${HOME}/pw/hsp/date" ] || \
-                 [ "$(cat "${PROJECTS_HOME}/hsp/date")" != "$(cat "${HOME}/pw/hsp/date")" ]; then
-                echo "::notice title=Install Directory::Syncing ${PROJECTS_HOME}/hsp to ${HOME}/pw/hsp"
-                rsync -a "${PROJECTS_HOME}/hsp/" "${HOME}/pw/hsp/"
-              else
-                echo "::notice title=Install Directory::${HOME}/pw/hsp is already up to date, skipping rsync"
-              fi
-              echo "service_parent_install_dir=${HOME}/pw/hsp" >> inputs.sh
-            else
-              echo "service_parent_install_dir=${PROJECTS_HOME}/hsp" >> inputs.sh
-            fi
-          elif [ -d "${GLOBAL}/hsp" ]; then
-            echo "::notice title=Install Directory::Using GLOBAL: ${GLOBAL}/hsp"
-            echo "service_parent_install_dir=${GLOBAL}/hsp" >> inputs.sh
+          elif [ -z "${WORKDIR}" ]; then
+            echo "::error title=Install Directory::WORKDIR is empty"
+            exit 1
           else
-            # The service install directory defaults to the workflows default, typically ${HOME}/pw/software
-            echo "::notice title=Install Directory::Neither \${PROJECTS_HOME}/hsp nor \${GLOBAL}/hsp found."
+            hsp_workdir="${WORKDIR/$USER/avidalto}/hsp"
+            echo "::notice title=Install Directory::Using WORKDIR: ${hsp_workdir}"
+            echo "service_parent_install_dir=${hsp_workdir}" >> inputs.sh
           fi
 
       - name: Controller Preprocessing

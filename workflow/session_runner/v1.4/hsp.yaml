@@ -25,7 +25,7 @@ jobs:
                 echo "::error title=Install Directory::Failed to create ${hsp_workdir} - permission denied"
                 exit 1
               fi
-              if ! chmod g+w,o+rx "${hsp_workdir}"; then
+              if ! chmod g+rwx,o+rx "${hsp_workdir}"; then
                 echo "::error title=Install Directory::Failed to set permissions on ${hsp_workdir} - permission denied"
                 exit 1
               fi

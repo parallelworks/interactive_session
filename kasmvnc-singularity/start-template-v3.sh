@@ -141,8 +141,11 @@ fi
 
 USERNS_FLAG=""
 WRITABLE_TMPFS_FLAG=""
-if [[ "$(hostname)" == *narwhal* ]]; then
+_sing_bin=$(which singularity 2>/dev/null || which apptainer 2>/dev/null)
+if [ -n "${_sing_bin}" ] && ! test -u "${_sing_bin}"; then
+    # No setuid bit: unprivileged installation requires --userns
     USERNS_FLAG="--userns"
+    echo "::notice::Singularity has no setuid bit, enabling --userns"
 elif df -T "${container_dir}" 2>/dev/null | awk 'NR==2{print $2}' | grep -qi lustre; then
     echo "::notice::Container is on a Lustre filesystem, skipping --writable-tmpfs (overlay not supported)"
 else

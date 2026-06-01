@@ -161,7 +161,7 @@ jobs:
                 default: ""
                 option-key: ${{ inputs.cluster.resource.name }}
                 tooltip: '--constraint=<value> slurm directive'
-                ignore: ${{ 'existing' != inputs.cluster.resource.provider || (inputs.cluster.resource.name != 'blueback' && inputs.cluster.resource.name != 'narwhal' && inputs.cluster.resource.name != 'nautilus' && inputs.cluster.resource.name != 'raider') }}
+                ignore: ${{ 'existing' != inputs.cluster.resource.provider || (inputs.cluster.resource.name != 'blueback' && inputs.cluster.resource.name != 'narwhal' && inputs.cluster.resource.name != 'nautilus' && inputs.cluster.resource.name != 'raider' && inputs.cluster.resource.name != 'crux') }}
                 hidden: ${{ .ignore }}
                 options:
                   blueback:
@@ -192,6 +192,9 @@ jobs:
                     - mla
                     - viz
                     - transfer
+                  crux:
+                    - AMD
+                    - Intel
               time:
                 label: Walltime
                 type: string

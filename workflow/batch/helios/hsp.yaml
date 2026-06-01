@@ -1,0 +1,274 @@
+configurations:
+  Carpenter:
+    inputs:
+      scheduler: true
+      pbs:
+        is_enabled: true
+        scheduler_directives: |
+          # Parameters that apply to all sites
+          #PBS -l walltime=00:30:00
+          #PBS -V
+          #PBS -q standard
+          #PBS -l select=1:ncpus=192:mpiprocs=192
+  Ruth:
+    inputs:
+      scheduler: true
+      pbs:
+        is_enabled: true
+        scheduler_directives: |
+          # Parameters that apply to all sites
+          #PBS -l walltime=00:30:00
+          #PBS -V
+          #PBS -q standard
+          #PBS -l select=1:ncpus=128:mpiprocs=128
+  Warhawk:
+    inputs:
+      scheduler: true
+      pbs:
+        is_enabled: true
+        scheduler_directives: |
+          # Parameters that apply to all sites
+          #PBS -l walltime=00:30:00
+          #PBS -V
+          #PBS -q standard
+          #PBS -l select=1:ncpus=128:mpiprocs=128
+  Wheat:
+    inputs:
+      scheduler: true
+      pbs:
+        is_enabled: true
+        account: ''
+        scheduler_directives: |
+          # Parameters that apply to all sites
+          #PBS -l walltime=00:30:00
+          #PBS -V
+          #PBS -q standard
+          #PBS -l select=1:ncpus=92:mpiprocs=92:nmlas=4
+env:
+  LOAD_CREATE: ${{ inputs.load_create }}
+  HELIOS_VERSION: ${{ inputs.helios_version }}
+  NUM_PROCESSOR: ${{ inputs.num_processor }}
+jobs:
+  helios_runner:
+    steps:
+      - uses: github/parallelworks/interactive_session@main
+        with:
+          $yaml: workflow/script_submitter/v3.6/hsp.yaml
+          resource: ${{ inputs.resource }}
+          rundir: ${{ inputs.rundir }}
+          shebang: ${{ inputs.advanced_options.shebang }}
+          use_existing_script: false
+          script: ${{ inputs.advanced_options.script }}
+          scheduler: ${{ inputs.scheduler }}
+          use_scheduler_agent: false
+          slurm:
+            is_enabled: ${{ inputs.slurm.is_enabled }}
+            account: ${{ inputs.slurm.account }}
+            partition: ${{ inputs.slurm.partition }}
+            qos: ${{ inputs.slurm.qos }}
+            cpus_per_task: ${{ inputs.slurm.cpus_per_task }}
+            nodes: ${{ inputs.slurm.nodes }}
+            gpus: ${{ inputs.slurm.gpus }}
+            node_type: ${{ inputs.slurm.node_type }}
+            time: ${{ inputs.slurm.time }}
+            scheduler_directives: ${{ inputs.slurm.scheduler_directives }}
+          pbs:
+            is_enabled: ${{ inputs.pbs.is_enabled }}
+            account: ${{ inputs.pbs.account }}
+            scheduler_directives: ${{ inputs.pbs.scheduler_directives }}
+'on':
+  execute:
+    inputs:
+      resource:
+        label: Resource Target
+        type: compute-clusters
+        autoselect: true
+        optional: false
+      rundir:
+        label: Helios Case Directory
+        type: string
+        tooltip: Directory with the Helios input files
+      num_processor:
+        label: Number of Processors
+        default: 16
+        type: number
+        tooltip: Number of processors to run the job with
+      load_create:
+        label: Command to load CREATE Environment
+        default: module load create
+        type: string
+      helios_version:
+        label: Helios Version
+        default: current
+        type: string
+        tooltip: Helios version to use when running the job
+      advanced_options:
+        type: group
+        label: Advanced Options
+        collapsed: true
+        items:
+          shebang:
+            label: Shebang
+            type: string
+            default: '#!/bin/bash'
+          script:
+            label: Script
+            type: editor
+            tooltip: Type the script to run without shebang and scheduler directives.
+            default: |
+              echo "$(date) Starting job"
+              ${LOAD_CREATE}
+              ${CREATE_HOME}/av/helios/${HELIOS_VERSION}/bin/csi -p ${NUM_PROCESSOR}
+      scheduler:
+        type: boolean
+        default: true
+        label: Schedule Job?
+        hidden: ${{ inputs.resource.schedulerType == '' }}
+        ignore: ${{ .hidden }}
+        tooltip: |
+          Yes → Job is submitted to the scheduler using sbatch, qsub, etc
+          No  → Job is executed in the controller or login node instead
+      slurm:
+        type: group
+        label: SLURM Directives
+        hidden: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        ignore: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        items:
+          is_enabled:
+            type: boolean
+            hidden: true
+            default: true
+            label: Is SLURM Enabled? Yes, unless the slurm section is hidden and ignored
+          account:
+            label: SLURM account
+            type: slurm-accounts
+            resource: ${{ inputs.resource }}
+            tooltip: '--account=value slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
+          partition:
+            type: slurm-partitions
+            label: SLURM partition
+            optional: true
+            resource: ${{ inputs.resource }}
+            tooltip: '--partition=value slurm directive'
+          qos:
+            label: Quality of Service [QoS]
+            type: slurm-qos
+            resource: ${{ inputs.resource }}
+            tooltip: '--qos=value slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
+          cpus_per_task:
+            label: CPUs per task
+            type: number
+            default: 1
+            tooltip: '--cpus-per-task= SLURM directive to set the number of CPUs per task'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
+          nodes:
+            label: Number of Nodes
+            type: number
+            default: 1
+            tooltip: '--nodes=value slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
+          gpus:
+            label: Number of GPUs
+            type: number
+            default: 0
+            min: 0
+            tooltip: '--gres=gpu:value slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
+          node_type:
+            label: Node Type
+            type: dropdown
+            optional: true
+            default: ""
+            option-key: ${{ inputs.resource.name }}
+            tooltip: '--constraint=<value> slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider || (inputs.resource.name != 'blueback' && inputs.resource.name != 'narwhal' && inputs.resource.name != 'nautilus' && inputs.resource.name != 'raider' && inputs.resource.name != 'crux') }}
+            hidden: ${{ .ignore }}
+            options:
+              blueback:
+                - standard
+                - bigmem
+                - mla
+                - viz
+                - transfer
+              narwhal:
+                - standard
+                - bigmem
+                - mla
+                - smla
+                - dmla
+                - viz
+                - transfer
+              nautilus:
+                - standard
+                - highclock
+                - bigmem
+                - mla
+                - viz
+                - transfer
+              raider:
+                - standard
+                - highclock
+                - bigmem
+                - mla
+                - viz
+                - transfer
+              crux:
+                - AMD
+                - Intel
+          time:
+            label: Walltime
+            type: string
+            default: '01:00:00'
+            tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job (format: D-HH:MM:SS or HH:MM:SS)'
+          scheduler_directives:
+            type: editor
+            optional: true
+            tooltip: |
+              Add extra SLURM directives, one per line, using the #SBATCH prefix. For example:
+              #SBATCH --exclusive
+              #SBATCH --nodelist=<node-name>
+            default: |
+              ##SBATCH --constraint=mla # uncomment for Navy and AFRL DSRC systems
+      pbs:
+        type: group
+        label: PBS Directives
+        hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+        ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+        items:
+          is_enabled:
+            type: boolean
+            hidden: true
+            default: true
+            label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
+          account:
+            label: Account
+            type: string
+            tooltip: PBS account for job submission (-A)
+          scheduler_directives:
+            label: Scheduler Directives
+            type: editor
+            tooltip: |
+              Add extra PBS directives, one per line, using the #PBS prefix. For example:
+              #PBS -l mem=16gb
+              #PBS -l ngpus=1
+            default: |
+              # Parameters that apply to all sites
+              #PBS -l walltime=01:00:00
+              #PBS -V
+              #PBS -q standard
+              # Remove first # to activate specific lines
+              #=====Ruth (Lustre, only vis has NVIDIA)=====
+              ##PBS -l select=1:ncpus=128:mpiprocs=128
+              #=====Warhawk (Lustre)====
+              ##PBS -l select=1:ncpus=128:mpiprocs=128
+              #=====Wheat (WEKA, nmlas=4|6)====
+              ##PBS -l select=1:ncpus=92:mpiprocs=92:nmlas=4
+              #=====Carpenter===
+              ##PBS -l select=1:ncpus=192:mpiprocs=192

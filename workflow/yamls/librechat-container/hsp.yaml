@@ -98,6 +98,7 @@ jobs:
               cpus_per_task: ${{ inputs.cluster.slurm.cpus_per_task }}
               nodes: ${{ inputs.cluster.slurm.nodes }}
               gpus: ${{ inputs.cluster.slurm.gpus }}
+              node_type: ${{ inputs.cluster.slurm.node_type }}
               scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
               time: ${{ inputs.cluster.slurm.time }}
             pbs:
@@ -204,6 +205,47 @@ jobs:
                 tooltip: '--gres=gpu:value slurm directive'
                 ignore: ${{ 'existing' != inputs.resource.provider }}
                 hidden: ${{ .ignore }}
+              node_type:
+                label: Node Type
+                type: dropdown
+                optional: true
+                default: ""
+                option-key: ${{ inputs.resource.name }}
+                tooltip: '--constraint=<value> slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider || (inputs.resource.name != 'blueback' && inputs.resource.name != 'narwhal' && inputs.resource.name != 'nautilus' && inputs.resource.name != 'raider' && inputs.resource.name != 'crux') }}
+                hidden: ${{ .ignore }}
+                options:
+                  blueback:
+                    - standard
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  narwhal:
+                    - standard
+                    - bigmem
+                    - mla
+                    - smla
+                    - dmla
+                    - viz
+                    - transfer
+                  nautilus:
+                    - standard
+                    - highclock
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  raider:
+                    - standard
+                    - highclock
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  crux:
+                    - AMD
+                    - Intel
               time:
                 label: Walltime
                 type: string

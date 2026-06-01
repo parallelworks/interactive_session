@@ -117,11 +117,6 @@ jobs:
             echo "#SBATCH --partition=${{ inputs.slurm.partition }}" >> headers.sh
           fi
 
-          # The scheduler directives parameter is always optional
-          if ! [ -z "${{ inputs.slurm.scheduler_directives }}" ]; then
-            echo "${{ inputs.slurm.scheduler_directives }}" >> headers.sh
-          fi
-
           if ! [ -z "${{ inputs.slurm.time }}" ]; then
             echo "#SBATCH --time=${{ inputs.slurm.time }}" >> headers.sh
           fi
@@ -135,7 +130,17 @@ jobs:
             if [[ "${GPUS:-0}" != "0" ]]; then
               echo "#SBATCH --gres=gpu:${GPUS}" >> headers.sh
             fi
+            if ! [ -z "${{ inputs.slurm.node_type }}" ]; then
+              echo "#SBATCH --constraint=${{ inputs.slurm.node_type }}" >> headers.sh
+            fi
           fi
+
+          # The scheduler directives parameter is always optional
+          # Scheduler directives must be the last to be added to avoid format issues
+          if ! [ -z "${{ inputs.slurm.scheduler_directives }}" ]; then
+            echo "${{ inputs.slurm.scheduler_directives }}" >> headers.sh
+          fi
+
           # Remove lines that don't start with #
           sed -i '/^#/!d' headers.sh
           echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
@@ -536,9 +541,52 @@ jobs:
             label: Number of GPUs
             type: number
             default: 0
+            min: 0
             tooltip: '--gres=gpu:value slurm directive'
             ignore: ${{ 'existing' != inputs.resource.provider }}
             hidden: ${{ .ignore }}
+          node_type:
+            label: Node Type
+            type: dropdown
+            optional: true
+            default: ""
+            option-key: ${{ inputs.resource.name }}
+            tooltip: '--constraint=<value> slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider || (inputs.resource.name != 'blueback' && inputs.resource.name != 'narwhal' && inputs.resource.name != 'nautilus' && inputs.resource.name != 'raider' && inputs.resource.name != 'crux') }}
+            hidden: ${{ .ignore }}
+            options:
+              blueback:
+                - standard
+                - bigmem
+                - mla
+                - viz
+                - transfer
+              narwhal:
+                - standard
+                - bigmem
+                - mla
+                - smla
+                - dmla
+                - viz
+                - transfer
+              nautilus:
+                - standard
+                - highclock
+                - bigmem
+                - mla
+                - viz
+                - transfer
+              raider:
+                - standard
+                - highclock
+                - bigmem
+                - mla
+                - viz
+                - transfer
+              crux:
+                - AMD
+                - Intel
+
           time:
             label: Walltime
             type: string

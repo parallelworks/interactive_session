@@ -13,7 +13,7 @@ jobs:
           # This script prepares the target host and always runs in the controller node
           cp ${{ inputs.service.inputs_sh }} ${{ inputs.service.rundir }}/controller-preprocessing-${PW_JOB_ID}.sh
           cat ${{ inputs.service.controller_script }} >> ${{ inputs.service.rundir }}/controller-preprocessing-${PW_JOB_ID}.sh
-          bash ${{ inputs.service.rundir }}/controller-preprocessing-${PW_JOB_ID}.sh
+          bash -l ${{ inputs.service.rundir }}/controller-preprocessing-${PW_JOB_ID}.sh
       - name: Create Service Script
         run: |
           rm -f HOSTNAME SESSION_PORT job.ended job.started
@@ -68,7 +68,7 @@ jobs:
         with:
           $yaml: workflow/script_submitter/v3.6/noaa.yaml
           resource: ${{ inputs.resource }}
-          shebang: '#!/bin/bash'
+          shebang: '#!/bin/bash -l'
           rundir: ${{ inputs.service.rundir }}
           use_existing_script: true
           script_path: ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh

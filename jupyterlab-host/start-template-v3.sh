@@ -122,10 +122,7 @@ if which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]];
     echo "kill ${pid} #socat" >> cancel.sh
 fi
 
-echo "::group::Nginx Proxy"
-echo "::notice::Starting nginx wrapper on service port ${service_port}"
-
-# Write config file
+# Write nginx config files (container is started later, after JupyterLab is ready)
 cat >> config.conf <<HERE
 server {
  listen ${service_port};
@@ -187,61 +184,6 @@ http {
 }
 HERE
 
-if which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]]; then
-    container_name="nginx-${service_port}"
-    touch empty
-    touch nginx.logs
-    echo "docker volume rm ${container_name}" >> cancel.sh
-    docker volume create ${container_name}
-    echo "docker stop ${container_name}" >> cancel.sh
-    echo "docker rm ${container_name}" >> cancel.sh
-    chmod 644 ${PWD}/{nginx.conf,config.conf,empty}
-    docker run  -d --name ${container_name} \
-         --add-host=host.docker.internal:host-gateway \
-         -p ${service_port}:${service_port} \
-         -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
-         -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
-         -v $PWD/empty:/etc/nginx/conf.d/default.conf \
-         nginxinc/nginx-unprivileged:1.25.3
-    # Print logs
-    docker logs ${container_name}
-elif sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
-    container_name="nginx-${service_port}"
-    # Remove container when job is canceled
-    echo "sudo docker stop ${container_name}" >> cancel.sh
-    echo "sudo docker rm ${container_name}" >> cancel.sh
-    # Start container
-    sudo service docker start
-    touch empty
-    touch nginx.logs
-    # change ownership to nginx user
-    sudo chown 101:101 nginx.conf config.conf empty nginx.logs  
-    sudo chmod 644 *.conf
-    sudo docker run  -d --name ${container_name} \
-         -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
-         -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
-         -v $PWD/empty:/etc/nginx/conf.d/default.conf \
-         -v $PWD/nginx.logs:/var/log/nginx/access.log \
-         -v $PWD/nginx.logs:/var/log/nginx/error.log \
-         --network=host nginxinc/nginx-unprivileged:1.25.3
-    # Print logs
-    sudo docker logs ${container_name}
-elif which singularity >/dev/null 2>&1; then
-    echo "::notice::Running singularity container ${service_nginx_sif}"
-    # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
-    # and other users cannot use the node. Was not able to change this in the config.conf.
-    mkdir -p ./tmp
-    # Need to overwrite default configuration!
-    touch empty
-    singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B $PWD/nginx.conf:/etc/nginx/nginx.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} >> nginx.logs 2>&1 &
-    pid=$!
-    echo "kill ${pid}" >> cancel.sh
-else
-    echo "::error title=Error::Need Docker or Singularity to start NGINX proxy"
-    exit 1
-fi
-echo "::endgroup::"
-
 
 ####################
 # START JUPYTERLAB #
@@ -271,8 +213,6 @@ sed -i "s|^.*c\.ServerApp\.port.*|c.ServerApp.port = ${jupyterlab_port}|" jupyte
 sed -i "s|^.*c\.ServerApp\.token.*|c.ServerApp.token = ''|" jupyter_lab_config.py
 sed -i "s|^.*c\.ServerApp\.tornado_settings.*|c.ServerApp.tornado_settings = {\"static_url_prefix\":\"${basepath}/static/\"}|" jupyter_lab_config.py
 sed -i "s|^.*c\.ServerApp\.root_dir.*|c.ServerApp.root_dir = '${service_notebook_dir}'|" jupyter_lab_config.py
-
-cd ${service_notebook_dir}
 
 # JUICE https://docs.juicelabs.co/docs/juice/intro
 juice_cmd=""  # Initialize to empty
@@ -305,9 +245,91 @@ date
 mkdir -p ${PW_PARENT_JOB_DIR}/jupyter_runtime
 export JUPYTER_RUNTIME_DIR=${PW_PARENT_JOB_DIR}/jupyter_runtime
 echo "::endgroup::"
-${juice_cmd} jupyter-lab --port=${jupyterlab_port} --no-browser --config=${PW_PARENT_JOB_DIR}/jupyter_lab_config.py --allow-root
-#jupyter-lab --port=${jupyterlab_port} --ip ${HOSTNAME} --no-browser --config=${PWD}/jupyter_lab_config.py
 
-# Keep container alive indefinitely
-# Using 'inf' which is bash-specific shorthand for infinity
+# Start JupyterLab in the background so nginx can be delayed until it is ready.
+# root_dir is set in the config, so cd is not needed.
+${juice_cmd} jupyter-lab --port=${jupyterlab_port} --no-browser --config=${PW_PARENT_JOB_DIR}/jupyter_lab_config.py --allow-root &
+jlab_pid=$!
+echo "kill ${jlab_pid} # jupyter-lab" >> cancel.sh
+
+# Wait for JupyterLab to accept connections before starting nginx.
+# This prevents the session from being exposed to users before the backend is ready.
+echo "::group::Waiting for JupyterLab"
+echo "::notice::Waiting for JupyterLab on port ${jupyterlab_port}"
+for i in $(seq 1 120); do
+    if curl -sf "http://127.0.0.1:${jupyterlab_port}${basepath}/" > /dev/null 2>&1; then
+        echo "::notice::JupyterLab ready after ${i}s"
+        break
+    fi
+    if ! kill -0 ${jlab_pid} 2>/dev/null; then
+        echo "::error title=Error::JupyterLab process exited unexpectedly"
+        exit 1
+    fi
+    sleep 1
+done
+echo "::endgroup::"
+
+
+##############################
+# START NGINX (backend ready) #
+##############################
+echo "::group::Nginx Proxy"
+echo "::notice::Starting nginx wrapper on service port ${service_port}"
+
+if which docker >/dev/null 2>&1 && [[ "${service_rootless_docker}" == "true" ]]; then
+    container_name="nginx-${service_port}"
+    touch empty
+    touch nginx.logs
+    echo "docker volume rm ${container_name}" >> cancel.sh
+    docker volume create ${container_name}
+    echo "docker stop ${container_name}" >> cancel.sh
+    echo "docker rm ${container_name}" >> cancel.sh
+    chmod 644 ${PW_PARENT_JOB_DIR}/nginx.conf ${PW_PARENT_JOB_DIR}/config.conf ${PW_PARENT_JOB_DIR}/empty
+    docker run  -d --name ${container_name} \
+         --add-host=host.docker.internal:host-gateway \
+         -p ${service_port}:${service_port} \
+         -v ${PW_PARENT_JOB_DIR}/config.conf:/etc/nginx/conf.d/config.conf \
+         -v ${PW_PARENT_JOB_DIR}/nginx.conf:/etc/nginx/nginx.conf \
+         -v ${PW_PARENT_JOB_DIR}/empty:/etc/nginx/conf.d/default.conf \
+         nginxinc/nginx-unprivileged:1.25.3
+    docker logs ${container_name}
+elif sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
+    container_name="nginx-${service_port}"
+    echo "sudo docker stop ${container_name}" >> cancel.sh
+    echo "sudo docker rm ${container_name}" >> cancel.sh
+    sudo service docker start
+    touch empty
+    touch nginx.logs
+    sudo chown 101:101 ${PW_PARENT_JOB_DIR}/nginx.conf ${PW_PARENT_JOB_DIR}/config.conf ${PW_PARENT_JOB_DIR}/empty ${PW_PARENT_JOB_DIR}/nginx.logs
+    sudo chmod 644 ${PW_PARENT_JOB_DIR}/nginx.conf ${PW_PARENT_JOB_DIR}/config.conf
+    sudo docker run  -d --name ${container_name} \
+         -v ${PW_PARENT_JOB_DIR}/config.conf:/etc/nginx/conf.d/config.conf \
+         -v ${PW_PARENT_JOB_DIR}/nginx.conf:/etc/nginx/nginx.conf \
+         -v ${PW_PARENT_JOB_DIR}/empty:/etc/nginx/conf.d/default.conf \
+         -v ${PW_PARENT_JOB_DIR}/nginx.logs:/var/log/nginx/access.log \
+         -v ${PW_PARENT_JOB_DIR}/nginx.logs:/var/log/nginx/error.log \
+         --network=host nginxinc/nginx-unprivileged:1.25.3
+    sudo docker logs ${container_name}
+elif which singularity >/dev/null 2>&1; then
+    echo "::notice::Running singularity container ${service_nginx_sif}"
+    # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid
+    # and other users cannot use the node. Was not able to change this in the config.conf.
+    mkdir -p ${PW_PARENT_JOB_DIR}/tmp
+    touch ${PW_PARENT_JOB_DIR}/empty
+    singularity run \
+        -B ${PW_PARENT_JOB_DIR}/tmp:/tmp \
+        -B ${PW_PARENT_JOB_DIR}/config.conf:/etc/nginx/conf.d/config.conf \
+        -B ${PW_PARENT_JOB_DIR}/nginx.conf:/etc/nginx/nginx.conf \
+        -B ${PW_PARENT_JOB_DIR}/empty:/etc/nginx/conf.d/default.conf \
+        ${service_nginx_sif} >> ${PW_PARENT_JOB_DIR}/nginx.logs 2>&1 &
+    pid=$!
+    echo "kill ${pid}" >> cancel.sh
+else
+    echo "::error title=Error::Need Docker or Singularity to start NGINX proxy"
+    exit 1
+fi
+echo "::endgroup::"
+
+# Keep job alive - wait for JupyterLab process
+wait ${jlab_pid}
 sleep inf

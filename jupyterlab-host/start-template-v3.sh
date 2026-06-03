@@ -264,6 +264,7 @@ sed -i "s|^.*c\.LabApp\.default_url.*|c.LabApp.default_url = '${basepath}/lab'|"
 sed -i "s|^.*c\.LabApp\.static_url_prefix.*|c.LabApp.static_url_prefix = '${basepath}/static'|" jupyter_lab_config.py
 sed -i "s|^.*c\.ServerApp\.allow_origin.*|c.ServerApp.allow_origin = '*'|" jupyter_lab_config.py
 sed -i "s|^.*c\.ServerApp\.allow_remote_access.*|c.ServerApp.allow_remote_access = True|" jupyter_lab_config.py
+sed -i "s|^.*c\.ServerApp\.ip.*|c.ServerApp.ip = '127.0.0.1'|" jupyter_lab_config.py
 sed -i "s|^.*c\.ServerApp\.base_url.*|c.ServerApp.base_url = '${basepath}'|" jupyter_lab_config.py
 sed -i "s|^.*c\.ServerApp\.default_url.*|c.ServerApp.default_url = '${basepath}/'|" jupyter_lab_config.py
 sed -i "s|^.*c\.ServerApp\.port.*|c.ServerApp.port = ${jupyterlab_port}|" jupyter_lab_config.py

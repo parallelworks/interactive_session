@@ -85,12 +85,16 @@ else
     LIBRECHAT_HOSTNAME=""
 fi
 
-if [ -n "${resource_uri:-}" ] && [ -n "${LIBRECHAT_HOSTNAME:-}" ]; then
-    LIBRECHAT_SSH="pw ssh ${resource_uri} ssh ${LIBRECHAT_HOSTNAME}"
+if [ -n "${resource_uri:-}" ]; then
+    if [ "${scheduler:-false}" = "true" ] && [ -n "${LIBRECHAT_HOSTNAME:-}" ]; then
+        LIBRECHAT_SSH="pw ssh ${resource_uri} ssh ${LIBRECHAT_HOSTNAME}"
+    else
+        LIBRECHAT_SSH="pw ssh ${resource_uri}"
+    fi
     echo "::notice::LIBRECHAT_SSH=${LIBRECHAT_SSH}"
 else
     LIBRECHAT_SSH=""
-    echo "::notice::LIBRECHAT_SSH not set (resource_uri='${resource_uri:-}' hostname='${LIBRECHAT_HOSTNAME:-}') — restart commands will run locally"
+    echo "::notice::LIBRECHAT_SSH not set (resource_uri='${resource_uri:-}') — restart commands will run locally"
 fi
 
 # ── Cancel script ─────────────────────────────────────────────────────────────

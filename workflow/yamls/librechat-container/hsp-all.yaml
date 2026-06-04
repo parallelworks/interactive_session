@@ -148,6 +148,7 @@ jobs:
           librechat_dir="${{ inputs.service.librechat_dir }}"
           resource_uri="${{ inputs.resource.uri }}"
           librechat_job_dir="${PW_PARENT_JOB_DIR}/librechat"
+          scheduler="${{ inputs.cluster.scheduler }}"
           EOF
           # Remove empty variables
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh

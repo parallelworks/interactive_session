@@ -68,7 +68,8 @@ jobs:
             echo "partition=${{ inputs.cluster.slurm.partition_tag_cloud }}" | tee -a $OUTPUTS
           fi
 
-      - uses: github/parallelworks/interactive_session@main
+      - name: Session Runner
+        uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
           $yaml: workflow/session_runner/v1.4/noaa.yaml

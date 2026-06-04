@@ -63,7 +63,8 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - uses: github/parallelworks/interactive_session@main
+      - name: Session Runner
+        uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
           $yaml: workflow/script_submitter/v3.6/noaa.yaml

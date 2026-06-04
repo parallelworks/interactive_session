@@ -67,6 +67,12 @@ PYEOF
     librechat_html_bind=(--bind "$_patched:/app/client/dist/index.html")
 fi
 
+# Bind to :: (dual-stack) on IPv6-enabled systems so the platform proxy can
+# connect even when the hostname resolves to an IPv6 address first.
+# Falls back to 0.0.0.0 on IPv4-only systems.
+_lc_host=0.0.0.0
+[ -f /proc/net/if_inet6 ] && _lc_host=::
+
 stop_existing librechat
 run_bg librechat \
   singularity exec \
@@ -78,7 +84,7 @@ run_bg librechat \
     --bind "$BASE/images:/app/client/public/images" \
     --bind "$BASE/uploads:/app/uploads" \
     --bind "$BASE/logs:/app/logs" \
-    --env HOST=0.0.0.0 \
+    --env "HOST=${_lc_host}" \
     --env "PORT=$service_port" \
     --env "DOMAIN_SERVER=http://localhost:$service_port" \
     --env "MONGO_URI=mongodb://localhost:$MONGODB_PORT/LibreChat" \

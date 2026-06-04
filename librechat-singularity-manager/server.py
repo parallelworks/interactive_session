@@ -361,7 +361,17 @@ if __name__ == '__main__':
         print('ERROR: DATA_DIR env var not set', flush=True)
         raise SystemExit(1)
 
-    print(f'LibreChat Manager listening on port {MGR_PORT}', flush=True)
+    # Bind to :: (dual-stack) on IPv6-enabled systems so the platform proxy
+    # can connect when the hostname resolves to an IPv6 address first.
+    import socket as _socket
+    try:
+        _s = _socket.socket(_socket.AF_INET6, _socket.SOCK_STREAM)
+        _s.close()
+        _bind_host = '::'
+    except OSError:
+        _bind_host = '0.0.0.0'
+
+    print(f'LibreChat Manager listening on port {MGR_PORT} (host={_bind_host})', flush=True)
     print(f'DATA_DIR={DATA_DIR}', flush=True)
     print(f'LIBRECHAT_SSH={LIBRECHAT_SSH!r}', flush=True)
-    app.run(host='0.0.0.0', port=MGR_PORT, threaded=True, debug=False)
+    app.run(host=_bind_host, port=MGR_PORT, threaded=True, debug=False)

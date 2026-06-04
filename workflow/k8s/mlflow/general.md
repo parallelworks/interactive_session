@@ -6,5 +6,5 @@ This workflow launches MLFlow on a Kubernetes cluster using a user-specified ima
 - **Set Namespace:** Specify a namespace (e.g., default).
 - **Choose an Image:** Default is `ubuntu/mlflow:2.1.1_1.0-22.04`.
 - **Configure Resources:** Set CPU, memory, and optional GPU requests/limits.
-- **Run the Workflow:** Deploy Code Server and access it via a web interface.
+- **Run the Workflow:** Deploy MLFlow and access it via a web interface.
 

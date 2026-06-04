@@ -66,7 +66,7 @@ On HSP clusters, configure your SLURM account, QoS, and node count as required b
 
 ## What Happens at Launch
 
-1. **Controller (login node)**: Downloads the pre-built SIF images from the GitHub container registry on first run. Clones (or updates) the LibreChat repository to `librechat_dir`. Copies `.env.example` to `.env`, sets `DOMAIN_CLIENT` for Activate platform access, and appends any provided API keys. Writes a `librechat.yaml` pre-configured with the GenAI MIL and ACTIVATE platform endpoints (skipped if a custom `librechat_config` path is provided and points to an existing file).
+1. **Controller (login node)**: Downloads the pre-built SIF images from the GitHub container registry on first run. Clones (or updates) the LibreChat repository to `librechat_dir`. Copies `.env.example` to `.env`, sets `DOMAIN_CLIENT` for Activate platform access, and appends any provided API keys. Writes a `librechat.yaml` pre-configured with the GenAI MIL and ACTIVATE platform endpoints (a custom `librechat_config` path, if provided, takes precedence when LibreChat starts).
 
 2. **Start script (compute/login node)**: Allocates ports for all five services, then starts them in dependency order: MongoDB → MeiliSearch → PostgreSQL → RAG API → LibreChat. Each service is health-checked before the next one starts.
 

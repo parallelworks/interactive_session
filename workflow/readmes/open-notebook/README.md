@@ -6,8 +6,8 @@ Launch [Open Notebook](https://github.com/lfnovo/open-notebook) as an interactiv
 
 - Full Open Notebook web UI accessible directly from the platform session
 - Persistent data across session restarts when using stable data directories
-- Nginx reverse proxy with session basepath integration
-- Supports both privileged and rootless Docker environments
+- Session basepath integration for access through the Activate platform
+- Works with Docker accessible directly or via `sudo`
 - SLURM and PBS scheduler support for running on compute nodes
 
 ## Use Cases
@@ -38,7 +38,7 @@ Launch [Open Notebook](https://github.com/lfnovo/open-notebook) as an interactiv
 
 ## Requirements
 
-- Docker must be installed and accessible on the target node (privileged or rootless)
+- Docker must be installed and accessible on the target node (directly or via `sudo`)
 - The `pw` agent binary must be in `PATH` (provided automatically by the platform)
 - Outbound internet access from the service node is required on first launch to pull Docker images
 

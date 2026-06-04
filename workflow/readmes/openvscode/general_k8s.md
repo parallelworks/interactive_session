@@ -1,7 +1,7 @@
 # OpenVSCode Interactive Session
 This workflow starts an OpenVSCode server [interactive session](../../../README.md), on either a **Compute Cluster** (SLURM or PBS) or a **Kubernetes Cluster**.
 
-Use the `Target Type` input to select your environment.
+Select a resource under **Service host** — the workflow automatically uses the Compute Cluster or Kubernetes path based on the resource type you choose.
 
 ## Compute Cluster
 Launches a Code Server server on a **Compute Cluster** using a user-specified release. 

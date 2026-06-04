@@ -58,7 +58,7 @@ This means:
 ## Configuration
 
 ### Container Runtime
-Choose **Docker** or **Singularity** depending on what is available on your cluster. Singularity is the default and requires no root privileges.
+Choose **Docker** or **Singularity** depending on what is available on your cluster. Docker is the default; Singularity requires no root privileges and is preferred on clusters without a Docker daemon.
 
 ### Operating System
 Selects the KasmVNC container image (Rocky Linux 8, Rocky Linux 9, or Ubuntu 22.04). This controls the look-and-feel of the desktop window manager only — it does **not** affect the host OS or the tools available in the xterm terminal.
@@ -70,7 +70,7 @@ Specify a command to run automatically when the session starts (e.g., `firefox`,
 Common cluster directories (`/p/home`, `/p/work`, `/scratch`, etc.) are automatically mounted into the container if they exist. Specify extra paths (one per line) for additional data access inside the container itself.
 
 ### Compute Resources
-Configure CPU, memory, walltime, and GPU requirements. GPU support requires selecting a GPU-enabled partition and enabling the appropriate SLURM/PBS directives.
+Configure CPU, memory, and walltime. With Singularity, NVIDIA GPUs are auto-detected and enabled (`--nv`) when present; request GPU hardware through your scheduler directives (e.g. `#SBATCH --gres=gpu:1` for SLURM or `#PBS -l ngpus=1` for PBS).
 
 ---
 
@@ -84,7 +84,7 @@ Configure CPU, memory, walltime, and GPU requirements. GPU support requires sele
 ## Getting Started
 
 1. Select your cluster resource and configure scheduler settings (partition, CPUs, memory, walltime)
-2. Choose your container runtime (Singularity recommended)
+2. Choose your container runtime (Docker is the default; choose Singularity if Docker is unavailable)
 3. Optionally set a startup application or additional mount paths
 4. Launch the session
 5. Click the link to open the browser-based desktop

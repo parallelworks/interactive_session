@@ -1,7 +1,7 @@
 ## RStudio Interactive Session
 This workflow launches RStudio in a remote desktop [interactive session](../../../README.md) accessible via a web browser on a **Compute Cluster** (SLURM or PBS) or as a container on a **Kubernetes Cluster** using the official RStudio docker [image](https://hub.docker.com/r/rocker/rstudio).
 
-Use the `Target Type` input to select your environment.
+Select a resource under **Service host** — the workflow automatically uses the Compute Cluster or Kubernetes path based on the resource type you choose.
 
 ## Compute Cluster
 Runs RStudio in a remote desktop session on a SLURM or PBS cluster using TurboVNC, TigerVNC, or KasmVNC, depending on the installed VNC software.
@@ -17,5 +17,5 @@ Deploys an RStudio container on a Kubernetes cluster with user-defined image and
 - **Set Namespace:** Specify a namespace (e.g., default).
 - **Choose an Image:** Default is `rocker/rstudio` from [this](https://hub.docker.com/r/rocker/rstudio) DockerHub repository. 
 - **Configure Resources:** Set CPU, memory, and optional GPU requests/limits.
-- **Run the Workflow:** Deploy Code Server and access it via a web interface.
+- **Run the Workflow:** Deploy RStudio and access it via a web interface.
 

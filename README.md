@@ -10,7 +10,12 @@ This repository contains interactive session workflows for the Activate platform
 | `jupyter-host` | Legacy Jupyter Notebook |
 | `openvscode` | VS Code in the browser |
 | `vncserver` | Remote desktop (VNC) with various GUI applications |
+| `kasmvnc` | Browser-based KasmVNC remote desktop (Docker or Singularity) |
 | `webshell` | Browser-based terminal |
+| `langflow` | Visual builder for AI/LLM workflows (host or Singularity) |
+| `librechat` | Multi-model AI chat interface (LibreChat, via Singularity) |
+| `n8n` | Workflow automation via a visual node editor (Docker or Singularity) |
+| `open-notebook` | AI research notebook backed by SurrealDB (Docker) |
 
 ## How It Works
 

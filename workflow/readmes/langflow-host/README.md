@@ -12,11 +12,11 @@
 
 ## Installation
 
-Langflow is installed automatically by the controller script into a Python 3.11 virtual environment under the **Install Directory** (default: `~/pw/software/langflow/venv`). The installation is shared across sessions launched on the same cluster, so it only runs once.
+Langflow is installed automatically by the controller script into a Python 3.11 virtual environment under the **Install Directory** (default: `~/pw/software`; the venv is created at `<Install Directory>/langflow/venv`). The installation is shared across sessions launched on the same cluster, so it only runs once.
 
 ## Data Persistence
 
-Flows, credentials, and settings are stored in the **Langflow Data Directory** (default: `~/.langflow`). If this path is on a shared or persistent filesystem, your work survives across sessions. To resume a previous session's state, launch with the same data directory.
+Flows, credentials, and settings are stored in the **Langflow Data Directory** (default: `~/pw/.langflow`). If this path is on a shared or persistent filesystem, your work survives across sessions. To resume a previous session's state, launch with the same data directory.
 
 ## Stopping the Session
 

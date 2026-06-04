@@ -51,7 +51,8 @@ env:
 jobs:
   helios_runner:
     steps:
-      - uses: github/parallelworks/interactive_session@main
+      - name: Session Runner
+        uses: github/parallelworks/interactive_session@main
         with:
           $yaml: workflow/script_submitter/v3.6/hsp.yaml
           resource: ${{ inputs.resource }}

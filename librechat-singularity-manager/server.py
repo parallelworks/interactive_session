@@ -68,6 +68,7 @@ def _run_restart(jid, script_path):
             cmd = shlex.split(LIBRECHAT_SSH) + ['bash', script_path]
         else:
             cmd = ['bash', script_path]
+        _jobs.append(jid, '$ ' + ' '.join(shlex.quote(c) for c in cmd))
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,

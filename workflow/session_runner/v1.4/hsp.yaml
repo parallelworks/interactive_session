@@ -309,18 +309,18 @@ jobs:
                 type: dropdown
                 optional: true
                 default: ""
-                option-key: ${{ inputs.resource.name }}
+                option-key: ${{ inputs.resource.ip }}
                 tooltip: '--constraint=<value> slurm directive'
-                ignore: ${{ 'existing' != inputs.resource.provider || (inputs.resource.name != 'blueback' && inputs.resource.name != 'narwhal' && inputs.resource.name != 'nautilus' && inputs.resource.name != 'raider' && inputs.resource.name != 'crux') }}
+                ignore: ${{ 'existing' != inputs.resource.provider || (inputs.resource.ip != 'blueback.navydsrc.hpc.mil' && inputs.resource.ip != 'narwhal.navydsrc.hpc.mil' && inputs.resource.ip != 'nautilus.navydsrc.hpc.mil' && inputs.resource.ip != 'raider.afrl.hpc.mil' && inputs.resource.ip != 'crux.mhpcc.hpc.mil') }}
                 hidden: ${{ .ignore }}
                 options:
-                  blueback:
+                  blueback.navydsrc.hpc.mil:
                     - standard
                     - bigmem
                     - mla
                     - viz
                     - transfer
-                  narwhal:
+                  narwhal.navydsrc.hpc.mil:
                     - standard
                     - bigmem
                     - mla
@@ -328,21 +328,21 @@ jobs:
                     - dmla
                     - viz
                     - transfer
-                  nautilus:
+                  nautilus.navydsrc.hpc.mil:
                     - standard
                     - highclock
                     - bigmem
                     - mla
                     - viz
                     - transfer
-                  raider:
+                  raider.afrl.hpc.mil:
                     - standard
                     - highclock
                     - bigmem
                     - mla
                     - viz
                     - transfer
-                  crux:
+                  crux.mhpcc.hpc.mil:
                     - AMD
                     - Intel
               time:

@@ -22,7 +22,7 @@ To rebuild or update the container, use `langflow-singularity/build-container.sh
 
 Flows, credentials, and settings are stored in the **Langflow Data Directory** (default: `~/pw/.langflow`). If this path is on a shared or persistent filesystem, your work survives across sessions. To resume a previous session's state, launch with the same data directory.
 
-The **Database URL** (default: `sqlite:////~/pw/.langflow/langflow.db`) controls where Langflow stores its internal database. The default SQLite file lives in the data directory so it is preserved across sessions automatically. To use a PostgreSQL backend, set a `postgresql://` URL here.
+The **Database URL** (default: `sqlite:////${HOME}/pw/.langflow/langflow.db`) controls where Langflow stores its internal database. The default SQLite file lives in the data directory so it is preserved across sessions automatically. To use a PostgreSQL backend, set a `postgresql://` URL here.
 
 ## Custom Components
 
@@ -47,7 +47,7 @@ The session sets the following Langflow environment variables automatically:
 | `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` | `true` | Skips API key check when auto-login is enabled |
 | `LANGFLOW_CONFIG_DIR` | form input | Config/custom-components directory (default: `~/pw/.langflow`) |
 | `LANGFLOW_COMPONENTS_PATH` | form input | Extra custom components directory; only set when provided |
-| `LANGFLOW_DATABASE_URL` | form input | Database URL (default: `sqlite:////~/pw/.langflow/langflow.db`) |
+| `LANGFLOW_DATABASE_URL` | form input | Database URL (default: `sqlite:////${HOME}/pw/.langflow/langflow.db`) |
 
 ## Stopping the Session
 

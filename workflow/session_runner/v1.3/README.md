@@ -23,9 +23,10 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
-      - uses: marketplace/script_submitter/v3.5
+      - uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
+          $yaml: workflow/session_runner/v1.3/general.yaml
           session: ${{ sessions.session }}
           resource: ${{ inputs.cluster.resource }}
           cluster:

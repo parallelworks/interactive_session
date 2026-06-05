@@ -9,7 +9,7 @@ When creating a new interactive session workflow, the YAML will be named `[deplo
 ## General Requirements
 
 1. DO NOT add k8s support - create only the standard deployment workflow
-2. Use the session_runner subworkflow (github/parallelworks/interactive_session@mai with $yaml: workflow/session_runner/v1.4/<deployment>.yaml) for deployment
+2. Use the session_runner subworkflow (github/parallelworks/interactive_session@main with $yaml: workflow/session_runner/v1.4/<deployment>.yaml) for deployment
 3. Follow the existing v4 session pattern with preprocessing + session_runner jobs
 4. Ask the user which deployment target to use (general/emed/hsp/noaa) if not specified
 

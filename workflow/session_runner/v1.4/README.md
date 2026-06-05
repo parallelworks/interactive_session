@@ -32,12 +32,12 @@ jobs:
           cluster:
             scheduler: ${{ inputs.cluster.scheduler }}
             slurm:
-              is_disabled: false
+              is_enabled: true
               partition: ${{ inputs.cluster.slurm.partition }}
               scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
               time: ${{ inputs.cluster.slurm.time }}
             pbs:
-              is_disabled: true
+              is_enabled: false
               scheduler_directives: ""
           service:
             start_service_script: ${PW_PARENT_JOB_DIR}/my-service/start-template-v3.sh

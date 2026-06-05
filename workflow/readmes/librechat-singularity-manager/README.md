@@ -8,7 +8,7 @@ A **librechat-singularity** session must already be running on the same resource
 
 ## Features
 
-- **Live status**: Each service (MongoDB, MeiliSearch, PostgreSQL/pgvector, RAG API, LibreChat) shows a green (running) or red (stopped) indicator, updated every 5 seconds
+- **Live status**: Each service (MongoDB, MeiliSearch, PostgreSQL/pgvector, RAG API, LibreChat) shows a green (running) or red (stopped) indicator, updated every 10 seconds
 - **Restart individual services**: Click **↺ Restart** on any card to restart that service without affecting others
 - **Restart all**: The **↺ Restart All** button restarts all five services in dependency order
 - **Live console output**: Restart output streams to the console panel in real time
@@ -34,7 +34,7 @@ A **librechat-singularity** session must already be running on the same resource
 
 ## Architecture
 
-The manager runs a minimal Python HTTP server (stdlib only, no external dependencies) that:
+The manager runs a minimal Python (Flask) HTTP server that:
 - Reads PID files from `<librechat_dir>/singularity-data/pids/` to determine service status
 - Tails log files from `<librechat_dir>/singularity-data/logs/`
 - Executes restart shims from `<librechat_dir>/singularity-data/restart-*.sh` in background threads and streams output to the browser

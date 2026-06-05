@@ -144,12 +144,12 @@ jobs:
           cluster:
             scheduler: ${{ inputs.cluster.scheduler }}
             slurm:
-              is_disabled: ${{ inputs.cluster.resource.schedulerType != 'slurm'  || inputs.cluster.scheduler == false }}
+              is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
               partition: ${{ inputs.cluster.slurm.partition }}
               scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
               time: ${{ inputs.cluster.slurm.time }}
             pbs:
-              is_disabled: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+              is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
               scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
           service:
             start_service_script: ${PW_PARENT_JOB_DIR}/my-session/start-template-v3.sh
@@ -179,11 +179,12 @@ jobs:
             type: group
             label: SLURM Directives
             hidden: ${{ inputs.cluster.resource.schedulerType != 'slurm'  || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.cluster.resource.schedulerType != 'slurm'  || inputs.cluster.scheduler == false }}
             items:
-              is_disabled:
+              is_enabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.cluster.resource.schedulerType != 'slurm'  || inputs.cluster.scheduler == false }}
+                default: true
               partition:
                 type: slurm-partitions
                 label: SLURM partition
@@ -200,11 +201,12 @@ jobs:
             type: group
             label: PBS Directives
             hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             items:
-              is_disabled:
+              is_enabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+                default: true
               scheduler_directives:
                 type: editor
       service:
@@ -226,8 +228,8 @@ The `session_runner` subworkflow accepts these inputs:
 | `session` | Reference to the session object defined in `sessions:` |
 | `resource` | The compute cluster resource |
 | `cluster.scheduler` | `true` to submit to SLURM/PBS, `false` to run on controller |
-| `cluster.slurm` | SLURM settings: `is_disabled`, `partition`, `time`, `scheduler_directives` |
-| `cluster.pbs` | PBS settings: `is_disabled`, `scheduler_directives` |
+| `cluster.slurm` | SLURM settings: `is_enabled`, `partition`, `time`, `scheduler_directives` |
+| `cluster.pbs` | PBS settings: `is_enabled`, `scheduler_directives` |
 | `service.start_service_script` | Path to your start script |
 | `service.controller_script` | Path to your controller script |
 | `service.inputs_sh` | Path to the generated `inputs.sh` |

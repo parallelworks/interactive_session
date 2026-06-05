@@ -54,7 +54,7 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
-      - uses: marketplace/script_submitter/v3.5
+      - uses: marketplace/script_submitter/v3.6
         with:
           resource: ${{ inputs.cluster.resource }}
           rundir: ${PW_JOB_DIR}
@@ -64,12 +64,12 @@ jobs:
           scheduler: ${{ inputs.cluster.scheduler }}
           use_scheduler_agent: true
           slurm:
-            is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
+            is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
             partition: ${{ inputs.cluster.slurm.partition }}
             time: ${{ inputs.cluster.slurm.time }}
             scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
           pbs:
-            is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
+            is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
 ```
 
@@ -83,7 +83,7 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
-      - uses: marketplace/script_submitter/v3.5
+      - uses: marketplace/script_submitter/v3.6
         with:
           resource: ${{ inputs.cluster.resource }}
           rundir: ${PW_JOB_DIR}
@@ -95,12 +95,12 @@ jobs:
             python my_analysis.py --input data.csv
           scheduler: ${{ inputs.cluster.scheduler }}
           slurm:
-            is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
+            is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
             partition: ${{ inputs.cluster.slurm.partition }}
             time: ${{ inputs.cluster.slurm.time }}
             scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
           pbs:
-            is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
+            is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
 ```
 
@@ -126,7 +126,7 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
-      - uses: marketplace/script_submitter/v3.5
+      - uses: marketplace/script_submitter/v3.6
         with:
           resource: ${{ inputs.cluster.resource }}
           rundir: ${PW_JOB_DIR}
@@ -134,11 +134,11 @@ jobs:
           script_path: ${PW_JOB_DIR}/my-script.sh
           scheduler: ${{ inputs.cluster.scheduler }}
           slurm:
-            is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
+            is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
             partition: ${{ inputs.cluster.slurm.partition }}
             time: ${{ inputs.cluster.slurm.time }}
           pbs:
-            is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
+            is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
 ```
 

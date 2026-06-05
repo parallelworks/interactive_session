@@ -31,7 +31,7 @@ Runs five containerized services from pre-built SIF images:
 ### Manager Session
 A lightweight Python HTTP server that reads `service.env` written by the LibreChat session and exposes a dashboard for:
 
-- **Live status**: Green/red indicators for each service, polled every 5 seconds
+- **Live status**: Green/red indicators for each service, polled every 10 seconds
 - **Restart individual services**: Restart any service without affecting others or stopping the job
 - **Restart all**: Restart all five services in dependency order
 - **Live console output**: Restart output streams to the browser in real time
@@ -105,7 +105,7 @@ Both sessions start in parallel:
    - Writes `service.env` with all port assignments and paths, which the Manager reads on startup
 
 3. **Manager preprocessing (login node)**:
-   - Checks out the manager scripts from the repository
+   - Writes the manager's `inputs.sh` (LibreChat directory, resource, scheduler settings); the manager scripts are checked out earlier by the shared checkout job
 
 4. **Manager start (compute or login node)**:
    - Waits up to 10 minutes for `service.env` to appear (retrying every 60 seconds)
@@ -132,7 +132,7 @@ Both sessions start in parallel:
 ## Using the Manager
 
 The Manager dashboard shows a card for each of the five services. Each card displays:
-- **Status indicator**: green (running) or red (stopped), refreshed every 5 seconds
+- **Status indicator**: green (running) or red (stopped), refreshed every 10 seconds
 - **↺ Restart button**: restarts that service independently, preserving its port
 - **Logs button**: streams the last 100 lines of the service log to the console panel
 

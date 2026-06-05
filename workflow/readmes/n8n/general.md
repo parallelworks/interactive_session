@@ -4,7 +4,7 @@
 
 ## Container Runtime
 
-You can run n8n using **Docker** or **Singularity** — select the runtime in the form before launching. Use Singularity on clusters where Docker is not available or not permitted.
+You can run n8n using **Docker** or **Singularity** — select the runtime in the form before launching. Singularity is the default and needs no root or Docker daemon; choose Docker on hosts where Docker is available.
 
 ## Accessing the Session
 
@@ -19,11 +19,9 @@ Workflows, credentials, and settings are stored in the **n8n Data Directory** yo
 - **Export**: In the n8n editor, open a workflow → menu (⋮) → **Download**. This saves a `.json` file.
 - **Import**: In the n8n editor, click **Add workflow** → **Import from file** and select the `.json` file.
 
-Example workflows are available in the `n8n-workflow/examples/` directory of this repository.
-
 ## Image Version
 
-The default n8n image tag is `1.123.4`. You can change it in the **n8n Image Tag** field before launching. Use `latest` to always pull the most recent release (not recommended for production — version pinning avoids unexpected breaking changes).
+The **n8n Image Tag** field (default `1.123.4`) sets the n8n version **when running under Docker**. Use `latest` to always pull the most recent release (not recommended for production — version pinning avoids unexpected breaking changes). The Singularity runtime ships a fixed prebuilt image and ignores this field.
 
 ## Stopping the Session
 

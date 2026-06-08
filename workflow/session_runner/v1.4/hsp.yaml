@@ -155,8 +155,16 @@ jobs:
         early-cancel: any-job-failed
         run: |
           set -x
-          #HOSTNAME=$(cat HOSTNAME | cut -d'.' -f1)
-          HOSTNAME=$(cat HOSTNAME)
+          if [ "${{ inputs.cluster.scheduler }}" = "false" ]; then
+            # Not scheduled: the service runs on this same (login/controller) node,
+            # so the proxy must reach it via localhost rather than the node's
+            # external hostname (which may resolve to a login-pool alias or an
+            # interface the proxy can't reach -> "Proxy Error").
+            HOSTNAME=localhost
+          else
+            #HOSTNAME=$(cat HOSTNAME | cut -d'.' -f1)
+            HOSTNAME=$(cat HOSTNAME)
+          fi
           echo "HOSTNAME=${HOSTNAME}" | tee -a $OUTPUTS
 
           if [ -z "${HOSTNAME}" ]; then

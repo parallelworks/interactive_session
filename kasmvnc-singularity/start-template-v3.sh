@@ -22,7 +22,7 @@ else
 fi
 
 if [ -n "${service_parent_install_dir}" ]; then
-    container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}
+    container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}-gpu
     if ! [ -d "${container_dir}" ] && ! [ -w "${service_parent_install_dir}" ]; then
         echo "::warning::container_dir ${container_dir} does not exist and no write permission to ${service_parent_install_dir}. Resetting to ${HOME}/pw/software."
         service_parent_install_dir=${HOME}/pw/software
@@ -31,7 +31,14 @@ else
     service_parent_install_dir=${HOME}/pw/software
 fi
 
-container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}
+# Container image candidates, in order of preference. The actual choice is made
+# below, once we know whether this Singularity can mount a SIF unprivileged:
+#   1. SIF                (GPU; reads reliably on parallel filesystems) if mountable
+#   2. GPU sandbox dir    (VirtualGL) in place
+#   3. base sandbox dir   (software, no GPU) -- runs everywhere, the guaranteed floor
+container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}-gpu
+container_sif=${container_dir}.sif
+base_container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}
 
 # Initialize cancel script
 echo '#!/bin/bash' > cancel.sh
@@ -89,6 +96,45 @@ if command -v nvidia-smi &>/dev/null && nvidia-smi --list-gpus &>/dev/null; then
     echo "::notice::NVIDIA GPU detected, enabling Singularity --nv flag"
 else
     echo "::notice::No NVIDIA GPU detected, running without --nv"
+fi
+
+# This script runs on the compute node, where the GPU (if any) actually is. For
+# hardware rendering with a GPU present, make sure the host has the NVIDIA OpenGL/
+# EGL userspace so that Singularity --nv can inject it into the container for
+# VirtualGL (many cloud GPU images ship compute-only drivers). Best-effort and
+# idempotent; the container falls back to software if it can't be provisioned.
+# Skipped entirely for software rendering.
+NV_GL_BIND_FLAGS=""
+if [ "${rendering}" = "hardware" ] && [ -n "${GPU_FLAG}" ]; then
+    # Locate this runtime's helper scripts. The platform concatenates this template
+    # into a run-dir script, so ${BASH_SOURCE} is unreliable -- probe known paths.
+    kasm_src_dir=""
+    for _d in "${PW_PARENT_JOB_DIR}/kasmvnc-singularity" \
+              "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)" \
+              "$(pwd)/kasmvnc-singularity" "$(pwd)"; do
+        if [ -n "${_d}" ] && [ -f "${_d}/install-host-nvidia-gl.sh" ]; then
+            kasm_src_dir="${_d}"
+            break
+        fi
+    done
+    if [ -n "${kasm_src_dir}" ]; then
+        bash "${kasm_src_dir}/install-host-nvidia-gl.sh" || echo "::warning::host NVIDIA GL setup skipped/failed"
+    fi
+
+    # When the host lacks root, install-host-nvidia-gl.sh extracts the NVIDIA GL/EGL
+    # userspace into a user-writable dir instead of /usr/lib64. Bind those libraries
+    # into the container's /usr/lib64 (where the loader and the EGL ICD look) so GPU
+    # rendering works without root. If GL was installed system-wide (root) this dir
+    # won't exist and --nv injects the libraries directly instead.
+    nv_gl_userdir="${service_parent_install_dir}/nvidia-gl"
+    if [ -e "${nv_gl_userdir}/libEGL_nvidia.so.0" ]; then
+        for _lib in "${nv_gl_userdir}"/*.so*; do
+            [ -e "${_lib}" ] || continue
+            _real="$(readlink -f "${_lib}")"
+            NV_GL_BIND_FLAGS="${NV_GL_BIND_FLAGS} --bind ${_real}:/usr/lib64/$(basename "${_lib}")"
+        done
+        echo "::notice::Binding rootless NVIDIA GL userspace from ${nv_gl_userdir} into the container"
+    fi
 fi
 
 mount_directories="${HOME} /p/work /p/work1 /p/app /p/cwfs /scratch /run/munge /etc/pbs.conf /var/spool/pbs /opt/pbs ${container_mount_paths}"
@@ -152,65 +198,122 @@ if [ -n "${_sing_bin}" ] && ! test -u "${_sing_bin}"; then
     # No setuid bit: unprivileged installation requires --userns
     USERNS_FLAG="--userns"
     echo "::notice::Singularity has no setuid bit, enabling --userns"
-elif df -T "${container_dir}" 2>/dev/null | awk 'NR==2{print $2}' | grep -qi lustre; then
+elif df -T "${service_parent_install_dir}/containers" 2>/dev/null | awk 'NR==2{print $2}' | grep -qi lustre; then
     echo "::notice::Container is on a Lustre filesystem, skipping --writable-tmpfs (overlay not supported)"
 else
     WRITABLE_TMPFS_FLAG="--writable-tmpfs"
 fi
 
+# Build the ordered list of container-image candidates (most preferred first). The
+# run loop tries each and falls through to the next if the container won't stay up.
+# Software rendering (the default) uses only the base container, the old way.
+# Hardware rendering uses ONLY the GPU images and fails if none run (no base fallback):
+#   1. SIF             (GPU; reliable reads on parallel FS) -- only if this
+#                       Singularity can actually mount a SIF unprivileged (some site
+#                       builds are setuid-mode w/o the suid bit and no FUSE fallback,
+#                       failing with "No setuid installation found")
+#   2. GPU sandbox dir (VirtualGL) -- GPU where sandbox reads are clean
+# Container paths contain no spaces, so a space-separated list is safe.
+container_candidates=""
+if [ "${rendering}" = "hardware" ]; then
+    if [ -f "${container_sif}" ]; then
+        if singularity exec ${USERNS_FLAG} "${container_sif}" true >/dev/null 2>&1; then
+            container_candidates="${container_candidates} ${container_sif}"
+        else
+            echo "::warning::SIF present but this Singularity cannot mount it unprivileged; skipping SIF"
+        fi
+    fi
+    [ -d "${container_dir}" ]      && container_candidates="${container_candidates} ${container_dir}"
+    # Hardware rendering does NOT fall back to the base (software) container -- if
+    # neither the SIF nor the GPU sandbox is usable, the empty-candidates check
+    # below fails the job.
+else
+    # Software rendering (default): base container only.
+    container_candidates="${base_container_dir}"
+fi
+container_candidates=$(echo ${container_candidates})   # trim leading/trailing space
+if [ -z "${container_candidates}" ]; then
+    echo "::error::No usable container image found (looked for ${container_sif}, ${container_dir}, ${base_container_dir})"
+    exit 1
+fi
+echo "::notice::Rendering mode: ${rendering:-software}; container image candidates (in order): ${container_candidates}"
+
 env
 
-max_attempts=4
-attempt=0
+# Try each candidate; per candidate retry a couple of times on a fresh display in
+# case of a display collision. Fall through to the next candidate if the container
+# does not stay up (a SIF that can't be mounted, or a sandbox with truncated reads).
+display_tries_per_image=2
 kasmvnc_container_pid=""
-while [ $attempt -lt $max_attempts ]; do
-    attempt=$((attempt + 1))
-    if [ $attempt -gt 1 ]; then
-        echo "::warning::Attempt $((attempt-1)) failed, finding new display for retry ${attempt}/${max_attempts}..."
-        rm -rf $PWD/container_tmp $PWD/xkb
-        find_available_display || { echo "::error::No available display found"; exit 1; }
-    fi
-    mkdir -p $PWD/container_tmp
-    mkdir -p $PWD/container_tmp/.X11-unix
-    mkdir -p $PWD/xkb
+container_image=""
+started=""
+_launched=""
+for _cand in ${container_candidates}; do
+    echo "::notice::Trying container image: ${_cand}"
+    _try=0
+    while [ ${_try} -lt ${display_tries_per_image} ]; do
+        _try=$((_try + 1))
+        if [ -n "${_launched}" ]; then
+            rm -rf $PWD/container_tmp $PWD/xkb
+            find_available_display || { echo "::error::No available display found"; exit 1; }
+        fi
+        _launched=1
+        mkdir -p $PWD/container_tmp/.X11-unix
+        mkdir -p $PWD/xkb
 
-    echo "::notice::Starting KasmVNC container (attempt ${attempt}/${max_attempts}) on display :${XdisplayNumber}..."
-    set -x
-    singularity run \
-        ${WRITABLE_TMPFS_FLAG} ${USERNS_FLAG} ${ETC_ENV_FLAG} \
-        ${GPU_FLAG} \
-        ${MOUNT_FLAGS} \
-        --env XAUTHORITY=/tmp/.Xauthority \
-        --env DISPLAY=":${XdisplayNumber}" \
-        --env BASE_PATH="${basepath}" \
-        --env NGINX_PORT="${service_port}" \
-        --env KASM_PORT=$(pw agent open-port) \
-        --env VNC_DISPLAY="${XdisplayNumber}" \
-        --bind /etc/passwd:/etc/passwd:ro \
-        --bind /etc/group:/etc/group:ro \
-        --bind /etc/ssl/certs:/etc/ssl/certs:ro \
-        --bind $PWD/empty:/etc/nginx/conf.d/default.conf \
-        --bind $PWD/error.log:/var/log/nginx/error.log \
-        --bind $PWD/container_tmp:/tmp \
-        --bind $PWD/xkb:/var/lib/xkb \
-        "${container_dir}" &
-    set +x
+        echo "::notice::Starting KasmVNC container on display :${XdisplayNumber} (image: ${_cand}, try ${_try}/${display_tries_per_image})..."
+        set -x
+        singularity run \
+            ${WRITABLE_TMPFS_FLAG} ${USERNS_FLAG} ${ETC_ENV_FLAG} \
+            ${GPU_FLAG} \
+            ${NV_GL_BIND_FLAGS} \
+            ${MOUNT_FLAGS} \
+            --env XAUTHORITY=/tmp/.Xauthority \
+            --env DISPLAY=":${XdisplayNumber}" \
+            --env BASE_PATH="${basepath}" \
+            --env NGINX_PORT="${service_port}" \
+            --env KASM_PORT=$(pw agent open-port) \
+            --env VNC_DISPLAY="${XdisplayNumber}" \
+            --bind /etc/passwd:/etc/passwd:ro \
+            --bind /etc/group:/etc/group:ro \
+            --bind /etc/ssl/certs:/etc/ssl/certs:ro \
+            --bind $PWD/empty:/etc/nginx/conf.d/default.conf \
+            --bind $PWD/error.log:/var/log/nginx/error.log \
+            --bind $PWD/container_tmp:/tmp \
+            --bind $PWD/xkb:/var/lib/xkb \
+            "${_cand}" &
+        set +x
+        kasmvnc_container_pid=$!
+        echo "::notice::KasmVNC container started with PID ${kasmvnc_container_pid} (image: ${_cand})"
 
-    kasmvnc_container_pid=$!
-    echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
-    echo "pkill -TERM -f \"Xvnc :${XdisplayNumber}\"" >> cancel.sh
-    echo "sleep 3" >> cancel.sh
-    echo "pkill -KILL -f \"Xvnc :${XdisplayNumber}\"" >> cancel.sh
-    echo "::notice::KasmVNC container started with PID ${kasmvnc_container_pid}"
-
-    sleep 20
-    kill -0 "${kasmvnc_container_pid}" 2>/dev/null && break
+        sleep 20
+        if kill -0 "${kasmvnc_container_pid}" 2>/dev/null; then
+            started=1
+            container_image="${_cand}"
+            break
+        fi
+        echo "::warning::Container (${_cand}) exited within 20s on display :${XdisplayNumber}"
+    done
+    [ -n "${started}" ] && break
+    echo "::warning::Image ${_cand} did not stay up; falling back to the next image"
 done
+
+if [ -z "${started}" ]; then
+    echo "::error::KasmVNC failed to start with any image"
+    exit 1
+fi
+echo "::notice::KasmVNC running (image: ${container_image}, PID ${kasmvnc_container_pid})"
+
+# Register cleanup for the running container and its display.
+echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
+echo "pkill -TERM -f \"Xvnc :${XdisplayNumber}\"" >> cancel.sh
+echo "sleep 3" >> cancel.sh
+echo "pkill -KILL -f \"Xvnc :${XdisplayNumber}\"" >> cancel.sh
 
 sleep 5
 
 if ! kill -0 "${kasmvnc_container_pid}" 2>/dev/null; then
-    echo "::error::KasmVNC failed to start after ${max_attempts} attempts"
+    echo "::error::KasmVNC failed to start"
     exit 1
 fi
 

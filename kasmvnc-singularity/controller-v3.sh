@@ -62,14 +62,29 @@ if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
         bash "${kasm_src_dir}/install-host-nvidia-gl.sh" || echo "::warning::host NVIDIA GL setup skipped/failed"
     fi
 
-    # Build the VirtualGL-enabled container from the base image. The controller
-    # node has internet (needed for the VirtualGL package). Idempotent.
+    # Obtain the VirtualGL-enabled container. Prefer the prebuilt package from the
+    # registry (same mechanism as the base image above); fall back to building it
+    # locally from the base image if the pull is unavailable. Idempotent.
     gpu_container_dir="${container_dir}-gpu"
-    if [ ! -d "${gpu_container_dir}" ] \
-       && [ -n "${kasm_src_dir}" ] && [ -f "${kasm_src_dir}/build-gpu-container.sh" ] \
-       && [ -d "${container_dir}" ]; then
-        bash "${kasm_src_dir}/build-gpu-container.sh" "${container_dir}" "${gpu_container_dir}" \
-            || echo "::warning::GPU container build failed; desktop will use software rendering"
+    gpu_container_tgz="${gpu_container_dir}.tgz"
+    if [ ! -d "${gpu_container_dir}" ]; then
+        echo "::notice::Pulling GPU container ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-gpu:1.0"
+        rm -f "${gpu_container_tgz}"
+        if ${PW_PARENT_JOB_DIR}/tools/oras/oras pull ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-gpu:1.0 -o "$(dirname ${gpu_container_dir})" \
+           && [ -s "${gpu_container_tgz}" ] \
+           && tar -xzf "${gpu_container_tgz}" -C "$(dirname ${gpu_container_dir})"; then
+            rm -f "${gpu_container_tgz}"
+            chmod -R a+rX "${gpu_container_dir}" 2>/dev/null || true
+            echo "::notice::GPU container ready (pulled): ${gpu_container_dir}"
+        else
+            echo "::warning::GPU container pull failed; building locally from base image"
+            rm -f "${gpu_container_tgz}"
+            if [ -n "${kasm_src_dir}" ] && [ -f "${kasm_src_dir}/build-gpu-container.sh" ] \
+               && [ -d "${container_dir}" ]; then
+                bash "${kasm_src_dir}/build-gpu-container.sh" "${container_dir}" "${gpu_container_dir}" \
+                    || echo "::warning::GPU container build failed; desktop will use software rendering"
+            fi
+        fi
     fi
     echo "::endgroup::"
 fi

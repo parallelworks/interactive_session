@@ -22,7 +22,7 @@ else
 fi
 
 if [ -n "${service_parent_install_dir}" ]; then
-    container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}
+    container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}-gpu
     if ! [ -d "${container_dir}" ] && ! [ -w "${service_parent_install_dir}" ]; then
         echo "::warning::container_dir ${container_dir} does not exist and no write permission to ${service_parent_install_dir}. Resetting to ${HOME}/pw/software."
         service_parent_install_dir=${HOME}/pw/software
@@ -31,7 +31,9 @@ else
     service_parent_install_dir=${HOME}/pw/software
 fi
 
-container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}
+# Always use the GPU (VirtualGL) container: it renders OpenGL on the GPU when one
+# is available (with --nv) and falls back to software (llvmpipe) otherwise.
+container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}-gpu
 
 # Initialize cancel script
 echo '#!/bin/bash' > cancel.sh
@@ -91,45 +93,25 @@ else
     echo "::notice::No NVIDIA GPU detected, running without --nv"
 fi
 
-# Locate this runtime's helper scripts (build-gpu-container.sh, kasmvnc-gpu.def,
-# install-host-nvidia-gl.sh). The platform concatenates this template into a
-# run-dir script, so ${BASH_SOURCE} is unreliable -- probe known locations.
-kasm_src_dir=""
-for _d in "${PW_PARENT_JOB_DIR}/kasmvnc-singularity" \
-          "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)" \
-          "$(pwd)/kasmvnc-singularity" "$(pwd)"; do
-    if [ -n "${_d}" ] && [ -f "${_d}/build-gpu-container.sh" ]; then
-        kasm_src_dir="${_d}"
-        break
-    fi
-done
-
-# On GPU nodes, run the desktop in the VirtualGL-enabled container so OpenGL apps
-# render on the GPU (EGL) instead of llvmpipe. Falls back to the base container
-# (software rendering) if anything is unavailable.
+# This script runs on the compute node, where the GPU (if any) actually is. When a
+# GPU is present, make sure the host has the NVIDIA OpenGL/EGL userspace so that
+# Singularity --nv can inject it into the container for VirtualGL (many cloud GPU
+# images ship compute-only drivers). Best-effort and idempotent; the container
+# falls back to software rendering if the userspace can't be provisioned.
 if [ -n "${GPU_FLAG}" ]; then
-    gpu_container_dir="${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}-gpu"
-
-    # Ensure the host has NVIDIA OpenGL/EGL userspace so --nv can inject it
-    # (many cloud GPU images ship compute-only drivers). Best-effort, idempotent.
-    if [ -n "${kasm_src_dir}" ] && [ -f "${kasm_src_dir}/install-host-nvidia-gl.sh" ]; then
+    # Locate this runtime's helper scripts. The platform concatenates this template
+    # into a run-dir script, so ${BASH_SOURCE} is unreliable -- probe known paths.
+    kasm_src_dir=""
+    for _d in "${PW_PARENT_JOB_DIR}/kasmvnc-singularity" \
+              "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)" \
+              "$(pwd)/kasmvnc-singularity" "$(pwd)"; do
+        if [ -n "${_d}" ] && [ -f "${_d}/install-host-nvidia-gl.sh" ]; then
+            kasm_src_dir="${_d}"
+            break
+        fi
+    done
+    if [ -n "${kasm_src_dir}" ]; then
         bash "${kasm_src_dir}/install-host-nvidia-gl.sh" || echo "::warning::host NVIDIA GL setup skipped/failed"
-    fi
-
-    # Build the VirtualGL container on demand if it isn't present yet.
-    if [ ! -d "${gpu_container_dir}" ] \
-       && [ -n "${kasm_src_dir}" ] && [ -f "${kasm_src_dir}/build-gpu-container.sh" ] \
-       && [ -d "${container_dir}" ]; then
-        echo "::notice::Building VirtualGL-enabled container ${gpu_container_dir}..."
-        bash "${kasm_src_dir}/build-gpu-container.sh" "${container_dir}" "${gpu_container_dir}" \
-            || echo "::warning::GPU container build failed; falling back to ${container_dir}"
-    fi
-
-    if [ -d "${gpu_container_dir}" ]; then
-        echo "::notice::Using hardware-accelerated container ${gpu_container_dir}"
-        container_dir="${gpu_container_dir}"
-    else
-        echo "::warning::GPU container unavailable; using ${container_dir} (software rendering)"
     fi
 fi
 

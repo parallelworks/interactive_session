@@ -98,6 +98,7 @@ fi
 # Singularity --nv can inject it into the container for VirtualGL (many cloud GPU
 # images ship compute-only drivers). Best-effort and idempotent; the container
 # falls back to software rendering if the userspace can't be provisioned.
+NV_GL_BIND_FLAGS=""
 if [ -n "${GPU_FLAG}" ]; then
     # Locate this runtime's helper scripts. The platform concatenates this template
     # into a run-dir script, so ${BASH_SOURCE} is unreliable -- probe known paths.
@@ -112,6 +113,21 @@ if [ -n "${GPU_FLAG}" ]; then
     done
     if [ -n "${kasm_src_dir}" ]; then
         bash "${kasm_src_dir}/install-host-nvidia-gl.sh" || echo "::warning::host NVIDIA GL setup skipped/failed"
+    fi
+
+    # When the host lacks root, install-host-nvidia-gl.sh extracts the NVIDIA GL/EGL
+    # userspace into a user-writable dir instead of /usr/lib64. Bind those libraries
+    # into the container's /usr/lib64 (where the loader and the EGL ICD look) so GPU
+    # rendering works without root. If GL was installed system-wide (root) this dir
+    # won't exist and --nv injects the libraries directly instead.
+    nv_gl_userdir="${service_parent_install_dir}/nvidia-gl"
+    if [ -e "${nv_gl_userdir}/libEGL_nvidia.so.0" ]; then
+        for _lib in "${nv_gl_userdir}"/*.so*; do
+            [ -e "${_lib}" ] || continue
+            _real="$(readlink -f "${_lib}")"
+            NV_GL_BIND_FLAGS="${NV_GL_BIND_FLAGS} --bind ${_real}:/usr/lib64/$(basename "${_lib}")"
+        done
+        echo "::notice::Binding rootless NVIDIA GL userspace from ${nv_gl_userdir} into the container"
     fi
 fi
 
@@ -203,6 +219,7 @@ while [ $attempt -lt $max_attempts ]; do
     singularity run \
         ${WRITABLE_TMPFS_FLAG} ${USERNS_FLAG} ${ETC_ENV_FLAG} \
         ${GPU_FLAG} \
+        ${NV_GL_BIND_FLAGS} \
         ${MOUNT_FLAGS} \
         --env XAUTHORITY=/tmp/.Xauthority \
         --env DISPLAY=":${XdisplayNumber}" \

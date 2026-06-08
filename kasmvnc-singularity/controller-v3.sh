@@ -82,11 +82,13 @@ else
         #    but the sandbox reads cleanly. Best-effort.
         download_sandbox ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-gpu:1.0 \
             "${container_dir}" "${container_tgz}" \
-            || echo "::warning::GPU sandbox download failed; relying on SIF/base"
-        # 3. Base sandbox -- the guaranteed fallback that runs on every system.
-        download_sandbox ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}:1.0 \
-            "${base_container_dir}" "${base_container_tgz}" \
-            || { echo "::error title=Error::Failed to provision base container"; exit 1; }
+            || echo "::warning::GPU sandbox download failed; relying on the SIF"
+        # Hardware rendering must use a GPU image -- it does NOT fall back to the
+        # base (software) container. Require at least one of SIF / GPU sandbox.
+        if [ ! -f "${container_sif}" ] && [ ! -d "${container_dir}" ]; then
+            echo "::error title=Error::Hardware rendering requested but neither the SIF nor the GPU sandbox could be provisioned"
+            exit 1
+        fi
     else
         # Local filesystem -> GPU (VirtualGL) sandbox in place.
         download_sandbox ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-gpu:1.0 \

@@ -205,15 +205,14 @@ else
 fi
 
 # Build the ordered list of container-image candidates (most preferred first). The
-# run loop tries each and falls through to the next if the container won't stay up,
-# so we always land on something that runs. Software rendering (the default) uses
-# only the base container, the old way. Hardware rendering tries:
+# run loop tries each and falls through to the next if the container won't stay up.
+# Software rendering (the default) uses only the base container, the old way.
+# Hardware rendering uses ONLY the GPU images and fails if none run (no base fallback):
 #   1. SIF             (GPU; reliable reads on parallel FS) -- only if this
 #                       Singularity can actually mount a SIF unprivileged (some site
 #                       builds are setuid-mode w/o the suid bit and no FUSE fallback,
 #                       failing with "No setuid installation found")
 #   2. GPU sandbox dir (VirtualGL) -- GPU where sandbox reads are clean
-#   3. base sandbox    (software, no GPU) -- the guaranteed floor
 # Container paths contain no spaces, so a space-separated list is safe.
 container_candidates=""
 if [ "${rendering}" = "hardware" ]; then
@@ -225,7 +224,9 @@ if [ "${rendering}" = "hardware" ]; then
         fi
     fi
     [ -d "${container_dir}" ]      && container_candidates="${container_candidates} ${container_dir}"
-    [ -d "${base_container_dir}" ] && container_candidates="${container_candidates} ${base_container_dir}"
+    # Hardware rendering does NOT fall back to the base (software) container -- if
+    # neither the SIF nor the GPU sandbox is usable, the empty-candidates check
+    # below fails the job.
 else
     # Software rendering (default): base container only.
     container_candidates="${base_container_dir}"

@@ -1,0 +1,102 @@
+Bootstrap: localimage
+From: {{ BASE_SANDBOX }}
+
+# Builds a GPU-enabled KasmVNC sandbox on top of the standard kasmvnc-<os> base
+# image. It adds VirtualGL (GLX -> GPU EGL redirector) so OpenGL applications in
+# the headless Xvnc desktop render on the NVIDIA GPU instead of llvmpipe.
+#
+# The NVIDIA driver userspace (libGLX_nvidia / libEGL_nvidia / ...) is NOT baked
+# in -- those must match the host kernel module and are injected at runtime by
+# `singularity run --nv`. This image only provides the host-independent pieces:
+# VirtualGL, the NVIDIA EGL vendor ICD, and a GPU-aware desktop launcher.
+#
+# Build with build-gpu-container.sh (passes --build-arg BASE_SANDBOX=...).
+
+%post
+    set -eux
+
+    # EPEL provides VirtualGL; appstream/CRB provide the optional GL test tools.
+    dnf install -y epel-release \
+        || dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
+        || true
+
+    # VirtualGL is REQUIRED -- it is the GLX -> GPU redirector. Fail the build if absent.
+    dnf install -y --enablerepo=epel VirtualGL \
+        || dnf install -y VirtualGL
+
+    # Optional GL diagnostics (do not fail the build if a repo lacks them).
+    dnf install -y mesa-demos egl-utils || true
+    dnf install -y --enablerepo=epel,crb glmark2 || dnf install -y glmark2 || true
+    dnf clean all || true
+
+    # NVIDIA EGL vendor ICD: lets glvnd inside the container load libEGL_nvidia.so.0
+    # (which `--nv` injects from the host). Without it the container only sees Mesa.
+    mkdir -p /usr/share/glvnd/egl_vendor.d
+    cat > /usr/share/glvnd/egl_vendor.d/10_nvidia.json <<'JSON'
+{
+    "file_format_version" : "1.0.0",
+    "ICD" : {
+        "library_path" : "libEGL_nvidia.so.0"
+    }
+}
+JSON
+
+    # vglrun-egl: launch a command under VirtualGL using the NVIDIA EGL backend
+    # (no X server needed on the GPU). libvglfaker (EPEL build) references the
+    # glvnd entry points glXGetProcAddressARB (libGL) and eglGetProcAddress
+    # (libEGL) but links neither, so a non-GL parent like startxfce4 / the shell
+    # leaves them undefined and the faker aborts. Preload both *at the moment of
+    # exec* -- after any LD_PRELOAD set earlier in the session (e.g. nss_wrapper
+    # for LDAP/NIS users). Children inherit the faker and render on the GPU.
+    cat > /usr/local/bin/vglrun-egl <<'WRAP'
+#!/bin/bash
+export LD_PRELOAD="libGL.so.1:libEGL.so.1${LD_PRELOAD:+:$LD_PRELOAD}"
+exec vglrun -d egl "$@"
+WRAP
+    chmod +x /usr/local/bin/vglrun-egl
+
+    # Patch the desktop launcher so the whole XFCE session runs under VirtualGL
+    # when an NVIDIA GPU is present, and falls back to software rendering otherwise.
+    python3 - /usr/local/bin/run_kasm_nginx.sh <<'PY'
+import re, sys
+path = sys.argv[1]
+s = open(path).read()
+
+detect = '''# --- Hardware-accelerated OpenGL via VirtualGL (auto-detected at session start) ---
+export PATH="/opt/VirtualGL/bin:$PATH"
+VGL_WRAP=""
+if command -v vglrun-egl >/dev/null 2>&1 && [ -e /dev/nvidiactl ] && \\
+   ( ls /.singularity.d/libs/libEGL_nvidia.so* >/dev/null 2>&1 || ls /usr/lib64/libEGL_nvidia.so* >/dev/null 2>&1 ); then
+    echo "[INFO] NVIDIA GPU + VirtualGL detected -> hardware-accelerated OpenGL (vglrun -d egl)"
+    unset LIBGL_ALWAYS_SOFTWARE
+    # Whole session runs under VirtualGL; vglrun-egl handles the libEGL preload.
+    export VGL_WRAP="vglrun-egl "
+else
+    echo "[INFO] GPU/VirtualGL not available -> software rendering (llvmpipe)"
+    export LIBGL_ALWAYS_SOFTWARE=1
+fi
+# --- end hardware-accel detection ---'''
+
+old = "export LIBGL_ALWAYS_SOFTWARE=1"
+assert old in s, "could not find LIBGL_ALWAYS_SOFTWARE marker in launcher"
+s = s.replace(old, detect, 1)
+
+# The LDAP/NIS fallback sets LD_PRELOAD for nss_wrapper; make it APPEND instead of
+# overwrite so it never clobbers an existing preload.
+s = s.replace('export LD_PRELOAD="$wrapper_path"',
+              'export LD_PRELOAD="$wrapper_path${LD_PRELOAD:+:$LD_PRELOAD}"')
+
+s, n = re.subn(r'(?m)^startxfce4$', '${VGL_WRAP}startxfce4', s)
+assert n == 1, "expected exactly one bare 'startxfce4' launch line, found %d" % n
+
+open(path, "w").write(s)
+print("patched", path)
+PY
+
+    # Sanity: VirtualGL + wrapper present
+    command -v vglrun >/dev/null 2>&1 || [ -x /opt/VirtualGL/bin/vglrun ] || { echo "VirtualGL not installed"; exit 1; }
+    [ -x /usr/local/bin/vglrun-egl ] || { echo "vglrun-egl wrapper missing"; exit 1; }
+
+%labels
+    HARDWARE_ACCEL VirtualGL-EGL
+    MAINTAINER Parallel Works <support@parallelworks.com>

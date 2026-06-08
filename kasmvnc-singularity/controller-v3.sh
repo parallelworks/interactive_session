@@ -43,6 +43,37 @@ if ! [ -d "${container_dir}" ]; then
     echo "::endgroup::"
 fi
 
+# --- Hardware-acceleration provisioning (best-effort, GPU nodes only) ----------
+# Locate this runtime's helper scripts (co-located with this controller script).
+kasm_src_dir=""
+for _d in "${PW_PARENT_JOB_DIR}/kasmvnc-singularity" "$(pwd)/kasmvnc-singularity" "$(pwd)"; do
+    if [ -n "${_d}" ] && [ -f "${_d}/build-gpu-container.sh" ]; then
+        kasm_src_dir="${_d}"
+        break
+    fi
+done
+
+if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
+    echo "::group::GPU detected - provisioning hardware-accelerated (VirtualGL) desktop"
+
+    # Ensure the host has NVIDIA OpenGL/EGL userspace so Singularity --nv can
+    # inject it into the container (compute-only driver images lack it).
+    if [ -n "${kasm_src_dir}" ] && [ -f "${kasm_src_dir}/install-host-nvidia-gl.sh" ]; then
+        bash "${kasm_src_dir}/install-host-nvidia-gl.sh" || echo "::warning::host NVIDIA GL setup skipped/failed"
+    fi
+
+    # Build the VirtualGL-enabled container from the base image. The controller
+    # node has internet (needed for the VirtualGL package). Idempotent.
+    gpu_container_dir="${container_dir}-gpu"
+    if [ ! -d "${gpu_container_dir}" ] \
+       && [ -n "${kasm_src_dir}" ] && [ -f "${kasm_src_dir}/build-gpu-container.sh" ] \
+       && [ -d "${container_dir}" ]; then
+        bash "${kasm_src_dir}/build-gpu-container.sh" "${container_dir}" "${gpu_container_dir}" \
+            || echo "::warning::GPU container build failed; desktop will use software rendering"
+    fi
+    echo "::endgroup::"
+fi
+
 
 xterm_path=$(which xterm 2>/dev/null)
 if [ -z "${xterm_path}" ]; then

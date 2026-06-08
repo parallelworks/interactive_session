@@ -91,6 +91,48 @@ else
     echo "::notice::No NVIDIA GPU detected, running without --nv"
 fi
 
+# Locate this runtime's helper scripts (build-gpu-container.sh, kasmvnc-gpu.def,
+# install-host-nvidia-gl.sh). The platform concatenates this template into a
+# run-dir script, so ${BASH_SOURCE} is unreliable -- probe known locations.
+kasm_src_dir=""
+for _d in "${PW_PARENT_JOB_DIR}/kasmvnc-singularity" \
+          "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)" \
+          "$(pwd)/kasmvnc-singularity" "$(pwd)"; do
+    if [ -n "${_d}" ] && [ -f "${_d}/build-gpu-container.sh" ]; then
+        kasm_src_dir="${_d}"
+        break
+    fi
+done
+
+# On GPU nodes, run the desktop in the VirtualGL-enabled container so OpenGL apps
+# render on the GPU (EGL) instead of llvmpipe. Falls back to the base container
+# (software rendering) if anything is unavailable.
+if [ -n "${GPU_FLAG}" ]; then
+    gpu_container_dir="${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}-gpu"
+
+    # Ensure the host has NVIDIA OpenGL/EGL userspace so --nv can inject it
+    # (many cloud GPU images ship compute-only drivers). Best-effort, idempotent.
+    if [ -n "${kasm_src_dir}" ] && [ -f "${kasm_src_dir}/install-host-nvidia-gl.sh" ]; then
+        bash "${kasm_src_dir}/install-host-nvidia-gl.sh" || echo "::warning::host NVIDIA GL setup skipped/failed"
+    fi
+
+    # Build the VirtualGL container on demand if it isn't present yet.
+    if [ ! -d "${gpu_container_dir}" ] \
+       && [ -n "${kasm_src_dir}" ] && [ -f "${kasm_src_dir}/build-gpu-container.sh" ] \
+       && [ -d "${container_dir}" ]; then
+        echo "::notice::Building VirtualGL-enabled container ${gpu_container_dir}..."
+        bash "${kasm_src_dir}/build-gpu-container.sh" "${container_dir}" "${gpu_container_dir}" \
+            || echo "::warning::GPU container build failed; falling back to ${container_dir}"
+    fi
+
+    if [ -d "${gpu_container_dir}" ]; then
+        echo "::notice::Using hardware-accelerated container ${gpu_container_dir}"
+        container_dir="${gpu_container_dir}"
+    else
+        echo "::warning::GPU container unavailable; using ${container_dir} (software rendering)"
+    fi
+fi
+
 mount_directories="${HOME} /p/work /p/work1 /p/app /p/cwfs /scratch /run/munge /etc/pbs.conf /var/spool/pbs /opt/pbs ${container_mount_paths}"
 
 # Function to build mount flags for existing directories

@@ -203,78 +203,109 @@ else
     WRITABLE_TMPFS_FLAG="--writable-tmpfs"
 fi
 
-# Select the container image. Some site Singularity builds are setuid-mode without
-# the suid bit and have no FUSE fallback, so they cannot mount a SIF unprivileged
-# (run fails with "No setuid installation found"). Probe mountability with a cheap
-# exec and fall back: SIF (if mountable) -> GPU sandbox dir -> base sandbox dir.
-if [ -f "${container_sif}" ] && singularity exec ${USERNS_FLAG} "${container_sif}" true >/dev/null 2>&1; then
-    container_image="${container_sif}"
-    echo "::notice::Using SIF image (hardware-accelerated, mountable here): ${container_image}"
-elif [ -d "${container_dir}" ]; then
-    container_image="${container_dir}"
-    echo "::notice::Using GPU (VirtualGL) sandbox: ${container_image}"
-elif [ -d "${base_container_dir}" ]; then
-    container_image="${base_container_dir}"
-    echo "::warning::SIF not mountable and GPU sandbox unavailable; using base sandbox (software rendering): ${container_image}"
-else
+# Build the ordered list of container-image candidates (most preferred first). The
+# run loop tries each and falls through to the next if the container won't stay up,
+# so we always land on something that runs:
+#   1. SIF             (GPU; reliable reads on parallel FS) -- only if this
+#                       Singularity can actually mount a SIF unprivileged (some site
+#                       builds are setuid-mode w/o the suid bit and no FUSE fallback,
+#                       failing with "No setuid installation found")
+#   2. GPU sandbox dir (VirtualGL) -- GPU where sandbox reads are clean
+#   3. base sandbox    (software, no GPU) -- the guaranteed floor
+# Container paths contain no spaces, so a space-separated list is safe.
+container_candidates=""
+if [ -f "${container_sif}" ]; then
+    if singularity exec ${USERNS_FLAG} "${container_sif}" true >/dev/null 2>&1; then
+        container_candidates="${container_candidates} ${container_sif}"
+    else
+        echo "::warning::SIF present but this Singularity cannot mount it unprivileged; skipping SIF"
+    fi
+fi
+[ -d "${container_dir}" ]      && container_candidates="${container_candidates} ${container_dir}"
+[ -d "${base_container_dir}" ] && container_candidates="${container_candidates} ${base_container_dir}"
+container_candidates=$(echo ${container_candidates})   # trim leading/trailing space
+if [ -z "${container_candidates}" ]; then
     echo "::error::No usable container image found (looked for ${container_sif}, ${container_dir}, ${base_container_dir})"
     exit 1
 fi
+echo "::notice::Container image candidates (in order): ${container_candidates}"
 
 env
 
-max_attempts=4
-attempt=0
+# Try each candidate; per candidate retry a couple of times on a fresh display in
+# case of a display collision. Fall through to the next candidate if the container
+# does not stay up (a SIF that can't be mounted, or a sandbox with truncated reads).
+display_tries_per_image=2
 kasmvnc_container_pid=""
-while [ $attempt -lt $max_attempts ]; do
-    attempt=$((attempt + 1))
-    if [ $attempt -gt 1 ]; then
-        echo "::warning::Attempt $((attempt-1)) failed, finding new display for retry ${attempt}/${max_attempts}..."
-        rm -rf $PWD/container_tmp $PWD/xkb
-        find_available_display || { echo "::error::No available display found"; exit 1; }
-    fi
-    mkdir -p $PWD/container_tmp
-    mkdir -p $PWD/container_tmp/.X11-unix
-    mkdir -p $PWD/xkb
+container_image=""
+started=""
+_launched=""
+for _cand in ${container_candidates}; do
+    echo "::notice::Trying container image: ${_cand}"
+    _try=0
+    while [ ${_try} -lt ${display_tries_per_image} ]; do
+        _try=$((_try + 1))
+        if [ -n "${_launched}" ]; then
+            rm -rf $PWD/container_tmp $PWD/xkb
+            find_available_display || { echo "::error::No available display found"; exit 1; }
+        fi
+        _launched=1
+        mkdir -p $PWD/container_tmp/.X11-unix
+        mkdir -p $PWD/xkb
 
-    echo "::notice::Starting KasmVNC container (attempt ${attempt}/${max_attempts}) on display :${XdisplayNumber}..."
-    set -x
-    singularity run \
-        ${WRITABLE_TMPFS_FLAG} ${USERNS_FLAG} ${ETC_ENV_FLAG} \
-        ${GPU_FLAG} \
-        ${NV_GL_BIND_FLAGS} \
-        ${MOUNT_FLAGS} \
-        --env XAUTHORITY=/tmp/.Xauthority \
-        --env DISPLAY=":${XdisplayNumber}" \
-        --env BASE_PATH="${basepath}" \
-        --env NGINX_PORT="${service_port}" \
-        --env KASM_PORT=$(pw agent open-port) \
-        --env VNC_DISPLAY="${XdisplayNumber}" \
-        --bind /etc/passwd:/etc/passwd:ro \
-        --bind /etc/group:/etc/group:ro \
-        --bind /etc/ssl/certs:/etc/ssl/certs:ro \
-        --bind $PWD/empty:/etc/nginx/conf.d/default.conf \
-        --bind $PWD/error.log:/var/log/nginx/error.log \
-        --bind $PWD/container_tmp:/tmp \
-        --bind $PWD/xkb:/var/lib/xkb \
-        "${container_image}" &
-    set +x
+        echo "::notice::Starting KasmVNC container on display :${XdisplayNumber} (image: ${_cand}, try ${_try}/${display_tries_per_image})..."
+        set -x
+        singularity run \
+            ${WRITABLE_TMPFS_FLAG} ${USERNS_FLAG} ${ETC_ENV_FLAG} \
+            ${GPU_FLAG} \
+            ${NV_GL_BIND_FLAGS} \
+            ${MOUNT_FLAGS} \
+            --env XAUTHORITY=/tmp/.Xauthority \
+            --env DISPLAY=":${XdisplayNumber}" \
+            --env BASE_PATH="${basepath}" \
+            --env NGINX_PORT="${service_port}" \
+            --env KASM_PORT=$(pw agent open-port) \
+            --env VNC_DISPLAY="${XdisplayNumber}" \
+            --bind /etc/passwd:/etc/passwd:ro \
+            --bind /etc/group:/etc/group:ro \
+            --bind /etc/ssl/certs:/etc/ssl/certs:ro \
+            --bind $PWD/empty:/etc/nginx/conf.d/default.conf \
+            --bind $PWD/error.log:/var/log/nginx/error.log \
+            --bind $PWD/container_tmp:/tmp \
+            --bind $PWD/xkb:/var/lib/xkb \
+            "${_cand}" &
+        set +x
+        kasmvnc_container_pid=$!
+        echo "::notice::KasmVNC container started with PID ${kasmvnc_container_pid} (image: ${_cand})"
 
-    kasmvnc_container_pid=$!
-    echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
-    echo "pkill -TERM -f \"Xvnc :${XdisplayNumber}\"" >> cancel.sh
-    echo "sleep 3" >> cancel.sh
-    echo "pkill -KILL -f \"Xvnc :${XdisplayNumber}\"" >> cancel.sh
-    echo "::notice::KasmVNC container started with PID ${kasmvnc_container_pid}"
-
-    sleep 20
-    kill -0 "${kasmvnc_container_pid}" 2>/dev/null && break
+        sleep 20
+        if kill -0 "${kasmvnc_container_pid}" 2>/dev/null; then
+            started=1
+            container_image="${_cand}"
+            break
+        fi
+        echo "::warning::Container (${_cand}) exited within 20s on display :${XdisplayNumber}"
+    done
+    [ -n "${started}" ] && break
+    echo "::warning::Image ${_cand} did not stay up; falling back to the next image"
 done
+
+if [ -z "${started}" ]; then
+    echo "::error::KasmVNC failed to start with any image"
+    exit 1
+fi
+echo "::notice::KasmVNC running (image: ${container_image}, PID ${kasmvnc_container_pid})"
+
+# Register cleanup for the running container and its display.
+echo "kill ${kasmvnc_container_pid} #kasmvnc_container_pid" >> cancel.sh
+echo "pkill -TERM -f \"Xvnc :${XdisplayNumber}\"" >> cancel.sh
+echo "sleep 3" >> cancel.sh
+echo "pkill -KILL -f \"Xvnc :${XdisplayNumber}\"" >> cancel.sh
 
 sleep 5
 
 if ! kill -0 "${kasmvnc_container_pid}" 2>/dev/null; then
-    echo "::error::KasmVNC failed to start after ${max_attempts} attempts"
+    echo "::error::KasmVNC failed to start"
     exit 1
 fi
 

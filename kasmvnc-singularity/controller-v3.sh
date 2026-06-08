@@ -27,14 +27,18 @@ base_container_tgz=${base_container_dir}.tgz
 # the container(s); it must not install host packages or assume a local GPU.
 
 # Download a sandbox tarball from ghcr and extract it in place (idempotent).
+# Returns non-zero on failure (does NOT exit) so callers can fall back to another
+# tier. The downloaded artifact keeps its own filename, landing at ${tgz}.
 download_sandbox() {
-    local repo=$1 fname=$2 dest=$3 tgz=$4
+    local repo=$1 dest=$2 tgz=$3
     [ -d "${dest}" ] && return 0
     echo "::group::Downloading ${repo}"
-    echo "::notice::Using GitHub registry to download ${fname}"
-    oras_pull_file "${repo}" "${fname}" "${tgz}"
-    if [ ! -s "${tgz}" ]; then echo "::error title=Error::Failed to download ${tgz}"; return 1; fi
-    if ! tar -xzf "${tgz}" -C "$(dirname ${dest})"; then echo "::error title=Error::Failed to extract ${tgz}"; return 1; fi
+    rm -f "${tgz}"
+    if ! ${PW_PARENT_JOB_DIR}/tools/oras/oras pull "${repo}" -o "$(dirname ${dest})"; then
+        echo "::error title=Error::oras pull failed for ${repo}"; echo "::endgroup::"; return 1
+    fi
+    if [ ! -s "${tgz}" ]; then echo "::error title=Error::Failed to download ${tgz}"; echo "::endgroup::"; return 1; fi
+    if ! tar -xzf "${tgz}" -C "$(dirname ${dest})"; then echo "::error title=Error::Failed to extract ${tgz}"; echo "::endgroup::"; return 1; fi
     rm -f "${tgz}"
     # Make the extracted sandbox fully readable/executable: tarballs carry root-owned,
     # restrictively-permissioned files; without this other users (and overlay setup)
@@ -45,11 +49,14 @@ download_sandbox() {
 
 # Singularity *sandbox directories* read unreliably from parallel/clustered
 # filesystems (Lustre, WEKA, GPFS, NFS, ...): cold reads can return truncated data
-# and corrupt Python/Perl files at startup. On those filesystems fetch a single-file
-# SIF (reads reliably) for hardware acceleration, plus the base sandbox as a floor
-# that runs even where the SIF can't be mounted. On local filesystems the GPU
-# sandbox reads fine, so just fetch that. The start script picks among whatever is
-# present at run time (SIF if mountable -> GPU sandbox -> base sandbox).
+# and corrupt Python/Perl files at startup. On those filesystems fetch all three
+# images so the start script can fall back through them at run time:
+#   - SIF (reads reliably, hardware-accelerated) for hosts that can mount a SIF;
+#   - GPU (VirtualGL) sandbox for hosts that can't mount a SIF but read sandboxes
+#     fine (e.g. a GPU compute node on Lustre);
+#   - base sandbox as the guaranteed software floor.
+# On local filesystems the GPU sandbox reads fine, so just fetch that. The start
+# script tries SIF (if mountable) -> GPU sandbox -> base and uses the first that runs.
 fs_type=$(df -T "${service_parent_install_dir}/containers" 2>/dev/null | awk 'NR==2{print $2}')
 [ -z "${fs_type}" ] && fs_type=$(stat -f -c %T "${service_parent_install_dir}/containers" 2>/dev/null)
 echo "::notice::Container filesystem type: ${fs_type:-unknown}"
@@ -63,19 +70,24 @@ if echo "${fs_type}" | grep -qiE 'lustre|nfs|gpfs|weka|beegfs|panfs|fhgfs|ceph';
                -o "$(dirname ${container_sif})" && [ -s "${container_sif}" ]; then
             chmod a+rX "${container_sif}"
         else
-            echo "::warning::SIF download unavailable; will rely on the base sandbox"
+            echo "::warning::SIF download unavailable; will rely on the sandbox images"
             rm -f "${container_sif}"
         fi
         echo "::endgroup::"
     fi
-    # 2. Base sandbox -- the guaranteed fallback that runs on every system.
+    # 2. GPU (VirtualGL) sandbox -- gives hardware acceleration where the SIF can't
+    #    be mounted but the sandbox reads cleanly. Best-effort.
+    download_sandbox ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-gpu:1.0 \
+        "${container_dir}" "${container_tgz}" \
+        || echo "::warning::GPU sandbox download failed; relying on SIF/base"
+    # 3. Base sandbox -- the guaranteed fallback that runs on every system.
     download_sandbox ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}:1.0 \
-        "kasmvnc-${kasmvnc_os}.tgz" "${base_container_dir}" "${base_container_tgz}" \
+        "${base_container_dir}" "${base_container_tgz}" \
         || { echo "::error title=Error::Failed to provision base container"; exit 1; }
 else
     # Local filesystem -> GPU (VirtualGL) sandbox in place.
     download_sandbox ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-gpu:1.0 \
-        "kasmvnc-${kasmvnc_os}-gpu.tgz" "${container_dir}" "${container_tgz}" \
+        "${container_dir}" "${container_tgz}" \
         || { echo "::error title=Error::Failed to provision GPU container"; exit 1; }
 fi
 

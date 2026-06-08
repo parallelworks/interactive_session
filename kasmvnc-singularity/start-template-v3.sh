@@ -98,13 +98,14 @@ else
     echo "::notice::No NVIDIA GPU detected, running without --nv"
 fi
 
-# This script runs on the compute node, where the GPU (if any) actually is. When a
-# GPU is present, make sure the host has the NVIDIA OpenGL/EGL userspace so that
-# Singularity --nv can inject it into the container for VirtualGL (many cloud GPU
-# images ship compute-only drivers). Best-effort and idempotent; the container
-# falls back to software rendering if the userspace can't be provisioned.
+# This script runs on the compute node, where the GPU (if any) actually is. For
+# hardware rendering with a GPU present, make sure the host has the NVIDIA OpenGL/
+# EGL userspace so that Singularity --nv can inject it into the container for
+# VirtualGL (many cloud GPU images ship compute-only drivers). Best-effort and
+# idempotent; the container falls back to software if it can't be provisioned.
+# Skipped entirely for software rendering.
 NV_GL_BIND_FLAGS=""
-if [ -n "${GPU_FLAG}" ]; then
+if [ "${rendering}" = "hardware" ] && [ -n "${GPU_FLAG}" ]; then
     # Locate this runtime's helper scripts. The platform concatenates this template
     # into a run-dir script, so ${BASH_SOURCE} is unreliable -- probe known paths.
     kasm_src_dir=""
@@ -205,7 +206,8 @@ fi
 
 # Build the ordered list of container-image candidates (most preferred first). The
 # run loop tries each and falls through to the next if the container won't stay up,
-# so we always land on something that runs:
+# so we always land on something that runs. Software rendering (the default) uses
+# only the base container, the old way. Hardware rendering tries:
 #   1. SIF             (GPU; reliable reads on parallel FS) -- only if this
 #                       Singularity can actually mount a SIF unprivileged (some site
 #                       builds are setuid-mode w/o the suid bit and no FUSE fallback,
@@ -214,21 +216,26 @@ fi
 #   3. base sandbox    (software, no GPU) -- the guaranteed floor
 # Container paths contain no spaces, so a space-separated list is safe.
 container_candidates=""
-if [ -f "${container_sif}" ]; then
-    if singularity exec ${USERNS_FLAG} "${container_sif}" true >/dev/null 2>&1; then
-        container_candidates="${container_candidates} ${container_sif}"
-    else
-        echo "::warning::SIF present but this Singularity cannot mount it unprivileged; skipping SIF"
+if [ "${rendering}" = "hardware" ]; then
+    if [ -f "${container_sif}" ]; then
+        if singularity exec ${USERNS_FLAG} "${container_sif}" true >/dev/null 2>&1; then
+            container_candidates="${container_candidates} ${container_sif}"
+        else
+            echo "::warning::SIF present but this Singularity cannot mount it unprivileged; skipping SIF"
+        fi
     fi
+    [ -d "${container_dir}" ]      && container_candidates="${container_candidates} ${container_dir}"
+    [ -d "${base_container_dir}" ] && container_candidates="${container_candidates} ${base_container_dir}"
+else
+    # Software rendering (default): base container only.
+    container_candidates="${base_container_dir}"
 fi
-[ -d "${container_dir}" ]      && container_candidates="${container_candidates} ${container_dir}"
-[ -d "${base_container_dir}" ] && container_candidates="${container_candidates} ${base_container_dir}"
 container_candidates=$(echo ${container_candidates})   # trim leading/trailing space
 if [ -z "${container_candidates}" ]; then
     echo "::error::No usable container image found (looked for ${container_sif}, ${container_dir}, ${base_container_dir})"
     exit 1
 fi
-echo "::notice::Container image candidates (in order): ${container_candidates}"
+echo "::notice::Rendering mode: ${rendering:-software}; container image candidates (in order): ${container_candidates}"
 
 env
 

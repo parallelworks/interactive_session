@@ -47,48 +47,52 @@ download_sandbox() {
     echo "::endgroup::"
 }
 
-# Singularity *sandbox directories* read unreliably from parallel/clustered
-# filesystems (Lustre, WEKA, GPFS, NFS, ...): cold reads can return truncated data
-# and corrupt Python/Perl files at startup. On those filesystems fetch all three
-# images so the start script can fall back through them at run time:
-#   - SIF (reads reliably, hardware-accelerated) for hosts that can mount a SIF;
-#   - GPU (VirtualGL) sandbox for hosts that can't mount a SIF but read sandboxes
-#     fine (e.g. a GPU compute node on Lustre);
-#   - base sandbox as the guaranteed software floor.
-# On local filesystems the GPU sandbox reads fine, so just fetch that. The start
-# script tries SIF (if mountable) -> GPU sandbox -> base and uses the first that runs.
-fs_type=$(df -T "${service_parent_install_dir}/containers" 2>/dev/null | awk 'NR==2{print $2}')
-[ -z "${fs_type}" ] && fs_type=$(stat -f -c %T "${service_parent_install_dir}/containers" 2>/dev/null)
-echo "::notice::Container filesystem type: ${fs_type:-unknown}"
-
-if echo "${fs_type}" | grep -qiE 'lustre|nfs|gpfs|weka|beegfs|panfs|fhgfs|ceph'; then
-    # 1. Hardware-accelerated SIF (best-effort -- only usable where Singularity can
-    #    mount a SIF unprivileged; the start script verifies that at run time).
-    if [ ! -f "${container_sif}" ]; then
-        echo "::group::KasmVNC GPU Container Download (SIF, ${fs_type} filesystem)"
-        if ${PW_PARENT_JOB_DIR}/tools/oras/oras pull ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-sif:v1 \
-               -o "$(dirname ${container_sif})" && [ -s "${container_sif}" ]; then
-            chmod a+rX "${container_sif}"
-        else
-            echo "::warning::SIF download unavailable; will rely on the sandbox images"
-            rm -f "${container_sif}"
-        fi
-        echo "::endgroup::"
-    fi
-    # 2. GPU (VirtualGL) sandbox -- gives hardware acceleration where the SIF can't
-    #    be mounted but the sandbox reads cleanly. Best-effort.
-    download_sandbox ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-gpu:1.0 \
-        "${container_dir}" "${container_tgz}" \
-        || echo "::warning::GPU sandbox download failed; relying on SIF/base"
-    # 3. Base sandbox -- the guaranteed fallback that runs on every system.
+# Default is software rendering: download only the base container and run it the
+# old way. Hardware rendering provisions the GPU images. Singularity *sandbox
+# directories* read unreliably from parallel/clustered filesystems (Lustre, WEKA,
+# GPFS, NFS, ...) -- cold reads can return truncated data and corrupt Python/Perl
+# files at startup -- so on those filesystems fetch all three images and let the
+# start script fall back through them at run time (SIF if mountable -> GPU sandbox
+# -> base). On local filesystems the GPU sandbox reads fine, so just fetch that.
+if [ "${rendering}" != "hardware" ]; then
+    echo "::notice::Software rendering selected; using base container only"
     download_sandbox ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}:1.0 \
         "${base_container_dir}" "${base_container_tgz}" \
         || { echo "::error title=Error::Failed to provision base container"; exit 1; }
 else
-    # Local filesystem -> GPU (VirtualGL) sandbox in place.
-    download_sandbox ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-gpu:1.0 \
-        "${container_dir}" "${container_tgz}" \
-        || { echo "::error title=Error::Failed to provision GPU container"; exit 1; }
+    fs_type=$(df -T "${service_parent_install_dir}/containers" 2>/dev/null | awk 'NR==2{print $2}')
+    [ -z "${fs_type}" ] && fs_type=$(stat -f -c %T "${service_parent_install_dir}/containers" 2>/dev/null)
+    echo "::notice::Hardware rendering selected; container filesystem type: ${fs_type:-unknown}"
+
+    if echo "${fs_type}" | grep -qiE 'lustre|nfs|gpfs|weka|beegfs|panfs|fhgfs|ceph'; then
+        # 1. Hardware-accelerated SIF (best-effort -- only usable where Singularity
+        #    can mount a SIF unprivileged; the start script verifies that at run time).
+        if [ ! -f "${container_sif}" ]; then
+            echo "::group::KasmVNC GPU Container Download (SIF, ${fs_type} filesystem)"
+            if ${PW_PARENT_JOB_DIR}/tools/oras/oras pull ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-sif:v1 \
+                   -o "$(dirname ${container_sif})" && [ -s "${container_sif}" ]; then
+                chmod a+rX "${container_sif}"
+            else
+                echo "::warning::SIF download unavailable; will rely on the sandbox images"
+                rm -f "${container_sif}"
+            fi
+            echo "::endgroup::"
+        fi
+        # 2. GPU (VirtualGL) sandbox -- hardware accel where the SIF can't be mounted
+        #    but the sandbox reads cleanly. Best-effort.
+        download_sandbox ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-gpu:1.0 \
+            "${container_dir}" "${container_tgz}" \
+            || echo "::warning::GPU sandbox download failed; relying on SIF/base"
+        # 3. Base sandbox -- the guaranteed fallback that runs on every system.
+        download_sandbox ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}:1.0 \
+            "${base_container_dir}" "${base_container_tgz}" \
+            || { echo "::error title=Error::Failed to provision base container"; exit 1; }
+    else
+        # Local filesystem -> GPU (VirtualGL) sandbox in place.
+        download_sandbox ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-gpu:1.0 \
+            "${container_dir}" "${container_tgz}" \
+            || { echo "::error title=Error::Failed to provision GPU container"; exit 1; }
+    fi
 fi
 
 

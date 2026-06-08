@@ -39,6 +39,7 @@ jobs:
           kasmvnc_os="${{ inputs.desktop.kasmvnc_os }}"
           startup_command="${{ inputs.desktop.startup_command }}"
           container_mount_paths="${{ inputs.desktop.container_mount_paths }}"
+          rendering="${{ inputs.desktop.rendering }}"
           service_parent_install_dir="${{ inputs.parent_install_dir }}"
           EOF
           echo basepath=${basepath} >> inputs.sh
@@ -210,6 +211,19 @@ jobs:
         label: Desktop Settings
         collapsed: true
         items:
+          rendering:
+            type: dropdown
+            label: Rendering
+            default: software
+            tooltip: |
+              Software (CPU): llvmpipe rendering; runs on any node.
+              Hardware (GPU): VirtualGL/EGL on an NVIDIA GPU when available
+              (auto-detected; falls back to software if unavailable).
+            options:
+              - label: Software (CPU)
+                value: software
+              - label: Hardware (GPU)
+                value: hardware
           kasmvnc_os:
             type: dropdown
             label: Operating System

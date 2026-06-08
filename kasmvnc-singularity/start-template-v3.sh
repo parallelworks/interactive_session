@@ -31,19 +31,14 @@ else
     service_parent_install_dir=${HOME}/pw/software
 fi
 
-# Always use the GPU (VirtualGL) container: it renders OpenGL on the GPU when one
-# is available (with --nv) and falls back to software (llvmpipe) otherwise.
+# Container image candidates, in order of preference. The actual choice is made
+# below, once we know whether this Singularity can mount a SIF unprivileged:
+#   1. SIF                (GPU; reads reliably on parallel filesystems) if mountable
+#   2. GPU sandbox dir    (VirtualGL) in place
+#   3. base sandbox dir   (software, no GPU) -- runs everywhere, the guaranteed floor
 container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}-gpu
-
-# Prefer a single-file SIF image when present (the controller downloads one on
-# parallel/clustered filesystems where sandbox directories read unreliably);
-# otherwise run the sandbox directory.
-if [ -f "${container_dir}.sif" ]; then
-    container_image="${container_dir}.sif"
-else
-    container_image="${container_dir}"
-fi
-echo "::notice::Using container image: ${container_image}"
+container_sif=${container_dir}.sif
+base_container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}
 
 # Initialize cancel script
 echo '#!/bin/bash' > cancel.sh
@@ -202,10 +197,28 @@ if [ -n "${_sing_bin}" ] && ! test -u "${_sing_bin}"; then
     # No setuid bit: unprivileged installation requires --userns
     USERNS_FLAG="--userns"
     echo "::notice::Singularity has no setuid bit, enabling --userns"
-elif df -T "${container_image}" 2>/dev/null | awk 'NR==2{print $2}' | grep -qi lustre; then
+elif df -T "${service_parent_install_dir}/containers" 2>/dev/null | awk 'NR==2{print $2}' | grep -qi lustre; then
     echo "::notice::Container is on a Lustre filesystem, skipping --writable-tmpfs (overlay not supported)"
 else
     WRITABLE_TMPFS_FLAG="--writable-tmpfs"
+fi
+
+# Select the container image. Some site Singularity builds are setuid-mode without
+# the suid bit and have no FUSE fallback, so they cannot mount a SIF unprivileged
+# (run fails with "No setuid installation found"). Probe mountability with a cheap
+# exec and fall back: SIF (if mountable) -> GPU sandbox dir -> base sandbox dir.
+if [ -f "${container_sif}" ] && singularity exec ${USERNS_FLAG} "${container_sif}" true >/dev/null 2>&1; then
+    container_image="${container_sif}"
+    echo "::notice::Using SIF image (hardware-accelerated, mountable here): ${container_image}"
+elif [ -d "${container_dir}" ]; then
+    container_image="${container_dir}"
+    echo "::notice::Using GPU (VirtualGL) sandbox: ${container_image}"
+elif [ -d "${base_container_dir}" ]; then
+    container_image="${base_container_dir}"
+    echo "::warning::SIF not mountable and GPU sandbox unavailable; using base sandbox (software rendering): ${container_image}"
+else
+    echo "::error::No usable container image found (looked for ${container_sif}, ${container_dir}, ${base_container_dir})"
+    exit 1
 fi
 
 env

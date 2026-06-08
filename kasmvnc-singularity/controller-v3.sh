@@ -16,57 +16,67 @@ fi
 mkdir -p ${service_parent_install_dir}/containers ${service_parent_install_dir}/tools
 chmod a+rX ${service_parent_install_dir}/containers ${service_parent_install_dir}/tools
 
-container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}-gpu
+container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}-gpu       # GPU (VirtualGL) sandbox
 container_tgz=${container_dir}.tgz
 container_sif=${container_dir}.sif
+base_container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}      # base sandbox (runs everywhere)
+base_container_tgz=${base_container_dir}.tgz
 
 # The controller runs on the controller/login node (which has internet) -- NOT on
-# the compute node where the container ultimately runs. Its only job here is to
-# download the container; it must not install host packages or assume a GPU is
-# present locally. We always fetch the GPU (VirtualGL) container: it auto-detects
-# at session start and falls back to software rendering when no GPU is available.
-#
+# the compute node where the container ultimately runs. Its only job is to download
+# the container(s); it must not install host packages or assume a local GPU.
+
+# Download a sandbox tarball from ghcr and extract it in place (idempotent).
+download_sandbox() {
+    local repo=$1 fname=$2 dest=$3 tgz=$4
+    [ -d "${dest}" ] && return 0
+    echo "::group::Downloading ${repo}"
+    echo "::notice::Using GitHub registry to download ${fname}"
+    oras_pull_file "${repo}" "${fname}" "${tgz}"
+    if [ ! -s "${tgz}" ]; then echo "::error title=Error::Failed to download ${tgz}"; return 1; fi
+    if ! tar -xzf "${tgz}" -C "$(dirname ${dest})"; then echo "::error title=Error::Failed to extract ${tgz}"; return 1; fi
+    rm -f "${tgz}"
+    # Make the extracted sandbox fully readable/executable: tarballs carry root-owned,
+    # restrictively-permissioned files; without this other users (and overlay setup)
+    # can't read it and Python/Perl errors occur inside the container.
+    chmod -R a+rX "${dest}"
+    echo "::endgroup::"
+}
+
 # Singularity *sandbox directories* read unreliably from parallel/clustered
-# filesystems (Lustre, WEKA, GPFS, NFS, ...): cold reads can return truncated
-# data and corrupt Python/Perl files at startup. On those filesystems download a
-# single-file SIF image (reads reliably); on local filesystems use the sandbox.
+# filesystems (Lustre, WEKA, GPFS, NFS, ...): cold reads can return truncated data
+# and corrupt Python/Perl files at startup. On those filesystems fetch a single-file
+# SIF (reads reliably) for hardware acceleration, plus the base sandbox as a floor
+# that runs even where the SIF can't be mounted. On local filesystems the GPU
+# sandbox reads fine, so just fetch that. The start script picks among whatever is
+# present at run time (SIF if mountable -> GPU sandbox -> base sandbox).
 fs_type=$(df -T "${service_parent_install_dir}/containers" 2>/dev/null | awk 'NR==2{print $2}')
 [ -z "${fs_type}" ] && fs_type=$(stat -f -c %T "${service_parent_install_dir}/containers" 2>/dev/null)
 echo "::notice::Container filesystem type: ${fs_type:-unknown}"
 
 if echo "${fs_type}" | grep -qiE 'lustre|nfs|gpfs|weka|beegfs|panfs|fhgfs|ceph'; then
-    # Parallel/clustered filesystem -> use a SIF image.
+    # 1. Hardware-accelerated SIF (best-effort -- only usable where Singularity can
+    #    mount a SIF unprivileged; the start script verifies that at run time).
     if [ ! -f "${container_sif}" ]; then
         echo "::group::KasmVNC GPU Container Download (SIF, ${fs_type} filesystem)"
-        echo "::notice::Using GitHub registry to download SIF"
-        oras_pull_file ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-sif:v1 kasmvnc-${kasmvnc_os}-gpu.sif ${container_sif}
-        if [ ! -s ${container_sif} ]; then
-            echo "::error title=Error::Failed to download file ${container_sif}"
-            exit 1
+        if ${PW_PARENT_JOB_DIR}/tools/oras/oras pull ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-sif:v1 \
+               -o "$(dirname ${container_sif})" && [ -s "${container_sif}" ]; then
+            chmod a+rX "${container_sif}"
+        else
+            echo "::warning::SIF download unavailable; will rely on the base sandbox"
+            rm -f "${container_sif}"
         fi
-        chmod a+rX ${container_sif}
         echo "::endgroup::"
     fi
-elif ! [ -d "${container_dir}" ]; then
-    # Local filesystem -> use the sandbox directory (tarball + extract).
-    echo "::group::KasmVNC GPU Container Download (sandbox)"
-    echo "::notice::Using GitHub registry to download file"
-    oras_pull_file ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-gpu:1.0 kasmvnc-${kasmvnc_os}-gpu.tgz ${container_tgz}
-    if [ ! -s ${container_tgz} ]; then
-        echo "::error title=Error::Failed to download file ${container_tgz}"
-        exit 1
-    fi
-    if ! tar -xzf ${container_tgz} -C $(dirname ${container_dir}); then
-        echo "::error title=Error::Failed to extract ${container_tgz}"
-        exit 1
-    fi
-    rm ${container_tgz}
-    # Ensure the extracted sandbox is fully readable/executable by the current user.
-    # Singularity sandbox tarballs often contain root-owned files with restrictive
-    # permissions; without this, --writable-tmpfs overlayfs setup fails on the first
-    # run, causing Python/Perl errors inside the container.
-    chmod -R a+rX ${container_dir}
-    echo "::endgroup::"
+    # 2. Base sandbox -- the guaranteed fallback that runs on every system.
+    download_sandbox ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}:1.0 \
+        "kasmvnc-${kasmvnc_os}.tgz" "${base_container_dir}" "${base_container_tgz}" \
+        || { echo "::error title=Error::Failed to provision base container"; exit 1; }
+else
+    # Local filesystem -> GPU (VirtualGL) sandbox in place.
+    download_sandbox ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-gpu:1.0 \
+        "kasmvnc-${kasmvnc_os}-gpu.tgz" "${container_dir}" "${container_tgz}" \
+        || { echo "::error title=Error::Failed to provision GPU container"; exit 1; }
 fi
 
 

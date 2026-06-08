@@ -29,6 +29,21 @@ From: {{ BASE_SANDBOX }}
     dnf install -y --enablerepo=epel,crb glmark2 || dnf install -y glmark2 || true
     dnf clean all || true
 
+    # VirtualGL's legacy fakelib symlinks use an over-long relative path that
+    # escapes the rootfs, which makes `singularity build` reject the image when
+    # packing a SIF. Rewrite them to absolute targets (functionally identical and
+    # SIF-packable). vglrun itself uses VGL_LIBRARY_PATH, not fakelib.
+    for _d in /usr/lib64/fakelib /usr/lib/fakelib; do
+        [ -d "${_d}" ] || continue
+        for _l in "${_d}"/*; do
+            [ -L "${_l}" ] || continue
+            case "$(readlink "${_l}")" in
+                /*) : ;;
+                *) ln -sf "/$(readlink "${_l}" | sed -E 's#^(\.\./)+##')" "${_l}" ;;
+            esac
+        done
+    done
+
     # NVIDIA EGL vendor ICD: lets glvnd inside the container load libEGL_nvidia.so.0
     # (which `--nv` injects from the host). Without it the container only sees Mesa.
     mkdir -p /usr/share/glvnd/egl_vendor.d

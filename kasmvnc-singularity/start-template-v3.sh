@@ -35,6 +35,16 @@ fi
 # is available (with --nv) and falls back to software (llvmpipe) otherwise.
 container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}-gpu
 
+# Prefer a single-file SIF image when present (the controller downloads one on
+# parallel/clustered filesystems where sandbox directories read unreliably);
+# otherwise run the sandbox directory.
+if [ -f "${container_dir}.sif" ]; then
+    container_image="${container_dir}.sif"
+else
+    container_image="${container_dir}"
+fi
+echo "::notice::Using container image: ${container_image}"
+
 # Initialize cancel script
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
@@ -192,7 +202,7 @@ if [ -n "${_sing_bin}" ] && ! test -u "${_sing_bin}"; then
     # No setuid bit: unprivileged installation requires --userns
     USERNS_FLAG="--userns"
     echo "::notice::Singularity has no setuid bit, enabling --userns"
-elif df -T "${container_dir}" 2>/dev/null | awk 'NR==2{print $2}' | grep -qi lustre; then
+elif df -T "${container_image}" 2>/dev/null | awk 'NR==2{print $2}' | grep -qi lustre; then
     echo "::notice::Container is on a Lustre filesystem, skipping --writable-tmpfs (overlay not supported)"
 else
     WRITABLE_TMPFS_FLAG="--writable-tmpfs"
@@ -234,7 +244,7 @@ while [ $attempt -lt $max_attempts ]; do
         --bind $PWD/error.log:/var/log/nginx/error.log \
         --bind $PWD/container_tmp:/tmp \
         --bind $PWD/xkb:/var/lib/xkb \
-        "${container_dir}" &
+        "${container_image}" &
     set +x
 
     kasmvnc_container_pid=$!

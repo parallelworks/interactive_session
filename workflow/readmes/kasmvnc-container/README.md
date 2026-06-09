@@ -38,7 +38,7 @@ This means:
 
 - **Multiple OS Options**: Rocky Linux 8/9 or Ubuntu 22.04 (container OS only — host OS is unaffected)
 - **Container Runtime**: Supports both Docker and Singularity
-- **GPU Support**: Native GPU access for visualization and compute workloads
+- **Software or GPU Rendering**: CPU (llvmpipe) by default, or hardware-accelerated OpenGL via VirtualGL on an NVIDIA GPU — auto-detected, with software fallback
 - **Startup Application**: Automatically launch any host command when the session starts
 - **Flexible Storage**: Auto-mount common directories plus custom paths
 - **Scheduler Support**: Works with both SLURM and PBS job schedulers
@@ -62,6 +62,9 @@ Choose **Docker** or **Singularity** depending on what is available on your clus
 
 ### Operating System
 Selects the KasmVNC container image (Rocky Linux 8, Rocky Linux 9, or Ubuntu 22.04). This controls the look-and-feel of the desktop window manager only — it does **not** affect the host OS or the tools available in the xterm terminal.
+
+### Rendering
+Choose **Software (CPU)** for llvmpipe rendering, which runs on any node, or **Hardware (GPU)** for VirtualGL/EGL-accelerated OpenGL on an NVIDIA GPU (Singularity runtime). Hardware mode auto-detects the GPU at session start and falls back to software rendering if none is available. Defaults to software.
 
 ### Startup Application
 Specify a command to run automatically when the session starts (e.g., `firefox`, `matlab`, `paraview`). This command runs **on the host compute node** using the container's X display.  Leave blank to start with just the xterm terminal.

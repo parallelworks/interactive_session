@@ -105,12 +105,17 @@ echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 jupyterserver_port=$(pw agent open-port)
 
-#######################
-# START NGINX WRAPPER #
-#######################
+###########################
+# WRITE NGINX CONFIG FILES #
+###########################
+# The nginx process is started later, only AFTER the Jupyter Notebook backend is
+# confirmed to be accepting connections (see "START NGINX WRAPPER" below).
+# Starting nginx first lets the platform readiness probe connect to nginx and
+# receive a 502 from the not-yet-ready upstream; because that probe does not use
+# curl --fail, a 502 is treated as "ready" and the session is exposed before
+# Jupyter is up -> intermittent 502 / broken sessions.
 
-echo "::group::Nginx Proxy"
-echo "::notice::Starting nginx wrapper on service port ${service_port}"
+echo "::group::Nginx config"
 
 # Write config file
 cat >> config.conf <<HERE
@@ -174,40 +179,6 @@ http {
 }
 HERE
 
-if sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
-    container_name="nginx-${service_port}"
-    # Remove container when job is canceled
-    echo "sudo docker stop ${container_name}" >> cancel.sh
-    echo "sudo docker rm ${container_name}" >> cancel.sh
-    # Start container
-    sudo service docker start
-    touch empty
-    touch nginx.logs
-    # change ownership to nginx user
-    sudo chown 101:101 nginx.conf config.conf empty nginx.logs  
-    sudo chmod 644 *.conf
-    sudo docker run  -d --name ${container_name} \
-         -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
-         -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
-         -v $PWD/empty:/etc/nginx/conf.d/default.conf \
-         -v $PWD/nginx.logs:/var/log/nginx/access.log \
-         -v $PWD/nginx.logs:/var/log/nginx/error.log \
-         --network=host nginxinc/nginx-unprivileged:1.25.3
-    # Print logs
-    sudo docker logs ${container_name}
-elif which singularity >/dev/null 2>&1; then
-    echo "::notice::Running singularity container ${service_nginx_sif}"
-    # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid 
-    # and other users cannot use the node. Was not able to change this in the config.conf.
-    mkdir -p ./tmp
-    # Need to overwrite default configuration!
-    touch empty
-    singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B $PWD/nginx.conf:/etc/nginx/nginx.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} >> nginx.logs 2>&1 &
-    pid=$!
-    echo "kill ${pid}" >> cancel.sh
-else
-    echo "::error title=Error::Need Docker or Singularity to start NGINX proxy"
-fi
 echo "::endgroup::"
 
 
@@ -286,7 +257,76 @@ sed -i "s|^.*c\.ServerApp\.root_dir.*|c.ServerApp.root_dir = '${service_notebook
 sed -i "s|^.*c\.ServerApp\.base_url.*|c.ServerApp.base_url = '${basepath}/'|" jupyter_notebook_config.py
 #sed -i "s|^.*c\.ServerApp\.base_url.*|c.ServerApp.base_url = '${basepath}/'|" jupyter_notebook_config.py
 date
-jupyter-notebook --port=${jupyterserver_port} --no-browser --config=${PWD}/jupyter_notebook_config.py
+
+# Start the Jupyter Notebook server in the background so nginx can be delayed
+# until the backend is ready (see the note in the nginx config section above).
+jupyter-notebook --port=${jupyterserver_port} --no-browser --config=${PWD}/jupyter_notebook_config.py &
+jupyter_pid=$!
+echo "kill ${jupyter_pid} # jupyter-notebook" >> cancel.sh
+
+# Wait for Jupyter to accept connections before starting nginx. This prevents
+# the session from being exposed (and the platform readiness probe from passing)
+# before the backend can actually serve requests. The Notebook server can be
+# slow to start when nb_conda_kernels scans many environments, so allow up to 5
+# minutes.
+echo "::group::Waiting for Jupyter Notebook"
+echo "::notice::Waiting for Jupyter Notebook on port ${jupyterserver_port}"
+for i in $(seq 1 300); do
+    if curl -sf "http://127.0.0.1:${jupyterserver_port}${basepath}/" > /dev/null 2>&1; then
+        echo "::notice::Jupyter Notebook ready after ${i}s"
+        break
+    fi
+    if ! kill -0 ${jupyter_pid} 2>/dev/null; then
+        echo "::error title=Error::Jupyter Notebook process exited unexpectedly"
+        exit 1
+    fi
+    sleep 1
+done
+echo "::endgroup::"
+
+#######################
+# START NGINX WRAPPER #
+#######################
+echo "::group::Nginx Proxy"
+echo "::notice::Starting nginx wrapper on service port ${service_port}"
+if sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
+    container_name="nginx-${service_port}"
+    # Remove container when job is canceled
+    echo "sudo docker stop ${container_name}" >> cancel.sh
+    echo "sudo docker rm ${container_name}" >> cancel.sh
+    # Start container
+    sudo service docker start
+    touch empty
+    touch nginx.logs
+    # change ownership to nginx user
+    sudo chown 101:101 nginx.conf config.conf empty nginx.logs
+    sudo chmod 644 *.conf
+    sudo docker run  -d --name ${container_name} \
+         -v $PWD/config.conf:/etc/nginx/conf.d/config.conf \
+         -v $PWD/nginx.conf:/etc/nginx/nginx.conf \
+         -v $PWD/empty:/etc/nginx/conf.d/default.conf \
+         -v $PWD/nginx.logs:/var/log/nginx/access.log \
+         -v $PWD/nginx.logs:/var/log/nginx/error.log \
+         --network=host nginxinc/nginx-unprivileged:1.25.3
+    # Print logs
+    sudo docker logs ${container_name}
+elif which singularity >/dev/null 2>&1; then
+    echo "::notice::Running singularity container ${service_nginx_sif}"
+    # We need to mount $PWD/tmp:/tmp because otherwise nginx writes the file /tmp/nginx.pid
+    # and other users cannot use the node. Was not able to change this in the config.conf.
+    mkdir -p ./tmp
+    # Need to overwrite default configuration!
+    touch empty
+    singularity run -B $PWD/tmp:/tmp -B $PWD/config.conf:/etc/nginx/conf.d/config.conf -B $PWD/nginx.conf:/etc/nginx/nginx.conf -B empty:/etc/nginx/conf.d/default.conf ${service_nginx_sif} >> nginx.logs 2>&1 &
+    pid=$!
+    echo "kill ${pid}" >> cancel.sh
+else
+    echo "::error title=Error::Need Docker or Singularity to start NGINX proxy"
+fi
+echo "::endgroup::"
+
+# Keep the job alive while the Jupyter Notebook server runs.
+wait ${jupyter_pid}
 
 fi
 

@@ -48,12 +48,13 @@ download_sandbox() {
 }
 
 # Default is software rendering: download only the base container and run it the
-# old way. Hardware rendering provisions the GPU images. Singularity *sandbox
-# directories* read unreliably from parallel/clustered filesystems (Lustre, WEKA,
-# GPFS, NFS, ...) -- cold reads can return truncated data and corrupt Python/Perl
-# files at startup -- so on those filesystems fetch all three images and let the
-# start script fall back through them at run time (SIF if mountable -> GPU sandbox
-# -> base). On local filesystems the GPU sandbox reads fine, so just fetch that.
+# old way. Hardware rendering provisions the GPU images instead -- never the base,
+# and it does NOT fall back to software. Singularity *sandbox directories* read
+# unreliably from parallel/clustered filesystems (Lustre, WEKA, GPFS, NFS, ...) --
+# cold reads can return truncated data and corrupt Python/Perl files at startup --
+# so on those filesystems fetch both GPU images (SIF + GPU sandbox) and let the
+# start script try them at run time (SIF if mountable -> GPU sandbox; fail if
+# neither runs). On local filesystems the GPU sandbox reads fine, so just fetch that.
 if [ "${rendering}" != "hardware" ]; then
     echo "::notice::Software rendering selected; using base container only"
     download_sandbox ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}:1.0 \

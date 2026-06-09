@@ -103,7 +103,7 @@ jobs:
       container_runtime:
         type: dropdown
         label: Run container using
-        default: kasmvnc-docker
+        default: kasmvnc-singularity
         tooltip: Select which container runtime will be used to launch the KasmVNC container (e.g., Docker or Singularity).
         options:
           - label: Docker
@@ -181,6 +181,8 @@ jobs:
             type: dropdown
             label: Rendering
             default: software
+            hidden: ${{ inputs.container_runtime == 'kasmvnc-docker' }}
+            ignore: ${{ .hidden }}
             tooltip: |
               Software (CPU): llvmpipe rendering; runs on any node.
               Hardware (GPU): VirtualGL/EGL on an NVIDIA GPU when available

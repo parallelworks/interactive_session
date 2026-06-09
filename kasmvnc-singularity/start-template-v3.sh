@@ -7,19 +7,31 @@ set -ex
 
 echo "::group::Desktop Service Starting (Compute Node)"
 
-# Load singularity/apptainer if not already in PATH
-if ! which singularity &> /dev/null; then
-    if module load apptainer 2>/dev/null; then
-        echo "::notice::Loaded apptainer module"
-    elif module load singularity 2>/dev/null; then
-        echo "::notice::Loaded singularity module"
-    else
-        echo "::error title=Error::singularity/apptainer not found in PATH and could not be loaded via module"
-        exit 1
-    fi
+# Container runtime selection. Prefer apptainer over singularity: apptainer mounts
+# SIFs rootless (it bundles squashfuse/fuse-overlayfs), and a SIF -- being a single
+# file -- reads reliably on parallel filesystems (Lustre/GPFS/WEKA/NFS) where an
+# exploded sandbox directory returns truncated reads that corrupt Perl/Python at
+# startup. Older setuid-mode singularity (no suid bit, no FUSE) cannot mount a SIF
+# unprivileged and is forced onto the unreliable sandbox path.
+# Works whether the runtime is already in PATH or must be loaded via environment
+# modules, so it is portable across the many systems this script runs on. Every
+# later invocation uses ${CONTAINER}.
+CONTAINER=""
+if command -v apptainer &>/dev/null; then
+    CONTAINER=apptainer
+elif module load apptainer &>/dev/null && command -v apptainer &>/dev/null; then
+    CONTAINER=apptainer
+    echo "::notice::Loaded apptainer module"
+elif command -v singularity &>/dev/null; then
+    CONTAINER=singularity
+elif module load singularity &>/dev/null && command -v singularity &>/dev/null; then
+    CONTAINER=singularity
+    echo "::notice::Loaded singularity module"
 else
-    echo "::notice::singularity already available in PATH"
+    echo "::error title=Error::Neither apptainer nor singularity found in PATH or via environment modules"
+    exit 1
 fi
+echo "::notice::Using container runtime: ${CONTAINER} ($(${CONTAINER} --version 2>/dev/null))"
 
 if [ -n "${service_parent_install_dir}" ]; then
     container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}-gpu
@@ -193,11 +205,11 @@ fi
 
 USERNS_FLAG=""
 WRITABLE_TMPFS_FLAG=""
-_sing_bin=$(which singularity 2>/dev/null || which apptainer 2>/dev/null)
+_sing_bin=$(command -v "${CONTAINER}" 2>/dev/null)
 if [ -n "${_sing_bin}" ] && ! test -u "${_sing_bin}"; then
     # No setuid bit: unprivileged installation requires --userns
     USERNS_FLAG="--userns"
-    echo "::notice::Singularity has no setuid bit, enabling --userns"
+    echo "::notice::${CONTAINER} has no setuid bit, enabling --userns"
 elif df -T "${service_parent_install_dir}/containers" 2>/dev/null | awk 'NR==2{print $2}' | grep -qi lustre; then
     echo "::notice::Container is on a Lustre filesystem, skipping --writable-tmpfs (overlay not supported)"
 else
@@ -217,10 +229,10 @@ fi
 container_candidates=""
 if [ "${rendering}" = "hardware" ]; then
     if [ -f "${container_sif}" ]; then
-        if singularity exec ${USERNS_FLAG} "${container_sif}" true >/dev/null 2>&1; then
+        if ${CONTAINER} exec ${USERNS_FLAG} "${container_sif}" true >/dev/null 2>&1; then
             container_candidates="${container_candidates} ${container_sif}"
         else
-            echo "::warning::SIF present but this Singularity cannot mount it unprivileged; skipping SIF"
+            echo "::warning::SIF present but ${CONTAINER} cannot mount it unprivileged; skipping SIF"
         fi
     fi
     [ -d "${container_dir}" ]      && container_candidates="${container_candidates} ${container_dir}"
@@ -263,7 +275,7 @@ for _cand in ${container_candidates}; do
 
         echo "::notice::Starting KasmVNC container on display :${XdisplayNumber} (image: ${_cand}, try ${_try}/${display_tries_per_image})..."
         set -x
-        singularity run \
+        ${CONTAINER} run \
             ${WRITABLE_TMPFS_FLAG} ${USERNS_FLAG} ${ETC_ENV_FLAG} \
             ${GPU_FLAG} \
             ${NV_GL_BIND_FLAGS} \

@@ -55,7 +55,7 @@ jobs:
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
 
-            echo "module load singularity" >> inputs.sh
+            echo "module load apptainer || module load singularity" >> inputs.sh
 
             slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
             echo "slug=${slug}"  | tee -a $OUTPUTS

@@ -1,0 +1,119 @@
+# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
+# pipeline: a 3-stage DAG (generate -> analyze -> report) on one resource.
+# Jobs share ${PW_PARENT_JOB_DIR}, pass values via $OUTPUTS, and the report job
+# runs a conditional step based on an upstream output.
+permissions:
+  - '*'
+
+jobs:
+  generate:
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Write code
+        run: |
+          set -x
+          mkdir -p ${PW_PARENT_JOB_DIR}/pipeline
+          base64 -d > ${PW_PARENT_JOB_DIR}/pipeline/gen.py <<'B64'
+          IyEvdXNyL2Jpbi9lbnYgcHl0aG9uMwoiIiJTdGFnZSAxIG9mIHRoZSBwaXBlbGluZTogZ2VuZXJhdGUgYSBub2lzeSBsaW5lYXIg
+          ZGF0YXNldCB0byBkYXRhLmNzdi4KClByaW50cyB0aGUgcm93IGNvdW50IG9uIHN0ZG91dCBzbyB0aGUgam9iIGNhbiBjYXB0dXJl
+          IGl0IGludG8gJE9VVFBVVFMuCiIiIgppbXBvcnQgYXJncGFyc2UKaW1wb3J0IGNzdgppbXBvcnQgcmFuZG9tCgphcCA9IGFyZ3Bh
+          cnNlLkFyZ3VtZW50UGFyc2VyKCkKYXAuYWRkX2FyZ3VtZW50KCItLXJvd3MiLCB0eXBlPWludCwgZGVmYXVsdD0xMDAwKQphcC5h
+          ZGRfYXJndW1lbnQoIi0tbm9pc2UiLCB0eXBlPWZsb2F0LCBkZWZhdWx0PTIuMCkKYXAuYWRkX2FyZ3VtZW50KCItLXNsb3BlIiwg
+          dHlwZT1mbG9hdCwgZGVmYXVsdD0zLjApCmFwLmFkZF9hcmd1bWVudCgiLS1pbnRlcmNlcHQiLCB0eXBlPWZsb2F0LCBkZWZhdWx0
+          PTUuMCkKYXAuYWRkX2FyZ3VtZW50KCItLXNlZWQiLCB0eXBlPWludCwgZGVmYXVsdD03KQphcC5hZGRfYXJndW1lbnQoIi0tb3V0
+          IiwgZGVmYXVsdD0iZGF0YS5jc3YiKQphID0gYXAucGFyc2VfYXJncygpCgpybmQgPSByYW5kb20uUmFuZG9tKGEuc2VlZCkKd2l0
+          aCBvcGVuKGEub3V0LCAidyIsIG5ld2xpbmU9IiIpIGFzIGZoOgogICAgdyA9IGNzdi53cml0ZXIoZmgpCiAgICB3LndyaXRlcm93
+          KFsieCIsICJ5Il0pCiAgICBmb3IgaSBpbiByYW5nZShhLnJvd3MpOgogICAgICAgIHggPSBpIC8gYS5yb3dzICogMTAuMAogICAg
+          ICAgIHkgPSBhLnNsb3BlICogeCArIGEuaW50ZXJjZXB0ICsgcm5kLmdhdXNzKDAsIGEubm9pc2UpCiAgICAgICAgdy53cml0ZXJv
+          dyhbcm91bmQoeCwgNCksIHJvdW5kKHksIDQpXSkKCnByaW50KGEucm93cykK
+          B64
+          base64 -d > ${PW_PARENT_JOB_DIR}/pipeline/analyze.py <<'B64'
+          IyEvdXNyL2Jpbi9lbnYgcHl0aG9uMwoiIiJTdGFnZSAyIG9mIHRoZSBwaXBlbGluZTogbGVhc3Qtc3F1YXJlcyBmaXQgb2YgZGF0
+          YS5jc3YgLT4gc3RhdHMuanNvbi4KClByaW50cyBgc2xvcGU9Li4uYCBhbmQgYG1lYW5feT0uLi5gIGxpbmVzIOKAlCBLRVk9VkFM
+          VUUgZm9ybWF0IOKAlCBzbyB0aGUgam9iIGNhbgpwaXBlIHRoZW0gc3RyYWlnaHQgaW50byAkT1VUUFVUUyBmb3IgZG93bnN0cmVh
+          bSBqb2JzIHRvIGNvbnN1bWUuCiIiIgppbXBvcnQgY3N2CmltcG9ydCBqc29uCmltcG9ydCBzdGF0aXN0aWNzIGFzIHN0Cgp4cywg
+          eXMgPSBbXSwgW10Kd2l0aCBvcGVuKCJkYXRhLmNzdiIpIGFzIGZoOgogICAgbmV4dChmaCkgICMgaGVhZGVyCiAgICBmb3Igcm93
+          IGluIGNzdi5yZWFkZXIoZmgpOgogICAgICAgIHhzLmFwcGVuZChmbG9hdChyb3dbMF0pKQogICAgICAgIHlzLmFwcGVuZChmbG9h
+          dChyb3dbMV0pKQoKbiA9IGxlbih4cykKbXggPSBzdW0oeHMpIC8gbgpteSA9IHN1bSh5cykgLyBuCnNsb3BlID0gc3VtKCh4IC0g
+          bXgpICogKHkgLSBteSkgZm9yIHgsIHkgaW4gemlwKHhzLCB5cykpIC8gc3VtKCh4IC0gbXgpICoqIDIgZm9yIHggaW4geHMpCmlu
+          dGVyY2VwdCA9IG15IC0gc2xvcGUgKiBteAoKc3RhdHMgPSB7CiAgICAibiI6IG4sCiAgICAic2xvcGUiOiByb3VuZChzbG9wZSwg
+          NCksCiAgICAiaW50ZXJjZXB0Ijogcm91bmQoaW50ZXJjZXB0LCA0KSwKICAgICJtZWFuX3kiOiByb3VuZChteSwgNCksCiAgICAi
+          c3RkZXZfeSI6IHJvdW5kKHN0LnBzdGRldih5cyksIDQpLAp9CndpdGggb3Blbigic3RhdHMuanNvbiIsICJ3IikgYXMgZmg6CiAg
+          ICBqc29uLmR1bXAoc3RhdHMsIGZoLCBpbmRlbnQ9MikKCiMgS0VZPVZBTFVFIGxpbmVzIC0+ICRPVVRQVVRTLiBnb29kX2ZpdCBp
+          cyBjb21wdXRlZCBoZXJlIChpbiBQeXRob24sIHdoZXJlIG51bWVyaWMKIyBjb21wYXJpc29ucyBhcmUgcmVsaWFibGUpIGFuZCBj
+          b25zdW1lZCBieSBhIGRvd25zdHJlYW0gYGlmOmAgdmlhIHN0cmluZyBlcXVhbGl0eS4KcHJpbnQoInNsb3BlPSUuNGYiICUgc2xv
+          cGUpCnByaW50KCJtZWFuX3k9JS40ZiIgJSBteSkKcHJpbnQoInN0ZGV2X3k9JS40ZiIgJSBzdGF0c1sic3RkZXZfeSJdKQpwcmlu
+          dCgiZ29vZF9maXQ9JXMiICUgKCJ0cnVlIiBpZiAyLjAgPD0gc2xvcGUgPD0gNC4wIGVsc2UgImZhbHNlIikpCg==
+          B64
+      - name: Generate dataset
+        run: |
+          set -x
+          cd ${PW_PARENT_JOB_DIR}
+          rows=$(python3 pipeline/gen.py --rows "${{ inputs.data.rows }}" --noise "${{ inputs.data.noise }}" --out data.csv)
+          echo "n_rows=${rows}" | tee -a $OUTPUTS
+          head -3 data.csv
+
+  analyze:
+    needs:
+      - generate
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Least-squares fit
+        run: |
+          set -x
+          cd ${PW_PARENT_JOB_DIR}
+          # analyze.py prints KEY=VALUE lines (slope=, mean_y=, stdev_y=, good_fit=)
+          # which tee writes straight into $OUTPUTS as job outputs.
+          python3 pipeline/analyze.py | tee -a $OUTPUTS
+          cat stats.json
+
+  report:
+    needs:
+      - generate
+      - analyze
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Write report
+        run: |
+          cd ${PW_PARENT_JOB_DIR}
+          cat > report.md <<EOF
+          # Pipeline report
+
+          - rows generated: ${{ needs.generate.outputs.n_rows }}
+          - fitted slope:   ${{ needs.analyze.outputs.slope }}
+          - fitted mean_y:  ${{ needs.analyze.outputs.mean_y }}
+          - stdev_y:        ${{ needs.analyze.outputs.stdev_y }}
+          - good fit:       ${{ needs.analyze.outputs.good_fit }}
+          EOF
+          cat report.md
+      - name: Flag a poor fit
+        if: ${{ needs.analyze.outputs.good_fit == 'false' }}
+        run: |
+          echo "::warning title=Poor fit::slope ${{ needs.analyze.outputs.slope }} is outside the expected band"
+      - name: Confirm a good fit
+        if: ${{ needs.analyze.outputs.good_fit == 'true' }}
+        run: |
+          echo "::notice title=Good fit::slope ${{ needs.analyze.outputs.slope }} looks healthy"
+
+'on':
+  execute:
+    inputs:
+      resource:
+        type: compute-clusters
+        label: Compute resource
+        include-workspace: true
+      data:
+        type: group
+        label: Dataset
+        items:
+          rows:
+            label: Rows
+            type: integer
+            default: 1000
+          noise:
+            label: Noise stdev
+            type: number
+            default: 2.0

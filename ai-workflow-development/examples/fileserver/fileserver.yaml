@@ -1,0 +1,124 @@
+# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
+# fileserver: browse/download a directory on the resource via a tunnel session.
+# No custom code — the start script runs Python's stdlib http.server.
+permissions:
+  - '*'
+sessions:
+  session:
+    useTLS: false
+    redirect: true
+
+jobs:
+  preprocessing:
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Create inputs and scripts
+        run: |
+          set -x
+          env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+          sed -i 's/=\(.*\)/="\1"/' inputs.sh
+          cat <<'EOF' >> inputs.sh
+          PATH=$HOME/pw:$PATH
+          fs_dir="${{ inputs.fs.directory }}"
+          EOF
+          sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+          sed -i '/=""/d' inputs.sh
+          sed -i 's/^/export /' inputs.sh
+          mkdir -p ${PW_PARENT_JOB_DIR}/fileserver
+          base64 -d > ${PW_PARENT_JOB_DIR}/fileserver/controller-v3.sh <<'B64'
+          IyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMj
+          IyMjIyMKIyBmaWxlc2VydmVyIOKAlCBjb250cm9sbGVyIHNjcmlwdC4gVXNlcyBQeXRob24ncyBidWlsdC1pbiBodHRwLnNlcnZl
+          ciwgc28gdGhlIG9ubHkKIyByZXF1aXJlbWVudCBpcyBweXRob24zLiBJZGVtcG90ZW50LgojIyMjIyMjIyMjIyMjIyMjIyMjIyMj
+          IyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIwpzZXQgLW8gcGlwZWZhaWwK
+          aWYgISBjb21tYW5kIC12IHB5dGhvbjMgPi9kZXYvbnVsbCAyPiYxOyB0aGVuCiAgICBlY2hvICI6OmVycm9yIHRpdGxlPUVycm9y
+          OjpweXRob24zIG5vdCBmb3VuZCBvbiAkKGhvc3RuYW1lKSIKICAgIGV4aXQgMQpmaQplY2hvICI6Om5vdGljZTo6cHl0aG9uMyAk
+          KHB5dGhvbjMgLS12ZXJzaW9uIDI+JjEpIG9uICQoaG9zdG5hbWUpIgo=
+          B64
+          base64 -d > ${PW_PARENT_JOB_DIR}/fileserver/start-template-v3.sh <<'B64'
+          IyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMj
+          IyMjIyMKIyBmaWxlc2VydmVyIOKAlCBzdGFydCBzZXJ2aWNlIHNjcmlwdC4gTm8gY3VzdG9tIGNvZGU6IFB5dGhvbidzIHN0ZGxp
+          YiBodHRwLnNlcnZlcgojIGFscmVhZHkgZG9lcyBkaXJlY3RvcnkgbGlzdGluZyArIGRvd25sb2Fkcy4gc2Vzc2lvbl9ydW5uZXIg
+          aW5qZWN0cyAke3NlcnZpY2VfcG9ydH0uCiMKIyBOT1RFOiB0aGlzIGV4cG9zZXMgdGhlIGNob3NlbiBkaXJlY3RvcnkgUkVBRC1P
+          TkxZIHRocm91Z2ggdGhlIHNlc3Npb24gdG8gYW55b25lCiMgd2l0aCB0aGUgc2Vzc2lvbiBVUkwuIFBvaW50IGl0IGF0IGRhdGEg
+          eW91IGludGVuZCB0byBzaGFyZSwgbm90ICRIT01FIHNlY3JldHMuCiMgSW5wdXRzIChmcm9tIGlucHV0cy5zaCk6IGZzX2RpciAo
+          ZGlyZWN0b3J5IHRvIHNlcnZlKS4KIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMj
+          IyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMKc2VydmVfZGlyPSIke2ZzX2RpcjotJEhPTUV9IgplY2hvICI6Om5vdGljZTo6U2Vy
+          dmluZyAke3NlcnZlX2Rpcn0gb24gcG9ydCAke3NlcnZpY2VfcG9ydH0gZnJvbSAkKGhvc3RuYW1lKSIKCmVjaG8gJyMhL2Jpbi9i
+          YXNoJyA+ICR7UFdfUEFSRU5UX0pPQl9ESVJ9L2NhbmNlbC5zaApjaG1vZCAreCAke1BXX1BBUkVOVF9KT0JfRElSfS9jYW5jZWwu
+          c2gKCnB5dGhvbjMgLW0gaHR0cC5zZXJ2ZXIgIiR7c2VydmljZV9wb3J0fSIgLS1iaW5kIDAuMC4wLjAgLS1kaXJlY3RvcnkgIiR7
+          c2VydmVfZGlyfSIgXAogICAgPiAke1BXX1BBUkVOVF9KT0JfRElSfS9maWxlc2VydmVyLm91dCAyPiYxICYKcGlkPSQhCmVjaG8g
+          ImtpbGwgJHtwaWR9IiA+PiAke1BXX1BBUkVOVF9KT0JfRElSfS9jYW5jZWwuc2gKZWNobyAiOjpub3RpY2U6Omh0dHAuc2VydmVy
+          IHN0YXJ0ZWQgKHBpZCAke3BpZH0pIgpzbGVlcCBpbmYK
+          B64
+
+  session_runner:
+    needs:
+      - preprocessing
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Session Runner
+        uses: github/parallelworks/interactive_session@main
+        early-cancel: any-job-failed
+        with:
+          $yaml: workflow/session_runner/v1.4/general.yaml
+          session: ${{ sessions.session }}
+          resource: ${{ inputs.resource }}
+          cluster:
+            scheduler: ${{ inputs.scheduler }}
+            slurm:
+              is_enabled: ${{ inputs.slurm.is_enabled }}
+              partition: ${{ inputs.slurm.partition }}
+              scheduler_directives: ${{ inputs.slurm.scheduler_directives }}
+              time: ${{ inputs.slurm.time }}
+            pbs:
+              is_enabled: ${{ inputs.pbs.is_enabled }}
+              scheduler_directives: ${{ inputs.pbs.scheduler_directives }}
+          service:
+            start_service_script: ${PW_PARENT_JOB_DIR}/fileserver/start-template-v3.sh
+            controller_script: ${PW_PARENT_JOB_DIR}/fileserver/controller-v3.sh
+            inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
+            slug: ""
+            rundir: ${PW_PARENT_JOB_DIR}
+
+'on':
+  execute:
+    inputs:
+      resource:
+        type: compute-clusters
+        label: Service host
+        include-workspace: true
+      scheduler:
+        type: boolean
+        default: false
+        label: Schedule Job?
+        hidden: ${{ inputs.resource.schedulerType == '' }}
+        ignore: ${{ .hidden }}
+      slurm:
+        type: group
+        label: SLURM Directives
+        hidden: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        ignore: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        items:
+          is_enabled: { type: boolean, hidden: true, default: true }
+          partition: { type: slurm-partitions, label: SLURM partition, optional: true, resource: '${{ inputs.resource }}' }
+          time: { label: Walltime, type: string, default: '01:00:00' }
+          scheduler_directives: { type: editor, optional: true }
+      pbs:
+        type: group
+        label: PBS Directives
+        hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+        ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+        items:
+          is_enabled: { type: boolean, hidden: true, default: true }
+          scheduler_directives: { label: Scheduler Directives, type: editor }
+      fs:
+        type: group
+        label: File Server
+        items:
+          directory:
+            label: Directory to serve
+            type: string
+            default: ${HOME}/pw/jobs
+            tooltip: Read-only directory exposed through the session

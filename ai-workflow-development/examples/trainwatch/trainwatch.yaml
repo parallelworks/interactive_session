@@ -1,0 +1,190 @@
+# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
+# trainwatch: live training dashboard served as a tunnel session via session_runner.
+permissions:
+  - '*'
+sessions:
+  session:
+    useTLS: false
+    redirect: true
+
+jobs:
+  preprocessing:
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Create inputs and code
+        run: |
+          set -x
+          env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+          sed -i 's/=\(.*\)/="\1"/' inputs.sh
+          cat <<'EOF' >> inputs.sh
+          PATH=$HOME/pw:$PATH
+          tw_epochs="${{ inputs.train.epochs }}"
+          tw_period="${{ inputs.train.period }}"
+          EOF
+          sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+          sed -i '/=""/d' inputs.sh
+          sed -i 's/^/export /' inputs.sh
+          mkdir -p ${PW_PARENT_JOB_DIR}/trainwatch
+          base64 -d > ${PW_PARENT_JOB_DIR}/trainwatch/trainwatch_server.py <<'B64'
+          IyEvdXNyL2Jpbi9lbnYgcHl0aG9uMwoiIiJBIGxpdmUgInRyYWluaW5nIiBkYXNoYm9hcmQgc2VydmVkIG92ZXIgSFRUUCAocHVy
+          ZSBzdGRsaWIpLgoKQSBiYWNrZ3JvdW5kIHRocmVhZCBzaW11bGF0ZXMgYSB0cmFpbmluZyBydW4gKGxvc3MgZGVjYXlzIHdpdGgg
+          bm9pc2U7IGFjY3VyYWN5CnJpc2VzKTsgdGhlIHBhZ2UgcG9sbHMgL21ldHJpY3MgYW5kIGRyYXdzIGEgbGl2ZSBTVkcgbG9zcyBj
+          dXJ2ZS4gQ291bnRlcnBhcnQgdG8KdGhlIGZyYWN0YWwgZGVtbzogdGhhdCByZW5kZXJzIGFuIGltYWdlIHNlcnZlci1zaWRlLCB0
+          aGlzIHN0cmVhbXMgYSBudW1lcmljIHRpbWUKc2VyaWVzIGFuZCBjaGFydHMgaXQgY2xpZW50LXNpZGUuCgpFbmRwb2ludHM6ICAv
+          ICAoZGFzaGJvYXJkKSAgIC9tZXRyaWNzIChKU09OIGhpc3RvcnkpICAgL2hlYWx0aHoKIiIiCmltcG9ydCBhcmdwYXJzZQppbXBv
+          cnQganNvbgppbXBvcnQgbWF0aAppbXBvcnQgcmFuZG9tCmltcG9ydCB0aHJlYWRpbmcKaW1wb3J0IHRpbWUKZnJvbSBodHRwLnNl
+          cnZlciBpbXBvcnQgQmFzZUhUVFBSZXF1ZXN0SGFuZGxlciwgVGhyZWFkaW5nSFRUUFNlcnZlcgoKU1RBVEUgPSB7Imhpc3Rvcnki
+          OiBbXSwgImVwb2NocyI6IDAsICJkb25lIjogRmFsc2UsICJzdGFydGVkIjogdGltZS50aW1lKCl9CkxPQ0sgPSB0aHJlYWRpbmcu
+          TG9jaygpCgoKZGVmIHRyYWluKGVwb2NocywgcGVyaW9kKToKICAgIHJuZCA9IHJhbmRvbS5SYW5kb20oMSkKICAgIHdpdGggTE9D
+          SzoKICAgICAgICBTVEFURS51cGRhdGUoaGlzdG9yeT1bXSwgZXBvY2hzPWVwb2NocywgZG9uZT1GYWxzZSwgc3RhcnRlZD10aW1l
+          LnRpbWUoKSkKICAgIGZvciBlIGluIHJhbmdlKDEsIGVwb2NocyArIDEpOgogICAgICAgIGxvc3MgPSAyLjUgKiBtYXRoLmV4cCgt
+          ZSAvIChlcG9jaHMgLyA0LjApKSArIHJuZC51bmlmb3JtKDAsIDAuMTUpCiAgICAgICAgYWNjID0gbWF4KDAuMCwgbWluKDEuMCwg
+          MS4wIC0gbG9zcyAvIDMuMCkpCiAgICAgICAgd2l0aCBMT0NLOgogICAgICAgICAgICBTVEFURVsiaGlzdG9yeSJdLmFwcGVuZCh7
+          ImVwb2NoIjogZSwgImxvc3MiOiByb3VuZChsb3NzLCA0KSwgImFjYyI6IHJvdW5kKGFjYywgNCl9KQogICAgICAgIHRpbWUuc2xl
+          ZXAocGVyaW9kKQogICAgd2l0aCBMT0NLOgogICAgICAgIFNUQVRFWyJkb25lIl0gPSBUcnVlCgoKUEFHRSA9ICIiIjwhZG9jdHlw
+          ZSBodG1sPjxodG1sPjxoZWFkPjxtZXRhIGNoYXJzZXQ9InV0Zi04Ij48dGl0bGU+dHJhaW53YXRjaDwvdGl0bGU+CjxzdHlsZT4K
+          IGJvZHl7Zm9udC1mYW1pbHk6c3lzdGVtLXVpLHNhbnMtc2VyaWY7YmFja2dyb3VuZDojMGIwYjEyO2NvbG9yOiNlOGU4ZjA7bWFy
+          Z2luOjA7cGFkZGluZzoyNHB4O3RleHQtYWxpZ246Y2VudGVyfQogaDF7Zm9udC13ZWlnaHQ6NjAwfSAuc3RhdHtkaXNwbGF5Omlu
+          bGluZS1ibG9jazttYXJnaW46MCAxOHB4O2ZvbnQtc2l6ZToxNXB4O2NvbG9yOiNjZmNmZTZ9CiAuc3RhdCBie2Rpc3BsYXk6Ymxv
+          Y2s7Zm9udC1zaXplOjI2cHg7Y29sb3I6I2ZmZn0gc3Zne2JhY2tncm91bmQ6IzEyMTIxYztib3JkZXI6MXB4IHNvbGlkICMzMzM7
+          Ym9yZGVyLXJhZGl1czo4cHg7bWFyZ2luLXRvcDoxNHB4fQogLm11dGVke2NvbG9yOiM5YTlhYjA7Zm9udC1zaXplOjEzcHh9Cjwv
+          c3R5bGU+PC9oZWFkPjxib2R5PgogPGgxPnRyYWlud2F0Y2ggJm1kYXNoOyBsaXZlIHRyYWluaW5nPC9oMT4KIDxkaXY+PHNwYW4g
+          Y2xhc3M9InN0YXQiPmVwb2NoIDxiIGlkPSJlcCI+MDwvYj48L3NwYW4+PHNwYW4gY2xhc3M9InN0YXQiPmxvc3MgPGIgaWQ9Imxv
+          c3MiPiZtZGFzaDs8L2I+PC9zcGFuPgogPHNwYW4gY2xhc3M9InN0YXQiPmFjYyA8YiBpZD0iYWNjIj4mbWRhc2g7PC9iPjwvc3Bh
+          bj48c3BhbiBjbGFzcz0ic3RhdCI+c3RhdHVzIDxiIGlkPSJzdCI+c3RhcnRpbmc8L2I+PC9zcGFuPjwvZGl2PgogPHN2ZyBpZD0i
+          Y2hhcnQiIHdpZHRoPSI2NDAiIGhlaWdodD0iMzIwIiB2aWV3Qm94PSIwIDAgNjQwIDMyMCI+PC9zdmc+CiA8ZGl2IGNsYXNzPSJt
+          dXRlZCIgaWQ9Im1ldGEiPjwvZGl2Pgo8c2NyaXB0Pgpjb25zdCBXPTY0MCxIPTMyMCxQPTM2OwpmdW5jdGlvbiBkcmF3KGhpc3Qp
+          ewogY29uc3Qgc3ZnPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdjaGFydCcpOwogaWYoIWhpc3QubGVuZ3RoKXtyZXR1cm59CiBj
+          b25zdCB4cz1oaXN0Lm1hcChkPT5kLmVwb2NoKSwgeXM9aGlzdC5tYXAoZD0+ZC5sb3NzKTsKIGNvbnN0IHhtYXg9TWF0aC5tYXgo
+          Li4ueHMsMSksIHltYXg9TWF0aC5tYXgoLi4ueXMsMC4xKTsKIGNvbnN0IHN4PWU9PlArKFctMipQKSooZS0xKS9NYXRoLm1heCh4
+          bWF4LTEsMSk7CiBjb25zdCBzeT12PT5ILVAtKEgtMipQKSp2L3ltYXg7CiBsZXQgcHRzPWhpc3QubWFwKGQ9PnN4KGQuZXBvY2gp
+          KycsJytzeShkLmxvc3MpKS5qb2luKCcgJyk7CiBsZXQgZ3JpZD0nJzsKIGZvcihsZXQgaT0wO2k8PTQ7aSsrKXtsZXQgeT1QKyhI
+          LTIqUCkqaS80O2dyaWQrPWA8bGluZSB4MT0ke1B9IHkxPSR7eX0geDI9JHtXLVB9IHkyPSR7eX0gc3Ryb2tlPSMyYTJhM2EvPmA7
+          fQogc3ZnLmlubmVySFRNTD1ncmlkK2A8cG9seWxpbmUgcG9pbnRzPSIke3B0c30iIGZpbGw9bm9uZSBzdHJva2U9IzViOGNmZiBz
+          dHJva2Utd2lkdGg9Mi41Lz5gKwogICBgPHRleHQgeD0ke1B9IHk9MjAgZmlsbD0jOWE5YWIwIGZvbnQtc2l6ZT0xMj5sb3NzPC90
+          ZXh0PmArCiAgIGA8dGV4dCB4PSR7Vy1QLTQwfSB5PSR7SC0xMn0gZmlsbD0jOWE5YWIwIGZvbnQtc2l6ZT0xMj5lcG9jaDwvdGV4
+          dD5gOwp9CmFzeW5jIGZ1bmN0aW9uIHRpY2soKXsKIHRyeXsKICBjb25zdCBzPWF3YWl0IChhd2FpdCBmZXRjaCgnbWV0cmljcycs
+          e2NhY2hlOiduby1zdG9yZSd9KSkuanNvbigpOwogIGNvbnN0IGg9cy5oaXN0b3J5OyBjb25zdCBsYXN0PWhbaC5sZW5ndGgtMV18
+          fHt9OwogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdlcCcpLnRleHRDb250ZW50PShsYXN0LmVwb2NofHwwKSsnLycrcy5lcG9j
+          aHM7CiAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2xvc3MnKS50ZXh0Q29udGVudD1sYXN0Lmxvc3MhPW51bGw/bGFzdC5sb3Nz
+          LnRvRml4ZWQoNCk6J+KAlCc7CiAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2FjYycpLnRleHRDb250ZW50PWxhc3QuYWNjIT1u
+          dWxsPyhsYXN0LmFjYyoxMDApLnRvRml4ZWQoMSkrJyUnOifigJQnOwogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdzdCcpLnRl
+          eHRDb250ZW50PXMuZG9uZT8nZG9uZSc6J3RyYWluaW5nJzsKICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbWV0YScpLnRleHRD
+          b250ZW50PSdlbGFwc2VkICcrcy5lbGFwc2VkLnRvRml4ZWQoMSkrJ3MnOwogIGRyYXcoaCk7CiAgc2V0VGltZW91dCh0aWNrLCBz
+          LmRvbmU/MzAwMDo1MDApOwogfWNhdGNoKGUpe3NldFRpbWVvdXQodGljaywxNTAwKTt9Cn0KdGljaygpOwo8L3NjcmlwdD48L2Jv
+          ZHk+PC9odG1sPiIiIgoKCmNsYXNzIEhhbmRsZXIoQmFzZUhUVFBSZXF1ZXN0SGFuZGxlcik6CiAgICBkZWYgbG9nX21lc3NhZ2Uo
+          c2VsZiwgKmEpOgogICAgICAgIHBhc3MKCiAgICBkZWYgX3NlbmQoc2VsZiwgY29kZSwgY3R5cGUsIGJvZHkpOgogICAgICAgIHNl
+          bGYuc2VuZF9yZXNwb25zZShjb2RlKQogICAgICAgIHNlbGYuc2VuZF9oZWFkZXIoIkNvbnRlbnQtVHlwZSIsIGN0eXBlKQogICAg
+          ICAgIHNlbGYuc2VuZF9oZWFkZXIoIkNvbnRlbnQtTGVuZ3RoIiwgc3RyKGxlbihib2R5KSkpCiAgICAgICAgc2VsZi5zZW5kX2hl
+          YWRlcigiQ2FjaGUtQ29udHJvbCIsICJuby1zdG9yZSIpCiAgICAgICAgc2VsZi5lbmRfaGVhZGVycygpCiAgICAgICAgaWYgc2Vs
+          Zi5jb21tYW5kICE9ICJIRUFEIjoKICAgICAgICAgICAgc2VsZi53ZmlsZS53cml0ZShib2R5KQoKICAgIGRlZiBkb19HRVQoc2Vs
+          Zik6CiAgICAgICAgcGF0aCA9IHNlbGYucGF0aC5zcGxpdCgiPyIsIDEpWzBdCiAgICAgICAgaWYgcGF0aCBpbiAoIi8iLCAiL2lu
+          ZGV4Lmh0bWwiKToKICAgICAgICAgICAgc2VsZi5fc2VuZCgyMDAsICJ0ZXh0L2h0bWw7IGNoYXJzZXQ9dXRmLTgiLCBQQUdFLmVu
+          Y29kZSgpKQogICAgICAgIGVsaWYgcGF0aCA9PSAiL21ldHJpY3MiOgogICAgICAgICAgICB3aXRoIExPQ0s6CiAgICAgICAgICAg
+          ICAgICBib2R5ID0ganNvbi5kdW1wcyh7CiAgICAgICAgICAgICAgICAgICAgImhpc3RvcnkiOiBTVEFURVsiaGlzdG9yeSJdLAog
+          ICAgICAgICAgICAgICAgICAgICJlcG9jaHMiOiBTVEFURVsiZXBvY2hzIl0sCiAgICAgICAgICAgICAgICAgICAgImRvbmUiOiBT
+          VEFURVsiZG9uZSJdLAogICAgICAgICAgICAgICAgICAgICJlbGFwc2VkIjogdGltZS50aW1lKCkgLSBTVEFURVsic3RhcnRlZCJd
+          LAogICAgICAgICAgICAgICAgfSkuZW5jb2RlKCkKICAgICAgICAgICAgc2VsZi5fc2VuZCgyMDAsICJhcHBsaWNhdGlvbi9qc29u
+          IiwgYm9keSkKICAgICAgICBlbGlmIHBhdGggPT0gIi9oZWFsdGh6IjoKICAgICAgICAgICAgc2VsZi5fc2VuZCgyMDAsICJ0ZXh0
+          L3BsYWluIiwgYiJvayIpCiAgICAgICAgZWxzZToKICAgICAgICAgICAgc2VsZi5fc2VuZCg0MDQsICJ0ZXh0L3BsYWluIiwgYiJu
+          b3QgZm91bmQiKQoKICAgIGRvX0hFQUQgPSBkb19HRVQKCgpkZWYgbWFpbigpOgogICAgYXAgPSBhcmdwYXJzZS5Bcmd1bWVudFBh
+          cnNlcigpCiAgICBhcC5hZGRfYXJndW1lbnQoIi0tcG9ydCIsIHR5cGU9aW50LCByZXF1aXJlZD1UcnVlKQogICAgYXAuYWRkX2Fy
+          Z3VtZW50KCItLWhvc3QiLCBkZWZhdWx0PSIwLjAuMC4wIikKICAgIGFwLmFkZF9hcmd1bWVudCgiLS1lcG9jaHMiLCB0eXBlPWlu
+          dCwgZGVmYXVsdD02MCkKICAgIGFwLmFkZF9hcmd1bWVudCgiLS1wZXJpb2QiLCB0eXBlPWZsb2F0LCBkZWZhdWx0PTAuNSkKICAg
+          IGEgPSBhcC5wYXJzZV9hcmdzKCkKICAgIHRocmVhZGluZy5UaHJlYWQodGFyZ2V0PXRyYWluLCBhcmdzPShhLmVwb2NocywgYS5w
+          ZXJpb2QpLCBkYWVtb249VHJ1ZSkuc3RhcnQoKQogICAgc3J2ID0gVGhyZWFkaW5nSFRUUFNlcnZlcigoYS5ob3N0LCBhLnBvcnQp
+          LCBIYW5kbGVyKQogICAgcHJpbnQoInRyYWlud2F0Y2ggb24gJXM6JWQgKCVkIGVwb2NocykiICUgKGEuaG9zdCwgYS5wb3J0LCBh
+          LmVwb2NocyksIGZsdXNoPVRydWUpCiAgICBzcnYuc2VydmVfZm9yZXZlcigpCgoKaWYgX19uYW1lX18gPT0gIl9fbWFpbl9fIjoK
+          ICAgIG1haW4oKQo=
+          B64
+          base64 -d > ${PW_PARENT_JOB_DIR}/trainwatch/controller-v3.sh <<'B64'
+          IyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMj
+          IyMjIyMKIyB0cmFpbndhdGNoIOKAlCBjb250cm9sbGVyIHNjcmlwdCAobG9naW4gbm9kZSwgaGFzIGludGVybmV0KS4gUHVyZS1z
+          dGRsaWIgc2VydmVyLAojIHNvIHRoZSBvbmx5IHJlcXVpcmVtZW50IGlzIHB5dGhvbjMuIElkZW1wb3RlbnQuCiMjIyMjIyMjIyMj
+          IyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjCnNldCAt
+          byBwaXBlZmFpbAppZiAhIGNvbW1hbmQgLXYgcHl0aG9uMyA+L2Rldi9udWxsIDI+JjE7IHRoZW4KICAgIGVjaG8gIjo6ZXJyb3Ig
+          dGl0bGU9RXJyb3I6OnB5dGhvbjMgbm90IGZvdW5kIG9uICQoaG9zdG5hbWUpIgogICAgZXhpdCAxCmZpCmVjaG8gIjo6bm90aWNl
+          OjpweXRob24zICQocHl0aG9uMyAtLXZlcnNpb24gMj4mMSkgb24gJChob3N0bmFtZSkiCg==
+          B64
+          base64 -d > ${PW_PARENT_JOB_DIR}/trainwatch/start-template-v3.sh <<'B64'
+          IyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMj
+          IyMjIyMKIyB0cmFpbndhdGNoIOKAlCBzdGFydCBzZXJ2aWNlIHNjcmlwdC4gc2Vzc2lvbl9ydW5uZXIgaW5qZWN0cyAke3NlcnZp
+          Y2VfcG9ydH0uCiMgQmluZHMgMC4wLjAuMDoke3NlcnZpY2VfcG9ydH0sIHdyaXRlcyBjYW5jZWwuc2gsIGtlZXBzIHRoZSBqb2Ig
+          YWxpdmUuCiMgSW5wdXRzIChmcm9tIGlucHV0cy5zaCk6IHR3X2Vwb2NocywgdHdfcGVyaW9kIChvcHRpb25hbCkuCiMjIyMjIyMj
+          IyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjCmVj
+          aG8gJyMhL2Jpbi9iYXNoJyA+ICR7UFdfUEFSRU5UX0pPQl9ESVJ9L2NhbmNlbC5zaApjaG1vZCAreCAke1BXX1BBUkVOVF9KT0Jf
+          RElSfS9jYW5jZWwuc2gKCnB5dGhvbjMgJHtQV19QQVJFTlRfSk9CX0RJUn0vdHJhaW53YXRjaC90cmFpbndhdGNoX3NlcnZlci5w
+          eSBcCiAgICAtLXBvcnQgIiR7c2VydmljZV9wb3J0fSIgLS1ob3N0IDAuMC4wLjAgXAogICAgLS1lcG9jaHMgIiR7dHdfZXBvY2hz
+          Oi02MH0iIC0tcGVyaW9kICIke3R3X3BlcmlvZDotMC41fSIgXAogICAgPiAke1BXX1BBUkVOVF9KT0JfRElSfS90cmFpbndhdGNo
+          Lm91dCAyPiYxICYKcGlkPSQhCmVjaG8gImtpbGwgJHtwaWR9IiA+PiAke1BXX1BBUkVOVF9KT0JfRElSfS9jYW5jZWwuc2gKZWNo
+          byAiOjpub3RpY2U6OnRyYWlud2F0Y2ggc3RhcnRlZCAocGlkICR7cGlkfSkgb24gJHtzZXJ2aWNlX3BvcnR9IgpzbGVlcCBpbmYK
+          B64
+
+  session_runner:
+    needs:
+      - preprocessing
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Session Runner
+        uses: github/parallelworks/interactive_session@main
+        early-cancel: any-job-failed
+        with:
+          $yaml: workflow/session_runner/v1.4/general.yaml
+          session: ${{ sessions.session }}
+          resource: ${{ inputs.resource }}
+          cluster:
+            scheduler: ${{ inputs.scheduler }}
+            slurm:
+              is_enabled: ${{ inputs.slurm.is_enabled }}
+              partition: ${{ inputs.slurm.partition }}
+              scheduler_directives: ${{ inputs.slurm.scheduler_directives }}
+              time: ${{ inputs.slurm.time }}
+            pbs:
+              is_enabled: ${{ inputs.pbs.is_enabled }}
+              scheduler_directives: ${{ inputs.pbs.scheduler_directives }}
+          service:
+            start_service_script: ${PW_PARENT_JOB_DIR}/trainwatch/start-template-v3.sh
+            controller_script: ${PW_PARENT_JOB_DIR}/trainwatch/controller-v3.sh
+            inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
+            slug: ""
+            rundir: ${PW_PARENT_JOB_DIR}
+
+'on':
+  execute:
+    inputs:
+      resource:
+        type: compute-clusters
+        label: Service host
+        include-workspace: true
+      scheduler:
+        type: boolean
+        default: false
+        label: Schedule Job?
+        hidden: ${{ inputs.resource.schedulerType == '' }}
+        ignore: ${{ .hidden }}
+      slurm:
+        type: group
+        label: SLURM Directives
+        hidden: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        ignore: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        items:
+          is_enabled: { type: boolean, hidden: true, default: true }
+          partition: { type: slurm-partitions, label: SLURM partition, optional: true, resource: '${{ inputs.resource }}' }
+          time: { label: Walltime, type: string, default: '01:00:00' }
+          scheduler_directives: { type: editor, optional: true }
+      pbs:
+        type: group
+        label: PBS Directives
+        hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+        ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+        items:
+          is_enabled: { type: boolean, hidden: true, default: true }
+          scheduler_directives: { label: Scheduler Directives, type: editor }
+      train:
+        type: group
+        label: Training Settings
+        items:
+          epochs: { label: Epochs, type: integer, default: 60 }
+          period: { label: Seconds per epoch, type: number, default: 0.5 }

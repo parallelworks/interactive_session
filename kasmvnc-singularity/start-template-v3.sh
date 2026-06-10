@@ -149,17 +149,29 @@ if [ "${rendering}" = "hardware" ] && [ -n "${GPU_FLAG}" ]; then
     fi
 fi
 
-mount_directories="${HOME} /p/work /p/work1 /p/app /p/cwfs /scratch /run/munge /etc/pbs.conf /var/spool/pbs /opt/pbs ${container_mount_paths}"
+# Directories auto-mounted when present. Absence is normal across the many systems
+# this runs on, so missing auto-mounts are skipped silently (debug, not warning).
+default_mount_directories="${HOME} /p/work /p/work1 /p/app /p/cwfs /scratch /run/munge /etc/pbs.conf /var/spool/pbs /opt/pbs"
 
-# Function to build mount flags for existing directories
+# User-requested mounts come from the 'container_mount_paths' editor input (one path
+# per line). Strip any CR a browser editor may have added so existence checks don't
+# fail on a trailing '\r'.
+container_mount_paths=$(printf '%s' "${container_mount_paths}" | tr -d '\r')
+
+# Build "--bind dir" flags for directories that exist. With warn_missing="warn" a
+# user-visible warning is emitted for absent paths (used for the user-requested
+# paths); the auto-mount defaults stay silent.
 build_mount_flags() {
     local directories="$1"
-    local flags=""
+    local warn_missing="$2"
+    local flags="" dir
 
     for dir in ${directories}; do
         if [ -e "${dir}" ]; then
             flags="${flags} --bind ${dir}"
             echo "::debug::Mount: ${dir} exists, adding to bind mounts" >&2
+        elif [ "${warn_missing}" = "warn" ]; then
+            echo "::warning::Mount path '${dir}' does not exist on this host; skipping" >&2
         else
             echo "::debug::Mount: ${dir} does not exist, skipping" >&2
         fi
@@ -168,8 +180,8 @@ build_mount_flags() {
     echo "${flags}"
 }
 
-# Build mount flags for existing directories
-MOUNT_FLAGS=$(build_mount_flags "${mount_directories}")
+# Build mount flags: silent for the auto-mounted defaults, warn for user-requested paths
+MOUNT_FLAGS="$(build_mount_flags "${default_mount_directories}") $(build_mount_flags "${container_mount_paths}" warn)"
 echo "::notice::Mount flags: ${MOUNT_FLAGS}"
 
 touch empty

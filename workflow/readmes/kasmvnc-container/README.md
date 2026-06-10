@@ -70,7 +70,7 @@ Choose **Software (CPU)** for llvmpipe rendering, which runs on any node, or **H
 Specify a command to run automatically when the session starts (e.g., `firefox`, `matlab`, `paraview`). This command runs **on the host compute node** using the container's X display.  Leave blank to start with just the xterm terminal.
 
 ### Additional Mount Paths
-Common cluster directories (`/p/home`, `/p/work`, `/scratch`, etc.) are automatically mounted into the container if they exist. Specify extra paths (one per line) for additional data access inside the container itself.
+Common cluster directories (`/p/home`, `/p/work`, `/scratch`, etc.) are automatically mounted into the container if they exist. Specify extra paths (one per line) for additional data access inside the container itself. Each listed path is mounted if it exists on the host; if it does not, a warning is logged and the path is skipped.
 
 ### Compute Resources
 Configure CPU, memory, and walltime. With Singularity, NVIDIA GPUs are auto-detected and enabled (`--nv`) when present; request GPU hardware through your scheduler directives (e.g. `#SBATCH --gres=gpu:1` for SLURM or `#PBS -l ngpus=1` for PBS).

@@ -53,8 +53,11 @@ jobs:
           # Remove empty variables
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
           sed -i '/=""/d' inputs.sh # remove var=""
-          # Add export= to all lines
-          sed -i 's/^/export /' inputs.sh
+          # Prepend 'export ' to each VAR= assignment line only -- NOT to the
+          # continuation lines of a multi-line value. container_mount_paths is an
+          # 'editor' input written one path per line; a blanket 's/^/export /' would
+          # turn each extra path into 'export /path' and corrupt inputs.sh.
+          sed -i -E 's/^([A-Za-z_][A-Za-z0-9_]*=)/export \1/' inputs.sh
 
           slug="vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&host=${PW_PLATFORM_HOST}${basepath}/&dt=0"
           echo "slug=${slug}"  | tee -a $OUTPUTS
@@ -536,13 +539,13 @@ jobs:
             tooltip: Command to run after desktop starts (optional)
             optional: true
           container_mount_paths:
-            type: string
+            type: editor
             label: Additional Mount Paths
-            placeholder: |-
-              /scratch
-              /tmp
-            tooltip: 'Extra directories to mount into the container (one per line). Auto-mounted if they exist: /p/home, /p/work, /p/work1, /p/app, /p/cwfs, /scratch, /run/munge, /etc/pbs.conf, /var/spool/pbs, /opt/pbs'
             optional: true
+            tooltip: |
+              Extra directories to bind-mount into the container, one per line.
+              Each path is mounted if it exists on the host; if it does not, a warning is logged and the path is skipped.
+              Auto-mounted when present: /p/home, /p/work, /p/work1, /p/app, /p/cwfs, /scratch, /run/munge, /etc/pbs.conf, /var/spool/pbs, /opt/pbs
       k8s:
         type: group
         label: Kubernetes Settings

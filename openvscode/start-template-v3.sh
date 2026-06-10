@@ -86,7 +86,7 @@ echo "::group::Start Service"
 echo "::notice::Starting code-server: ${juice_cmd} ${service_exec} --bind-addr=0.0.0.0:${service_port} ${password_flag} ${service_directory}"
 
 ${juice_cmd} ${service_exec} \
-    --bind-addr=${HOSTNAME}:${service_port} \
+    --bind-addr=0.0.0.0:${service_port} \
     ${gh_flag} \
     ${password_flag} \
     ${service_directory}

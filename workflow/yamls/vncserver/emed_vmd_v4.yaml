@@ -261,7 +261,7 @@ jobs:
             default: vncserver
           nginx_sif_tag_existing:
             type: string
-            default: /public/apps/pw/nginx-unprivileged.sif
+            default: /public/codelab/singularity/nginx-unprivileged
             hidden: true
             ignore: ${{ 'existing' != inputs.cluster.resource.provider }}
             optional: ${{ .ignore }}

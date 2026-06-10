@@ -238,7 +238,7 @@ jobs:
           nginx_sif:
             type: string
             hidden: true
-            default: /public/apps/pw/nginx-unprivileged.sif
+            default: /public/codelab/singularity/nginx-unprivileged
           notebook_dir:
             label: Directory to start Jupyter Notebook GUI
             type: string

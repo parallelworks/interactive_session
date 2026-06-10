@@ -83,7 +83,7 @@ export GOTELEMETRY=off
 
 # START SERVICE
 echo "::group::Start Service"
-echo "::notice::Starting code-server: ${juice_cmd} ${service_exec} --bind-addr=${HOSTNAME}:${service_port} ${password_flag} ${service_directory}"
+echo "::notice::Starting code-server: ${juice_cmd} ${service_exec} --bind-addr=localhost:${service_port} ${password_flag} ${service_directory}"
 
 ${juice_cmd} ${service_exec} \
     --bind-addr=${HOSTNAME}:${service_port} \

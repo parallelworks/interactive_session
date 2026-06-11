@@ -12,7 +12,7 @@ set -o pipefail
 #   hermes_role                 worker | orchestrator
 #   service_parent_install_dir  install root (default ${HOME}/pw/software)
 #   service_hermes_model        model name as the platform lists it
-#   service_openai_base_url     platform OpenAI-compatible endpoint
+#   (brain endpoint is always https://${PW_PLATFORM_HOST}/api/openai/v1)
 #   service_hermes_install_cmd  command that installs hermes (see Hermes docs)
 #   service_allocation          X-Allocation for org-provider models (e.g. "Private LLM Group")
 #   PW_API_KEY                  runtime platform key -> OPENAI_API_KEY (not persisted)
@@ -56,7 +56,7 @@ echo "::group::Configure brain (platform OpenAI-compatible endpoint)"
 # future hermes. CONFIRM provider keys (and whether hermes can send a custom
 # X-Allocation header) against:
 #   https://hermes-agent.nousresearch.com/docs/integrations/providers
-base_url="${service_openai_base_url:-https://${PW_PLATFORM_HOST}/api/openai/v1}"
+base_url="https://${PW_PLATFORM_HOST}/api/openai/v1"
 mkdir -p "${HOME}/.hermes"
 HERMES_ENV="${HOME}/.hermes/.env"
 : > "${HERMES_ENV}"

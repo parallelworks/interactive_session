@@ -23,9 +23,10 @@ session in this repo.
         each worker's brain → platform OpenAI-compatible endpoint
 ```
 
-- **Brain**: every agent calls the platform's OpenAI-compatible endpoint
-  (`https://activate.parallel.works/api/openai/v1`) with the org secret
-  `PW_PLATFORM_TOKEN`. One credential, central model choice, billed by the platform.
+- **Brain**: every agent calls the platform's OpenAI-compatible endpoint,
+  always `https://${PW_PLATFORM_HOST}/api/openai/v1`, authenticated with the
+  **runtime `PW_API_KEY`** (never written to disk). Org-provider models
+  (`org:*`, e.g. GLM) also require the `X-Allocation` header, sent per request.
 - **Transport (the part Hermes doesn't do across clusters)**: the orchestrator
   reaches each worker with `pw ssh <cluster> curl localhost:<agent_port>`.
   Hub-and-spoke: **no inbound ports**, reuses pw auth, works for any cluster.
@@ -45,9 +46,10 @@ session in this repo.
 
 ## Setup (once)
 
-1. Create the org secret **`PW_PLATFORM_TOKEN`** = a platform token for the
-   OpenAI-compatible endpoint.
-2. Confirm a tool-calling-capable model name: `GET /api/openai/v1/models`.
+No org secret needed — auth is the runtime `PW_API_KEY`. Just confirm the
+defaults match your platform:
+1. A tool-calling-capable model id: `pw ai models ls` (default `org:glm/glm-5.1`).
+2. The allocation to bill: `GET /api/allocations` (default `Private LLM Group`).
 
 ## Run
 

@@ -11,7 +11,7 @@
 #   hermes_role                worker | orchestrator
 #   service_port               port to bind (set by session_runner; pinned for workers)
 #   service_name               service dir name under the job dir (hermes-agent)
-#   service_openai_base_url    platform OpenAI-compatible endpoint
+#   (brain endpoint is always https://${PW_PLATFORM_HOST}/api/openai/v1)
 #   PW_PLATFORM_TOKEN          platform token -> OPENAI_API_KEY for the agent
 #   HERMES_WORKERS             (orchestrator) comma-separated worker cluster names
 #   HERMES_AGENT_PORT          (orchestrator) port the workers listen on
@@ -23,7 +23,7 @@ AGENT_DIR="${PW_PARENT_JOB_DIR}/${service_name:-hermes-agent}"
 # Make pw / pw agent reachable, and give the agent its brain credentials.
 # The brain key is the runtime PW_API_KEY (never persisted to inputs.sh).
 export PATH="${HOME}/pw:${PATH}"
-export OPENAI_BASE_URL="${service_openai_base_url:-https://${PW_PLATFORM_HOST}/api/openai/v1}"
+export OPENAI_BASE_URL="https://${PW_PLATFORM_HOST}/api/openai/v1"
 export OPENAI_API_KEY="${PW_API_KEY}"
 export X_ALLOCATION="${service_allocation}"
 export MODEL="${service_hermes_model}"

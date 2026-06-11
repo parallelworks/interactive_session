@@ -35,7 +35,6 @@ jobs:
           hermes_role="worker"
           service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
           service_hermes_model="${{ inputs.service.hermes_model }}"
-          service_openai_base_url="${{ inputs.service.openai_base_url }}"
           service_hermes_install_cmd="${{ inputs.service.hermes_install_cmd }}"
           service_allocation="${{ inputs.service.allocation }}"
           service_port="${{ inputs.service.agent_port }}"
@@ -159,11 +158,6 @@ jobs:
             type: string
             default: Private LLM Group
             tooltip: Allocation name to bill org-provider (org:*) inference against, from `GET /api/allocations`.
-          openai_base_url:
-            label: Platform OpenAI endpoint
-            type: string
-            optional: true
-            tooltip: Defaults to https://<platform-host>/api/openai/v1 (derived from PW_PLATFORM_HOST). Override only if needed.
           hermes_install_cmd:
             label: Hermes install command
             type: string

@@ -98,6 +98,61 @@ def run_hermes_task(task, context=""):
     return "[stub:{}] no brain configured: {}".format(CLUSTER, prompt[:200])
 # ------------------------------------------------------------------------------
 
+# Minimal chat UI served at the session root so the worker is usable in the
+# browser. Paths are matched by suffix (do_GET/do_POST) so it works whether the
+# platform forwards "/task" or the full "<session-prefix>/task".
+PAGE = """<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hermes worker</title><style>
+body{font:15px/1.5 system-ui,sans-serif;margin:0;background:#f4f1ea;color:#222}
+header{padding:10px 16px;background:#2b2b2b;color:#eee}
+header b{color:#fff} header span{opacity:.7;font-size:13px}
+#log{padding:16px;max-width:820px;margin:0 auto}
+.msg{margin:10px 0;padding:10px 14px;border-radius:10px;white-space:pre-wrap}
+.u{background:#dfe7f5;align-self:end} .a{background:#fff;border:1px solid #e3ddcf}
+.role{font-size:11px;text-transform:uppercase;letter-spacing:.05em;opacity:.6;margin-bottom:3px}
+#bar{position:sticky;bottom:0;background:#f4f1ea;padding:12px 16px;border-top:1px solid #ddd}
+#bar div{max-width:820px;margin:0 auto;display:flex;gap:8px}
+#q{flex:1;padding:10px;border:1px solid #bbb;border-radius:8px;font:inherit}
+button{padding:10px 18px;border:0;border-radius:8px;background:#b5562f;color:#fff;cursor:pointer}
+button:disabled{opacity:.5}
+</style></head><body>
+<header><b>Hermes worker</b> &mdash; <span id="meta">connecting…</span></header>
+<div id="log"></div>
+<div id="bar"><div>
+  <input id="q" placeholder="Ask the agent (e.g. tell me your hostname)" autofocus>
+  <button id="send" onclick="ask()">Send</button>
+</div></div>
+<script>
+const base = location.pathname.replace(/\\/+$/,'');
+const log = document.getElementById('log'), q = document.getElementById('q'), btn = document.getElementById('send');
+fetch(base + '/health').then(r=>r.json()).then(d=>{
+  document.getElementById('meta').textContent =
+    'cluster: ' + d.cluster + '  ·  model: ' + d.model + '  ·  brain: ' + d.brain;
+}).catch(()=>{});
+function add(role, text){
+  const m = document.createElement('div');
+  m.className = 'msg ' + (role==='you'?'u':'a');
+  m.innerHTML = '<div class="role">'+role+'</div>';
+  m.appendChild(document.createTextNode(text));
+  log.appendChild(m); window.scrollTo(0, document.body.scrollHeight);
+  return m;
+}
+async function ask(){
+  const t = q.value.trim(); if(!t) return;
+  q.value=''; btn.disabled=true; add('you', t);
+  const thinking = add('agent', '…');
+  try{
+    const r = await fetch(base + '/task', {method:'POST',
+      headers:{'Content-Type':'application/json'}, body: JSON.stringify({task:t})});
+    const d = await r.json();
+    thinking.lastChild.textContent = d.result || d.error || JSON.stringify(d);
+  }catch(e){ thinking.lastChild.textContent = 'error: ' + e; }
+  btn.disabled=false; q.focus();
+}
+q.addEventListener('keydown', e=>{ if(e.key==='Enter') ask(); });
+</script></body></html>"""
+
 
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code, obj):
@@ -109,14 +164,19 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        if self.path in ("/", "/health"):
+        if self.path.rstrip("/").endswith("/health") or self.path == "/health":
             self._send(200, {"status": "ok", "role": ROLE, "cluster": CLUSTER,
                              "brain": bool(BASE and API_KEY), "model": MODEL})
-        else:
-            self._send(404, {"error": "not found"})
+            return
+        body = PAGE.encode()              # chat UI at the session root (any prefix)
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def do_POST(self):
-        if self.path != "/task":
+        if not self.path.rstrip("/").endswith("/task") and self.path != "/task":
             self._send(404, {"error": "not found"})
             return
         try:

@@ -188,8 +188,9 @@ graph gives you sequencing, data flow, conditionals, and parallelism:
   emit them, rather than doing numeric comparisons inside the expression.
 - **Fan-out / fan-in:** sibling jobs that share a common `needs` but don't depend on
   each other **run concurrently**; a downstream job with `needs: [w1, w2, w3]` joins
-  them. (Verified: 3 workers logged the same finish second.) Generate repetitive
-  jobs programmatically in your `build_yaml.py` rather than hand-copying them.
+  them. (Verified: 3 workers logged the same finish second.) For N identical workers,
+  use a **matrix strategy** (`strategy.matrix`) rather than hand-copying jobs — see
+  `workflow/tutorials/matrix/workflow.yaml`.
 - See `workflow/tutorials/nginx/` (jobs, `needs`, `$OUTPUTS`, conditional `if:`,
   sessions) and `workflow/tutorials/matrix/workflow.yaml` (fan-out workers via a matrix
   strategy — the pattern to copy for a parameter sweep).
@@ -481,10 +482,6 @@ sync with the platform. Read the one closest to your task:
 > **Adding a new tutorial requires maintainer approval.** Tutorials must each show
 > something new and non-repetitive — do not add one to `workflow/tutorials/` without
 > sign-off from the repo maintainer (Alvaro). Prefer pointing at an existing tutorial.
-
-(There is an `ai-workflow-development/examples/` directory in this repo. It was a
-one-off learning exercise — **do not cite or rely on it**; use the repo workflows and
-tutorials above instead.)
 
 ---
 

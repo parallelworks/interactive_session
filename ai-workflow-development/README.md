@@ -59,6 +59,5 @@ worked patterns, so keep that repo available on the node.
    resources, and `bash install.sh`.
 4. Add a row to the **Approaches** table above.
 
-> The `examples/` directory in this repo was an early learning exercise and is **not
-> cited by the skill** — use the repo's `workflow/yamls/` and `workflow/tutorials/`
-> instead. New tutorials require maintainer approval.
+> The skill teaches from the repo's own `workflow/yamls/` and `workflow/tutorials/` —
+> point new material there. New tutorials require maintainer approval.

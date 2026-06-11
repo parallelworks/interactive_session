@@ -64,10 +64,13 @@ pw workflows create hermes-orchestrator --yaml workflow/yamls/hermes-orchestrato
 pw workflows run hermes-orchestrator -i '{"cluster":{"resource":"workspace","scheduler":false}}' --name orchestrator
 ```
 
-**Worker discovery:** the orchestrator runs `pw sessions ls`, filters to running
-`hermes-worker` sessions, and reads each one's cluster (`targetName`) and port
-(`remotePort`). Its session UI lists those workers as checkboxes — pick which to
-target, type a goal, and it delegates + aggregates. Programmatically:
+**Worker discovery:** the orchestrator runs `pw sessions ls` and filters to
+running sessions whose **name carries the `hermes_worker` marker** (set by the
+worker YAML's `sessions:` key — independent of the workflow name), reading each
+one's cluster (`targetName`) and port (`remotePort`). Delegation runs in
+parallel, so total time ≈ the slowest single worker. Its session UI lists those
+workers as checkboxes — pick which to target, type a goal, and it delegates +
+aggregates. Programmatically:
 `GET /workers` (list) and `POST /run {"goal":"...","targets":[{"cluster","port"}]}`
 (omit `targets` to hit all discovered workers).
 

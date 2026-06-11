@@ -9,7 +9,7 @@
 permissions:
   - '*'
 sessions:
-  session:
+  hermes_worker:          # session name carries this marker -> orchestrator discovery keys on it
     redirect: true
 
 jobs:
@@ -56,7 +56,7 @@ jobs:
         early-cancel: any-job-failed
         with:
           $yaml: workflow/session_runner/v1.4/general.yaml
-          session: ${{ sessions.session }}
+          session: ${{ sessions.hermes_worker }}
           resource: ${{ inputs.cluster.resource }}
           cluster:
             scheduler: ${{ inputs.cluster.scheduler }}

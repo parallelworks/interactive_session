@@ -19,17 +19,20 @@ import base64
 import json
 import os
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ROLE = "orchestrator"
 DEFAULT_PORT = os.environ.get("HERMES_AGENT_PORT", "8717")
 DISPATCH_TIMEOUT = int(os.environ.get("HERMES_DISPATCH_TIMEOUT", "1800"))
 LOCAL_TEST = os.environ.get("HERMES_LOCAL_TEST") == "1"  # reach localhost, skip pw ssh
-WORKER_WORKFLOW = os.environ.get("HERMES_WORKER_WORKFLOW", "hermes-worker")
+# Workers are identified by a marker in their SESSION name (set by the worker
+# YAML's `sessions:` key), so discovery does not depend on the workflow name.
+WORKER_MARKER = os.environ.get("HERMES_WORKER_SESSION", "hermes_worker")
 
 
 def discover_workers():
-    """Find running hermes-worker sessions from the platform session registry."""
+    """Find running worker sessions from the platform session registry."""
     try:
         out = subprocess.run(["pw", "sessions", "ls", "-o", "json"],
                              capture_output=True, text=True, timeout=30)
@@ -39,8 +42,8 @@ def discover_workers():
     rows = data if isinstance(data, list) else data.get("sessions", data.get("data", []))
     seen, workers = set(), []
     for s in rows:
-        wr = s.get("workflowRun") or {}
-        if wr.get("name") != WORKER_WORKFLOW or s.get("status") != "running":
+        name = s.get("name") or ""
+        if WORKER_MARKER not in name or s.get("status") != "running":
             continue
         cluster = (s.get("targetName") or "").split("/")[-1]
         if not cluster or cluster in seen:
@@ -48,7 +51,7 @@ def discover_workers():
         seen.add(cluster)
         workers.append({"cluster": cluster,
                         "port": s.get("remotePort") or int(DEFAULT_PORT),
-                        "session": s.get("name")})
+                        "session": name})
     return workers
 
 
@@ -83,7 +86,12 @@ def run_goal(goal, targets=None):
     """
     if targets is None:
         targets = discover_workers()
-    results = [delegate(t["cluster"], goal, t.get("port", DEFAULT_PORT)) for t in targets]
+    if not targets:
+        return {"goal": goal, "workers": [], "results": []}
+    # Parallel: total time ~= slowest single worker, not the sum.
+    with ThreadPoolExecutor(max_workers=min(16, len(targets))) as ex:
+        results = list(ex.map(
+            lambda t: delegate(t["cluster"], goal, t.get("port", DEFAULT_PORT)), targets))
     return {"goal": goal, "workers": [t["cluster"] for t in targets], "results": results}
 
 
@@ -139,17 +147,24 @@ async function ask(){
   if(!targets.length){ add('a','<div class="role">orchestrator</div>Select at least one worker.'); return; }
   q.value=''; btn.disabled=true;
   add('u','<div class="role">goal &rarr; '+targets.map(w=>esc(w.cluster)).join(', ')+'</div>'+esc(t));
-  const box=add('a','<div class="role">orchestrator</div>delegating…');
+  const box=add('a','<div class="role">orchestrator</div>delegating to '+targets.length+' worker(s)…');
   try{
-    const d=await (await fetch(base+'/run',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({goal:t, targets:targets})})).json();
+    const r=await fetch(base+'/run',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({goal:t, targets:targets})});
     let html='<div class="role">orchestrator</div>';
-    for(const x of (d.results||[])){
-      const ans=(x.result && x.result.result)?x.result.result:(x.error||JSON.stringify(x.result));
-      html+='<div class="cl">'+esc(x.cluster)+(x.ok?'':' (error)')+'</div>'+esc(ans);
+    if(!r.ok){ html+='HTTP '+r.status+': '+esc((await r.text()).slice(0,400)); }
+    else{
+      const d=await r.json();
+      if(d.error){ html+='error: '+esc(d.error); }
+      else if(!d.results || !d.results.length){ html+='(no results) '+esc(JSON.stringify(d)); }
+      else for(const x of d.results){
+        const ans=(x.result && x.result.result)?x.result.result:(x.error||JSON.stringify(x.result));
+        html+='<div class="cl">'+esc(x.cluster)+(x.ok?'':' (error)')+'</div>'+esc(ans);
+      }
     }
     box.innerHTML=html;
-  }catch(e){ box.innerHTML='<div class="role">orchestrator</div>error: '+esc(''+e); }
+  }catch(e){ box.innerHTML='<div class="role">orchestrator</div>request failed: '+esc(''+e)+
+    ' — if the goal is long-running, a single synchronous call can exceed the session tunnel timeout.'; }
   btn.disabled=false; q.focus();
 }
 q.addEventListener('keydown',e=>{if(e.key==='Enter')ask();});

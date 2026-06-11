@@ -9,7 +9,7 @@
 permissions:
   - '*'
 sessions:
-  session:
+  hermes_orchestrator:    # distinct from the worker marker so it isn't self-discovered
     redirect: true
 
 jobs:
@@ -57,7 +57,7 @@ jobs:
         early-cancel: any-job-failed
         with:
           $yaml: workflow/session_runner/v1.4/general.yaml
-          session: ${{ sessions.session }}
+          session: ${{ sessions.hermes_orchestrator }}
           resource: ${{ inputs.cluster.resource }}
           cluster:
             scheduler: ${{ inputs.cluster.scheduler }}

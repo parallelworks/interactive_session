@@ -1,0 +1,181 @@
+# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
+#
+# Hermes ORCHESTRATOR -- coordinates worker agents across clusters.
+# Runs on the platform workspace. Reaches each worker over the hub-and-spoke
+# transport `pw ssh <cluster> curl localhost:<agent_port>` (no inbound ports,
+# reuses pw auth). Start the per-cluster hermes-worker sessions FIRST, then run
+# this with the list of those cluster names.
+permissions:
+  - '*'
+sessions:
+  session:
+    redirect: true
+
+jobs:
+  preprocessing:
+    ssh:
+      remoteHost: ${{ inputs.cluster.resource.ip }}   # workspace -> empty ip -> runs locally
+    steps:
+      - name: Checkout
+        uses: parallelworks/checkout
+        with:
+          repo: https://github.com/parallelworks/interactive_session.git
+          branch: hermes-agent   # dev branch; flip to main after review/merge
+          sparse_checkout:
+            - ${{ inputs.service.name }}
+      - name: Create Inputs
+        run: |
+          set -x
+          env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+          sed -i 's/=\(.*\)/="\1"/' inputs.sh
+          cat <<'EOF' >> inputs.sh
+          PATH=$HOME/pw:$PATH
+          service_name="${{ inputs.service.name }}"
+          hermes_role="orchestrator"
+          service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
+          service_hermes_model="${{ inputs.service.hermes_model }}"
+          service_openai_base_url="${{ inputs.service.openai_base_url }}"
+          service_hermes_install_cmd="${{ inputs.service.hermes_install_cmd }}"
+          HERMES_AGENT_PORT="${{ inputs.service.agent_port }}"
+          HERMES_DISPATCH_TIMEOUT="${{ inputs.service.dispatch_timeout }}"
+          EOF
+          # The `workers` list arrives as a JSON array; flatten to a comma list of names.
+          workers_json='${{ inputs.workers }}'
+          hermes_workers=$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '[]'); print(','.join(x.get('name','') for x in d if x.get('name')))" "$workers_json")
+          echo "HERMES_WORKERS=${hermes_workers}" >> inputs.sh
+          if ! [ -z "${{ org.PW_PLATFORM_TOKEN }}" ]; then
+            echo "PW_PLATFORM_TOKEN=${{ org.PW_PLATFORM_TOKEN }}" >> inputs.sh
+          fi
+          sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+          sed -i '/=""/d' inputs.sh
+          sed -i 's/^/export /' inputs.sh
+
+  session_runner:
+    needs:
+      - preprocessing
+    ssh:
+      remoteHost: ${{ inputs.cluster.resource.ip }}
+    steps:
+      - name: Session Runner
+        uses: github/parallelworks/interactive_session@main
+        early-cancel: any-job-failed
+        with:
+          $yaml: workflow/session_runner/v1.4/general.yaml
+          session: ${{ sessions.session }}
+          resource: ${{ inputs.cluster.resource }}
+          cluster:
+            scheduler: ${{ inputs.cluster.scheduler }}
+            slurm:
+              is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
+              partition: ${{ inputs.cluster.slurm.partition }}
+              scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+              time: ${{ inputs.cluster.slurm.time }}
+            pbs:
+              is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
+              scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+          service:
+            start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/start-template-v3.sh
+            controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/controller-v3.sh
+            inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
+            rundir: ${PW_PARENT_JOB_DIR}
+
+'on':
+  execute:
+    inputs:
+      cluster:
+        type: group
+        label: Orchestrator Host
+        items:
+          resource:
+            type: compute-clusters
+            label: Orchestrator host
+            include-workspace: true
+            tooltip: Where the orchestrator runs. Pick "workspace" -- it sits on the platform and can `pw ssh` to every worker cluster.
+          scheduler:
+            type: boolean
+            default: false
+            label: Schedule Job?
+            hidden: ${{ inputs.cluster.resource.schedulerType == '' }}
+            ignore: ${{ .hidden }}
+          slurm:
+            type: group
+            label: SLURM Directives
+            hidden: ${{ inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            items:
+              is_enabled:
+                type: boolean
+                hidden: true
+                default: true
+                label: Is SLURM enabled?
+              partition:
+                type: slurm-partitions
+                label: SLURM partition
+                optional: true
+                resource: ${{ inputs.cluster.resource }}
+              time:
+                label: Walltime
+                type: string
+                default: '01:00:00'
+              scheduler_directives:
+                type: editor
+                optional: true
+          pbs:
+            type: group
+            label: PBS Directives
+            hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            items:
+              is_enabled:
+                type: boolean
+                hidden: true
+                default: true
+                label: Is PBS enabled?
+              scheduler_directives:
+                label: Scheduler Directives
+                type: editor
+      workers:
+        type: list
+        label: Worker clusters
+        tooltip: One row per running hermes-worker. Enter the cluster name exactly as `pw cluster ls` shows it (the part after the last `/`).
+        template:
+          name:
+            type: string
+            label: Worker cluster name
+            tooltip: e.g. gcpsmall
+      service:
+        type: group
+        label: Hermes Orchestrator Settings
+        items:
+          name:
+            type: string
+            hidden: true
+            default: hermes-agent
+          agent_port:
+            label: Worker agent port
+            type: integer
+            default: 8717
+            tooltip: Port the workers listen on. Must match the hermes-worker `agent_port`.
+          dispatch_timeout:
+            label: Per-task timeout (s)
+            type: integer
+            default: 1800
+          hermes_model:
+            label: Model (brain)
+            type: string
+            default: claude-opus-4-8
+            tooltip: Model name as the platform's OpenAI-compatible endpoint lists it. Pick a tool-calling-capable model.
+          openai_base_url:
+            label: Platform OpenAI endpoint
+            type: string
+            default: https://activate.parallel.works/api/openai/v1
+          hermes_install_cmd:
+            label: Hermes install command
+            type: string
+            optional: true
+            tooltip: Command the controller runs to install hermes if missing (see Hermes docs). Empty = stub mode.
+          parent_install_dir:
+            label: Install directory
+            type: string
+            hidden: true
+            default: ${HOME}/pw/software

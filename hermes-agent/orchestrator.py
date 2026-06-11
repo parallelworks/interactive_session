@@ -19,6 +19,7 @@ import base64
 import json
 import os
 import subprocess
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -29,6 +30,12 @@ LOCAL_TEST = os.environ.get("HERMES_LOCAL_TEST") == "1"  # reach localhost, skip
 # Workers are identified by a marker in their SESSION name (set by the worker
 # YAML's `sessions:` key), so discovery does not depend on the workflow name.
 WORKER_MARKER = os.environ.get("HERMES_WORKER_SESSION", "hermes_worker")
+
+# Brain for the orchestrator's own synthesis step -- same platform endpoint.
+BRAIN = os.environ.get("OPENAI_BASE_URL", "").rstrip("/")
+API_KEY = os.environ.get("OPENAI_API_KEY", "")          # = PW_API_KEY at runtime
+ALLOCATION = os.environ.get("X_ALLOCATION", "")
+MODEL = os.environ.get("MODEL", "org:glm/glm-5.1")
 
 
 def discover_workers():
@@ -95,6 +102,50 @@ def run_goal(goal, targets=None):
     return {"goal": goal, "workers": [t["cluster"] for t in targets], "results": results}
 
 
+def brain_chat(messages):
+    body = {"model": MODEL, "messages": messages}
+    headers = {"Authorization": "Bearer " + API_KEY, "Content-Type": "application/json"}
+    if ALLOCATION:
+        headers["X-Allocation"] = ALLOCATION
+    req = urllib.request.Request(BRAIN + "/chat/completions",
+                                 data=json.dumps(body).encode(), headers=headers)
+    with urllib.request.urlopen(req, timeout=DISPATCH_TIMEOUT) as r:
+        return json.load(r)["choices"][0]["message"].get("content", "")
+
+
+def _text(result):
+    r = result.get("result")
+    return r.get("result", "") if isinstance(r, dict) else result.get("error", "")
+
+
+def solve(goal, targets=None):
+    """Collaborative solve: each worker reports local facts for the goal, then the
+    orchestrator's brain synthesizes ONE answer across all of them."""
+    if targets is None:
+        targets = discover_workers()
+    if not targets:
+        return {"goal": goal, "reports": [], "answer": "No workers available."}
+    gather = ("We are jointly solving this goal: \"{}\". Report the facts about THIS "
+              "machine relevant to it -- run shell commands to check. Describe only your "
+              "own machine; don't guess about others.").format(goal)
+    with ThreadPoolExecutor(max_workers=min(16, len(targets))) as ex:
+        reports = list(ex.map(
+            lambda t: delegate(t["cluster"], gather, t.get("port", DEFAULT_PORT)), targets))
+    lines = "\n".join("- {}: {}".format(r.get("cluster"), _text(r)) for r in reports)
+    try:
+        answer = brain_chat([
+            {"role": "system", "content": "You are the orchestrator coordinating agents on "
+             "different HPC clusters. Combine their individual reports into one clear answer "
+             "to the user's goal, with a recommendation when relevant."},
+            {"role": "user", "content": "Goal: {}\n\nReports from each cluster's agent:\n{}\n\n"
+             "Give the final answer.".format(goal, lines)},
+        ])
+    except Exception as e:  # noqa: BLE001
+        answer = "(synthesis failed: {})".format(e)
+    return {"goal": goal, "workers": [t["cluster"] for t in targets],
+            "reports": reports, "answer": answer}
+
+
 PAGE = """<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Hermes orchestrator</title><style>
@@ -118,15 +169,17 @@ button:disabled{opacity:.5} #refresh{background:#888}
 <div id="workers">workers: <span id="wlist">discovering…</span> <button id="refresh" onclick="loadWorkers()">refresh</button></div>
 <div id="log"></div>
 <div id="bar"><div>
-  <input id="q" placeholder="Goal for the selected workers (e.g. tell me your hostname)" autofocus>
-  <button id="send" onclick="ask()">Send</button>
+  <input id="q" placeholder="Goal for the selected workers" autofocus>
+  <button id="send" onclick="run('run')">Send (raw)</button>
+  <button id="solve" onclick="run('solve')" style="background:#b5562f">Solve together</button>
 </div></div>
 <script>
 const base=location.pathname.replace(/\\/+$/,'');
 const wlist=document.getElementById('wlist'), log=document.getElementById('log'),
-      q=document.getElementById('q'), btn=document.getElementById('send');
+      q=document.getElementById('q'), send=document.getElementById('send'), solveb=document.getElementById('solve');
 let WORKERS=[];
 function esc(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function busy(b){send.disabled=b;solveb.disabled=b;}
 async function loadWorkers(){
   wlist.textContent='discovering…';
   try{
@@ -141,33 +194,34 @@ function selected(){
 }
 function add(cls,html){const m=document.createElement('div');m.className='msg '+cls;m.innerHTML=html;
   log.appendChild(m);window.scrollTo(0,document.body.scrollHeight);return m;}
-async function ask(){
+function fmt(x){const ans=(x.result && x.result.result)?x.result.result:(x.error||JSON.stringify(x.result));
+  return '<div class="cl">'+esc(x.cluster)+(x.ok?'':' (error)')+'</div>'+esc(ans);}
+async function run(mode){
   const t=q.value.trim(); if(!t) return;
   const targets=selected();
   if(!targets.length){ add('a','<div class="role">orchestrator</div>Select at least one worker.'); return; }
-  q.value=''; btn.disabled=true;
-  add('u','<div class="role">goal &rarr; '+targets.map(w=>esc(w.cluster)).join(', ')+'</div>'+esc(t));
-  const box=add('a','<div class="role">orchestrator</div>delegating to '+targets.length+' worker(s)…');
+  q.value=''; busy(true);
+  add('u','<div class="role">'+(mode==='solve'?'solve':'goal')+' &rarr; '+targets.map(w=>esc(w.cluster)).join(', ')+'</div>'+esc(t));
+  const box=add('a','<div class="role">orchestrator</div>'+(mode==='solve'?'gathering, then synthesizing…':'delegating to '+targets.length+' worker(s)…'));
   try{
-    const r=await fetch(base+'/run',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({goal:t, targets:targets})});
+    const r=await fetch(base+'/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({goal:t,targets:targets})});
     let html='<div class="role">orchestrator</div>';
     if(!r.ok){ html+='HTTP '+r.status+': '+esc((await r.text()).slice(0,400)); }
     else{
       const d=await r.json();
       if(d.error){ html+='error: '+esc(d.error); }
-      else if(!d.results || !d.results.length){ html+='(no results) '+esc(JSON.stringify(d)); }
-      else for(const x of d.results){
-        const ans=(x.result && x.result.result)?x.result.result:(x.error||JSON.stringify(x.result));
-        html+='<div class="cl">'+esc(x.cluster)+(x.ok?'':' (error)')+'</div>'+esc(ans);
-      }
+      else if(mode==='solve'){
+        html+='<b>'+esc(d.answer||'(no answer)')+'</b><div class="role" style="margin-top:10px">reports</div>';
+        for(const x of (d.reports||[])) html+=fmt(x);
+      }else if(!d.results || !d.results.length){ html+='(no results) '+esc(JSON.stringify(d)); }
+      else for(const x of d.results) html+=fmt(x);
     }
     box.innerHTML=html;
   }catch(e){ box.innerHTML='<div class="role">orchestrator</div>request failed: '+esc(''+e)+
-    ' — if the goal is long-running, a single synchronous call can exceed the session tunnel timeout.'; }
-  btn.disabled=false; q.focus();
+    ' — a long synchronous goal can exceed the session tunnel timeout.'; }
+  busy(false); q.focus();
 }
-q.addEventListener('keydown',e=>{if(e.key==='Enter')ask();});
+q.addEventListener('keydown',e=>{if(e.key==='Enter')run('solve');});
 loadWorkers();
 </script></body></html>"""
 
@@ -196,7 +250,9 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(body)
 
     def do_POST(self):
-        if not self.path.rstrip("/").endswith("/run") and self.path != "/run":
+        p = self.path.rstrip("/")
+        is_run, is_solve = p.endswith("/run") or self.path == "/run", p.endswith("/solve") or self.path == "/solve"
+        if not (is_run or is_solve):
             self._json(404, {"error": "not found"})
             return
         try:
@@ -207,7 +263,7 @@ class Handler(BaseHTTPRequestHandler):
                 disc = {w["cluster"]: w for w in discover_workers()}
                 targets = [{"cluster": c, "port": disc.get(c, {}).get("port", int(DEFAULT_PORT))}
                            for c in req["workers"]]
-            self._json(200, run_goal(req.get("goal", ""), targets))
+            self._json(200, (solve if is_solve else run_goal)(req.get("goal", ""), targets))
         except Exception as e:  # noqa: BLE001
             self._json(500, {"error": str(e)})
 

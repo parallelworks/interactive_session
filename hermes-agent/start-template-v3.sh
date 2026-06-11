@@ -38,7 +38,7 @@ if [ "${hermes_role}" = "orchestrator" ]; then
     python3 "${AGENT_DIR}/orchestrator.py" --port "${service_port}" --host 0.0.0.0 \
         > "${PW_PARENT_JOB_DIR}/orchestrator.out" 2>&1 &
 else
-    export HERMES_CLUSTER="${PW_USER:-worker}"
+    export HERMES_CLUSTER="${service_cluster:-${PW_USER:-worker}}"
     python3 "${AGENT_DIR}/agent_server.py" --port "${service_port}" --host 0.0.0.0 \
         > "${PW_PARENT_JOB_DIR}/worker.out" 2>&1 &
 fi

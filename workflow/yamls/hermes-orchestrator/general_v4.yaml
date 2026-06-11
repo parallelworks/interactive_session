@@ -9,8 +9,9 @@
 permissions:
   - '*'
 sessions:
-  hermes_orchestrator:    # distinct from the worker marker so it isn't self-discovered
-    redirect: true
+  hermes_orchestrator:    # OpenAI-compatible -> registered as a model in the platform's built-in chat
+    openAI: true
+    redirect: false
 
 jobs:
   preprocessing:

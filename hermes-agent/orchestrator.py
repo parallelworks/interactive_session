@@ -1,45 +1,62 @@
 #!/usr/bin/env python3
-"""Hermes ORCHESTRATOR -- coordinates worker agents across clusters.
+"""Hermes ORCHESTRATOR -- an OpenAI-compatible agent that coordinates per-cluster workers.
 
-Runs on the platform workspace. DISCOVERS its workers from the platform session
-registry (`pw sessions ls`): every running `hermes-worker` session reports its
-cluster (`targetName`) and port (`remotePort`). It then reaches each worker over
-the hub-and-spoke transport `pw ssh <cluster> curl localhost:<port>/task` and
-aggregates the answers. No static roster required.
+Declared in the workflow as an `openAI: true` session, so the Activate platform
+registers it as a chat model and wires it into the built-in chat UI. You just
+chat with it -- no bespoke UI. It discovers worker agents (`pw sessions ls`), and
+the GLM brain decides when to delegate tasks to them (tools: list_workers,
+delegate) and synthesizes the reply.
 
-Endpoints
-  GET  /  (+ any prefix)   -> browser chat UI (pick workers from a live list)
-  GET  /health             -> {"status":"ok","role":"orchestrator"}
-  GET  /workers            -> {"workers":[{"cluster","port","session"}, ...]}  (discovered)
-  POST /run                -> {"goal":..,"results":[...]}  delegate + aggregate
-        body: {"goal":..., "targets":[{"cluster","port"}]}  (or {"workers":[names]}; else all)
+OpenAI-compatible endpoints (suffix-matched, so the session path prefix is fine):
+  GET  /v1/models            advertise this orchestrator as a model
+  POST /v1/chat/completions  agent loop; supports stream=true (SSE)
+Debug: GET / or /health (status), GET /workers (discovered workers).
 """
 import argparse
 import base64
 import json
 import os
 import subprocess
+import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-ROLE = "orchestrator"
+MODEL_ID = os.environ.get("HERMES_MODEL_ID", "hermes-orchestrator")  # name shown in chat
 DEFAULT_PORT = os.environ.get("HERMES_AGENT_PORT", "8717")
 DISPATCH_TIMEOUT = int(os.environ.get("HERMES_DISPATCH_TIMEOUT", "1800"))
-LOCAL_TEST = os.environ.get("HERMES_LOCAL_TEST") == "1"  # reach localhost, skip pw ssh
-# Workers are identified by a marker in their SESSION name (set by the worker
-# YAML's `sessions:` key), so discovery does not depend on the workflow name.
+LOCAL_TEST = os.environ.get("HERMES_LOCAL_TEST") == "1"
 WORKER_MARKER = os.environ.get("HERMES_WORKER_SESSION", "hermes_worker")
-
-# Brain for the orchestrator's own synthesis step -- same platform endpoint.
+# Brain (platform OpenAI-compatible endpoint) for the orchestrator's own reasoning.
 BRAIN = os.environ.get("OPENAI_BASE_URL", "").rstrip("/")
 API_KEY = os.environ.get("OPENAI_API_KEY", "")          # = PW_API_KEY at runtime
 ALLOCATION = os.environ.get("X_ALLOCATION", "")
-MODEL = os.environ.get("MODEL", "org:glm/glm-5.1")
+BRAIN_MODEL = os.environ.get("MODEL", "org:glm/glm-5.1")
+
+SYSTEM = (
+    "You are the Hermes orchestrator. You coordinate worker agents, each running on a "
+    "different compute cluster. Use list_workers to see which clusters are available, and "
+    "delegate(cluster, task) to have a cluster's agent run commands there and report back. "
+    "To answer questions about the clusters, delegate to the relevant workers -- you may "
+    "call delegate several times in one turn, once per cluster -- then synthesize their "
+    "replies into one clear answer. Only delegate to clusters returned by list_workers."
+)
+TOOLS = [
+    {"type": "function", "function": {
+        "name": "list_workers",
+        "description": "List the available worker agents (one per cluster).",
+        "parameters": {"type": "object", "properties": {}}}},
+    {"type": "function", "function": {
+        "name": "delegate",
+        "description": "Run a task on a specific cluster's worker agent; returns its result.",
+        "parameters": {"type": "object", "properties": {
+            "cluster": {"type": "string", "description": "cluster name from list_workers"},
+            "task": {"type": "string", "description": "what the worker should do"}},
+            "required": ["cluster", "task"]}}},
+]
 
 
 def discover_workers():
-    """Find running worker sessions from the platform session registry."""
     try:
         out = subprocess.run(["pw", "sessions", "ls", "-o", "json"],
                              capture_output=True, text=True, timeout=30)
@@ -57,173 +74,71 @@ def discover_workers():
             continue
         seen.add(cluster)
         workers.append({"cluster": cluster,
-                        "port": s.get("remotePort") or int(DEFAULT_PORT),
-                        "session": name})
+                        "port": s.get("remotePort") or int(DEFAULT_PORT), "session": name})
     return workers
 
 
-def delegate(cluster, task, port, context=""):
-    payload = json.dumps({"task": task, "context": context})
+def delegate(cluster, task, port):
+    payload = json.dumps({"task": task})
     b64 = base64.b64encode(payload.encode()).decode()
-    remote = ("echo {b} | base64 -d | "
-              "curl -s -m {to} -X POST -H 'Content-Type: application/json' "
-              "--data-binary @- http://localhost:{port}/task"
-              ).format(b=b64, to=DISPATCH_TIMEOUT, port=port)
+    remote = ("echo {b} | base64 -d | curl -s -m {to} -X POST "
+              "-H 'Content-Type: application/json' --data-binary @- "
+              "http://localhost:{port}/task").format(b=b64, to=DISPATCH_TIMEOUT, port=port)
     argv = ["bash", "-c", remote] if LOCAL_TEST else ["pw", "ssh", cluster, remote]
     try:
-        out = subprocess.run(argv, capture_output=True, text=True,
-                             timeout=DISPATCH_TIMEOUT + 60)
+        out = subprocess.run(argv, capture_output=True, text=True, timeout=DISPATCH_TIMEOUT + 60)
         body = (out.stdout or "").strip()
         try:
             body = json.loads(body)
         except Exception:
             pass
-        return {"cluster": cluster, "ok": out.returncode == 0, "result": body,
-                "stderr": (out.stderr or "").strip()[:500]}
+        return {"cluster": cluster, "ok": out.returncode == 0, "result": body}
     except Exception as e:  # noqa: BLE001
         return {"cluster": cluster, "ok": False, "error": str(e)}
 
 
-def run_goal(goal, targets=None):
-    """Delegate `goal` to each target {cluster,port} and aggregate.
-
-    targets=None -> discover and use all running workers.
-    Integration point: a Hermes COORDINATOR could decide who does what here;
-    v1 broadcasts to every target. https://hermes-agent.ai/features/multi-agent
-    """
-    if targets is None:
-        targets = discover_workers()
-    if not targets:
-        return {"goal": goal, "workers": [], "results": []}
-    # Parallel: total time ~= slowest single worker, not the sum.
-    with ThreadPoolExecutor(max_workers=min(16, len(targets))) as ex:
-        results = list(ex.map(
-            lambda t: delegate(t["cluster"], goal, t.get("port", DEFAULT_PORT)), targets))
-    return {"goal": goal, "workers": [t["cluster"] for t in targets], "results": results}
-
-
-def brain_chat(messages):
-    body = {"model": MODEL, "messages": messages}
+def brain(messages, tools=None):
+    body = {"model": BRAIN_MODEL, "messages": messages}
+    if tools:
+        body["tools"], body["tool_choice"] = tools, "auto"
     headers = {"Authorization": "Bearer " + API_KEY, "Content-Type": "application/json"}
     if ALLOCATION:
         headers["X-Allocation"] = ALLOCATION
     req = urllib.request.Request(BRAIN + "/chat/completions",
                                  data=json.dumps(body).encode(), headers=headers)
     with urllib.request.urlopen(req, timeout=DISPATCH_TIMEOUT) as r:
-        return json.load(r)["choices"][0]["message"].get("content", "")
+        return json.load(r)["choices"][0]["message"]
 
 
-def _text(result):
-    r = result.get("result")
-    return r.get("result", "") if isinstance(r, dict) else result.get("error", "")
+def agent(messages, max_steps=6):
+    """Agent loop: brain decides to list_workers / delegate (tools), we execute, repeat."""
+    msgs = [{"role": "system", "content": SYSTEM}] + messages
+    for _ in range(max_steps):
+        m = brain(msgs, TOOLS)
+        msgs.append({k: v for k, v in m.items() if v is not None})
+        calls = m.get("tool_calls") or []
+        if not calls:
+            return m.get("content", "")
+        cache = {w["cluster"]: w for w in discover_workers()}
 
+        def run_call(tc):
+            fn = tc["function"]["name"]
+            args = json.loads(tc["function"].get("arguments") or "{}")
+            if fn == "list_workers":
+                out = discover_workers()
+            elif fn == "delegate":
+                c = args.get("cluster", "")
+                port = cache.get(c, {}).get("port", int(DEFAULT_PORT))
+                r = delegate(c, args.get("task", ""), port)
+                out = r.get("result", r)
+            else:
+                out = {"error": "unknown tool " + fn}
+            return {"role": "tool", "tool_call_id": tc["id"], "content": json.dumps(out)}
 
-def solve(goal, targets=None):
-    """Collaborative solve: each worker reports local facts for the goal, then the
-    orchestrator's brain synthesizes ONE answer across all of them."""
-    if targets is None:
-        targets = discover_workers()
-    if not targets:
-        return {"goal": goal, "reports": [], "answer": "No workers available."}
-    gather = ("We are jointly solving this goal: \"{}\". Report the facts about THIS "
-              "machine relevant to it -- run shell commands to check. Describe only your "
-              "own machine; don't guess about others.").format(goal)
-    with ThreadPoolExecutor(max_workers=min(16, len(targets))) as ex:
-        reports = list(ex.map(
-            lambda t: delegate(t["cluster"], gather, t.get("port", DEFAULT_PORT)), targets))
-    lines = "\n".join("- {}: {}".format(r.get("cluster"), _text(r)) for r in reports)
-    try:
-        answer = brain_chat([
-            {"role": "system", "content": "You are the orchestrator coordinating agents on "
-             "different HPC clusters. Combine their individual reports into one clear answer "
-             "to the user's goal, with a recommendation when relevant."},
-            {"role": "user", "content": "Goal: {}\n\nReports from each cluster's agent:\n{}\n\n"
-             "Give the final answer.".format(goal, lines)},
-        ])
-    except Exception as e:  # noqa: BLE001
-        answer = "(synthesis failed: {})".format(e)
-    return {"goal": goal, "workers": [t["cluster"] for t in targets],
-            "reports": reports, "answer": answer}
-
-
-PAGE = """<!doctype html><html><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hermes orchestrator</title><style>
-body{font:15px/1.5 system-ui,sans-serif;margin:0;background:#f4f1ea;color:#222}
-header{padding:10px 16px;background:#1f2d3d;color:#eee}
-header b{color:#fff}
-#workers{max-width:900px;margin:8px auto;padding:0 16px}
-#workers label{display:inline-block;margin:4px 10px 4px 0;padding:4px 10px;background:#fff;border:1px solid #ddd;border-radius:14px;cursor:pointer}
-#log{padding:16px;max-width:900px;margin:0 auto}
-.msg{margin:10px 0;padding:10px 14px;border-radius:10px;white-space:pre-wrap}
-.u{background:#dfe7f5} .a{background:#fff;border:1px solid #e3ddcf}
-.role{font-size:11px;text-transform:uppercase;letter-spacing:.05em;opacity:.6;margin-bottom:3px}
-.cl{font-weight:600;margin-top:8px}
-#bar{position:sticky;bottom:0;background:#f4f1ea;padding:12px 16px;border-top:1px solid #ddd}
-#bar div{max-width:900px;margin:0 auto;display:flex;gap:8px}
-#q{flex:1;padding:10px;border:1px solid #bbb;border-radius:8px;font:inherit}
-button{padding:10px 18px;border:0;border-radius:8px;background:#2f6fb5;color:#fff;cursor:pointer}
-button:disabled{opacity:.5} #refresh{background:#888}
-</style></head><body>
-<header><b>Hermes orchestrator</b></header>
-<div id="workers">workers: <span id="wlist">discovering…</span> <button id="refresh" onclick="loadWorkers()">refresh</button></div>
-<div id="log"></div>
-<div id="bar"><div>
-  <input id="q" placeholder="Goal for the selected workers" autofocus>
-  <button id="send" onclick="run('run')">Send (raw)</button>
-  <button id="solve" onclick="run('solve')" style="background:#b5562f">Solve together</button>
-</div></div>
-<script>
-const base=location.pathname.replace(/\\/+$/,'');
-const wlist=document.getElementById('wlist'), log=document.getElementById('log'),
-      q=document.getElementById('q'), send=document.getElementById('send'), solveb=document.getElementById('solve');
-let WORKERS=[];
-function esc(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
-function busy(b){send.disabled=b;solveb.disabled=b;}
-async function loadWorkers(){
-  wlist.textContent='discovering…';
-  try{
-    const d=await (await fetch(base+'/workers')).json();
-    WORKERS=d.workers||[];
-    if(!WORKERS.length){ wlist.textContent='none running — start a hermes-worker'; return; }
-    wlist.innerHTML=WORKERS.map((w,i)=>'<label><input type="checkbox" data-i="'+i+'" checked> '+esc(w.cluster)+' <small>:'+w.port+'</small></label>').join('');
-  }catch(e){ wlist.textContent='discovery error: '+esc(''+e); }
-}
-function selected(){
-  return [...document.querySelectorAll('#wlist input:checked')].map(c=>WORKERS[+c.dataset.i]);
-}
-function add(cls,html){const m=document.createElement('div');m.className='msg '+cls;m.innerHTML=html;
-  log.appendChild(m);window.scrollTo(0,document.body.scrollHeight);return m;}
-function fmt(x){const ans=(x.result && x.result.result)?x.result.result:(x.error||JSON.stringify(x.result));
-  return '<div class="cl">'+esc(x.cluster)+(x.ok?'':' (error)')+'</div>'+esc(ans);}
-async function run(mode){
-  const t=q.value.trim(); if(!t) return;
-  const targets=selected();
-  if(!targets.length){ add('a','<div class="role">orchestrator</div>Select at least one worker.'); return; }
-  q.value=''; busy(true);
-  add('u','<div class="role">'+(mode==='solve'?'solve':'goal')+' &rarr; '+targets.map(w=>esc(w.cluster)).join(', ')+'</div>'+esc(t));
-  const box=add('a','<div class="role">orchestrator</div>'+(mode==='solve'?'gathering, then synthesizing…':'delegating to '+targets.length+' worker(s)…'));
-  try{
-    const r=await fetch(base+'/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({goal:t,targets:targets})});
-    let html='<div class="role">orchestrator</div>';
-    if(!r.ok){ html+='HTTP '+r.status+': '+esc((await r.text()).slice(0,400)); }
-    else{
-      const d=await r.json();
-      if(d.error){ html+='error: '+esc(d.error); }
-      else if(mode==='solve'){
-        html+='<b>'+esc(d.answer||'(no answer)')+'</b><div class="role" style="margin-top:10px">reports</div>';
-        for(const x of (d.reports||[])) html+=fmt(x);
-      }else if(!d.results || !d.results.length){ html+='(no results) '+esc(JSON.stringify(d)); }
-      else for(const x of d.results) html+=fmt(x);
-    }
-    box.innerHTML=html;
-  }catch(e){ box.innerHTML='<div class="role">orchestrator</div>request failed: '+esc(''+e)+
-    ' — a long synchronous goal can exceed the session tunnel timeout.'; }
-  busy(false); q.focus();
-}
-q.addEventListener('keydown',e=>{if(e.key==='Enter')run('solve');});
-loadWorkers();
-</script></body></html>"""
+        with ThreadPoolExecutor(max_workers=min(16, len(calls))) as ex:
+            for res in ex.map(run_call, calls):
+                msgs.append(res)
+    return "(reached step limit without a final answer)"
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -237,35 +152,48 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         p = self.path.rstrip("/")
-        if p.endswith("/health") or self.path == "/health":
-            self._json(200, {"status": "ok", "role": ROLE})
-        elif p.endswith("/workers") or self.path == "/workers":
+        if p.endswith("/models"):
+            self._json(200, {"object": "list", "data": [
+                {"id": MODEL_ID, "object": "model", "created": int(time.time()), "owned_by": "hermes"}]})
+        elif p.endswith("/workers"):
             self._json(200, {"workers": discover_workers()})
         else:
-            body = PAGE.encode()
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
+            self._json(200, {"status": "ok", "role": "orchestrator", "model": MODEL_ID})
 
     def do_POST(self):
-        p = self.path.rstrip("/")
-        is_run, is_solve = p.endswith("/run") or self.path == "/run", p.endswith("/solve") or self.path == "/solve"
-        if not (is_run or is_solve):
+        if not self.path.rstrip("/").endswith("chat/completions"):
             self._json(404, {"error": "not found"})
             return
         try:
             n = int(self.headers.get("Content-Length", 0))
             req = json.loads(self.rfile.read(n) or b"{}")
-            targets = req.get("targets")
-            if targets is None and req.get("workers"):          # names -> look up ports
-                disc = {w["cluster"]: w for w in discover_workers()}
-                targets = [{"cluster": c, "port": disc.get(c, {}).get("port", int(DEFAULT_PORT))}
-                           for c in req["workers"]]
-            self._json(200, (solve if is_solve else run_goal)(req.get("goal", ""), targets))
+            messages = req.get("messages", [])
+            content = agent(messages)
+            if req.get("stream"):
+                self._stream(content)
+            else:
+                self._json(200, {
+                    "id": "chatcmpl-hermes", "object": "chat.completion",
+                    "created": int(time.time()), "model": MODEL_ID,
+                    "choices": [{"index": 0, "finish_reason": "stop",
+                                 "message": {"role": "assistant", "content": content}}]})
         except Exception as e:  # noqa: BLE001
-            self._json(500, {"error": str(e)})
+            self._json(500, {"error": {"message": str(e), "type": "orchestrator_error"}})
+
+    def _stream(self, content):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.end_headers()
+
+        def chunk(delta, finish=None):
+            obj = {"id": "chatcmpl-hermes", "object": "chat.completion.chunk",
+                   "created": int(time.time()), "model": MODEL_ID,
+                   "choices": [{"index": 0, "delta": delta, "finish_reason": finish}]}
+            self.wfile.write(("data: " + json.dumps(obj) + "\n\n").encode())
+
+        chunk({"role": "assistant", "content": content})
+        chunk({}, "stop")
+        self.wfile.write(b"data: [DONE]\n\n")
 
     def log_message(self, *a):
         pass
@@ -276,7 +204,8 @@ def main():
     ap.add_argument("--port", type=int, default=int(os.environ.get("service_port", "8717")))
     ap.add_argument("--host", default="0.0.0.0")
     args = ap.parse_args()
-    print("hermes orchestrator on {}:{} (workers auto-discovered)".format(args.host, args.port), flush=True)
+    print("hermes orchestrator (OpenAI-compatible) on {}:{} as model '{}'".format(
+        args.host, args.port, MODEL_ID), flush=True)
     ThreadingHTTPServer((args.host, args.port), Handler).serve_forever()
 
 

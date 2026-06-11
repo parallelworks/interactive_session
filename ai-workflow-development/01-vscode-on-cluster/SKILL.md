@@ -241,3 +241,29 @@ non-repetitive; point at an existing tutorial instead.
 - **`pw sessions stop` 404s** if the run was already canceled (cancel tears the
   session down). Not an error.
 - **Always `--dry-run`** before a real run; it catches schema/YAML problems cheaply.
+
+## Lessons from LLM-backed & multi-session builds (hermes-agent)
+
+Reusable takeaways from building a multi-agent workflow (an orchestrator on the
+workspace + a worker per cluster). Platform mechanics are in **reference §12**.
+
+- **`--dry-run` is necessary but NOT sufficient.** It only validates schema/variant.
+  "Tested end-to-end" (Step 3/4) means a real `create`+`run`, watching for "Session
+  is ready", exercising the *live* service, and debugging from `~/pw/jobs`. Don't
+  call a workflow tested on a dry-run alone.
+- **Prove the risky/novel mechanism on real infra early**, before the full workflow
+  is wired. For a distributed piece (e.g. cross-node `pw ssh` calls), stage the
+  script on the target node and exercise it directly, then wrap it in YAML.
+- **Reuse the platform's native surfaces — don't hand-roll UI.** For a chat-style
+  service, make it OpenAI-compatible and declare the session `openAI: true` so it
+  joins the platform's built-in chat (or point LibreChat at it). A bespoke HTML UI
+  inside the service is a maintenance dead-end. (Reference §12.)
+- **LLM "brain" = the platform endpoint + runtime `PW_API_KEY`** (+ `X-Allocation`
+  for `org:*` models) — no external key or org secret. Keep the key out of
+  `inputs.sh` (the `grep -v PW_API_KEY` convention) and read it from the runtime
+  env. (Reference §12.)
+- **`pw workflows run` uses the STORED def — `pw workflows update` after every YAML
+  edit**, or the run silently uses the old form.
+- **Discover related sessions by the `sessions:` key marker in the session name**
+  (`<workflow>_<n>_<key>`) via `pw sessions ls -o json` — more robust than matching
+  the workflow name. (Reference §12.)

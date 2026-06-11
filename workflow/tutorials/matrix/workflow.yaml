@@ -58,7 +58,7 @@ jobs:
       - uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
-          $yaml: workflow/script_submitter/v3.5/general.yaml
+          $yaml: workflow/script_submitter/v3.6/general.yaml
           resource: ${{ inputs.resource }}
           shebang: '#!/bin/bash'
           rundir: ${PWD}
@@ -69,12 +69,12 @@ jobs:
           scheduler: ${{ inputs.cluster.scheduler }}
           use_scheduler_agent: false
           slurm:
-            is_disabled: ${{ inputs.cluster.slurm.is_disabled }}
+            is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
             partition: ${{ inputs.cluster.slurm.partition }}
             scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
             time: ${{ inputs.cluster.slurm.time }}
           pbs:
-            is_disabled: ${{ inputs.cluster.pbs.is_disabled }}
+            is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
 'on':
   execute:
@@ -114,11 +114,11 @@ jobs:
             hidden: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
             ignore: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
             items:
-              is_disabled:
+              is_enabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.resource.provider == 'existing' && inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
-                label: Is SLURM disabled?
+                default: true
+                label: Is SLURM enabled? Yes, unless the slurm section is hidden and ignored
               partition:
                 type: slurm-partitions
                 label: SLURM partition
@@ -141,11 +141,11 @@ jobs:
             hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             items:
-              is_disabled:
+              is_enabled:
                 type: boolean
                 hidden: true
-                default: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
-                label: Is PBS disabled?
+                default: true
+                label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor

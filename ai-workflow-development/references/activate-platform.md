@@ -4,6 +4,17 @@ Dense, copy-paste-ready facts for building workflows on the Activate platform.
 Everything here was verified against `pw v7.56.0`, the `interactive_session` repo
 (`session_runner/v1.4`, `script_submitter/v3.6`), and live runs on this machine.
 
+## Official documentation (authoritative — consult when in doubt)
+
+This skill is a snapshot and **the platform docs are the source of truth**. They are
+updated over time, so they may describe newer behavior than what is captured here. If
+anything below conflicts with the docs, or a CLI flag / YAML field doesn't behave as
+documented here, **trust the docs and fix this file** (Step 5 of the methodology):
+
+- Building workflows — <https://parallelworks.com/docs/run/workflows/building-workflows>
+- Sessions — <https://parallelworks.com/docs/run/sessions>
+- `pw` CLI — <https://parallelworks.com/docs/cli>
+
 ---
 
 ## 1. Mental model
@@ -13,7 +24,7 @@ Everything here was verified against `pw v7.56.0`, the `interactive_session` rep
 - Jobs run **on a resource**, reached over SSH (`ssh.remoteHost`). Steps are shell
   (`run:`) or reusable **actions** (`uses:`). Jobs form a DAG via `needs:`.
 - A **session** exposes a web server running on a resource through the platform UI
-  (a reverse tunnel). The fractal demo uses a **tunnel** session.
+  (a reverse tunnel). The `nginx` tutorial builds one up step by step.
 - **Subworkflows** are workflows invoked from a step with `uses:` + `$yaml:`. Reuse
   `session_runner` (start a web service + make a session) and `script_submitter`
   (submit a script via SSH/SLURM/PBS) instead of writing launch logic yourself.
@@ -50,7 +61,7 @@ workflow, via `${{ inputs.<name>.* }}`):
 resolves the full object. Do NOT hand-build the object or hardcode `ip` (login IPs
 change when a cluster restarts):
 ```bash
-pw workflows run fractal -i '{"resource":"gcpsmall","scheduler":false}'
+pw workflows run my-session -i '{"resource":"gcpsmall","scheduler":false}'
 ```
 `pw cluster ls -o json` field names differ from the resolved object (`ipAddress` vs
 `ip`); rely on name resolution, not the raw cluster JSON.
@@ -72,7 +83,7 @@ Top of file (enables editor autocomplete; harmless at runtime):
 ### Top-level keys
 | key | purpose |
 |-----|---------|
-| `permissions` | list of users/groups allowed to run; `['*']` = everyone |
+| `permissions` | list of users/groups allowed to run; `['*']` = everyone. **Also required for the `pw` client to be auto-authenticated inside the workflow** — without `permissions: ['*']`, in-workflow `pw` calls (e.g. `pw agent open-port`) fail to authenticate. Always set it. |
 | `sessions` | named session objects this workflow creates |
 | `jobs` | the job DAG |
 | `'on'.execute.inputs` | the input form (note the quoted `'on'` to avoid YAML's bool) |
@@ -117,7 +128,9 @@ jobs:
     `with: { repo, branch, sparse_checkout: [paths...] }` (list items may be templated).
     Verified: `sparse_checkout: [workflow/readmes]` materializes
     `${PW_PARENT_JOB_DIR}/workflow/readmes`, visible to later `needs:`-dependent jobs.
-    This is the alternative to base64-embedding code (see examples/repo-analyzer).
+    This is **the** way to get code onto the node — see §10. Every real session YAML in
+    the repo (e.g. `workflow/yamls/webshell/general_v4.yaml`) starts preprocessing with a
+    `parallelworks/checkout` of `interactive_session` + a `sparse_checkout` of the service dir.
   - `parallelworks/update-session` — register/refresh a session (target/name/slug/remoteHost/remotePort)
   - `parallelworks/cancel-jobs` — cancel sibling jobs (e.g. a `tail -f` streamer)
   - `parallelworks/scheduler-agent`, `parallelworks/wait-for-agent` — dynamic compute node
@@ -177,15 +190,35 @@ graph gives you sequencing, data flow, conditionals, and parallelism:
   each other **run concurrently**; a downstream job with `needs: [w1, w2, w3]` joins
   them. (Verified: 3 workers logged the same finish second.) Generate repetitive
   jobs programmatically in your `build_yaml.py` rather than hand-copying them.
-- See `examples/pipeline` (sequential DAG + outputs + conditionals) and
-  `examples/sweep` (fan-out workers + fan-in aggregate).
+- See `workflow/tutorials/nginx/` (jobs, `needs`, `$OUTPUTS`, conditional `if:`,
+  sessions) and `workflow/tutorials/matrix/workflow.yaml` (fan-out workers via a matrix
+  strategy — the pattern to copy for a parameter sweep).
 
 ---
 
 ## 4. `session_runner` subworkflow (start a web service + make a session)
 
-Path: `workflow/session_runner/v1.4/<deployment>.yaml` (deployments: `general`,
-`emed`, `hsp`, `noaa`; use `general` unless told otherwise). Older: `v1.3`.
+Path: `workflow/session_runner/v1.4/<deployment>.yaml`. Older: `v1.3`.
+
+### Choosing the deployment variant (`general` / `emed` / `hsp` / `noaa`) — IMPORTANT
+Do **not** default to `general`. Pick the variant that matches the **Activate platform
+host you are on** (check `pw context list` → the `user@host` / platform host):
+
+| Platform host | Variant |
+|---|---|
+| `cluster.einsteinmed.edu` | `emed` |
+| `noaa.parallel.works` | `noaa` |
+| `activate.hpc.mil` | `hsp` |
+| anything else | `general` |
+| unclear | **ask the user** |
+
+The same choice applies to **`script_submitter`** (§5) and to the **resource form
+section** of your YAML: the `resource`, `scheduler`, `slurm`, and `pbs` input groups and
+the `with:` block you pass differ per variant (e.g. `emed`'s `slurm` has `slurm_options`,
+`partition_default`, `cpus_per_task`, `mem`, `gres_gpu_*` instead of `general`'s
+`partition`). **Copy the cluster/slurm/pbs form and the `with:` mapping from the matching
+`workflow/yamls/<service>/<variant>_v4.yaml`**, not from a `general` example, or
+`--dry-run` will reject the run with mismatched fields.
 
 **Invoke it** from a job that depends on your preprocessing:
 ```yaml
@@ -246,6 +279,8 @@ session_runner:
 
 Path: `workflow/script_submitter/v3.6/<deployment>.yaml`. Marketplace slug:
 `marketplace/script_submitter/v3.6`. Used standalone, or internally by `session_runner`.
+**Pick the deployment variant (`general`/`emed`/`hsp`/`noaa`) by the same host rule as
+§4**, and match the `slurm`/`pbs` `with:` block to that variant.
 
 Submission modes (auto-selected from inputs):
 - `scheduler:false` → run directly on the login node over SSH.
@@ -257,7 +292,7 @@ Submission modes (auto-selected from inputs):
 (default `#!/bin/bash`); `scheduler`, `use_scheduler_agent`; `slurm`/`pbs` groups;
 `define_cleanup_script` + `cleanup_script_path` (cleanup runs on cancel, 300s timeout,
 on the compute node for scheduled jobs). Output → `run.<JOBID>.out` in `rundir`
-(JOBID = the run slug, e.g. `run.montecarlo-00001.out`).
+(JOBID = the run slug, e.g. `run.my-session-00001.out`).
 
 **Invoke it as a subworkflow** (verified — batch compute, no session):
 ```yaml
@@ -380,12 +415,12 @@ pw forward ...                     # SSH port-forward
 ## 7. Job directory layout
 
 Named run → `~/pw/jobs/<workflow-name>/<NNNNN>/` on the **execution node** (run number
-**zero-padded to 5 digits**, e.g. `~/pw/jobs/fractal/00002/`). Inline run →
+**zero-padded to 5 digits**, e.g. `~/pw/jobs/my-session/00002/`). Inline run →
 `~/pw/jobs/<run-slug>/`. This path is `${PW_PARENT_JOB_DIR}`.
 
-Contents after a `session_runner` launch (all verified in the fractal run):
+Contents after a `session_runner` launch (all verified on a live run):
 ```
-~/pw/jobs/fractal/00002/
+~/pw/jobs/my-session/00002/
 ├── inputs.sh                              # exported PW vars + your form values
 ├── controller-preprocessing-<JOBID>.sh    # inputs.sh + your controller script (what ran)
 ├── start-service-<JOBID>.sh               # inputs.sh + port/trap glue + your start script
@@ -395,8 +430,8 @@ Contents after a `session_runner` launch (all verified in the fractal run):
 ├── SESSION_PORT                           # the allocated service_port
 ├── job.started                            # marker session_runner waits for
 ├── cancel.sh                              # your shutdown script (run on cancel)
-├── <your dir>/ ...                        # files your preprocessing wrote (e.g. mandelbrot/)
-├── <your service output>                  # e.g. mandelbrot.out, fractal.png
+├── <your service dir>/ ...                # files checked out / staged by preprocessing
+├── <your service output>                  # e.g. server.out, result.json
 ├── logs/<job>/step_N/                      # per-step logs
 └── subworkflows/session_runner/step_0/logs/<job>/...   # subworkflow step logs
 ```
@@ -417,8 +452,9 @@ Repo: `https://github.com/parallelworks/interactive_session` (local clone at
 | `webshell/{controller,start-template}-v3.sh` | minimal controller + start scripts |
 | `workflow/session_runner/v1.4/general.yaml` + `README.md` | the subworkflow internals + interface |
 | `workflow/script_submitter/v3.6/general.yaml` + `README.md` | submission modes + interface |
-| `workflow/yamls/jupyterlab-host/general_v4.yaml` | typical: install + nginx proxy + `slug` |
-| `workflow/yamls/vncserver/` | complex: containers, multiple options |
+| `workflow/yamls/jupyterlab-host/general_v4.yaml` + scripts | typical: install + nginx base-path proxy + `slug` (see §11) |
+| `workflow/yamls/openvscode/general_v4.yaml` | session whose `slug` is a query string (`?folder=...`) |
+| `workflow/yamls/kasmvnc-container/` | complex: containers, multiple options |
 
 Conventions: scripts idempotent; service binds `${service_port}` on `0.0.0.0`; write
 `cancel.sh`; end with `sleep inf`; all shared paths under `${PW_PARENT_JOB_DIR}`; form
@@ -426,30 +462,94 @@ inputs grouped into a cluster group + a service group; `permissions: ['*']`.
 
 ---
 
-## 9. Worked examples shipped with this skill
+## 9. Where to look for working patterns (use the repo, not invented examples)
 
-Seven examples under `examples/`, each pure-stdlib Python, base64-embedded into a
-self-contained YAML by a `build_yaml.py` (except `repo-analyzer`, which also uses
-`parallelworks/checkout`), and verified end-to-end on `gcpsmall`. Each teaches a
-distinct pattern — read the one closest to your task.
+Learn from the **real workflows already in the `interactive_session` repo** and the
+**tutorials under `workflow/tutorials/`** — they are maintained, reviewed, and kept in
+sync with the platform. Read the one closest to your task:
 
-| example | kind | subworkflow / mechanism | teaches |
-|---------|------|-------------------------|---------|
-| `fractal` | session | `session_runner/v1.4` | progressive server-side render; tunnel session; base64 self-contained YAML |
-| `trainwatch` | session | `session_runner/v1.4` | live metrics + client-side SVG chart from a JSON endpoint |
-| `fileserver` | session | `session_runner/v1.4` | a session can be a **stock built-in** (`python3 -m http.server`) — no custom code |
-| `montecarlo` | batch | `script_submitter/v3.6` | direct script submission; login node **or** SLURM; cleanup-field gotcha; relative paths |
-| `pipeline` | batch | **none** (job DAG) | `needs`, `$OUTPUTS` data flow, conditional `if:` steps |
-| `sweep` | batch | **none** (job DAG) | fan-out parallel workers + fan-in aggregate |
-| `repo-analyzer` | batch | `parallelworks/checkout` | clone a repo (sparse) + base64 tool; two delivery mechanisms |
+| Pattern you need | Look at |
+|---|---|
+| **Simplest session** (preprocessing → `session_runner`) | `workflow/yamls/webshell/general_v4.yaml` + `webshell/{controller,start-template}-v3.sh` |
+| **Session with install + base-path nginx proxy** (§11) | `workflow/yamls/jupyterlab-host/general_v4.yaml` + `jupyterlab-host/*.sh` |
+| **Session whose `slug` is a query string** | `workflow/yamls/openvscode/general_v4.yaml` (`slug=?folder=...`) |
+| **`parallelworks/checkout` (sparse) to fetch code** | preprocessing job of any `*_v4.yaml` above |
+| **Fan-out / sweep over N workers** (matrix strategy) | `workflow/tutorials/matrix/workflow.yaml` (use this for sweeps) |
+| **Job DAG: `needs`, `$OUTPUTS`, sessions, `update-session`, `pw agent open-port`** | `workflow/tutorials/nginx/` (`readme.md` + `workflow.yaml`, staged 1→4) |
+| **Round-robin retry / failover across resources** | `workflow/tutorials/round-robin-failover/` |
 
-Each has its own README with a copy-paste run recipe. Quick starts:
-```bash
-pw workflows run fractal     -i '{"resource":"gcpsmall","scheduler":false}'
-pw workflows run montecarlo  -i '{"resource":"gcpsmall","scheduler":false}'
-pw workflows run pipeline    -i '{"resource":"gcpsmall","data":{"rows":1500}}'
-pw workflows run sweep       -i '{"resource":"gcpsmall","sweep":{"steps":200}}'
-pw workflows run repo-analyzer -i '{"resource":"gcpsmall","repo":{"url":"https://github.com/parallelworks/interactive_session.git","branch":"main","path":"workflow/readmes"}}'
-```
-Session workflows (`fractal`, `trainwatch`, `fileserver`) hold a `sleep inf` —
-`pw workflows runs cancel <slug>` when done.
+> **Adding a new tutorial requires maintainer approval.** Tutorials must each show
+> something new and non-repetitive — do not add one to `workflow/tutorials/` without
+> sign-off from the repo maintainer (Alvaro). Prefer pointing at an existing tutorial.
+
+(There is an `ai-workflow-development/examples/` directory in this repo. It was a
+one-off learning exercise — **do not cite or rely on it**; use the repo workflows and
+tutorials above instead.)
+
+---
+
+## 10. Getting your workflow code onto the node
+
+`parallelworks/checkout` clones a git repo into the job dir — that is how every real
+session YAML delivers its `controller-v3.sh` / `start-template-v3.sh` (§3). **Do not
+base64-embed files** (the old approach); use one of these two modes.
+
+### Mode A — Claude has write access (recommended)
+Ask the user to grant write access via a **deploy key with write permission** on the
+repo. Then:
+1. Do all work on a **development branch — never push to `main`.**
+2. Commit and push your workflow code (scripts, etc.) to that branch.
+3. In preprocessing, `parallelworks/checkout` that **branch** (sparse-checkout your
+   service dir), exactly like the repo examples but with `branch: <your-dev-branch>`.
+4. The user reviews and merges the branch themselves; then flip the `branch:` to `main`.
+
+### Mode B — Claude has no write access (cannot push)
+`parallelworks/checkout` can't fetch code that isn't pushed yet, so stage it on the
+resource and **mimic** checkout with a copy step:
+1. Create a directory on the resource (e.g. `~/pw/dev/<workflow>/`) and write your files
+   there.
+2. Give preprocessing **two steps**:
+   - the `parallelworks/checkout` step **commented out**, configured as it will be once
+     the branch is merged (`repo`, `branch`, `sparse_checkout`);
+   - a **copy step** that stands in for it, materializing the same files in the job dir:
+     ```yaml
+     # - name: Checkout            # uncomment after the branch is merged...
+     #   uses: parallelworks/checkout
+     #   with:
+     #     repo: https://github.com/parallelworks/interactive_session.git
+     #     branch: <your-dev-branch>
+     #     sparse_checkout: [ <your-service-dir> ]
+     - name: Copy staged files (stand-in for checkout)
+       run: |
+         set -x
+         cp -r ~/pw/dev/<workflow>/. .   # mimics what checkout would materialize
+     ```
+3. Hand the changes to the user: they push & merge, **uncomment the checkout step, and
+   delete the copy step.** The two-step layout makes that swap a clean diff.
+
+---
+
+## 11. Sessions served from a base-path URL (nginx proxy)
+
+A session is reached at `https://<platform-host>/me/session/<user>/<session-name>/<slug>`
+— i.e. the app is served from a **URL prefix**, not the host root. Apps that build
+**absolute URLs** (JupyterLab, many SPAs) break unless they know that prefix. Two
+remedies, both used in the repo:
+
+- **Tell the app its base path.** Compute it in preprocessing/`inputs.sh`:
+  ```bash
+  basepath=/me/session/${PW_USER}/${{ sessions.session }}
+  ```
+  then point the app's base-URL setting at it (JupyterLab:
+  `c.ServerApp.base_url = '${basepath}'`, plus `default_url`/`static_url_prefix`/… — see
+  `jupyterlab-host/start-template-v3.sh`).
+- **Front it with an nginx reverse proxy** that listens on `${service_port}` and proxies
+  to the app on a private port, rewriting the prefix (and setting the WebSocket upgrade
+  headers). `jupyterlab-host/start-template-v3.sh` writes an `nginx.conf` and runs an
+  `nginx-unprivileged` container for exactly this.
+
+The **`slug`** you pass to `session_runner` is the path appended after the session URL:
+`lab` for JupyterLab, `""` for an app that serves correctly at the root, or even a query
+string like `?folder=...` (openvscode). Apps that serve everything with **relative**
+paths need no base path — use `slug: ""` and skip the proxy. Check the platform
+[Sessions docs](https://parallelworks.com/docs/run/sessions) for current behavior.

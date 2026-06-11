@@ -22,7 +22,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: hermes-agent   # dev branch; flip to main after review/merge
+          branch: main
           sparse_checkout:
             - ${{ inputs.service.name }}
       - name: Create Inputs

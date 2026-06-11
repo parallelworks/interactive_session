@@ -191,7 +191,10 @@ non-repetitive; point at an existing tutorial instead.
   that prints `K=v` lines) and read `${{ needs.<job>.outputs.K }}`. Drive conditional
   steps with `if: ${{ needs.X.outputs.flag == 'true' }}` — compute the boolean
   upstream. Fan out with a **matrix strategy** (see `workflow/tutorials/matrix/`); fan
-  in with `needs: [w1,w2,w3]`.
+  in with `needs: [w1,w2,w3]`. For **retry/failover**, attach a `retry` block to a step
+  and use `PW_WORKFLOW_STEP_CURRENT_RETRY` to pick a target per attempt — round-robin
+  over a `list` input fails over across resources (see
+  `workflow/tutorials/round-robin-failover/`; reference §3 "Step retries").
 - **Make scripts idempotent and traceable:** `set -o pipefail`, `set -x`; check
   before installing; safe to re-run.
 - **Stream progress and emit structured results.** Print incremental progress (it

@@ -156,6 +156,7 @@ expressions (`ignore: ${{ .hidden }}` mirrors the hidden flag).
 | `editor` | multi-line text box (e.g. scheduler directives) |
 | `dropdown` | `options: [{label, value}]` |
 | `group` | container with `items:` (values at `inputs.<group>.<item>`) |
+| `list` | repeater the user adds rows to; each row has the fields under `template:`. At runtime `${{ inputs.<name> }}` is a **JSON array** — parse with `python3`, don't slice in shell. Items can themselves be `compute-clusters` (pass `[{"resource":"<name>"}]` in `-i`). See `workflow/tutorials/round-robin-failover/`. |
 | `compute-clusters` | resource picker → resource object (§2); `include-workspace: true/false` |
 | `slurm-partitions` | partition dropdown; needs `resource: ${{ inputs.resource }}` |
 
@@ -194,6 +195,31 @@ graph gives you sequencing, data flow, conditionals, and parallelism:
 - See `workflow/tutorials/nginx/` (jobs, `needs`, `$OUTPUTS`, conditional `if:`,
   sessions) and `workflow/tutorials/matrix/workflow.yaml` (fan-out workers via a matrix
   strategy — the pattern to copy for a parameter sweep).
+
+### Step retries & attempt-aware logic (verified — see `tutorials/round-robin-failover`)
+A step can declare a `retry` block; it re-runs the step while it exits **non-zero**:
+```yaml
+- name: Probe
+  retry:
+    max-retries: 2     # EXTRA attempts after the first (so 3 total); may be an expression
+    interval: 2s       # wait between attempts
+    timeout: 60s       # cap a single attempt
+  run: |
+    ssh "${TARGET_IP}" nvidia-smi   # exit code drives the retry
+```
+- **`exit <code>` drives it:** zero = success (stop), non-zero = retry. A step that
+  exhausts its retries ends the run as **error** — pair it with a later
+  `if: ${{ always }}` step to report a clean result.
+- **Per-attempt env vars:** `PW_WORKFLOW_STEP_CURRENT_RETRY` (0 on the first try) and
+  `PW_WORKFLOW_STEP_MAX_RETRIES` are exported each attempt. `index % N` over a list turns
+  the retry counter into a **round-robin selector** (fail over to the next resource).
+- **`max-retries` can be computed:** `max-retries: ${{ needs.<job>.outputs.N - 1 }}` —
+  arithmetic is evaluated in the expression layer. An upstream step writing `N` to
+  `$OUTPUTS` lets a later step in the **same job** size its own retries
+  (`needs.<this-job>.outputs.N`; outputs written earlier in a job are visible later in it).
+- **In-step SSH vs job-level `ssh:`:** a job-level `ssh.remoteHost` pins every step to one
+  host; running `ssh "$HOST" cmd` *inside* a step lets the step pick (and change) its
+  target per attempt — that's how round-robin failover reaches a different resource each try.
 
 ---
 
@@ -477,7 +503,7 @@ sync with the platform. Read the one closest to your task:
 | **`parallelworks/checkout` (sparse) to fetch code** | preprocessing job of any `*_v4.yaml` above |
 | **Fan-out / sweep over N workers** (matrix strategy) | `workflow/tutorials/matrix/workflow.yaml` (use this for sweeps) |
 | **Job DAG: `needs`, `$OUTPUTS`, sessions, `update-session`, `pw agent open-port`** | `workflow/tutorials/nginx/` (`readme.md` + `workflow.yaml`, staged 1→4) |
-| **Round-robin retry / failover across resources** | `workflow/tutorials/round-robin-failover/` |
+| **Step `retry`, attempt-aware vars, `list` inputs, computed `max-retries`, failover** | `workflow/tutorials/round-robin-failover/` (staged README + `workflow.yaml`) |
 
 > **Adding a new tutorial requires maintainer approval.** Tutorials must each show
 > something new and non-repetitive — do not add one to `workflow/tutorials/` without

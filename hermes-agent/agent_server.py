@@ -1,38 +1,41 @@
 #!/usr/bin/env python3
-"""Hermes WORKER agent -- HTTP front-end for a per-cluster agent.
+"""Hermes WORKER agent -- an OpenAI-compatible agent for ONE cluster.
 
-Exposes the agent over one HTTP port so the orchestrator (on the platform
-workspace) can reach it via `pw ssh <cluster> curl localhost:<port>`.
+Declared in the workflow as an `openAI: true` session, so the Activate platform
+registers it as a chat model and wires it into the built-in chat UI. The agent
+answers by running shell commands on THIS cluster (brain + run_shell tool).
 
-Brain = the platform's OpenAI-compatible endpoint. Auth is the runtime
-PW_API_KEY (never written to disk); org-provider models also require the
-X-Allocation header. The worker runs a minimal real agent loop (a `run_shell`
-tool) so it can actually act on the cluster -- e.g. report its own hostname.
-If a `hermes` binary is present it is used instead (preferred path).
+OpenAI-compatible endpoints (suffix-matched, so the session path prefix is fine):
+  GET  /v1/models            advertise this worker as a model
+  POST /v1/chat/completions  agent loop; supports stream=true (SSE)
+Internal: POST /task  -> {"result": ...}   the orchestrator's delegate contract
+Debug:    GET / or /health  -> status
 
-Endpoints
-  GET  /  and  /health   -> {"status":"ok",...}
-  POST /task             -> {"result":"..."}   run one task on this cluster
+Brain = the platform endpoint (PW_API_KEY + X-Allocation). If a `hermes` binary
+is present it is used instead (preferred); with no brain it stubs.
 """
 import argparse
 import json
 import os
 import shutil
 import subprocess
+import time
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-ROLE = "worker"
 CLUSTER = os.environ.get("HERMES_CLUSTER") or os.environ.get("PW_USER") or "unknown"
+MODEL_ID = os.environ.get("HERMES_MODEL_ID", "hermes-worker")
 TASK_TIMEOUT = int(os.environ.get("HERMES_TASK_TIMEOUT", "1800"))
-
-# --- brain config (platform OpenAI-compatible endpoint) -----------------------
+# Brain config
 BASE = os.environ.get("OPENAI_BASE_URL", "").rstrip("/")
 API_KEY = os.environ.get("OPENAI_API_KEY", "")          # = PW_API_KEY at runtime
-ALLOCATION = os.environ.get("X_ALLOCATION", "")          # org-provider requirement
+ALLOCATION = os.environ.get("X_ALLOCATION", "")
 MODEL = os.environ.get("MODEL", "org:glm/glm-5.1")
-HERMES_TASK_CMD = os.environ.get("HERMES_TASK_CMD", "")  # override for a real hermes
+HERMES_TASK_CMD = os.environ.get("HERMES_TASK_CMD", "")
 
+SYSTEM = ("You are an agent running on the compute cluster '{}'. Use the run_shell tool to "
+          "inspect or act on THIS machine and answer the user from real command output. "
+          "Describe only this machine.").format(CLUSTER)
 TOOLS = [{
     "type": "function",
     "function": {
@@ -40,12 +43,10 @@ TOOLS = [{
         "description": "Run a shell command on THIS machine and return its stdout.",
         "parameters": {"type": "object",
                        "properties": {"command": {"type": "string"}},
-                       "required": ["command"]},
-    },
-}]
+                       "required": ["command"]}}}]
 
 
-def _run_shell(command):
+def run_shell(command):
     out = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=60)
     return (out.stdout or out.stderr).strip()
 
@@ -61,101 +62,40 @@ def _brain(messages):
         return json.load(r)["choices"][0]["message"]
 
 
-def _agent_loop(task, context="", max_steps=4):
-    """Minimal real agent: let the brain call run_shell, execute, feed back."""
-    messages = [
-        {"role": "system", "content": "You are an agent running on a compute cluster "
-         "named '{}'. When asked about this machine, use run_shell to find out for "
-         "real.".format(CLUSTER)},
-        {"role": "user", "content": task if not context else context + "\n\n" + task},
-    ]
+def _agent(messages, max_steps=4):
+    """Run the brain over `messages`, executing run_shell tool calls, until a final reply."""
+    msgs = [{"role": "system", "content": SYSTEM}] + messages
     for _ in range(max_steps):
-        msg = _brain(messages)
-        messages.append({k: v for k, v in msg.items() if v is not None})
-        calls = msg.get("tool_calls") or []
+        m = _brain(msgs)
+        msgs.append({k: v for k, v in m.items() if v is not None})
+        calls = m.get("tool_calls") or []
         if not calls:
-            return msg.get("content", "")
+            return m.get("content", "")
         for tc in calls:
             args = json.loads(tc["function"].get("arguments") or "{}")
-            messages.append({"role": "tool", "tool_call_id": tc["id"],
-                             "content": _run_shell(args.get("command", ""))})
-    return "(max steps reached)"
+            msgs.append({"role": "tool", "tool_call_id": tc["id"],
+                         "content": run_shell(args.get("command", ""))})
+    return "(reached step limit)"
 
 
 def run_hermes_task(task, context=""):
+    """Single-shot task (used by /task). Prefers a real hermes; else the brain loop; else stub."""
     prompt = task if not context else "{}\n\n{}".format(context, task)
-    if HERMES_TASK_CMD:                                  # explicit hermes command
+    if HERMES_TASK_CMD:
         out = subprocess.run(HERMES_TASK_CMD.format(task=prompt), shell=True,
                              capture_output=True, text=True, timeout=TASK_TIMEOUT)
         return (out.stdout or out.stderr).strip()
-    if shutil.which("hermes"):                           # preferred: real hermes
-        # TODO confirm headless flag + that hermes can send the X-Allocation header
+    if shutil.which("hermes"):
         out = subprocess.run(["hermes", "run", "--prompt", prompt],
                              capture_output=True, text=True, timeout=TASK_TIMEOUT)
         return (out.stdout or out.stderr).strip()
-    if BASE and API_KEY:                                 # built-in minimal agent
-        return _agent_loop(task, context)
+    if BASE and API_KEY:
+        return _agent([{"role": "user", "content": prompt}])
     return "[stub:{}] no brain configured: {}".format(CLUSTER, prompt[:200])
-# ------------------------------------------------------------------------------
-
-# Minimal chat UI served at the session root so the worker is usable in the
-# browser. Paths are matched by suffix (do_GET/do_POST) so it works whether the
-# platform forwards "/task" or the full "<session-prefix>/task".
-PAGE = """<!doctype html><html><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hermes worker</title><style>
-body{font:15px/1.5 system-ui,sans-serif;margin:0;background:#f4f1ea;color:#222}
-header{padding:10px 16px;background:#2b2b2b;color:#eee}
-header b{color:#fff} header span{opacity:.7;font-size:13px}
-#log{padding:16px;max-width:820px;margin:0 auto}
-.msg{margin:10px 0;padding:10px 14px;border-radius:10px;white-space:pre-wrap}
-.u{background:#dfe7f5;align-self:end} .a{background:#fff;border:1px solid #e3ddcf}
-.role{font-size:11px;text-transform:uppercase;letter-spacing:.05em;opacity:.6;margin-bottom:3px}
-#bar{position:sticky;bottom:0;background:#f4f1ea;padding:12px 16px;border-top:1px solid #ddd}
-#bar div{max-width:820px;margin:0 auto;display:flex;gap:8px}
-#q{flex:1;padding:10px;border:1px solid #bbb;border-radius:8px;font:inherit}
-button{padding:10px 18px;border:0;border-radius:8px;background:#b5562f;color:#fff;cursor:pointer}
-button:disabled{opacity:.5}
-</style></head><body>
-<header><b>Hermes worker</b> &mdash; <span id="meta">connecting…</span></header>
-<div id="log"></div>
-<div id="bar"><div>
-  <input id="q" placeholder="Ask the agent (e.g. tell me your hostname)" autofocus>
-  <button id="send" onclick="ask()">Send</button>
-</div></div>
-<script>
-const base = location.pathname.replace(/\\/+$/,'');
-const log = document.getElementById('log'), q = document.getElementById('q'), btn = document.getElementById('send');
-fetch(base + '/health').then(r=>r.json()).then(d=>{
-  document.getElementById('meta').textContent =
-    'cluster: ' + d.cluster + '  ·  model: ' + d.model + '  ·  brain: ' + d.brain;
-}).catch(()=>{});
-function add(role, text){
-  const m = document.createElement('div');
-  m.className = 'msg ' + (role==='you'?'u':'a');
-  m.innerHTML = '<div class="role">'+role+'</div>';
-  m.appendChild(document.createTextNode(text));
-  log.appendChild(m); window.scrollTo(0, document.body.scrollHeight);
-  return m;
-}
-async function ask(){
-  const t = q.value.trim(); if(!t) return;
-  q.value=''; btn.disabled=true; add('you', t);
-  const thinking = add('agent', '…');
-  try{
-    const r = await fetch(base + '/task', {method:'POST',
-      headers:{'Content-Type':'application/json'}, body: JSON.stringify({task:t})});
-    const d = await r.json();
-    thinking.lastChild.textContent = d.result || d.error || JSON.stringify(d);
-  }catch(e){ thinking.lastChild.textContent = 'error: ' + e; }
-  btn.disabled=false; q.focus();
-}
-q.addEventListener('keydown', e=>{ if(e.key==='Enter') ask(); });
-</script></body></html>"""
 
 
 class Handler(BaseHTTPRequestHandler):
-    def _send(self, code, obj):
+    def _json(self, code, obj):
         body = json.dumps(obj).encode()
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
@@ -164,28 +104,51 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        if self.path.rstrip("/").endswith("/health") or self.path == "/health":
-            self._send(200, {"status": "ok", "role": ROLE, "cluster": CLUSTER,
-                             "brain": bool(BASE and API_KEY), "model": MODEL})
-            return
-        body = PAGE.encode()              # chat UI at the session root (any prefix)
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        p = self.path.rstrip("/")
+        if p.endswith("/models"):
+            self._json(200, {"object": "list", "data": [
+                {"id": MODEL_ID, "object": "model", "created": int(time.time()), "owned_by": "hermes"}]})
+        else:
+            self._json(200, {"status": "ok", "role": "worker", "cluster": CLUSTER,
+                             "brain": bool(BASE and API_KEY), "model": MODEL_ID})
 
     def do_POST(self):
-        if not self.path.rstrip("/").endswith("/task") and self.path != "/task":
-            self._send(404, {"error": "not found"})
-            return
+        p = self.path.rstrip("/")
         try:
             n = int(self.headers.get("Content-Length", 0))
             req = json.loads(self.rfile.read(n) or b"{}")
-            result = run_hermes_task(req.get("task", ""), req.get("context", ""))
-            self._send(200, {"cluster": CLUSTER, "result": result})
-        except Exception as e:  # noqa: BLE001 - surface failures to the caller
-            self._send(500, {"cluster": CLUSTER, "error": str(e)})
+            if p.endswith("chat/completions"):
+                content = _agent(req.get("messages", []))
+                if req.get("stream"):
+                    self._stream(content)
+                else:
+                    self._json(200, {
+                        "id": "chatcmpl-hermes", "object": "chat.completion",
+                        "created": int(time.time()), "model": MODEL_ID,
+                        "choices": [{"index": 0, "finish_reason": "stop",
+                                     "message": {"role": "assistant", "content": content}}]})
+            elif p.endswith("/task"):
+                self._json(200, {"cluster": CLUSTER,
+                                 "result": run_hermes_task(req.get("task", ""), req.get("context", ""))})
+            else:
+                self._json(404, {"error": "not found"})
+        except Exception as e:  # noqa: BLE001
+            self._json(500, {"error": {"message": str(e), "type": "worker_error"}})
+
+    def _stream(self, content):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.end_headers()
+
+        def chunk(delta, finish=None):
+            obj = {"id": "chatcmpl-hermes", "object": "chat.completion.chunk",
+                   "created": int(time.time()), "model": MODEL_ID,
+                   "choices": [{"index": 0, "delta": delta, "finish_reason": finish}]}
+            self.wfile.write(("data: " + json.dumps(obj) + "\n\n").encode())
+
+        chunk({"role": "assistant", "content": content})
+        chunk({}, "stop")
+        self.wfile.write(b"data: [DONE]\n\n")
 
     def log_message(self, *a):
         pass
@@ -196,8 +159,8 @@ def main():
     ap.add_argument("--port", type=int, default=int(os.environ.get("service_port", "8717")))
     ap.add_argument("--host", default="0.0.0.0")
     args = ap.parse_args()
-    print("hermes worker [{}] on {}:{} | brain={} model={}".format(
-        CLUSTER, args.host, args.port, bool(BASE and API_KEY), MODEL), flush=True)
+    print("hermes worker [{}] (OpenAI-compatible) on {}:{} | brain={}".format(
+        CLUSTER, args.host, args.port, bool(BASE and API_KEY)), flush=True)
     ThreadingHTTPServer((args.host, args.port), Handler).serve_forever()
 
 

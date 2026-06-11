@@ -21,9 +21,12 @@ set -x
 AGENT_DIR="${PW_PARENT_JOB_DIR}/${service_name:-hermes-agent}"
 
 # Make pw / pw agent reachable, and give the agent its brain credentials.
+# The brain key is the runtime PW_API_KEY (never persisted to inputs.sh).
 export PATH="${HOME}/pw:${PATH}"
-export OPENAI_BASE_URL="${service_openai_base_url}"
-export OPENAI_API_KEY="${PW_PLATFORM_TOKEN}"
+export OPENAI_BASE_URL="${service_openai_base_url:-https://${PW_PLATFORM_HOST}/api/openai/v1}"
+export OPENAI_API_KEY="${PW_API_KEY}"
+export X_ALLOCATION="${service_allocation}"
+export MODEL="${service_hermes_model}"
 
 cd ~/
 rm -f "${PW_PARENT_JOB_DIR}/service.pid"

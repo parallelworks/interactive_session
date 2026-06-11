@@ -36,6 +36,7 @@ jobs:
           service_hermes_model="${{ inputs.service.hermes_model }}"
           service_openai_base_url="${{ inputs.service.openai_base_url }}"
           service_hermes_install_cmd="${{ inputs.service.hermes_install_cmd }}"
+          service_allocation="${{ inputs.service.allocation }}"
           HERMES_AGENT_PORT="${{ inputs.service.agent_port }}"
           HERMES_DISPATCH_TIMEOUT="${{ inputs.service.dispatch_timeout }}"
           EOF
@@ -43,9 +44,7 @@ jobs:
           workers_json='${{ inputs.workers }}'
           hermes_workers=$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '[]'); print(','.join(x.get('name','') for x in d if x.get('name')))" "$workers_json")
           echo "HERMES_WORKERS=${hermes_workers}" >> inputs.sh
-          if ! [ -z "${{ org.PW_PLATFORM_TOKEN }}" ]; then
-            echo "PW_PLATFORM_TOKEN=${{ org.PW_PLATFORM_TOKEN }}" >> inputs.sh
-          fi
+          # Brain key is the runtime PW_API_KEY -- intentionally NOT written to inputs.sh.
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
           sed -i '/=""/d' inputs.sh
           sed -i 's/^/export /' inputs.sh
@@ -163,12 +162,18 @@ jobs:
           hermes_model:
             label: Model (brain)
             type: string
-            default: claude-opus-4-8
-            tooltip: Model name as the platform's OpenAI-compatible endpoint lists it. Pick a tool-calling-capable model.
+            default: org:glm/glm-5.1
+            tooltip: Model id as `pw ai models ls` shows it. Must be tool-calling-capable.
+          allocation:
+            label: AI allocation (X-Allocation)
+            type: string
+            default: Private LLM Group
+            tooltip: Allocation name to bill org-provider (org:*) inference against, from `GET /api/allocations`.
           openai_base_url:
             label: Platform OpenAI endpoint
             type: string
-            default: https://activate.parallel.works/api/openai/v1
+            optional: true
+            tooltip: Defaults to https://<platform-host>/api/openai/v1 (derived from PW_PLATFORM_HOST). Override only if needed.
           hermes_install_cmd:
             label: Hermes install command
             type: string

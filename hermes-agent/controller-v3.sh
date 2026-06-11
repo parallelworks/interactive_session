@@ -14,7 +14,8 @@ set -o pipefail
 #   service_hermes_model        model name as the platform lists it
 #   service_openai_base_url     platform OpenAI-compatible endpoint
 #   service_hermes_install_cmd  command that installs hermes (see Hermes docs)
-#   PW_PLATFORM_TOKEN           platform token (org secret) -> OPENAI_API_KEY
+#   service_allocation          X-Allocation for org-provider models (e.g. "Private LLM Group")
+#   PW_API_KEY                  runtime platform key -> OPENAI_API_KEY (not persisted)
 ################################################################################
 
 if [ -z "${service_parent_install_dir}" ]; then
@@ -48,18 +49,22 @@ fi
 echo "::endgroup::"
 
 echo "::group::Configure brain (platform OpenAI-compatible endpoint)"
-# Hermes reads provider config from ~/.hermes/.env. For an OpenAI-compatible
-# proxy that is OPENAI_BASE_URL + OPENAI_API_KEY. CONFIRM exact keys against:
+# Brain = the platform OpenAI-compatible endpoint. The API key is the RUNTIME
+# PW_API_KEY (set by the start script, never persisted here). Org-provider
+# models (org:glm/*) also require the X-Allocation header, sent per-request by
+# the agent. We only record the non-secret base URL + model for reference / a
+# future hermes. CONFIRM provider keys (and whether hermes can send a custom
+# X-Allocation header) against:
 #   https://hermes-agent.nousresearch.com/docs/integrations/providers
+base_url="${service_openai_base_url:-https://${PW_PLATFORM_HOST}/api/openai/v1}"
 mkdir -p "${HOME}/.hermes"
 HERMES_ENV="${HOME}/.hermes/.env"
 : > "${HERMES_ENV}"
-echo "OPENAI_BASE_URL=${service_openai_base_url}" >> "${HERMES_ENV}"
-echo "OPENAI_API_KEY=${PW_PLATFORM_TOKEN}"        >> "${HERMES_ENV}"
+echo "OPENAI_BASE_URL=${base_url}" >> "${HERMES_ENV}"   # key comes from runtime PW_API_KEY
 chmod 600 "${HERMES_ENV}"
 if command -v hermes >/dev/null 2>&1 && [ -n "${service_hermes_model}" ]; then
     hermes config set model "${service_hermes_model}" || \
         echo "::warning::could not set hermes model; set it manually per docs"
 fi
-echo "::notice::brain endpoint = ${service_openai_base_url} | model = ${service_hermes_model}"
+echo "::notice::brain endpoint = ${base_url} | model = ${service_hermes_model} | allocation = ${service_allocation}"
 echo "::endgroup::"

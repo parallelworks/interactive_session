@@ -18,7 +18,7 @@ schema, subworkflow interfaces, `pw` CLI, and job-directory layout — this file
 the **process**; that file is the **facts**. The worked example lives in
 [examples/fractal/](examples/fractal/).
 
-**Assume the `pw` client is already authenticated.** Never run `pw auth` or ask the
+**Assume the `pw` client is already authenticated.** otherwise ask the
 user to log in. Confirm context with `pw context list` if unsure.
 
 ## Golden rules

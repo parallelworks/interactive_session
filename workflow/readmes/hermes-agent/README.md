@@ -59,17 +59,17 @@ pw workflows create hermes-worker --yaml workflow/yamls/hermes-worker/general_v4
 pw workflows run hermes-worker -i '{"cluster":{"resource":"gcpsmall","scheduler":false}}'      --name w-gcpsmall
 pw workflows run hermes-worker -i '{"cluster":{"resource":"a30gpuserver","scheduler":false}}'  --name w-a30
 
-# 2) the orchestrator on the workspace, given the worker cluster names
+# 2) the orchestrator on the workspace -- no roster needed, it discovers workers
 pw workflows create hermes-orchestrator --yaml workflow/yamls/hermes-orchestrator/general_v4.yaml
-pw workflows run hermes-orchestrator -i '{
-  "cluster":{"resource":"workspace","scheduler":false},
-  "workers":[{"name":"gcpsmall"},{"name":"a30gpuserver"}],
-  "service":{"agent_port":8717}
-}' --name orchestrator
+pw workflows run hermes-orchestrator -i '{"cluster":{"resource":"workspace","scheduler":false}}' --name orchestrator
 ```
 
-Then drive the orchestrator from its session (or curl it):
-`POST /run {"goal":"..."}` → it delegates to each worker and aggregates.
+**Worker discovery:** the orchestrator runs `pw sessions ls`, filters to running
+`hermes-worker` sessions, and reads each one's cluster (`targetName`) and port
+(`remotePort`). Its session UI lists those workers as checkboxes — pick which to
+target, type a goal, and it delegates + aggregates. Programmatically:
+`GET /workers` (list) and `POST /run {"goal":"...","targets":[{"cluster","port"}]}`
+(omit `targets` to hit all discovered workers).
 
 ## ⚠️ Confirm against the Hermes docs (the only non-platform unknowns)
 

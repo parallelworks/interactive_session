@@ -1,10 +1,11 @@
 # yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
 #
 # Hermes ORCHESTRATOR -- coordinates worker agents across clusters.
-# Runs on the platform workspace. Reaches each worker over the hub-and-spoke
-# transport `pw ssh <cluster> curl localhost:<agent_port>` (no inbound ports,
-# reuses pw auth). Start the per-cluster hermes-worker sessions FIRST, then run
-# this with the list of those cluster names.
+# Runs on the platform workspace. AUTO-DISCOVERS running hermes-worker sessions
+# via `pw sessions ls` (cluster = targetName, port = remotePort), then reaches
+# each over the hub-and-spoke transport `pw ssh <cluster> curl localhost:<port>`
+# (no inbound ports, reuses pw auth). Just launch it -- no roster to pass; pick
+# which discovered workers to target in the session UI.
 permissions:
   - '*'
 sessions:
@@ -39,10 +40,7 @@ jobs:
           HERMES_AGENT_PORT="${{ inputs.service.agent_port }}"
           HERMES_DISPATCH_TIMEOUT="${{ inputs.service.dispatch_timeout }}"
           EOF
-          # The `workers` list arrives as a JSON array; flatten to a comma list of names.
-          workers_json='${{ inputs.workers }}'
-          hermes_workers=$(python3 -c "import json,sys; d=json.loads(sys.argv[1] or '[]'); print(','.join(x.get('name','') for x in d if x.get('name')))" "$workers_json")
-          echo "HERMES_WORKERS=${hermes_workers}" >> inputs.sh
+          # Workers are auto-discovered at runtime via `pw sessions ls` -- no roster needed.
           # Brain key is the runtime PW_API_KEY -- intentionally NOT written to inputs.sh.
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
           sed -i '/=""/d' inputs.sh
@@ -132,15 +130,6 @@ jobs:
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
-      workers:
-        type: list
-        label: Worker clusters
-        tooltip: One row per running hermes-worker. Enter the cluster name exactly as `pw cluster ls` shows it (the part after the last `/`).
-        template:
-          name:
-            type: string
-            label: Worker cluster name
-            tooltip: e.g. gcpsmall
       service:
         type: group
         label: Hermes Orchestrator Settings
@@ -150,10 +139,10 @@ jobs:
             hidden: true
             default: hermes-agent
           agent_port:
-            label: Worker agent port
+            label: Fallback worker port
             type: integer
             default: 8717
-            tooltip: Port the workers listen on. Must match the hermes-worker `agent_port`.
+            tooltip: Only used if a discovered worker session is missing its port; normally each worker's port comes from `pw sessions ls`.
           dispatch_timeout:
             label: Per-task timeout (s)
             type: integer

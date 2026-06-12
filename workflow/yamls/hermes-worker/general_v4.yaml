@@ -13,6 +13,9 @@ sessions:
     openAI: true
     redirect: false
 
+env:
+  PW_API_KEY: ${PW_API_KEY}
+
 jobs:
   preprocessing:
     ssh:

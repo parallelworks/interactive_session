@@ -86,6 +86,7 @@ Top of file (enables editor autocomplete; harmless at runtime):
 | `permissions` | list of users/groups allowed to run; `['*']` = everyone. **Also required for the `pw` client to be auto-authenticated inside the workflow** — without `permissions: ['*']`, in-workflow `pw` calls (e.g. `pw agent open-port`) fail to authenticate. Always set it. |
 | `sessions` | named session objects this workflow creates |
 | `jobs` | the job DAG |
+| `env` | workflow-level environment variables injected into every job/step's runtime env. **The canonical way to make `PW_API_KEY` available to your workflow code** — set `env: { PW_API_KEY: ${PW_API_KEY} }` (see §12). |
 | `'on'.execute.inputs` | the input form (note the quoted `'on'` to avoid YAML's bool) |
 
 ### `sessions`
@@ -576,3 +577,84 @@ The **`slug`** you pass to `session_runner` is the path appended after the sessi
 string like `?folder=...` (openvscode). Apps that serve everything with **relative**
 paths need no base path — use `slug: ""` and skip the proxy. Check the platform
 [Sessions docs](https://parallelworks.com/docs/run/sessions) for current behavior.
+
+---
+
+## 12. AI agents & LLM-backed sessions (verified building `hermes-agent`)
+
+### Platform LLM endpoint — a service's "brain"
+OpenAI-compatible at **`https://${PW_PLATFORM_HOST}/api/openai/v1`**; auth
+`Authorization: Bearer ${PW_API_KEY}` (see below). **Org-provider models (`org:*`,
+e.g. `org:glm/glm-5.1`) require an `X-Allocation: <name>` header** — without it you
+get `400 "X-Allocation header is required for org provider requests"`. List
+allocation names at **`GET https://${PW_PLATFORM_HOST}/api/allocations`** (objects
+with `name`/`unit`/`total`/`used`; e.g. `Private LLM Group`). Discover models with
+`pw ai models ls [-o json]`; chat from the CLI with `pw ai chats new -p "..."
+"<model-id>"`. The connected GLM models support OpenAI tool/function calling, so
+you can build tool-using agents straight against the endpoint. (LibreChat points at
+the same endpoint — see `librechat-singularity/controller-v3.sh`.)
+
+### `PW_API_KEY` at runtime — the platform credential (don't persist it)
+**Whenever you need `PW_API_KEY` anywhere in the workflow's code, expose it once with
+a top-level `env:` block** so the platform injects it into every job/step's runtime
+env:
+```yaml
+env:
+  PW_API_KEY: ${PW_API_KEY}
+```
+This is the canonical way (used by `hermes-orchestrator`/`hermes-worker`). Still keep
+the key OUT of `inputs.sh`: standard preprocessing writes
+`env | grep '^PW_' | grep -v 'PW_API_KEY'` deliberately, and a long-running service
+process inherits the key directly anyway (verified via `/proc/<pid>/environ`), so a
+service can use it as the platform bearer token — `export OPENAI_API_KEY="${PW_API_KEY}"`
+— with no org secret. Expose it via the top-level `env:` block, read it from the
+runtime env, and never persist it to `inputs.sh`.
+
+### `openAI: true` sessions → the built-in chat (don't hand-roll a chat UI)
+A session declared `openAI: true` (schema-confirmed in `workflow.schema.json`)
+registers its tunneled service as a **model in the platform's built-in chat**. The
+service must serve `GET /v1/models` and `POST /v1/chat/completions` (SSE streaming
+OK). Pair with `redirect: false` (it's an API, not a page); `detach: true` to
+persist past the run.
+```yaml
+sessions:
+  my_session:
+    openAI: true
+    redirect: false
+```
+It appears in `pw ai models ls` as `session:<user>:<session-name>/<model-id>`
+(`<model-id>` comes from your `/v1/models`); chat via `pw ai chats` or the web UI.
+This is the right way to give a session a chat interface — **don't build a bespoke
+HTML chat page**. **Unresolved caveat:** a **workspace**-hosted openAI session
+registered reliably, but **cluster**-hosted ones (`targetType: cluster`) were
+observed NOT listing in `pw ai models ls` despite `openAI: true` + a working
+`/v1/models`. Confirm the rule before relying on per-cluster chat models.
+
+### Runtime session discovery
+`pw sessions ls -o json` gives per session: `name`, `status`, `targetName`
+(`<ns>/<cluster>` or `workspace`), `targetType` (`cluster`|`workspace`),
+`remoteHost`, `remotePort`, `localPort`, `openAI`, `workflowRun.{name,slug,number}`.
+**Session name = `<workflow-name>_<runNumber>_<sessionKey>`** (the `sessions:` key
+is the trailing part). Match the **sessionKey marker** in the name to find your
+sessions at runtime — more stable than the workflow name (chosen at `create`). Map
+a discovered session to its `targetName` (cluster) and `remotePort`.
+
+### `pw ssh` from inside a running session (cross-node transport)
+A service process CAN run `pw ssh <cluster> <cmd>` / `pw ssh workspace <cmd>` at
+runtime (reuses pw auth; needs `$HOME/pw` on PATH — the `PATH=$HOME/pw:$PATH`
+inputs.sh line covers it). Clean, inbound-port-free cross-cluster transport (e.g. an
+orchestrator on the workspace → `pw ssh <cluster> curl localhost:<port>`). **stdin
+is NOT reliably forwarded** through `pw ssh <c> <cmd>` — base64 the payload INTO the
+command instead: `pw ssh c "echo <b64> | base64 -d | curl --data-binary @- http://localhost:P/x"`.
+
+### More verified gotchas
+- **`pw workflows run <name>` uses the STORED definition.** After editing a YAML,
+  `pw workflows update <name> --yaml file.yaml` first, or the run uses the old form
+  (e.g. `400 Missing required fields` for an input you removed).
+- **Pin a service port:** export `service_port` in `inputs.sh` and `session_runner`
+  uses it (it only runs `pw agent open-port` when unset) — handy when another
+  service must reach it at a known port.
+- **Long synchronous requests through the session tunnel can `502 Proxy Error`**
+  (~a minute+ exceeds the proxy timeout). Stream to keep bytes flowing, or use an
+  async job+poll pattern for long work.
+- Transient `pw workflows run/cancel` API timeouts happen — just retry.

@@ -633,6 +633,17 @@ direct HTTP still work, you just can't chat it as a model). So put the user-faci
 chat agent on the workspace; treat cluster sessions as backend services reached over
 the tunnel / `pw ssh`.
 
+**One session can expose MANY models — and the platform re-polls (verified,
+hermes-agent).** Each entry your `/v1/models` returns registers as its own chat
+model `session:<user>:<session-name>/<model-id>`, all routed to the same session's
+`/v1/chat/completions`; branch on the request's `model` field to send each to the
+right place. The list is **dynamic**: the platform re-polls `/v1/models`, so models
+you add later (e.g. when a new backend appears) show up without relaunching the
+session. This is the clean way to surface several agents/targets from one
+**workspace** session instead of relying on per-cluster sessions registering — the
+hermes orchestrator advertises itself **plus one `hermes-<cluster>` model per
+worker**, routing a per-worker chat straight to that worker's own endpoint.
+
 **Serving SSE so the built-in chat doesn't abort it (hard-won — `http.server`):**
 the chat sends `stream: true`; if your streamed reply isn't framed the way the
 proxy expects it kills the chat with `stream error … INTERNAL_ERROR; received from

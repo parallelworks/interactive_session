@@ -40,12 +40,15 @@ Worker** workflow once per cluster, picking that cluster in the form. Keep
 always runs on your workspace and finds your workers automatically — there's
 nothing to configure.
 
-**3. Chat.** Open the platform chat and pick the **hermes-orchestrator** model.
-Ask away. As it works you'll see it reach out to each cluster, then give you a
-combined answer.
+**3. Chat.** Open the platform chat. You'll see a model per choice:
 
-> New workers are picked up automatically — launch one any time and the
-> orchestrator will start using it on your next question.
+- **`hermes-orchestrator`** — talks to *all* your clusters and combines the
+  answers (use this for "compare my clusters" / "where should I run X?").
+- **`hermes-<cluster>`** (e.g. `hermes-gcpsmall`) — talks to *just that one*
+  cluster. Pick this when you only care about a single machine.
+
+> Launch a worker any time — it shows up as its own `hermes-<cluster>` model and
+> the orchestrator starts using it automatically, no restart needed.
 
 ## Settings
 

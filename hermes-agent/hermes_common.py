@@ -145,6 +145,12 @@ def serve(model_id, agent, role, port, host="0.0.0.0",
     post_routes = post_routes or {}
 
     class Handler(BaseHTTPRequestHandler):
+        # HTTP/1.1 so streamed replies use chunked transfer-encoding: the
+        # terminating 0-chunk tells the platform's proxy the stream ended
+        # cleanly. (HTTP/1.0 close-delimited bodies look truncated to the proxy
+        # and it aborts the chat with an INTERNAL_ERROR.)
+        protocol_version = "HTTP/1.1"
+
         def log_message(self, *_):  # keep the service log quiet
             pass
 
@@ -156,12 +162,17 @@ def serve(model_id, agent, role, port, host="0.0.0.0",
             self.end_headers()
             self.wfile.write(body)
 
-        def _delta(self, delta, finish=None):
-            obj = {"id": "chatcmpl-hermes", "object": "chat.completion.chunk",
-                   "created": int(time.time()), "model": model_id,
-                   "choices": [{"index": 0, "delta": delta, "finish_reason": finish}]}
-            self.wfile.write(("data: " + json.dumps(obj) + "\n\n").encode())
+        def _sse(self, text):
+            """Write one SSE event as an HTTP chunked-encoding chunk."""
+            payload = ("data: " + text + "\n\n").encode()
+            self.wfile.write(b"%x\r\n%s\r\n" % (len(payload), payload))
             self.wfile.flush()
+
+        def _sse_delta(self, delta, finish=None):
+            self._sse(json.dumps({
+                "id": "chatcmpl-hermes", "object": "chat.completion.chunk",
+                "created": int(time.time()), "model": model_id,
+                "choices": [{"index": 0, "delta": delta, "finish_reason": finish}]}))
 
         def do_GET(self):
             path = self.path.rstrip("/")
@@ -212,16 +223,18 @@ def serve(model_id, agent, role, port, host="0.0.0.0",
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-cache")
+            self.send_header("Transfer-Encoding", "chunked")
             self.end_headers()
-            self._delta({"role": "assistant"})
+            self._sse_delta({"role": "assistant"})
             try:
                 for kind, text in agent.run(messages):
                     if text:
-                        self._delta({"content": text + "\n" if kind == "step" else text})
+                        self._sse_delta({"content": text + "\n" if kind == "step" else text})
             except Exception as exc:  # noqa: BLE001
-                self._delta({"content": "\n[error: %s]" % exc})
-            self._delta({}, "stop")
-            self.wfile.write(b"data: [DONE]\n\n")
+                self._sse_delta({"content": "\n[error: %s]" % exc})
+            self._sse_delta({}, "stop")
+            self._sse("[DONE]")
+            self.wfile.write(b"0\r\n\r\n")   # terminating chunk: clean end of stream
             self.wfile.flush()
 
     print("hermes %s (OpenAI-compatible) on %s:%s as model '%s' | brain=%s"

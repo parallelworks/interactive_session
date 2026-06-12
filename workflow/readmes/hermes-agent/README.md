@@ -1,100 +1,76 @@
-# Hermes multi-agent (orchestrator + per-cluster workers)
+# Hermes Multi-Agent
 
-A **Hermes orchestrator on the platform** that coordinates **one Hermes worker
-agent per cluster**. Built on the same `session_runner` pattern as every other
-session in this repo.
-
-## Architecture
+Chat with your compute clusters in plain language. Hermes puts one **AI agent on
+each cluster** and a single **orchestrator** you talk to from the platform chat.
+Ask a question and it asks the right clusters, runs the commands there, and
+gives you one clear answer.
 
 ```
-                 platform workspace
-              ┌───────────────────────┐
-              │  hermes-orchestrator   │   orchestrator.py  (a session)
-              │  (Hermes coordinator)  │
-              └─────────┬──────────────┘
-        pw ssh <cluster> curl localhost:<agent_port>/task
-          ┌─────────────┼───────────────┐
-          ▼             ▼                ▼
-   ┌────────────┐ ┌────────────┐  ┌────────────┐
-   │ gcpsmall   │ │ a30gpu...  │  │  cluster N │   agent_server.py (a session each)
-   │ hermes     │ │ hermes     │  │  hermes    │
-   │ worker     │ │ worker     │  │  worker    │
-   └────────────┘ └────────────┘  └────────────┘
-        each worker's brain → platform OpenAI-compatible endpoint
+                  You  (platform chat)
+                        │
+              ┌─────────▼──────────┐
+              │   Hermes           │     one chat model you talk to
+              │   Orchestrator     │     (runs on your workspace)
+              └─────────┬──────────┘
+            asks each cluster, in parallel
+          ┌─────────────┼─────────────┐
+          ▼             ▼             ▼
+    ┌──────────┐  ┌──────────┐  ┌──────────┐
+    │  Worker  │  │  Worker  │  │  Worker  │   one agent per cluster
+    │ cluster A│  │ cluster B│  │ cluster C│   (runs commands there)
+    └──────────┘  └──────────┘  └──────────┘
 ```
 
-- **Brain**: every agent calls the platform's OpenAI-compatible endpoint,
-  always `https://${PW_PLATFORM_HOST}/api/openai/v1`, authenticated with the
-  **runtime `PW_API_KEY`** (never written to disk). Org-provider models
-  (`org:*`, e.g. GLM) also require the `X-Allocation` header, sent per request.
-- **Transport (the part Hermes doesn't do across clusters)**: the orchestrator
-  reaches each worker with `pw ssh <cluster> curl localhost:<agent_port>`.
-  Hub-and-spoke: **no inbound ports**, reuses pw auth, works for any cluster.
-- **Why workers run on the login node** (`scheduler:false`): that's where the
-  internet (for the brain) and `pw ssh ... localhost` both reach them.
+## What you can ask it
 
-## Files
+- **“Where should I run a GPU training job?”** — it checks each cluster's GPUs,
+  memory and load, then recommends one.
+- **“How busy is each cluster right now?”** — it reports queues and utilization
+  across all of them.
+- **“On cluster B, start my simulation in `~/runs/exp1` and tell me the job ID.”**
+- **“Which clusters have CUDA 13 and at least 40 GB of free disk?”**
 
-| File | Role |
-|------|------|
-| `hermes-agent/agent_server.py` | worker HTTP front-end (`/health`, `/task`) — stdlib |
-| `hermes-agent/orchestrator.py` | orchestrator HTTP control + `pw ssh` dispatch — stdlib |
-| `hermes-agent/controller-v3.sh` | install Hermes + configure the brain (idempotent) |
-| `hermes-agent/start-template-v3.sh` | start the right role on `${service_port}` |
-| `workflow/yamls/hermes-worker/general_v4.yaml` | start one worker (run per cluster) |
-| `workflow/yamls/hermes-orchestrator/general_v4.yaml` | start the orchestrator (roster of workers) |
+## Getting started
 
-## Setup (once)
+**1. Add a worker to each cluster you want to reach.** Launch the **Hermes
+Worker** workflow once per cluster, picking that cluster in the form. Keep
+*Schedule Job?* off so the worker stays on the login node.
 
-No org secret needed — auth is the runtime `PW_API_KEY`. Just confirm the
-defaults match your platform:
-1. A tool-calling-capable model id: `pw ai models ls` (default `org:glm/glm-5.1`).
-2. The allocation to bill: `GET /api/allocations` (default `Private LLM Group`).
+**2. Launch the orchestrator.** Launch the **Hermes Orchestrator** workflow. It
+always runs on your workspace and finds your workers automatically — there's
+nothing to configure.
 
-## Run
+**3. Chat.** Open the platform chat and pick the **hermes-orchestrator** model.
+Ask away. As it works you'll see it reach out to each cluster, then give you a
+combined answer.
 
-```bash
-# 1) a worker on each cluster (login node)
-pw workflows create hermes-worker --yaml workflow/yamls/hermes-worker/general_v4.yaml
-pw workflows run hermes-worker -i '{"cluster":{"resource":"gcpsmall","scheduler":false}}'      --name w-gcpsmall
-pw workflows run hermes-worker -i '{"cluster":{"resource":"a30gpuserver","scheduler":false}}'  --name w-a30
+> New workers are picked up automatically — launch one any time and the
+> orchestrator will start using it on your next question.
 
-# 2) the orchestrator on the workspace -- no roster needed, it discovers workers
-pw workflows create hermes-orchestrator --yaml workflow/yamls/hermes-orchestrator/general_v4.yaml
-pw workflows run hermes-orchestrator -i '{"cluster":{"resource":"workspace","scheduler":false}}' --name orchestrator
-```
+## Settings
 
-**Worker discovery:** the orchestrator runs `pw sessions ls` and filters to
-running sessions whose **name carries the `hermes_worker` marker** (set by the
-worker YAML's `sessions:` key — independent of the workflow name), reading each
-one's cluster (`targetName`) and port (`remotePort`). Delegation runs in
-parallel, so total time ≈ the slowest single worker. Its session UI lists those
-workers as checkboxes — pick which to target, type a goal, and it delegates +
-aggregates. Programmatically:
-`GET /workers` (list) and `POST /run {"goal":"...","targets":[{"cluster","port"}]}`
-(omit `targets` to hit all discovered workers).
+Both workflows use sensible defaults; you usually don't need to change anything.
 
-## ⚠️ Confirm against the Hermes docs (the only non-platform unknowns)
+| Setting | What it does | Default |
+|---|---|---|
+| **Model** | The AI model behind the agents (must support tool calling) | `org:glm/glm-5.1` |
+| **AI allocation** | Which allocation your AI usage is billed to | `Private LLM Group` |
+| **Per-task timeout** | How long the orchestrator waits for a cluster to answer | 300 s |
 
-The platform plumbing is complete and tested. Three Hermes-specific bits are
-marked `CONFIRM`/`TODO` in the code — until set, the agent runs in **stub mode**
-(echoes tasks) so the wiring is demonstrable:
+On the worker, **Cluster** selects where it runs and **Agent port** is the port
+it listens on (change it only if 8717 is in use).
 
-1. **Install** — set the `hermes_install_cmd` input to the official installer
-   (`controller-v3.sh`).
-2. **Brain config keys** — `~/.hermes/.env` uses `OPENAI_BASE_URL` /
-   `OPENAI_API_KEY`; verify against
-   <https://hermes-agent.nousresearch.com/docs/integrations/providers>.
-3. **Headless task run** — `run_hermes_task()` in `agent_server.py` shells to
-   `hermes`; confirm the single-shot flag (or set `$HERMES_TASK_CMD`). For true
-   Hermes-to-Hermes coordination, wire `run_goal()` in `orchestrator.py` to a
-   Hermes coordinator whose delegate tool calls `delegate(cluster, task)`
-   (<https://hermes-agent.ai/features/multi-agent>).
+## Good to know
 
-## Notes
+- Run **one worker per cluster**. The orchestrator talks to each worker
+  privately over the platform's own connection — no open ports or extra setup.
+- For long jobs, ask the agent to **submit** the work and report back (e.g. the
+  job ID); then ask “is it done?” later. It won't sit and wait.
+- The agents only know what real commands tell them — answers come from live
+  output on each cluster, not guesses.
 
-- Worker port is **pinned** (`agent_port`, default 8717) so the orchestrator
-  roster is just a list of cluster names. Keep the two values in sync.
-- Workers must run with `scheduler:false` (login node) for the transport to reach
-  them and for brain internet access.
-- Clean up when done: `pw workflows runs cancel <slug>` (runs `cancel.sh`).
+## Stopping
+
+Cancel the workflow runs from the platform when you're done (each one shuts its
+agent down cleanly). Cancelling a worker just removes that cluster from the
+orchestrator's view; cancelling the orchestrator ends the chat agent.

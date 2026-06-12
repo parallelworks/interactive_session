@@ -13,6 +13,9 @@ sessions:
     openAI: true
     redirect: false
 
+env:
+  PW_API_KEY: ${PW_API_KEY}
+
 jobs:
   preprocessing:
     ssh:
@@ -86,10 +89,13 @@ jobs:
           resource:
             type: compute-clusters
             label: Orchestrator host
+            hidden: true
+            default: "" # Default to user workspace
             include-workspace: true
             tooltip: Where the orchestrator runs. Pick "workspace" -- it sits on the platform and can `pw ssh` to every worker cluster.
           scheduler:
             type: boolean
+            hidden: true
             default: false
             label: Schedule Job?
             hidden: ${{ inputs.cluster.resource.schedulerType == '' }}

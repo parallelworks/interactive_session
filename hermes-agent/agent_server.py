@@ -75,7 +75,8 @@ def main():
             prompt = req["context"] + "\n\n" + prompt
         return {"cluster": CLUSTER, "result": agent.answer([{"role": "user", "content": prompt}])}
 
-    hc.serve(MODEL_ID, agent, role="worker", port=args.port, host=args.host,
+    hc.serve(MODEL_ID, route=lambda req: agent, list_models=lambda: [MODEL_ID],
+             role="worker", port=args.port, host=args.host,
              post_routes={"/task": task},
              status=lambda: {"cluster": CLUSTER})
 

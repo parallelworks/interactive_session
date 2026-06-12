@@ -122,14 +122,68 @@ def describe(name, args):
     return name
 
 
+def worker_model_id(cluster):
+    """Chat-model id advertised for a single worker, e.g. 'hermes-gcpsmall'."""
+    return "hermes-" + cluster
+
+
+def proxy_chat(cluster, port, messages):
+    """Forward a whole conversation to one worker's /v1/chat/completions and
+    return its reply — a direct chat with that single cluster's agent."""
+    payload = base64.b64encode(json.dumps({"messages": messages}).encode()).decode()
+    remote = ("echo %s | base64 -d | curl -s -m %d -X POST "
+              "-H 'Content-Type: application/json' --data-binary @- "
+              "http://localhost:%d/v1/chat/completions") % (payload, DELEGATE_TIMEOUT, port)
+    argv = ["bash", "-c", remote] if LOCAL_TEST else ["pw", "ssh", cluster, remote]
+    try:
+        out = subprocess.run(argv, capture_output=True, text=True, timeout=DELEGATE_TIMEOUT + 60)
+    except Exception as exc:  # noqa: BLE001
+        return "(could not reach %s: %s)" % (cluster, exc)
+    try:
+        return json.loads(out.stdout)["choices"][0]["message"]["content"]
+    except Exception:  # noqa: BLE001
+        return (out.stdout or out.stderr or "").strip() or "(no response from %s)" % cluster
+
+
+class WorkerProxy:
+    """Responder that sends a chat straight to one cluster's worker, so each
+    worker is selectable as its own chat model next to the orchestrator."""
+
+    def __init__(self, cluster, port):
+        self.cluster = cluster
+        self.port = port
+
+    def answer(self, messages):
+        return proxy_chat(self.cluster, self.port, messages)
+
+    def run(self, messages):
+        yield "step", "↪ " + self.cluster
+        yield "answer", self.answer(messages)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=int(os.environ.get("service_port") or 8717))
     ap.add_argument("--host", default="0.0.0.0")
     args = ap.parse_args()
 
-    agent = hc.Agent(MODEL_ID, SYSTEM, TOOLS, run_tool, describe)
-    hc.serve(MODEL_ID, agent, role="orchestrator", port=args.port, host=args.host,
+    orchestrator = hc.Agent(MODEL_ID, SYSTEM, TOOLS, run_tool, describe)
+
+    def route(req):
+        # A chat addressed to hermes-<cluster> goes straight to that worker;
+        # anything else is handled by the orchestrator (which can reach them all).
+        requested = (req.get("model") or "").split("/")[-1]
+        for w in discover_workers():
+            if requested == worker_model_id(w["cluster"]):
+                return WorkerProxy(w["cluster"], w["port"])
+        return orchestrator
+
+    def list_models():
+        # The orchestrator plus one model per running worker.
+        return [MODEL_ID] + [worker_model_id(w["cluster"]) for w in discover_workers()]
+
+    hc.serve(MODEL_ID, route=route, list_models=list_models,
+             role="orchestrator", port=args.port, host=args.host,
              get_routes={"/workers": lambda: {"workers": discover_workers()}},
              status=lambda: {"workers": len(discover_workers())})
 

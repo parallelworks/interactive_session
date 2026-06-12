@@ -122,9 +122,10 @@ class Agent:
         return final
 
 
-def _models_payload(model_id):
+def _models_payload(model_ids):
     return {"object": "list", "data": [
-        {"id": model_id, "object": "model", "created": int(time.time()), "owned_by": "hermes"}]}
+        {"id": mid, "object": "model", "created": int(time.time()), "owned_by": "hermes"}
+        for mid in model_ids]}
 
 
 def _completion_payload(model_id, content):
@@ -134,12 +135,16 @@ def _completion_payload(model_id, content):
                  "message": {"role": "assistant", "content": content}}]}
 
 
-def serve(model_id, agent, role, port, host="0.0.0.0",
+def serve(model_id, route, list_models, role, port, host="0.0.0.0",
           get_routes=None, post_routes=None, status=None):
     """Start the OpenAI-compatible HTTP server for an agent.
 
+    route(req) -> a responder (an object with .run(messages) and .answer(messages))
+        chosen from the request — lets one session serve several models and send
+        each to the right place (the orchestrator routes per-worker chats here).
+    list_models() -> the model ids to advertise at GET /v1/models.
     get_routes / post_routes: {path-suffix: fn} for role-specific endpoints
-    (fn() -> obj for GET, fn(body) -> obj for POST), returned as JSON.
+        (fn() -> obj for GET, fn(body) -> obj for POST), returned as JSON.
     status: optional fn() -> dict merged into the / and /health page.
     """
     get_routes = get_routes or {}
@@ -166,7 +171,7 @@ def serve(model_id, agent, role, port, host="0.0.0.0",
         def do_GET(self):
             path = self.path.rstrip("/")
             if path.endswith("/models"):
-                self._json(200, _models_payload(model_id))
+                self._json(200, _models_payload(list_models()))
                 return
             for suffix, fn in get_routes.items():
                 if path.endswith(suffix):
@@ -198,17 +203,18 @@ def serve(model_id, agent, role, port, host="0.0.0.0",
                 self._json(500, {"error": {"message": str(exc), "type": role + "_error"}})
 
         def _chat(self, req):
+            responder = route(req)
             messages = req.get("messages", [])
             if req.get("stream"):
-                self._chat_stream(messages)
+                self._chat_stream(responder, messages)
                 return
             try:
-                content = agent.answer(messages)
+                content = responder.answer(messages)
             except Exception as exc:  # noqa: BLE001
                 content = "Sorry, I hit an error: %s" % exc
             self._json(200, _completion_payload(model_id, content))
 
-        def _chat_stream(self, messages):
+        def _chat_stream(self, responder, messages):
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-cache")
@@ -242,7 +248,7 @@ def serve(model_id, agent, role, port, host="0.0.0.0",
 
             try:
                 delta({"role": "assistant"})
-                for kind, text in agent.run(messages):
+                for kind, text in responder.run(messages):
                     if text:
                         delta({"content": text + "\n" if kind == "step" else text})
                 delta({}, "stop")

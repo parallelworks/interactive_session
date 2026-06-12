@@ -17,6 +17,7 @@ Standard library only, so it runs on a clean Python 3 (the cluster nodes ship
 """
 import json
 import os
+import threading
 import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -162,18 +163,6 @@ def serve(model_id, agent, role, port, host="0.0.0.0",
             self.end_headers()
             self.wfile.write(body)
 
-        def _sse(self, text):
-            """Write one SSE event as an HTTP chunked-encoding chunk."""
-            payload = ("data: " + text + "\n\n").encode()
-            self.wfile.write(b"%x\r\n%s\r\n" % (len(payload), payload))
-            self.wfile.flush()
-
-        def _sse_delta(self, delta, finish=None):
-            self._sse(json.dumps({
-                "id": "chatcmpl-hermes", "object": "chat.completion.chunk",
-                "created": int(time.time()), "model": model_id,
-                "choices": [{"index": 0, "delta": delta, "finish_reason": finish}]}))
-
         def do_GET(self):
             path = self.path.rstrip("/")
             if path.endswith("/models"):
@@ -225,17 +214,53 @@ def serve(model_id, agent, role, port, host="0.0.0.0",
             self.send_header("Cache-Control", "no-cache")
             self.send_header("Transfer-Encoding", "chunked")
             self.end_headers()
-            self._sse_delta({"role": "assistant"})
+
+            lock = threading.Lock()
+            done = threading.Event()
+
+            def chunk(raw):  # one HTTP chunked-encoding frame, serialized across threads
+                with lock:
+                    self.wfile.write(b"%x\r\n%s\r\n" % (len(raw), raw))
+                    self.wfile.flush()
+
+            def delta(body, finish=None):
+                chunk(("data: " + json.dumps({
+                    "id": "chatcmpl-hermes", "object": "chat.completion.chunk",
+                    "created": int(time.time()), "model": model_id,
+                    "choices": [{"index": 0, "delta": body, "finish_reason": finish}]}) + "\n\n").encode())
+
+            def keepalive():
+                # Empty-content deltas every second keep bytes flowing while the
+                # brain is thinking; without them the platform proxy treats the
+                # idle stream as dead and resets the chat (INTERNAL_ERROR).
+                while not done.wait(1.0):
+                    try:
+                        delta({"content": ""})
+                    except OSError:
+                        return
+            threading.Thread(target=keepalive, daemon=True).start()
+
             try:
+                delta({"role": "assistant"})
                 for kind, text in agent.run(messages):
                     if text:
-                        self._sse_delta({"content": text + "\n" if kind == "step" else text})
-            except Exception as exc:  # noqa: BLE001
-                self._sse_delta({"content": "\n[error: %s]" % exc})
-            self._sse_delta({}, "stop")
-            self._sse("[DONE]")
-            self.wfile.write(b"0\r\n\r\n")   # terminating chunk: clean end of stream
-            self.wfile.flush()
+                        delta({"content": text + "\n" if kind == "step" else text})
+                delta({}, "stop")
+                chunk(b"data: [DONE]\n\n")
+                with lock:
+                    self.wfile.write(b"0\r\n\r\n")   # terminating chunk: clean end of stream
+                    self.wfile.flush()
+            except OSError:
+                pass   # client disconnected mid-stream
+            except Exception as exc:  # noqa: BLE001 - surface brain/tool errors in the chat
+                try:
+                    delta({"content": "\n[error: %s]" % exc})
+                    delta({}, "stop")
+                    chunk(b"data: [DONE]\n\n")
+                except OSError:
+                    pass
+            finally:
+                done.set()
 
     print("hermes %s (OpenAI-compatible) on %s:%s as model '%s' | brain=%s"
           % (role, host, port, model_id, brain_ready()), flush=True)

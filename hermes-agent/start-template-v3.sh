@@ -1,50 +1,48 @@
 ################################################################################
 # Interactive Session Starter - Hermes Agent (worker | orchestrator)
 #
-# Purpose: start the Hermes agent's HTTP front-end on ${service_port} (0.0.0.0).
-#          worker       -> agent_server.py (one task-runner per cluster)
-#          orchestrator -> orchestrator.py (coordinates workers via pw ssh)
+# Purpose: start the Hermes agent on ${service_port} (bound on 0.0.0.0 so the
+#          platform tunnel can reach it).
+#            worker       -> agent_server.py  (one per cluster; runs shell there)
+#            orchestrator -> orchestrator.py  (on the workspace; coordinates workers)
 # Runs on: worker -> cluster login node (scheduler:false); orchestrator -> workspace
 # Called by: session_runner, after inputs.sh is sourced and ${service_port} is set
 #
 # Variables from inputs.sh:
-#   hermes_role                worker | orchestrator
-#   service_port               port to bind (set by session_runner; pinned for workers)
-#   service_name               service dir name under the job dir (hermes-agent)
-#   (brain endpoint is always https://${PW_PLATFORM_HOST}/api/openai/v1)
-#   PW_PLATFORM_TOKEN          platform token -> OPENAI_API_KEY for the agent
-#   HERMES_WORKERS             (orchestrator) comma-separated worker cluster names
-#   HERMES_AGENT_PORT          (orchestrator) port the workers listen on
+#   hermes_role      worker | orchestrator
+#   service_name     service dir under the job dir (hermes-agent)
+#   service_cluster  (worker) this cluster's name, used in the agent's answers
+#   service_port     port to bind (set by session_runner)
+# Brain credentials come from the runtime environment (PW_API_KEY, PW_PLATFORM_HOST)
+# and are exported below for the agent; they are never written to inputs.sh.
 ################################################################################
 set -x
 
 AGENT_DIR="${PW_PARENT_JOB_DIR}/${service_name:-hermes-agent}"
 
-# Make pw / pw agent reachable, and give the agent its brain credentials.
-# The brain key is the runtime PW_API_KEY (never persisted to inputs.sh).
+# `pw` on PATH (the orchestrator uses `pw ssh` / `pw sessions`), and the brain
+# credentials the agent reads from its environment.
 export PATH="${HOME}/pw:${PATH}"
 export OPENAI_BASE_URL="https://${PW_PLATFORM_HOST}/api/openai/v1"
-export OPENAI_API_KEY="${PW_API_KEY}"
+export OPENAI_API_KEY="${PW_API_KEY}"      # runtime platform key (not persisted)
 export X_ALLOCATION="${service_allocation}"
 export MODEL="${service_hermes_model}"
 
 cd ~/
-rm -f "${PW_PARENT_JOB_DIR}/service.pid"
 : > "${PW_PARENT_JOB_DIR}/cancel.sh"
 
 if [ "${hermes_role}" = "orchestrator" ]; then
-    export HERMES_WORKERS="${HERMES_WORKERS}"
-    export HERMES_AGENT_PORT="${HERMES_AGENT_PORT:-8717}"
-    python3 "${AGENT_DIR}/orchestrator.py" --port "${service_port}" --host 0.0.0.0 \
-        > "${PW_PARENT_JOB_DIR}/orchestrator.out" 2>&1 &
+    log="${PW_PARENT_JOB_DIR}/orchestrator.out"
+    python3 "${AGENT_DIR}/orchestrator.py" --port "${service_port}" --host 0.0.0.0 > "${log}" 2>&1 &
 else
-    export HERMES_CLUSTER="${PW_USER:-worker}"
-    python3 "${AGENT_DIR}/agent_server.py" --port "${service_port}" --host 0.0.0.0 \
-        > "${PW_PARENT_JOB_DIR}/worker.out" 2>&1 &
+    export HERMES_CLUSTER="${service_cluster:-${PW_USER}}"
+    log="${PW_PARENT_JOB_DIR}/worker.out"
+    python3 "${AGENT_DIR}/agent_server.py" --port "${service_port}" --host 0.0.0.0 > "${log}" 2>&1 &
 fi
-pid="$!"
-echo "${pid}" >> "${PW_PARENT_JOB_DIR}/service.pid"
+
+pid=$!
 echo "kill ${pid}" >> "${PW_PARENT_JOB_DIR}/cancel.sh"
+echo "::notice::hermes ${hermes_role} started (pid ${pid}) on port ${service_port} | log: ${log}"
 
 # Keep the job (and the session tunnel) alive.
 sleep inf

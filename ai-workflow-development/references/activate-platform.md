@@ -614,8 +614,8 @@ runtime env, and never persist it to `inputs.sh`.
 A session declared `openAI: true` (schema-confirmed in `workflow.schema.json`)
 registers its tunneled service as a **model in the platform's built-in chat**. The
 service must serve `GET /v1/models` and `POST /v1/chat/completions` (SSE streaming
-OK). Pair with `redirect: false` (it's an API, not a page); `detach: true` to
-persist past the run.
+supported, but it must be framed carefully — see the SSE note below). Pair with
+`redirect: false` (it's an API, not a page); `detach: true` to persist past the run.
 ```yaml
 sessions:
   my_session:
@@ -625,10 +625,39 @@ sessions:
 It appears in `pw ai models ls` as `session:<user>:<session-name>/<model-id>`
 (`<model-id>` comes from your `/v1/models`); chat via `pw ai chats` or the web UI.
 This is the right way to give a session a chat interface — **don't build a bespoke
-HTML chat page**. **Unresolved caveat:** a **workspace**-hosted openAI session
-registered reliably, but **cluster**-hosted ones (`targetType: cluster`) were
-observed NOT listing in `pw ai models ls` despite `openAI: true` + a working
-`/v1/models`. Confirm the rule before relying on per-cluster chat models.
+HTML chat page**. **Confirmed rule (hermes-agent, two builds):** only
+**workspace**-hosted openAI sessions register as chat models; **cluster**-hosted
+ones (`targetType: cluster`) do NOT list in `pw ai models ls` despite `openAI: true`
++ a working `/v1/models` (the session still exists and is reachable — discovery and
+direct HTTP still work, you just can't chat it as a model). So put the user-facing
+chat agent on the workspace; treat cluster sessions as backend services reached over
+the tunnel / `pw ssh`.
+
+**One session can expose MANY models — and the platform re-polls (verified,
+hermes-agent).** Each entry your `/v1/models` returns registers as its own chat
+model `session:<user>:<session-name>/<model-id>`, all routed to the same session's
+`/v1/chat/completions`; branch on the request's `model` field to send each to the
+right place. The list is **dynamic**: the platform re-polls `/v1/models`, so models
+you add later (e.g. when a new backend appears) show up without relaunching the
+session. This is the clean way to surface several agents/targets from one
+**workspace** session instead of relying on per-cluster sessions registering — the
+hermes orchestrator advertises itself **plus one `hermes-<cluster>` model per
+worker**, routing a per-worker chat straight to that worker's own endpoint.
+
+**Serving SSE so the built-in chat doesn't abort it (hard-won — `http.server`):**
+the chat sends `stream: true`; if your streamed reply isn't framed the way the
+proxy expects it kills the chat with `stream error … INTERNAL_ERROR; received from
+peer` (and your server logs a `BrokenPipeError`). Two requirements, both needed:
+1. **Reply over HTTP/1.1 with `Transfer-Encoding: chunked`** (set
+   `protocol_version = "HTTP/1.1"` on a `BaseHTTPRequestHandler`, add the header,
+   write each SSE event as one chunk `b"%x\r\n%s\r\n"`, end with `b"0\r\n\r\n"`).
+   An HTTP/1.0 close-delimited body reads as *truncated* to the HTTP/2 proxy.
+2. **Keep bytes flowing while you think.** A real LLM streams tokens continuously;
+   an agent loop goes silent for seconds during each brain/tool call, and the proxy
+   resets an idle stream. Emit a keepalive (an empty-content delta, or an SSE `:`
+   comment) ~every second from a background thread until real output is ready.
+   (Verified: a 3-second silent gap was enough to get reset.) `--dry-run` and
+   non-streaming both pass while streaming fails — only a real chat exercises this.
 
 ### Runtime session discovery
 `pw sessions ls -o json` gives per session: `name`, `status`, `targetName`

@@ -8,9 +8,8 @@ permissions:
   - '*'
 
 sessions:
-  hermes_worker:            # marker the orchestrator discovers; openAI -> also a chat model
-    openAI: true
-    redirect: false
+  hermes_worker:            # backend service the orchestrator discovers + reaches; the
+    redirect: false         # orchestrator exposes it as a chat model, so it isn't openAI itself
 
 env:
   PW_API_KEY: ${PW_API_KEY}   # runtime brain credential, injected into every step

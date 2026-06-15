@@ -1,15 +1,15 @@
-# Hermes Multi-Agent
+# Python AI Multi-Agent
 
-Chat with your compute clusters in plain language. Hermes puts one **AI agent on
-each cluster** and a single **orchestrator** you talk to from the platform chat.
-Ask a question and it asks the right clusters, runs the commands there, and
+Chat with your compute clusters in plain language. Python AI puts one **AI agent
+on each cluster** and a single **orchestrator** you talk to from the platform
+chat. Ask a question and it asks the right clusters, runs the commands there, and
 gives you one clear answer.
 
 ```
                   You  (platform chat)
                         │
               ┌─────────▼──────────┐
-              │   Hermes           │     one chat model you talk to
+              │   Python AI        │     one chat model you talk to
               │   Orchestrator     │     (runs on your workspace)
               └─────────┬──────────┘
             asks each cluster, in parallel
@@ -32,23 +32,23 @@ gives you one clear answer.
 
 ## Getting started
 
-**1. Add a worker to each cluster you want to reach.** Launch the **Hermes
+**1. Add a worker to each cluster you want to reach.** Launch the **Python AI
 Worker** workflow once per cluster, picking that cluster in the form. Keep
 *Schedule Job?* off so the worker stays on the login node.
 
-**2. Launch the orchestrator.** Launch the **Hermes Orchestrator** workflow. It
-always runs on your workspace and finds your workers automatically — there's
+**2. Launch the orchestrator.** Launch the **Python AI Orchestrator** workflow.
+It always runs on your workspace and finds your workers automatically — there's
 nothing to configure.
 
 **3. Chat.** Open the platform chat. You'll see a model per choice:
 
-- **`hermes-orchestrator`** — talks to *all* your clusters and combines the
+- **`python-ai-orchestrator`** — talks to *all* your clusters and combines the
   answers (use this for "compare my clusters" / "where should I run X?").
-- **`hermes-<cluster>`** (e.g. `hermes-gcpsmall`) — talks to *just that one*
-  cluster. Pick this when you only care about a single machine.
+- **`python-ai-<cluster>`** (e.g. `python-ai-gcpsmall`) — talks to *just that
+  one* cluster. Pick this when you only care about a single machine.
 
-> Launch a worker any time — it shows up as its own `hermes-<cluster>` model and
-> the orchestrator starts using it automatically, no restart needed.
+> Launch a worker any time — it shows up as its own `python-ai-<cluster>` model
+> and the orchestrator starts using it automatically, no restart needed.
 
 ## Settings
 

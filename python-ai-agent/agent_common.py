@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared plumbing for the Hermes agents (worker + orchestrator).
+"""Shared plumbing for the Python AI agents (worker + orchestrator).
 
 Each agent is a small OpenAI-compatible HTTP server:
     GET  /v1/models            advertise this agent as one chat model
@@ -30,7 +30,7 @@ BRAIN_URL = os.environ.get("OPENAI_BASE_URL", "").rstrip("/")
 BRAIN_KEY = os.environ.get("OPENAI_API_KEY", "")
 BRAIN_MODEL = os.environ.get("MODEL", "org:glm/glm-5.1")
 ALLOCATION = os.environ.get("X_ALLOCATION", "")
-BRAIN_TIMEOUT = int(os.environ.get("HERMES_BRAIN_TIMEOUT") or 300)
+BRAIN_TIMEOUT = int(os.environ.get("PYAI_BRAIN_TIMEOUT") or 300)
 
 
 def brain_ready():
@@ -124,12 +124,12 @@ class Agent:
 
 def _models_payload(model_ids):
     return {"object": "list", "data": [
-        {"id": mid, "object": "model", "created": int(time.time()), "owned_by": "hermes"}
+        {"id": mid, "object": "model", "created": int(time.time()), "owned_by": "python-ai-agent"}
         for mid in model_ids]}
 
 
 def _completion_payload(model_id, content):
-    return {"id": "chatcmpl-hermes", "object": "chat.completion", "created": int(time.time()),
+    return {"id": "chatcmpl-pyai", "object": "chat.completion", "created": int(time.time()),
             "model": model_id, "choices": [
                 {"index": 0, "finish_reason": "stop",
                  "message": {"role": "assistant", "content": content}}]}
@@ -231,7 +231,7 @@ def serve(model_id, route, list_models, role, port, host="0.0.0.0",
 
             def delta(body, finish=None):
                 chunk(("data: " + json.dumps({
-                    "id": "chatcmpl-hermes", "object": "chat.completion.chunk",
+                    "id": "chatcmpl-pyai", "object": "chat.completion.chunk",
                     "created": int(time.time()), "model": model_id,
                     "choices": [{"index": 0, "delta": body, "finish_reason": finish}]}) + "\n\n").encode())
 
@@ -268,6 +268,6 @@ def serve(model_id, route, list_models, role, port, host="0.0.0.0",
             finally:
                 done.set()
 
-    print("hermes %s (OpenAI-compatible) on %s:%s as model '%s' | brain=%s"
+    print("python-ai-agent %s (OpenAI-compatible) on %s:%s as model '%s' | brain=%s"
           % (role, host, port, model_id, brain_ready()), flush=True)
     ThreadingHTTPServer((host, port), Handler).serve_forever()

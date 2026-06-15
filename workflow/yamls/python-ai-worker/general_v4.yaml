@@ -23,7 +23,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: python-ai-agent    # TODO: switch to main once the branch is merged
+          branch: main    # TODO: switch to main once the branch is merged
           sparse_checkout:
             - ${{ inputs.service.name }}
       - name: Create Inputs

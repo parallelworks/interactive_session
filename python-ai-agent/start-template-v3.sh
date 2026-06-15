@@ -27,6 +27,7 @@ export OPENAI_BASE_URL="https://${PW_PLATFORM_HOST}/api/openai/v1"
 export OPENAI_API_KEY="${PW_API_KEY}"      # runtime platform key (not persisted)
 export X_ALLOCATION="${service_allocation}"
 export MODEL="${service_model}"
+export PYAI_SYSTEM_PROMPT_FILE="${PW_PARENT_JOB_DIR}/system_prompt.txt"   # written by preprocessing; optional
 
 cd ~/
 : > "${PW_PARENT_JOB_DIR}/cancel.sh"

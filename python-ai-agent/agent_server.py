@@ -18,13 +18,16 @@ CLUSTER = os.environ.get("PYAI_CLUSTER") or os.environ.get("PW_USER") or "this c
 MODEL_ID = os.environ.get("PYAI_MODEL_ID", "python-ai-worker")
 SHELL_TIMEOUT = int(os.environ.get("PYAI_SHELL_TIMEOUT") or 60)
 
-SYSTEM = (
-    "You are a Python AI agent running on the compute cluster '%s'. Use the run_shell tool "
-    "to inspect or act on THIS machine and answer from real command output — never "
+DEFAULT_SYSTEM = (
+    "You are a Python AI agent running on the compute cluster '{cluster}'. Use the run_shell "
+    "tool to inspect or act on THIS machine and answer from real command output — never "
     "guess. For long-running work (simulations, training, big downloads), submit it to "
     "the scheduler or start it in the background and report how to check on it; do not "
-    "block waiting for it to finish. Keep answers concise and specific to this cluster." % CLUSTER
+    "block waiting for it to finish. Keep answers concise and specific to this cluster."
 )
+# The workflow form can override this; falls back to DEFAULT_SYSTEM (see agent_common).
+# "{cluster}" in the prompt is replaced with this worker's cluster name.
+SYSTEM = hc.load_system_prompt(DEFAULT_SYSTEM).replace("{cluster}", CLUSTER)
 TOOLS = [{
     "type": "function",
     "function": {

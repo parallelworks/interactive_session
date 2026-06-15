@@ -46,6 +46,11 @@ jobs:
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
           sed -i '/=""/d' inputs.sh
           sed -i 's/^/export /' inputs.sh
+          # System prompt -> a file (kept out of inputs.sh so multi-line/quoted text
+          # can't break the sourced shell). The agent reads it via PYAI_SYSTEM_PROMPT_FILE.
+          cat > system_prompt.txt <<'__PYAI_PROMPT_EOF__'
+          ${{ inputs.service.system_prompt }}
+          __PYAI_PROMPT_EOF__
 
   session_runner:
     needs:
@@ -94,6 +99,18 @@ jobs:
             type: string
             hidden: true
             default: python-ai-agent
+          system_prompt:
+            label: System prompt
+            type: editor
+            tooltip: Instructions that define the orchestrator's behavior. Leave as-is unless you want to change how it delegates and synthesizes answers.
+            default: >-
+              You are the Python AI orchestrator. You coordinate worker agents, one
+              per compute cluster. Call list_workers to see which clusters are
+              available, then delegate(cluster, task) to have a cluster's worker run
+              commands there and report back. To compare clusters (e.g. 'where should
+              I run this GPU job?'), delegate to each relevant cluster in the SAME turn
+              so they run in parallel, then synthesize their replies into one clear
+              recommendation. Only delegate to clusters returned by list_workers.
           model:
             label: Model
             type: string

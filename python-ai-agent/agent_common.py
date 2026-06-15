@@ -60,6 +60,23 @@ def _tool_args(call):
         return {}
 
 
+def load_system_prompt(default):
+    """The system prompt from the file named by PYAI_SYSTEM_PROMPT_FILE (the
+    workflow form writes the user's prompt there), or `default` if that file is
+    missing/empty. Kept in a file rather than inputs.sh so multi-line or quoted
+    prompt text can't break the sourced shell."""
+    path = os.environ.get("PYAI_SYSTEM_PROMPT_FILE", "")
+    if path:
+        try:
+            with open(path, encoding="utf-8") as fh:
+                text = fh.read().strip()
+        except OSError:
+            text = ""
+        if text:
+            return text
+    return default
+
+
 class Agent:
     """Runs the brain over a set of tools until it produces an answer.
 

@@ -23,7 +23,7 @@ DELEGATE_TIMEOUT = int(os.environ.get("PYAI_DISPATCH_TIMEOUT") or 300)
 # When set, reach workers on localhost instead of via `pw ssh` (local testing).
 LOCAL_TEST = os.environ.get("PYAI_LOCAL_TEST") == "1"
 
-SYSTEM = (
+DEFAULT_SYSTEM = (
     "You are the Python AI orchestrator. You coordinate worker agents, one per compute "
     "cluster. Call list_workers to see which clusters are available, then "
     "delegate(cluster, task) to have a cluster's worker run commands there and report "
@@ -32,6 +32,8 @@ SYSTEM = (
     "their replies into one clear recommendation. Only delegate to clusters returned by "
     "list_workers."
 )
+# The workflow form can override this; falls back to DEFAULT_SYSTEM (see agent_common).
+SYSTEM = hc.load_system_prompt(DEFAULT_SYSTEM)
 TOOLS = [
     {"type": "function", "function": {
         "name": "list_workers",

@@ -44,6 +44,11 @@ jobs:
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
           sed -i '/=""/d' inputs.sh
           sed -i 's/^/export /' inputs.sh
+          # System prompt -> a file (kept out of inputs.sh so multi-line/quoted text
+          # can't break the sourced shell). The agent reads it via PYAI_SYSTEM_PROMPT_FILE.
+          cat > system_prompt.txt <<'__PYAI_PROMPT_EOF__'
+          ${{ inputs.service.system_prompt }}
+          __PYAI_PROMPT_EOF__
 
   session_runner:
     needs:
@@ -143,6 +148,17 @@ jobs:
             type: string
             hidden: true
             default: python-ai-agent
+          system_prompt:
+            label: System prompt
+            type: editor
+            tooltip: Instructions that define the worker's behavior. "{cluster}" is replaced with this cluster's name.
+            default: >-
+              You are a Python AI agent running on the compute cluster '{cluster}'.
+              Use the run_shell tool to inspect or act on THIS machine and answer from
+              real command output — never guess. For long-running work (simulations,
+              training, big downloads), submit it to the scheduler or start it in the
+              background and report how to check on it; do not block waiting for it to
+              finish. Keep answers concise and specific to this cluster.
           model:
             label: Model
             type: string

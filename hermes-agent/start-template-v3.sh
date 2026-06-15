@@ -54,6 +54,12 @@ export API_SERVER_HOST=127.0.0.1
 export API_SERVER_PORT="${hermes_api_port}"
 export API_SERVER_KEY="${api_key}"
 
+# Unattended service: there is no human approval channel over the chat API, so
+# auto-approve tool/command execution. Without this, the agent hits Hermes'
+# dangerous-command approval gate, stalls, and the chat reports "not reachable".
+# (The chat provider itself is the access boundary; see the README security note.)
+export HERMES_YOLO_MODE=1
+
 gw_log="${PW_PARENT_JOB_DIR}/hermes-gateway.out"
 proxy_log="${PW_PARENT_JOB_DIR}/auth-proxy.out"
 

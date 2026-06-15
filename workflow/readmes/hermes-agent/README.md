@@ -51,8 +51,12 @@ few minutes; later launches reuse the install and start fast.
   It is *not* the lightweight [Python AI](../python-ai-agent/) chat agent; they
   only share a name. Hermes is a large app (Python + Node), so the first install
   is heavier.
-- **Hermes can run arbitrary commands** on the cluster as you. Anyone allowed to
-  use the chat provider can too — treat access accordingly.
+- **Hermes runs commands unattended.** Because the chat has no approval channel,
+  the agent auto-approves tool/command execution (`HERMES_YOLO_MODE`). It can run
+  **arbitrary commands on the cluster as you**, and anyone allowed to use the chat
+  provider can too — the chat provider is the access boundary, so treat it
+  accordingly. Commands run on the cluster's **login node** (terminal backend
+  `local`).
 - **The brain is the platform LLM endpoint** via the runtime `PW_API_KEY`; no
   external API key is needed. The key is written only to a per-run config in the
   job directory (never to `inputs.sh`) and is scrubbed on shutdown.

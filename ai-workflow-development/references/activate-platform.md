@@ -571,6 +571,10 @@ remedies, both used in the repo:
   to the app on a private port, rewriting the prefix (and setting the WebSocket upgrade
   headers). `jupyterlab-host/start-template-v3.sh` writes an `nginx.conf` and runs an
   `nginx-unprivileged` container for exactly this.
+- **If the app honors `X-Forwarded-Prefix`, you need neither.** The session tunnel
+  forwards that header, so an app that reads it at runtime (injecting the prefix into
+  its served HTML / asset URLs) serves correctly under the base path with no base-URL
+  config and no nginx proxy — WebSockets included. (Verified with Hermes' dashboard.)
 
 The **`slug`** you pass to `session_runner` is the path appended after the session URL:
 `lab` for JupyterLab, `""` for an app that serves correctly at the root, or even a query
@@ -668,6 +672,17 @@ peer` (and your server logs a `BrokenPipeError`). Two requirements, both needed:
    comment) ~every second from a background thread until real output is ready.
    (Verified: a 3-second silent gap was enough to get reset.) `--dry-run` and
    non-streaming both pass while streaming fails — only a real chat exercises this.
+
+**"Not reachable" in the built-in chat** has causes beyond SSE: the platform's
+reachability probe hits `/` (and `HEAD`/`OPTIONS`) — a service that 404s/501s those
+reads as down, so answer them 200. And even with keepalives, an agentic/streaming
+openAI cluster session can still flap in the built-in chat. **When that happens,
+expose the service's own web UI as the session instead** — a normal tunnel session
+(`openAI: false`, `redirect: true`) served under the base path (often just
+`X-Forwarded-Prefix`, §11). Offer both from one workflow via a `dropdown` input
+driving the `sessions:` block: `openAI: ${{ inputs.x == 'chat' }}` /
+`redirect: ${{ inputs.x == 'dashboard' }}`. (Verified building `hermes-agent`: the
+native web UI worked in-browser where the openAI chat surface flapped.)
 
 ### Runtime session discovery
 `pw sessions ls -o json` gives per session: `name`, `status`, `targetName`

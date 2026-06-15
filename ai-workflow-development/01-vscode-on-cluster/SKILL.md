@@ -270,6 +270,12 @@ workspace + a worker per cluster). Platform mechanics are in **reference §12**.
   cluster agent. One workspace session can also expose **many** models (one
   `/v1/models` entry each, routed by the request's `model`) — handy for fronting
   several backends from one session. SSE must be framed for the proxy. (Reference §12.)
+- **If a chat-style openAI service is flaky in the built-in chat, serve its own web
+  UI instead.** Agentic/streaming cluster sessions can still report "not reachable"
+  (the probe hits `/`/`HEAD`/`OPTIONS` — answer those 200 — and slow/silent streams
+  flap). A web session (`openAI: false`, `redirect: true`) under the base path (often
+  just `X-Forwarded-Prefix`, no nginx) is more robust; offer both from one workflow via
+  a `dropdown` driving the `sessions:` block. (Verified building `hermes-agent`. §11/§12.)
 - **LLM "brain" = the platform endpoint + runtime `PW_API_KEY`** (+ `X-Allocation`
   for `org:*` models) — no external key or org secret. To use the key in workflow
   code, expose it with a top-level `env:` block (`PW_API_KEY: ${PW_API_KEY}`); keep

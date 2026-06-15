@@ -9,15 +9,24 @@ no upstream auth, so this shim sits on the tunnel-facing port
 on loopback. Responses — including SSE streams — are passed through. The shim
 keeps the API key off the public port and out of inputs.sh.
 
+It also answers liveness probes itself so the platform's session-reachability
+check passes: a plain `GET /` (Hermes' api_server has no root route and 404s),
+and `HEAD` / `OPTIONS` on any path (which a bare BaseHTTPRequestHandler would
+501). Everything under `/v1`, `/api`, etc. is forwarded with the key injected.
+
 Standard library only (Python 3.9+), so there is nothing to install.
 """
 import argparse
 import http.client
+import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 # Hop-by-hop headers (RFC 7230) plus framing headers we re-derive ourselves.
 HOP = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
        "te", "trailers", "transfer-encoding", "upgrade", "content-length", "host"}
+
+# Paths the shim answers itself (liveness), instead of forwarding to Hermes.
+LOCAL_OK_PATHS = {"", "/", "/health", "/healthz", "/ping"}
 
 
 def make_handler(up_host, up_port, bearer):
@@ -26,10 +35,56 @@ def make_handler(up_host, up_port, bearer):
         # cleanly; the 0-chunk marks a clean end of stream.
         protocol_version = "HTTP/1.1"
 
-        def log_message(self, *_):  # quiet
-            pass
+        def log_message(self, fmt, *args):  # one line per request -> stderr (auth-proxy.out)
+            sys.stderr.write("proxy %s %s\n" % (self.command, self.path))
+            sys.stderr.flush()
+
+        def _ok(self, body=b'{"status":"ok"}', ctype="application/json", with_body=True):
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            if with_body:
+                self.wfile.write(body)
+
+        def _path(self):
+            return self.path.split("?", 1)[0].rstrip("/") or "/"
+
+        def do_OPTIONS(self):
+            self.log_message("", )
+            self.send_response(200)
+            self.send_header("Allow", "GET, POST, DELETE, PATCH, HEAD, OPTIONS")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, PATCH, HEAD, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "*")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def do_HEAD(self):
+            self.log_message("", )
+            # Liveness probe — answer locally so a missing root route can't 404.
+            self.send_response(200)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def do_GET(self):
+            if self._path() in LOCAL_OK_PATHS:
+                self.log_message("", )
+                self._ok()
+                return
+            self._proxy("GET")
+
+        def do_POST(self):
+            self._proxy("POST")
+
+        def do_DELETE(self):
+            self._proxy("DELETE")
+
+        def do_PATCH(self):
+            self._proxy("PATCH")
 
         def _proxy(self, method):
+            self.log_message("", )
             length = int(self.headers.get("Content-Length") or 0)
             body = self.rfile.read(length) if length else None
             headers = {k: v for k, v in self.headers.items() if k.lower() not in HOP}
@@ -61,18 +116,6 @@ def make_handler(up_host, up_port, bearer):
                 pass   # client went away mid-stream
             finally:
                 conn.close()
-
-        def do_GET(self):
-            self._proxy("GET")
-
-        def do_POST(self):
-            self._proxy("POST")
-
-        def do_DELETE(self):
-            self._proxy("DELETE")
-
-        def do_PATCH(self):
-            self._proxy("PATCH")
 
     return Handler
 

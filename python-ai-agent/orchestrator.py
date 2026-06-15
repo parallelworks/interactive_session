@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hermes orchestrator — an OpenAI-compatible agent that coordinates the workers.
+"""Python AI orchestrator — an OpenAI-compatible agent that coordinates the workers.
 
 Runs on the platform workspace and appears as a chat model in the built-in chat.
 It discovers the running per-cluster worker sessions (`pw sessions ls`), and the
@@ -14,17 +14,17 @@ import os
 import subprocess
 import time
 
-import hermes_common as hc
+import agent_common as hc
 
-MODEL_ID = os.environ.get("HERMES_MODEL_ID", "hermes-orchestrator")
-WORKER_MARKER = os.environ.get("HERMES_WORKER_SESSION", "hermes_worker")
-FALLBACK_PORT = int(os.environ.get("HERMES_AGENT_PORT") or 8717)
-DELEGATE_TIMEOUT = int(os.environ.get("HERMES_DISPATCH_TIMEOUT") or 300)
+MODEL_ID = os.environ.get("PYAI_MODEL_ID", "python-ai-orchestrator")
+WORKER_MARKER = os.environ.get("PYAI_WORKER_SESSION", "python_ai_worker")
+FALLBACK_PORT = int(os.environ.get("PYAI_AGENT_PORT") or 8717)
+DELEGATE_TIMEOUT = int(os.environ.get("PYAI_DISPATCH_TIMEOUT") or 300)
 # When set, reach workers on localhost instead of via `pw ssh` (local testing).
-LOCAL_TEST = os.environ.get("HERMES_LOCAL_TEST") == "1"
+LOCAL_TEST = os.environ.get("PYAI_LOCAL_TEST") == "1"
 
-SYSTEM = (
-    "You are the Hermes orchestrator. You coordinate worker agents, one per compute "
+DEFAULT_SYSTEM = (
+    "You are the Python AI orchestrator. You coordinate worker agents, one per compute "
     "cluster. Call list_workers to see which clusters are available, then "
     "delegate(cluster, task) to have a cluster's worker run commands there and report "
     "back. To compare clusters (e.g. 'where should I run this GPU job?'), delegate to "
@@ -32,6 +32,8 @@ SYSTEM = (
     "their replies into one clear recommendation. Only delegate to clusters returned by "
     "list_workers."
 )
+# The workflow form can override this; falls back to DEFAULT_SYSTEM (see agent_common).
+SYSTEM = hc.load_system_prompt(DEFAULT_SYSTEM)
 TOOLS = [
     {"type": "function", "function": {
         "name": "list_workers",
@@ -123,8 +125,8 @@ def describe(name, args):
 
 
 def worker_model_id(cluster):
-    """Chat-model id advertised for a single worker, e.g. 'hermes-gcpsmall'."""
-    return "hermes-" + cluster
+    """Chat-model id advertised for a single worker, e.g. 'python-ai-gcpsmall'."""
+    return "python-ai-" + cluster
 
 
 def proxy_chat(cluster, port, messages):
@@ -170,7 +172,7 @@ def main():
     orchestrator = hc.Agent(MODEL_ID, SYSTEM, TOOLS, run_tool, describe)
 
     def route(req):
-        # A chat addressed to hermes-<cluster> goes straight to that worker;
+        # A chat addressed to python-ai-<cluster> goes straight to that worker;
         # anything else is handled by the orchestrator (which can reach them all).
         requested = (req.get("model") or "").split("/")[-1]
         for w in discover_workers():

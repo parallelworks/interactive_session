@@ -262,10 +262,14 @@ workspace + a worker per cluster). Platform mechanics are in **reference §12**.
   script on the target node and exercise it directly, then wrap it in YAML.
 - **Reuse the platform's native surfaces — don't hand-roll UI.** For a chat-style
   service, make it OpenAI-compatible and declare the session `openAI: true` so it
-  joins the built-in chat — but **on the workspace** (cluster sessions don't register
-  as models). One workspace session can expose **many** models (one `/v1/models`
-  entry each, routed by the request's `model`), so front several backends from one
-  session instead of a bespoke HTML UI. SSE must be framed for the proxy. (Reference §12.)
+  joins the built-in chat. **It works whether the session runs on the workspace or a
+  cluster — only the surface differs** (verified): a workspace session shows up as
+  chat **models** in `pw ai models ls`; a cluster session shows up as a chat
+  **provider** in `pw ai providers ls` (`csp: openai-tunnel`), and the web Chat lists
+  its models under that provider. So you do NOT need a workspace proxy to chat a
+  cluster agent. One workspace session can also expose **many** models (one
+  `/v1/models` entry each, routed by the request's `model`) — handy for fronting
+  several backends from one session. SSE must be framed for the proxy. (Reference §12.)
 - **LLM "brain" = the platform endpoint + runtime `PW_API_KEY`** (+ `X-Allocation`
   for `org:*` models) — no external key or org secret. To use the key in workflow
   code, expose it with a top-level `env:` block (`PW_API_KEY: ${PW_API_KEY}`); keep

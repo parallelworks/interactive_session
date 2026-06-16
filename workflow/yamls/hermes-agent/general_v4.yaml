@@ -39,6 +39,7 @@ jobs:
           PATH=$HOME/.local/bin:$HOME/pw:$PATH
           service_name="${{ inputs.service.name }}"
           service_interface="${{ inputs.service.interface }}"
+          service_marker="${{ inputs.service.marker }}"
           service_data_dir="${{ inputs.service.data_dir }}"
           service_fresh_start="${{ inputs.service.fresh_start }}"
           service_model="${{ inputs.service.hermes_model }}"
@@ -166,6 +167,14 @@ jobs:
               How to reach Hermes. "Web dashboard" serves Hermes' own web UI
               through the session (recommended). "Built-in platform chat" exposes
               it as an OpenAI provider in the platform Chat instead.
+          marker:
+            label: Fleet marker
+            type: string
+            default: worker
+            tooltip: >-
+              For Built-in chat mode: an agent-orchestrator launched with the SAME
+              marker will discover and coordinate this Hermes. Use a custom value
+              (e.g. "gpuworker") to keep separate fleets apart. (Ignored in dashboard mode.)
           hermes_model:
             label: Model
             type: string

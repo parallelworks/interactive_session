@@ -1,15 +1,15 @@
 # yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
 #
-# Python AI WORKER -- one agent on a cluster's login node that runs shell commands
-# there and reasons over the output. Run this once per cluster you want to reach.
-# The orchestrator discovers it automatically and delegates tasks to it over
-# `pw ssh <cluster> curl localhost:<port>`.
+# Lite Agent -- a small agent on a cluster's login node that runs shell commands
+# there and reasons over the output. Run it once per cluster. An agent-orchestrator
+# launched with the same fleet "marker" discovers it and asks it questions.
 permissions:
   - '*'
 
 sessions:
-  python_ai_worker:         # backend service the orchestrator discovers + reaches; the
-    redirect: false         # orchestrator exposes it as a chat model, so it isn't openAI itself
+  lite_agent:               # openAI -> registers as a chat provider AND is discoverable
+    openAI: true
+    redirect: false
 
 env:
   PW_API_KEY: ${PW_API_KEY}   # runtime brain credential, injected into every step
@@ -23,7 +23,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: main    # TODO: switch to main once the branch is merged
+          branch: agent-orchestrator-refactor   # TODO: switch to main once the branch is merged
           sparse_checkout:
             - ${{ inputs.service.name }}
       - name: Create Inputs
@@ -34,21 +34,15 @@ jobs:
           cat <<'EOF' >> inputs.sh
           PATH=$HOME/pw:$PATH
           service_name="${{ inputs.service.name }}"
-          agent_role="worker"
           service_cluster="${{ inputs.cluster.resource.name }}"
+          service_marker="${{ inputs.service.marker }}"
           service_model="${{ inputs.service.model }}"
           service_allocation="${{ inputs.service.allocation }}"
-          service_port="${{ inputs.service.agent_port }}"
           EOF
           # Brain key is the runtime PW_API_KEY -- intentionally NOT written to inputs.sh.
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
           sed -i '/=""/d' inputs.sh
           sed -i 's/^/export /' inputs.sh
-          # System prompt -> a file (kept out of inputs.sh so multi-line/quoted text
-          # can't break the sourced shell). The agent reads it via PYAI_SYSTEM_PROMPT_FILE.
-          cat > system_prompt.txt <<'__PYAI_PROMPT_EOF__'
-          ${{ inputs.service.system_prompt }}
-          __PYAI_PROMPT_EOF__
 
   session_runner:
     needs:
@@ -61,7 +55,7 @@ jobs:
         early-cancel: any-job-failed
         with:
           $yaml: workflow/session_runner/v1.4/general.yaml
-          session: ${{ sessions.python_ai_worker }}
+          session: ${{ sessions.lite_agent }}
           resource: ${{ inputs.cluster.resource }}
           cluster:
             scheduler: ${{ inputs.cluster.scheduler }}
@@ -84,13 +78,13 @@ jobs:
     inputs:
       cluster:
         type: group
-        label: Worker Cluster
+        label: Cluster
         items:
           resource:
             type: compute-clusters
             label: Cluster
             include-workspace: false
-            tooltip: The cluster to run this worker on. Keep "Schedule Job" off so it stays on the login node.
+            tooltip: The cluster to run this agent on. Keep "Schedule Job" off so it stays on the login node.
           scheduler:
             type: boolean
             default: false
@@ -98,7 +92,7 @@ jobs:
             hidden: ${{ inputs.cluster.resource.schedulerType == '' }}
             ignore: ${{ .hidden }}
             tooltip: |
-              Keep this off. The worker must stay on the login node so the
+              Keep this off. The agent must stay on the login node so the
               orchestrator can reach it and so it has the internet access its
               brain needs.
           slurm:
@@ -147,30 +141,22 @@ jobs:
           name:
             type: string
             hidden: true
-            default: python-ai-agent
-          system_prompt:
-            label: System prompt
-            type: editor
-            tooltip: Instructions that define the worker's behavior. "{cluster}" is replaced with this cluster's name.
-            default: >-
-              You are a Python AI agent running on the compute cluster '{cluster}'.
-              Use the run_shell tool to inspect or act on THIS machine and answer from
-              real command output — never guess. For long-running work (simulations,
-              training, big downloads), submit it to the scheduler or start it in the
-              background and report how to check on it; do not block waiting for it to
-              finish. Keep answers concise and specific to this cluster.
+            default: lite-agent
+          marker:
+            label: Fleet marker
+            type: string
+            default: worker
+            tooltip: >-
+              Group label. An agent-orchestrator launched with the SAME marker
+              discovers and coordinates this agent. Use a custom value (e.g.
+              "gpuworker") to keep separate fleets apart.
           model:
             label: Model
             type: string
             default: org:glm/glm-5.1
-            tooltip: The LLM that powers this worker. Must support tool calling. See `pw ai models ls`.
+            tooltip: The LLM that powers this agent. Must support tool calling. See `pw ai models ls`.
           allocation:
             label: AI allocation
             type: string
             default: Private LLM Group
             tooltip: Which allocation to bill model usage against (for org:* models).
-          agent_port:
-            label: Agent port
-            type: integer
-            default: 8717
-            tooltip: Port the worker listens on, on the cluster login node.

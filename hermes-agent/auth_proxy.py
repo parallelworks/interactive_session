@@ -24,6 +24,7 @@ Standard library only (Python 3.9+), so there is nothing to install.
 """
 import argparse
 import http.client
+import json
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -38,7 +39,7 @@ LOCAL_OK_PATHS = {"", "/", "/health", "/healthz", "/ping"}
 KEEPALIVE_SECS = 1.0   # emit an SSE comment after this many seconds of upstream silence
 
 
-def make_handler(up_host, up_port, bearer):
+def make_handler(up_host, up_port, bearer, marker):
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
 
@@ -71,6 +72,9 @@ def make_handler(up_host, up_port, bearer):
             self.end_headers()
 
         def do_GET(self):
+            if self._path() == "/_agent":   # fleet-marker discovery (for the orchestrator)
+                self._ok(json.dumps({"marker": marker, "kind": "hermes"}).encode())
+                return
             if self._path() in LOCAL_OK_PATHS:
                 self._ok()
                 return
@@ -179,10 +183,11 @@ def main():
     ap.add_argument("--listen", default="0.0.0.0:8717", help="host:port to listen on (tunnel-facing)")
     ap.add_argument("--upstream", default="127.0.0.1:8642", help="host:port of the Hermes api_server")
     ap.add_argument("--bearer", required=True, help="API_SERVER_KEY to inject")
+    ap.add_argument("--marker", default="worker", help="fleet marker advertised at /_agent")
     args = ap.parse_args()
     lh, lp = args.listen.rsplit(":", 1)
     uh, up = args.upstream.rsplit(":", 1)
-    handler = make_handler(uh, int(up), args.bearer)
+    handler = make_handler(uh, int(up), args.bearer, args.marker)
     print("auth_proxy: %s -> %s (injecting bearer)" % (args.listen, args.upstream), flush=True)
     ThreadingHTTPServer((lh, int(lp)), handler).serve_forever()
 

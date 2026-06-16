@@ -1,14 +1,15 @@
 # yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
 #
-# Python AI ORCHESTRATOR -- one chat model that coordinates your per-cluster workers.
-# Always runs on your workspace, so it can `pw ssh` to every worker cluster.
-# It auto-discovers the running python-ai-worker sessions (`pw sessions ls`) -- no
-# roster to configure. Launch it, then chat with it from the platform.
+# Agent ORCHESTRATOR -- one chat model that coordinates your per-cluster agents
+# (lite-agent and/or hermes-agent). Always runs on your workspace, so it can
+# `pw ssh` to every cluster. It auto-discovers worker agents whose fleet "marker"
+# matches its own -- launch agents on each cluster, then launch this with the same
+# marker and chat with it from the platform.
 permissions:
   - '*'
 
 sessions:
-  python_ai_orchestrator:   # openAI -> registered as a model in the built-in chat
+  agent_orchestrator:       # workspace openAI session -> registers as a chat model
     openAI: true
     redirect: false
 
@@ -24,7 +25,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: main    # TODO: switch to main once the branch is merged
+          branch: agent-orchestrator-refactor   # TODO: switch to main once the branch is merged
           sparse_checkout:
             - ${{ inputs.service.name }}
       - name: Create Inputs
@@ -35,22 +36,16 @@ jobs:
           cat <<'EOF' >> inputs.sh
           PATH=$HOME/pw:$PATH
           service_name="${{ inputs.service.name }}"
-          agent_role="orchestrator"
+          service_marker="${{ inputs.service.marker }}"
           service_model="${{ inputs.service.model }}"
           service_allocation="${{ inputs.service.allocation }}"
-          PYAI_AGENT_PORT="${{ inputs.service.agent_port }}"
-          PYAI_DISPATCH_TIMEOUT="${{ inputs.service.dispatch_timeout }}"
+          AGENT_ASK_TIMEOUT="${{ inputs.service.ask_timeout }}"
           EOF
-          # Workers are auto-discovered at runtime via `pw sessions ls` -- no roster.
+          # Workers are auto-discovered at runtime via `pw sessions ls` + marker probe.
           # Brain key is the runtime PW_API_KEY -- intentionally NOT written to inputs.sh.
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
           sed -i '/=""/d' inputs.sh
           sed -i 's/^/export /' inputs.sh
-          # System prompt -> a file (kept out of inputs.sh so multi-line/quoted text
-          # can't break the sourced shell). The agent reads it via PYAI_SYSTEM_PROMPT_FILE.
-          cat > system_prompt.txt <<'__PYAI_PROMPT_EOF__'
-          ${{ inputs.service.system_prompt }}
-          __PYAI_PROMPT_EOF__
 
   session_runner:
     needs:
@@ -63,7 +58,7 @@ jobs:
         early-cancel: any-job-failed
         with:
           $yaml: workflow/session_runner/v1.4/general.yaml
-          session: ${{ sessions.python_ai_orchestrator }}
+          session: ${{ sessions.agent_orchestrator }}
           resource: ${{ inputs.resource }}
           cluster:                       # workspace has no scheduler -> all literals
             scheduler: false
@@ -90,7 +85,7 @@ jobs:
         hidden: true               # always the workspace
         default: workspace
         include-workspace: true
-        tooltip: The orchestrator always runs on your workspace so it can reach every worker cluster.
+        tooltip: The orchestrator always runs on your workspace so it can reach every cluster.
       service:
         type: group
         label: Settings
@@ -98,19 +93,15 @@ jobs:
           name:
             type: string
             hidden: true
-            default: python-ai-agent
-          system_prompt:
-            label: System prompt
-            type: editor
-            tooltip: Instructions that define the orchestrator's behavior. Leave as-is unless you want to change how it delegates and synthesizes answers.
-            default: >-
-              You are the Python AI orchestrator. You coordinate worker agents, one
-              per compute cluster. Call list_workers to see which clusters are
-              available, then delegate(cluster, task) to have a cluster's worker run
-              commands there and report back. To compare clusters (e.g. 'where should
-              I run this GPU job?'), delegate to each relevant cluster in the SAME turn
-              so they run in parallel, then synthesize their replies into one clear
-              recommendation. Only delegate to clusters returned by list_workers.
+            default: agent-orchestrator
+          marker:
+            label: Fleet marker
+            type: string
+            default: worker
+            tooltip: >-
+              Only agents launched with this SAME marker are discovered and
+              coordinated. Use a custom value (e.g. "gpuworker") to target a
+              specific fleet.
           model:
             label: Model
             type: string
@@ -121,13 +112,8 @@ jobs:
             type: string
             default: Private LLM Group
             tooltip: Which allocation to bill model usage against (for org:* models).
-          dispatch_timeout:
-            label: Per-task timeout (seconds)
+          ask_timeout:
+            label: Per-cluster timeout (seconds)
             type: integer
             default: 300
-            tooltip: How long to wait for a worker to answer a delegated task.
-          agent_port:
-            label: Fallback worker port
-            type: integer
-            hidden: true
-            default: 8717
+            tooltip: How long to wait for a cluster's agent to answer a delegated question.

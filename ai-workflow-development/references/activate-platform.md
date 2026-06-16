@@ -665,16 +665,6 @@ peer` (and your server logs a `BrokenPipeError`). Two requirements, both needed:
    (Verified: a 3-second silent gap was enough to get reset.) `--dry-run` and
    non-streaming both pass while streaming fails — only a real chat exercises this.
 
-**"Not reachable" in the built-in chat** has causes beyond SSE: the platform's
-reachability probe hits `/` (and `HEAD`/`OPTIONS`) — a service that 404s/501s those
-reads as down, so answer them 200. And even with keepalives, an agentic/streaming
-openAI cluster session can still flap in the built-in chat. **When that happens,
-expose the service's own web UI as the session instead** — a normal tunnel session
-(`openAI: false`, `redirect: true`) served under the base path (often just
-`X-Forwarded-Prefix`, §11). Offer both from one workflow via a `dropdown` input
-driving the `sessions:` block: `openAI: ${{ inputs.x == 'chat' }}` /
-`redirect: ${{ inputs.x == 'dashboard' }}`. (Verified building `hermes-agent`: the
-native web UI worked in-browser where the openAI chat surface flapped.)
 
 ### Runtime session discovery
 `pw sessions ls -o json` gives per session: `name`, `status`, `targetName`

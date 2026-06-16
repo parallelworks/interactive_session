@@ -36,6 +36,12 @@ mkdir -p "${HERMES_HOME}"
 # Drop stale single-instance locks left by a hard-cancelled previous run.
 rm -f "${HERMES_HOME}/gateway.lock" "${HERMES_HOME}/auth.lock" 2>/dev/null || true
 
+# Install the persona (form value) as SOUL.md. Hermes reads it per-message and
+# never rewrites it, so the form is its source of truth -- (re)write each launch.
+if [ -s "${PW_PARENT_JOB_DIR}/soul.md" ]; then
+    cp "${PW_PARENT_JOB_DIR}/soul.md" "${HERMES_HOME}/SOUL.md"
+fi
+
 # Brain -> ACTIVATE platform OpenAI-compatible endpoint (used by BOTH interfaces).
 # Hermes' "custom" provider reads the bearer from model.api_key (NOT OPENAI_API_KEY),
 # and org:* models need the X-Allocation header, sent via default_headers.

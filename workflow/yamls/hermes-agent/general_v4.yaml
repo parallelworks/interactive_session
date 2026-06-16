@@ -49,6 +49,11 @@ jobs:
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
           sed -i '/=""/d' inputs.sh
           sed -i 's/^/export /' inputs.sh
+          # Persona -> a file (kept out of inputs.sh so multi-line text can't break
+          # the sourced shell). The start script installs it as the data dir's SOUL.md.
+          cat > soul.md <<'__HERMES_SOUL_EOF__'
+          ${{ inputs.service.soul }}
+          __HERMES_SOUL_EOF__
 
   session_runner:
     needs:
@@ -171,6 +176,20 @@ jobs:
             type: string
             default: Private LLM Group
             tooltip: Which allocation to bill model usage against (for org:* models).
+          soul:
+            label: Persona
+            type: editor
+            default: >-
+              You are a helpful, precise AI assistant running on a compute cluster.
+              You can run shell commands, write and run code, and manage jobs on this
+              machine. Answer from real command output rather than guessing, keep
+              replies concise, and show the commands you run. Say what you are about
+              to do before anything destructive, and for long-running work (large
+              jobs, downloads, training) start or submit it and report how to check
+              on it instead of waiting.
+            tooltip: >-
+              Hermes' personality and instructions (its SOUL.md). Applied on every
+              launch; edit to change its tone, rules, or expertise.
           data_dir:
             label: Data directory
             type: string

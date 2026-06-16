@@ -42,8 +42,12 @@ few minutes; later launches reuse the install and start fast.
 | Setting | What it does | Default |
 |---|---|---|
 | **Cluster** | Which cluster Hermes runs on | — |
+| **Interface** | Web dashboard (native UI) or Built-in platform chat | Web dashboard |
 | **Model** | The LLM behind Hermes (must support tool calling) | `org:glm/glm-5.1` |
 | **AI allocation** | Which allocation model usage is billed to (for `org:*` models) | `Private LLM Group` |
+| **Persona** | Hermes' personality + instructions (its `SOUL.md`) | a generic cluster-assistant persona |
+| **Data directory** | Where history, skills, and memory live (persists across runs) | `~/.hermes-agent` |
+| **Start fresh** | Wipe the data directory before starting | off |
 
 ## Good to know
 

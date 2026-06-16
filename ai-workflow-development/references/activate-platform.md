@@ -571,6 +571,10 @@ remedies, both used in the repo:
   to the app on a private port, rewriting the prefix (and setting the WebSocket upgrade
   headers). `jupyterlab-host/start-template-v3.sh` writes an `nginx.conf` and runs an
   `nginx-unprivileged` container for exactly this.
+- **If the app honors `X-Forwarded-Prefix`, you need neither.** The session tunnel
+  forwards that header, so an app that reads it at runtime (injecting the prefix into
+  its served HTML / asset URLs) serves correctly under the base path with no base-URL
+  config and no nginx proxy — WebSockets included. (Verified with Hermes' dashboard.)
 
 The **`slug`** you pass to `session_runner` is the path appended after the session URL:
 `lab` for JupyterLab, `""` for an app that serves correctly at the root, or even a query
@@ -622,16 +626,17 @@ sessions:
     openAI: true
     redirect: false
 ```
-It appears in `pw ai models ls` as `session:<user>:<session-name>/<model-id>`
-(`<model-id>` comes from your `/v1/models`); chat via `pw ai chats` or the web UI.
 This is the right way to give a session a chat interface — **don't build a bespoke
-HTML chat page**. **Confirmed rule (hermes-agent, two builds):** only
-**workspace**-hosted openAI sessions register as chat models; **cluster**-hosted
-ones (`targetType: cluster`) do NOT list in `pw ai models ls` despite `openAI: true`
-+ a working `/v1/models` (the session still exists and is reachable — discovery and
-direct HTTP still work, you just can't chat it as a model). So put the user-facing
-chat agent on the workspace; treat cluster sessions as backend services reached over
-the tunnel / `pw ssh`.
+HTML chat page**. **Where it surfaces depends on where the session runs** (verified):
+- **Workspace** session → chat **models**: `pw ai models ls` lists
+  `session:<user>:<session-name>/<model-id>`; chat via `pw ai chats` or the web UI.
+- **Cluster** session → chat **provider**: `pw ai providers ls` lists it
+  (`csp: openai-tunnel`); the web Chat polls its `/v1/models` and lists its models.
+  Not shown in `pw ai models ls`, and `pw ai chats` may not target it — use the web Chat.
+
+Both work in the built-in chat — the tunnel makes location transparent
+([Session Tunnels](https://parallelworks.com/docs/ai/ai-providers/session-tunnels)),
+so a cluster agent needs no workspace proxy.
 
 **One session can expose MANY models — and the platform re-polls (verified,
 hermes-agent).** Each entry your `/v1/models` returns registers as its own chat
@@ -639,10 +644,11 @@ model `session:<user>:<session-name>/<model-id>`, all routed to the same session
 `/v1/chat/completions`; branch on the request's `model` field to send each to the
 right place. The list is **dynamic**: the platform re-polls `/v1/models`, so models
 you add later (e.g. when a new backend appears) show up without relaunching the
-session. This is the clean way to surface several agents/targets from one
-**workspace** session instead of relying on per-cluster sessions registering — the
-hermes orchestrator advertises itself **plus one `hermes-<cluster>` model per
-worker**, routing a per-worker chat straight to that worker's own endpoint.
+session. This is a clean way to surface several agents/targets from one
+**workspace** session (one alternative to launching a separate per-cluster session
+per target — both work) — the hermes orchestrator advertises itself **plus one
+`hermes-<cluster>` model per worker**, routing a per-worker chat straight to that
+worker's own endpoint.
 
 **Serving SSE so the built-in chat doesn't abort it (hard-won — `http.server`):**
 the chat sends `stream: true`; if your streamed reply isn't framed the way the
@@ -658,6 +664,7 @@ peer` (and your server logs a `BrokenPipeError`). Two requirements, both needed:
    comment) ~every second from a background thread until real output is ready.
    (Verified: a 3-second silent gap was enough to get reset.) `--dry-run` and
    non-streaming both pass while streaming fails — only a real chat exercises this.
+
 
 ### Runtime session discovery
 `pw sessions ls -o json` gives per session: `name`, `status`, `targetName`

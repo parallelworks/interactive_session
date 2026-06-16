@@ -27,7 +27,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: agent-orchestrator-refactor  # TODO: switch to main once merged
+          branch: main
           sparse_checkout:
             - ${{ inputs.service.name }}
       - name: Create Inputs
@@ -169,6 +169,8 @@ jobs:
               it as an OpenAI provider in the platform Chat instead.
           marker:
             label: Fleet marker
+            hidden: ${{ inputs.service.interface != 'chat' }}
+            ignore: ${{ .hidden }}
             type: string
             default: worker
             tooltip: >-

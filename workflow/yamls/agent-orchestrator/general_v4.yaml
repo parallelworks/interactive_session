@@ -25,7 +25,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: agent-orchestrator-refactor   # TODO: switch to main once the branch is merged
+          branch: main
           sparse_checkout:
             - ${{ inputs.service.name }}
       - name: Create Inputs

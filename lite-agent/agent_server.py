@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Python AI worker — an OpenAI-compatible agent for ONE cluster.
+"""Lite agent — a small OpenAI-compatible agent for ONE cluster.
 
 Runs on a cluster's login node. It answers by running shell commands on THIS
 machine (the brain's run_shell tool) and reasoning over the real output, so you
 can ask it about the cluster or have it start and check on work there.
 
-The workflow declares it `openAI: true`, so it appears as a chat model, and the
-orchestrator reaches it at POST /task (its delegate contract).
+The workflow declares it `openAI: true`, so it appears as a chat model and the
+agent-orchestrator can discover it. It advertises its fleet **marker** at
+`GET /_agent` so an orchestrator with the same marker picks it up.
 """
 import argparse
 import os
@@ -14,12 +15,13 @@ import subprocess
 
 import agent_common as hc
 
-CLUSTER = os.environ.get("PYAI_CLUSTER") or os.environ.get("PW_USER") or "this cluster"
-MODEL_ID = os.environ.get("PYAI_MODEL_ID", "python-ai-worker")
-SHELL_TIMEOUT = int(os.environ.get("PYAI_SHELL_TIMEOUT") or 60)
+CLUSTER = os.environ.get("AGENT_CLUSTER") or os.environ.get("PW_USER") or "this cluster"
+MODEL_ID = os.environ.get("AGENT_MODEL_ID", "lite-agent")
+MARKER = os.environ.get("AGENT_MARKER", "worker")
+SHELL_TIMEOUT = int(os.environ.get("AGENT_SHELL_TIMEOUT") or 60)
 
 DEFAULT_SYSTEM = (
-    "You are a Python AI agent running on the compute cluster '{cluster}'. Use the run_shell "
+    "You are an agent running on the compute cluster '{cluster}'. Use the run_shell "
     "tool to inspect or act on THIS machine and answer from real command output — never "
     "guess. For long-running work (simulations, training, big downloads), submit it to "
     "the scheduler or start it in the background and report how to check on it; do not "
@@ -71,17 +73,11 @@ def main():
 
     agent = hc.Agent(MODEL_ID, SYSTEM, TOOLS, run_tool, describe)
 
-    def task(req):
-        """Delegate contract used by the orchestrator: {task, context?} -> {cluster, result}."""
-        prompt = req.get("task", "")
-        if req.get("context"):
-            prompt = req["context"] + "\n\n" + prompt
-        return {"cluster": CLUSTER, "result": agent.answer([{"role": "user", "content": prompt}])}
-
     hc.serve(MODEL_ID, route=lambda req: agent, list_models=lambda: [MODEL_ID],
              role="worker", port=args.port, host=args.host,
-             post_routes={"/task": task},
-             status=lambda: {"cluster": CLUSTER})
+             get_routes={"/_agent": lambda: {"marker": MARKER, "kind": "lite",
+                                             "model": MODEL_ID, "cluster": CLUSTER}},
+             status=lambda: {"cluster": CLUSTER, "marker": MARKER})
 
 
 if __name__ == "__main__":

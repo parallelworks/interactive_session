@@ -1,16 +1,16 @@
 set -o pipefail
 ################################################################################
-# Interactive Session Controller - Python AI Agent (worker | orchestrator)
+# Interactive Session Controller - Lite Agent
 #
-# Purpose: prepare the login/workspace node to run the Python AI agent. The agent
-#          is pure Python standard library and uses the platform's built-in LLM
-#          endpoint as its brain, so there is nothing to install here -- this
-#          step just checks the prerequisites. Idempotent.
-# Runs on: cluster login node (worker) or workspace node (orchestrator)
+# Purpose: prepare the login node to run the lite agent. The agent is pure Python
+#          standard library and uses the platform's built-in LLM endpoint as its
+#          brain, so there is nothing to install here -- this step just checks the
+#          prerequisites. Idempotent.
+# Runs on: cluster login node
 # Called by: session_runner, after inputs.sh is sourced
 #
 # Variables from inputs.sh:
-#   agent_role          worker | orchestrator
+#   service_marker      fleet marker (so a matching orchestrator finds this agent)
 #   service_model       brain model id (as `pw ai models ls` lists it)
 #   service_allocation  X-Allocation for org:* models (e.g. "Private LLM Group")
 ################################################################################
@@ -23,4 +23,4 @@ fi
 echo "::notice::python3 $(python3 --version 2>&1)"
 echo "::endgroup::"
 
-echo "::notice::Python AI ${agent_role} ready | brain=https://${PW_PLATFORM_HOST}/api/openai/v1 | model=${service_model} | allocation=${service_allocation}"
+echo "::notice::Lite agent ready | marker=${service_marker} | brain=https://${PW_PLATFORM_HOST}/api/openai/v1 | model=${service_model}"

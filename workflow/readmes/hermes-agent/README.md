@@ -43,6 +43,7 @@ Ask it things like:
 |---|---|---|
 | **Cluster** | Which cluster Hermes runs on | — |
 | **Interface** | Web dashboard (native UI) or Built-in platform chat | Web dashboard |
+| **Fleet marker** | In Built-in chat mode, groups it for an [Agent Orchestrator](../agent-orchestrator/) | `worker` |
 | **Model** | The LLM behind Hermes (must support tool calling) | `org:glm/glm-5.1` |
 | **AI allocation** | Which allocation model usage is billed to (for `org:*` models) | `Private LLM Group` |
 | **Persona** | Hermes' personality + instructions (its `SOUL.md`) | generic cluster assistant |
@@ -56,6 +57,9 @@ Ask it things like:
 - **State persists.** History, skills, and memory live in the **Data directory** —
   **cancel to stop, rerun to resume** right where you left off. *Start fresh* wipes it.
 - **No external key needed** — the brain is the platform LLM via the runtime key.
+- **Talk to several clusters at once.** In *Built-in chat* mode, set a **Fleet
+  marker** and launch an [Agent Orchestrator](../agent-orchestrator/) with the same
+  marker — it coordinates this Hermes alongside agents on your other clusters.
 - **For long jobs**, ask Hermes to submit and report back, then check on it later.
 
 ## Stopping

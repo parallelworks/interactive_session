@@ -87,7 +87,8 @@ else
     python3 "${AGENT_DIR}/auth_proxy.py" \
         --listen "0.0.0.0:${service_port}" \
         --upstream "127.0.0.1:${hermes_api_port}" \
-        --bearer "${api_key}" > "${proxy_log}" 2>&1 &
+        --bearer "${api_key}" \
+        --marker "${service_marker:-worker}" > "${proxy_log}" 2>&1 &
     proxy_pid=$!
     echo "kill ${gw_pid} ${proxy_pid} 2>/dev/null; rm -f ${HERMES_HOME}/config.yaml" >> "${PW_PARENT_JOB_DIR}/cancel.sh"
     echo "::notice::hermes chat started | gateway pid ${gw_pid} (api 127.0.0.1:${hermes_api_port}) | proxy pid ${proxy_pid} (tunnel 0.0.0.0:${service_port})"

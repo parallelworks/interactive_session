@@ -627,24 +627,16 @@ sessions:
     redirect: false
 ```
 This is the right way to give a session a chat interface — **don't build a bespoke
-HTML chat page**. **Where it surfaces depends on where the session runs (verified
-against the docs + a live cluster test):**
-- A **workspace**-hosted openAI session registers as chat **models** — it appears
-  in `pw ai models ls` as `session:<user>:<session-name>/<model-id>` (`<model-id>`
-  comes from your `/v1/models`); chat it with `pw ai chats` or the web UI.
-- A **cluster**-hosted openAI session registers as a chat **provider** — it appears
-  in `pw ai providers ls` (`csp: openai-tunnel`, `status: running`) and the web Chat
-  UI polls its `/v1/models` and lists its models under that provider. It does **not**
-  appear in `pw ai models ls`, and the `pw ai chats` CLI may not target it directly —
-  use the web Chat.
+HTML chat page**. **Where it surfaces depends on where the session runs** (verified):
+- **Workspace** session → chat **models**: `pw ai models ls` lists
+  `session:<user>:<session-name>/<model-id>`; chat via `pw ai chats` or the web UI.
+- **Cluster** session → chat **provider**: `pw ai providers ls` lists it
+  (`csp: openai-tunnel`); the web Chat polls its `/v1/models` and lists its models.
+  Not shown in `pw ai models ls`, and `pw ai chats` may not target it — use the web Chat.
 
-Both are fully usable in the built-in chat: the session tunnel makes the location
-transparent, exactly as the platform's [Session Tunnels](https://parallelworks.com/docs/ai/ai-providers/session-tunnels)
-docs describe ("ACTIVATE detects tunnels with the OpenAI flag and includes them in
-your available providers", with a session running *on a cluster*). An earlier note
-here claimed cluster openAI sessions "don't register as chat models" — that was a
-**wrong-surface** mistake (we only checked `pw ai models ls`); they register as
-**providers**. So you do NOT need a workspace proxy just to chat a cluster agent.
+Both work in the built-in chat — the tunnel makes location transparent
+([Session Tunnels](https://parallelworks.com/docs/ai/ai-providers/session-tunnels)),
+so a cluster agent needs no workspace proxy.
 
 **One session can expose MANY models — and the platform re-polls (verified,
 hermes-agent).** Each entry your `/v1/models` returns registers as its own chat

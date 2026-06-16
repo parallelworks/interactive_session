@@ -85,7 +85,8 @@ def discover_workers(ttl=5):
     rows = rows if isinstance(rows, list) else rows.get("sessions", rows.get("data", []))
     cands = []
     for s in rows:
-        if s.get("status") != "running" or not s.get("openAI") or s.get("targetType") != "cluster":
+        # any non-workspace agent session (cluster, existing, ...) is a candidate
+        if s.get("status") != "running" or not s.get("openAI") or s.get("targetType") == "workspace":
             continue
         cluster = (s.get("targetName") or "").split("/")[-1]
         port = s.get("remotePort")

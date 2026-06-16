@@ -24,7 +24,7 @@ the ACTIVATE platform LLM as its brain.
 
 ## Use it
 
-1. **Launch** the workflow, pick your **cluster**, keep *Schedule Job?* **off**.
+1. **Launch** the workflow, pick your **cluster**.
 2. **Wait** for *Session is ready* — the first launch installs Hermes (a few
    minutes); later launches are fast.
 3. **Open it** — **Web dashboard** (default): the session opens Hermes' UI, use the

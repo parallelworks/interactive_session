@@ -25,10 +25,16 @@ set -x
 AGENT_DIR="${PW_PARENT_JOB_DIR}/${service_name:-hermes-agent}"
 export PATH="${HOME}/.local/bin:${HOME}/pw:${PATH}"   # hermes + pw on PATH
 
-# Per-session Hermes home: config (incl. the brain key) and data live in the job
-# dir, isolated per run — not in ${HOME}/.hermes.
-export HERMES_HOME="${PW_PARENT_JOB_DIR}/hermes-home"
+# Persistent Hermes home: conversation history (sessions/, state.db), skills/,
+# memories/, kanban.db, cron/ and SOUL.md live here and SURVIVE cancel/rerun --
+# it is NOT the per-run job dir. Default ~/.hermes-agent; the form can repoint it.
+# The brain key is (re)written into it each launch and scrubbed on cancel.
+data_dir="${service_data_dir:-~/.hermes-agent}"
+export HERMES_HOME="${data_dir/#\~/$HOME}"          # expand a leading ~
+[ "${service_fresh_start}" = "true" ] && rm -rf "${HERMES_HOME}"
 mkdir -p "${HERMES_HOME}"
+# Drop stale single-instance locks left by a hard-cancelled previous run.
+rm -f "${HERMES_HOME}/gateway.lock" "${HERMES_HOME}/auth.lock" 2>/dev/null || true
 
 # Brain -> ACTIVATE platform OpenAI-compatible endpoint (used by BOTH interfaces).
 # Hermes' "custom" provider reads the bearer from model.api_key (NOT OPENAI_API_KEY),

@@ -39,6 +39,8 @@ jobs:
           PATH=$HOME/.local/bin:$HOME/pw:$PATH
           service_name="${{ inputs.service.name }}"
           service_interface="${{ inputs.service.interface }}"
+          service_data_dir="${{ inputs.service.data_dir }}"
+          service_fresh_start="${{ inputs.service.fresh_start }}"
           service_model="${{ inputs.service.hermes_model }}"
           service_allocation="${{ inputs.service.allocation }}"
           EOF
@@ -169,3 +171,16 @@ jobs:
             type: string
             default: Private LLM Group
             tooltip: Which allocation to bill model usage against (for org:* models).
+          data_dir:
+            label: Data directory
+            type: string
+            default: ~/.hermes-agent
+            tooltip: >-
+              Where Hermes keeps conversation history, skills, and memory on the
+              cluster. Persists across runs, so cancelling and rerunning the
+              workflow resumes where you left off. Absolute path, or one starting with ~.
+          fresh_start:
+            label: Start fresh
+            type: boolean
+            default: false
+            tooltip: Wipe the data directory before starting — clears all saved history, skills, and memory.

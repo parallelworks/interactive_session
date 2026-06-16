@@ -57,15 +57,20 @@ few minutes; later launches reuse the install and start fast.
   provider can too — the chat provider is the access boundary, so treat it
   accordingly. Commands run on the cluster's **login node** (terminal backend
   `local`).
+- **State persists across runs.** Conversation history, skills, and memory live in
+  the **Data directory** (default `~/.hermes-agent`), *not* the per-run job dir — so
+  you can **stop (cancel) and restart (rerun)** the workflow and pick up where you
+  left off. Tick **Start fresh** to wipe it and begin clean.
 - **The brain is the platform LLM endpoint** via the runtime `PW_API_KEY`; no
-  external API key is needed. The key is written only to a per-run config in the
-  job directory (never to `inputs.sh`) and is scrubbed on shutdown.
+  external API key is needed. The key is (re)written into the data directory's
+  config each launch (never to `inputs.sh`) and scrubbed on shutdown.
 - **For long work, ask Hermes to submit and report back** (e.g. a job ID), then
   check on it later — it won't block waiting.
-- **Advanced config:** Hermes reads `${PW_PARENT_JOB_DIR}/hermes-home/config.yaml`
-  on the node; edit it there for power-user options (see the Hermes docs).
+- **Advanced config:** Hermes reads `<data-directory>/config.yaml` on the node;
+  edit it there for power-user options (see the Hermes docs).
 
 ## Stopping
 
 Cancel the workflow run from the platform when you're done — it stops Hermes and
-the proxy and removes the session (and scrubs the key from disk).
+removes the session (and scrubs the key from disk). Your history, skills, and
+memory remain in the Data directory; **rerun the workflow to resume**.

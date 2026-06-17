@@ -141,3 +141,30 @@ endpoints:
       displayLabelEnabled: true
 YAML_EOF
 echo "::notice::LibreChat YAML config written to $DIR/librechat.yaml"
+
+# ── Optional: Langflow proxy endpoint ──────────────────────────────────────────
+# When the combined workflow runs the Langflow proxy (${langflow_proxy_dir} set),
+# register it as an extra custom endpoint so users can pick each Langflow flow as a
+# model. The proxy is co-located on the service host, reachable at localhost:<port>.
+# Appended as another item under endpoints.custom (same 4-space indent).
+# Only effective when LibreChat uses this generated config (librechat_config unset).
+if [ -n "${langflow_proxy_dir}" ] && [ -n "${langflow_proxy_port}" ]; then
+    if [ -n "${LANGFLOW_API_KEY}" ]; then
+        _upsert LANGFLOW_API_KEY "${LANGFLOW_API_KEY}" "$DIR/.env"
+        _proxy_api_key='${LANGFLOW_API_KEY}'   # resolved from .env by LibreChat at runtime
+    else
+        _proxy_api_key='langflow-proxy'        # placeholder; proxy auth is disabled
+    fi
+    cat >> "$DIR/librechat.yaml" <<YAML_EOF
+    - name: "Langflow"
+      apiKey: "${_proxy_api_key}"
+      baseURL: "http://localhost:${langflow_proxy_port}/v1"
+      models:
+        default: ["langflow"]
+        fetch: true
+      titleConvo: true
+      summarize: false
+      displayLabelEnabled: true
+YAML_EOF
+    echo "::notice::Added Langflow proxy endpoint (http://localhost:${langflow_proxy_port}/v1) to librechat.yaml"
+fi

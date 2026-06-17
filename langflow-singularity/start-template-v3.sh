@@ -219,6 +219,20 @@ PYEOF
 echo "::notice::Frontend patched — binding ${SESSION_FRONTEND} → ${FRONTEND_INSIDE}"
 echo "::endgroup::"
 
+# ── Optional: auto-import bundled flows ────────────────────────────────────────
+# When the combined LibreChat + Langflow workflow ships flow JSONs alongside the
+# proxy code (${langflow_proxy_dir}/flows), bind that directory into the container
+# and let Langflow import them on startup via LANGFLOW_LOAD_FLOWS_PATH. Imported
+# flows are upserted (idempotent) and owned by the superuser, so they get a
+# non-null user_id and the proxy discovers them as selectable models.
+if [ -n "${langflow_proxy_dir}" ] && [ -d "${langflow_proxy_dir}/flows" ]; then
+    proxy_flows_import_dir="${langflow_proxy_dir}/flows"
+    EXTRA_BINDS+=(--bind "${proxy_flows_import_dir}:${proxy_flows_import_dir}")
+    EXTRA_ENVS+=(--env "LANGFLOW_LOAD_FLOWS_PATH=${proxy_flows_import_dir}")
+    EXTRA_ENVS+=(--env "LANGFLOW_LOAD_FLOWS_OVERWRITE_ON_NAME_MATCH=true")
+    echo "::notice::Auto-importing Langflow flows from ${proxy_flows_import_dir}"
+fi
+
 # ── Start Langflow ─────────────────────────────────────────────────────────────
 echo "::group::Starting Langflow"
 echo "::notice::Port: ${service_port}"
@@ -262,5 +276,78 @@ echo "kill ${logs_pid} #langflow-logs" >> cancel.sh
 echo "::endgroup::"
 
 echo "::notice::Langflow → http://localhost:${service_port}"
+
+# ── Optional: OpenAI-compatible Langflow proxy ──────────────────────────────────
+# When ${langflow_proxy_dir} is set, launch the proxy co-located with Langflow so a
+# LibreChat user can pick each Langflow flow as a model. The proxy reads the
+# Langflow DB directly (flow discovery) and forwards chat turns to Langflow's run
+# API on localhost. Auth, when LANGFLOW_API_KEY is set, is shared with LibreChat.
+if [ -n "${langflow_proxy_dir}" ] && [ -d "${langflow_proxy_dir}/langflow_proxy" ]; then
+    echo "::group::Starting Langflow proxy"
+    proxy_venv="${service_parent_install_dir}/tools/langflow_proxy_venv"
+    proxy_port="${langflow_proxy_port:-8092}"
+
+    # Resolve the Langflow DB file the proxy queries for flows. SQLAlchemy URLs use
+    # four slashes for an absolute path (sqlite:////abs/x.db → /abs/x.db); strip the
+    # sqlite:/// prefix exactly as the proxy's own DB layer does.
+    if [[ "${service_langflow_database_url}" == sqlite:///* ]]; then
+        proxy_db_path="${service_langflow_database_url#sqlite:///}"   # sqlite:////abs → /abs
+        case "${proxy_db_path}" in /*) : ;; *) proxy_db_path="/${proxy_db_path}" ;; esac
+    else
+        proxy_db_path="${LANGFLOW_CONFIG_DIR}/langflow.db"
+    fi
+
+    proxy_config="${PW_PARENT_JOB_DIR}/langflow/proxy-config.yaml"
+
+    # Optional API-key auth, shared with the LibreChat endpoint via LANGFLOW_API_KEY.
+    proxy_api_key_line=""
+    if [ -n "${LANGFLOW_API_KEY}" ]; then
+        proxy_key_file="${PW_PARENT_JOB_DIR}/langflow/.proxy_api_key"
+        printf '%s' "${LANGFLOW_API_KEY}" > "${proxy_key_file}"
+        chmod 600 "${proxy_key_file}" || true
+        proxy_api_key_line="  api_key_file: \"${proxy_key_file}\""
+    fi
+
+    cat > "${proxy_config}" <<PROXYCFG
+proxy:
+  host: 0.0.0.0
+  port: ${proxy_port}
+${proxy_api_key_line}
+langflow:
+  host: 127.0.0.1
+  port: ${service_port}
+  database_path: "${proxy_db_path}"
+PROXYCFG
+
+    # Append an optional user-provided top-level `flows:` block (per-flow model
+    # routing). Looked up at ${langflow_proxy_flows_file} first, else flows.yaml
+    # next to the proxy code. Without it, every flow is exposed with defaults.
+    proxy_flows_file=""
+    if [ -n "${langflow_proxy_flows_file}" ] && [ -s "${langflow_proxy_flows_file}" ]; then
+        proxy_flows_file="${langflow_proxy_flows_file}"
+    elif [ -s "${langflow_proxy_dir}/flows.yaml" ]; then
+        proxy_flows_file="${langflow_proxy_dir}/flows.yaml"
+    fi
+    [ -n "${proxy_flows_file}" ] && cat "${proxy_flows_file}" >> "${proxy_config}"
+
+    if [ -x "${proxy_venv}/bin/python" ]; then
+        # Launch uvicorn directly (not bin/langflow_proxy) so a not-yet-created
+        # Langflow DB doesn't trip the strict pre-flight validator; the proxy
+        # discovers flows lazily and re-reads its config on every request.
+        APP_CONFIG_PATH="${proxy_config}" \
+        PYTHONPATH="${langflow_proxy_dir}:${PYTHONPATH:-}" \
+        "${proxy_venv}/bin/python" -m uvicorn langflow_proxy.main:app \
+            --host 0.0.0.0 --port "${proxy_port}" \
+            > langflow-proxy.log 2>&1 &
+        proxy_pid=$!
+        echo "kill ${proxy_pid} #langflow-proxy" >> cancel.sh
+        echo "::notice::Langflow proxy → http://localhost:${proxy_port}/v1 (pid ${proxy_pid})"
+        tail -f langflow-proxy.log &
+        echo "kill $! #langflow-proxy-logs" >> cancel.sh
+    else
+        echo "::warning::Langflow proxy venv missing at ${proxy_venv} — run the controller first. Skipping proxy."
+    fi
+    echo "::endgroup::"
+fi
 
 sleep inf

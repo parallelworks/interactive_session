@@ -7,11 +7,18 @@ env:
   JWT_REFRESH_SECRET: ${{ inputs.env.JWT_REFRESH_SECRET }}
   LIBRECHAT_API_KEY: ${{ inputs.env.LIBRECHAT_API_KEY }}
   LANGFLOW_API_KEY: ${{ inputs.env.LANGFLOW_API_KEY }}
+  service_parent_install_dir: /home/alvaro/pw/software
+
 sessions:
   librechat:
     redirect: true
   manager:
     redirect: false
+  langflow:
+    useTLS: false
+    redirect: false
+
+
 jobs:
   github_checkout:
     ssh:
@@ -26,6 +33,7 @@ jobs:
             - ${{ inputs.container_runtime }}
             - tools/oras
             - librechat-singularity-manager
+            - langflow-singularity
   
   librechat_preprocessing:
     needs:
@@ -52,10 +60,12 @@ jobs:
           # Write input form variables and ensure the pw agent is in the PATH
           cat <<'EOF' >> inputs.sh
           PATH=$HOME/pw:$PATH
-          librechat_dir="${{ inputs.service.librechat_dir }}"
-          domain_client="${{ inputs.service.domain_client }}"
-          librechat_db="${{ inputs.service.librechat_db }}"
-          librechat_config="${{ inputs.service.librechat_config }}"
+          librechat_dir="${{ inputs.librechat.dir }}"
+          domain_client="${{ inputs.librechat.domain_client }}"
+          librechat_db="${{ inputs.librechat.db }}"
+          librechat_config="${{ inputs.librechat.config }}"
+          langflow_proxy_dir="${{ inputs.langflow.proxy_dir }}"
+          langflow_proxy_port="${{ inputs.langflow.proxy_port }}"
           EOF
           echo basepath=${basepath} >> inputs.sh
           echo password=${password} >> inputs.sh
@@ -145,7 +155,7 @@ jobs:
           cat <<'EOF' >> inputs.sh
           basepath="/me/session/${PW_USER}/${{ sessions.manager }}/"
           PATH=$HOME/pw:$PATH
-          librechat_dir="${{ inputs.service.librechat_dir }}"
+          librechat_dir="${{ inputs.librechat.dir }}"
           resource_uri="${{ inputs.resource.uri }}"
           librechat_job_dir="${PW_PARENT_JOB_DIR}/librechat"
           scheduler="${{ inputs.cluster.scheduler }}"
@@ -192,6 +202,83 @@ jobs:
             inputs_sh: ${PW_PARENT_JOB_DIR}/manager/inputs.sh
             slug: /
             rundir: ${PW_PARENT_JOB_DIR}/manager
+
+
+  langflow_preprocessing:
+    needs:
+      - github_checkout
+    working-directory: ${PW_PARENT_JOB_DIR}/langflow
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Create Inputs
+        run: |
+          set -x
+          if [ -z "${PW_PLATFORM_HOST}" ]; then
+            PW_PLATFORM_HOST=activate.hpc.mil
+          fi
+          PW_PLATFORM_HOST="${PW_PLATFORM_HOST#https://}"
+          # Write PW variables
+          env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+          # Encase values between quotes
+          sed -i 's/=\(.*\)/="\1"/' inputs.sh
+          # Write input form variables and ensure the pw agent is in the PATH
+          cat <<'EOF' >> inputs.sh
+          basepath="/me/session/${PW_USER}/${{ sessions.langflow }}/"
+          PATH=$HOME/pw:$PATH
+          service_langflow_data_dir="${{ inputs.langflow.data_dir }}"
+          service_langflow_config_dir="${{ inputs.langflow.config_dir }}"
+          service_langflow_components_path="${{ inputs.langflow.components_path }}"
+          service_langflow_database_url="${{ inputs.langflow.database_url }}"
+          langflow_proxy_dir="${{ inputs.langflow.proxy_dir }}"
+          langflow_proxy_port="${{ inputs.langflow.proxy_port }}"
+          langflow_proxy_flows_file="${{ inputs.langflow.proxy_flows_file }}"
+          EOF
+
+          # Remove empty variables
+          sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+          sed -i '/=""/d' inputs.sh
+          # Add export to all lines
+          sed -i 's/^/export /' inputs.sh
+
+  langflow_session_runner:
+    working-directory: ${PW_PARENT_JOB_DIR}/langflow
+    needs:
+      - langflow_preprocessing
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Session Runner
+        uses: github/parallelworks/interactive_session@main
+        early-cancel: any-job-failed
+        with:
+          $yaml: workflow/session_runner/v1.4/hsp.yaml
+          session: ${{ sessions.langflow }}
+          resource: ${{ inputs.resource }}
+          cluster:
+            scheduler: ${{ inputs.cluster.scheduler }}
+            slurm:
+              is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
+              account: ${{ inputs.cluster.slurm.account }}
+              partition: ${{ inputs.cluster.slurm.partition }}
+              qos: ${{ inputs.cluster.slurm.qos }}
+              cpus_per_task: ${{ inputs.cluster.slurm.cpus_per_task }}
+              nodes: ${{ inputs.cluster.slurm.nodes }}
+              gpus: ${{ inputs.cluster.slurm.gpus }}
+              node_type: ${{ inputs.cluster.slurm.node_type }}
+              scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+              time: ${{ inputs.cluster.slurm.time }}
+            pbs:
+              is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
+              account: ${{ inputs.cluster.pbs.account }}
+              scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+          service:
+            start_service_script: ${PW_PARENT_JOB_DIR}/langflow-singularity/start-template-v3.sh
+            controller_script: ${PW_PARENT_JOB_DIR}/langflow-singularity/controller-v3.sh
+            inputs_sh: ${PW_PARENT_JOB_DIR}/langflow/inputs.sh
+            slug: ""
+            rundir: ${PW_PARENT_JOB_DIR}/langflow
+
 'on':
   execute:
     inputs:
@@ -365,22 +452,22 @@ jobs:
                   ##PBS -l select=1:ncpus=128:mpiprocs=128:ngpus=2
                   #=====Wheat (WEKA, nmlas=4|6)====
                   ##PBS -l select=1:ncpus=92:mpiprocs=92:nmlas=4
-      service:
+      librechat:
         type: group
         label: LibreChat Settings
         collapsed: true
         items:
-          librechat_dir:
+          dir:
             type: string
             label: LibreChat directory
             default: ${HOME}/pw/LibreChat
             tooltip: Path where the LibreChat repository is cloned. Defaults to a shared location so chat history and uploads persist across sessions.
-          librechat_config:
+          config:
             type: string
             label: LibreChat config file
             optional: true
             tooltip: Path to the LibreChat YAML configuration file. Defaults to the standard location inside the LibreChat directory.
-          librechat_db:
+          db:
             type: string
             label: LibreChat Database Directory
             optional: true
@@ -395,6 +482,84 @@ jobs:
                 value: ACTIVATE
               - label: LOCALHOST
                 value: LOCALHOST
+      langflow:
+        type: group
+        label: Langflow Settings
+        collapsed: true
+        items:
+          data_dir:
+            label: Langflow Data Directory
+            type: string
+            default: ${HOME}/pw/.langflow
+            tooltip: Directory where Langflow stores flows and credentials. Persists between sessions if on a shared filesystem.
+          config_dir:
+            label: Config Directory
+            type: string
+            optional: true
+            default: ${HOME}/pw/.langflow
+            tooltip: |
+              LANGFLOW_CONFIG_DIR inside the container. Components placed under
+              <config_dir>/components/ are auto-discovered at startup — ideal for
+              personal components stored alongside your flows and data.
+              Defaults to the same location as the data directory.
+          components_path:
+            label: Custom Components Path
+            type: string
+            optional: true
+            tooltip: |
+              LANGFLOW_COMPONENTS_PATH — points to any directory outside the config
+              dir, e.g. a git-managed repo or a shared team folder on the cluster.
+              The path is bind-mounted into the container.
+              Use this when components are version-controlled or shared across users;
+              use Config Directory/components/ for personal components instead.
+              Leave empty to use built-in components only.
+          database_url:
+            label: Database URL
+            type: string
+            optional: true
+            default: sqlite:////${HOME}/pw/.langflow/langflow.db
+            tooltip: |
+              LANGFLOW_DATABASE_URL for Langflow (SQLite or PostgreSQL).
+              For SQLite use: sqlite:////absolute/path/to/langflow.db
+              The database directory is bind-mounted automatically.
+              Defaults to a persistent SQLite file in the home directory.
+          proxy_dir:
+            label: Langflow Proxy Path
+            type: string
+            optional: true
+            tooltip: |
+              Path on the service host to the langflow_proxy code (the directory
+              that contains the 'langflow_proxy/' Python package). When set, an
+              OpenAI-compatible proxy is launched alongside Langflow and registered
+              in LibreChat as the "Langflow" endpoint, exposing each Langflow flow
+              as a selectable model. Leave empty to disable the proxy.
+              Any flow JSONs in <Langflow Proxy Path>/flows are auto-imported into
+              Langflow on startup (owned by the superuser) so they show up as models.
+              NOTE: assumes Langflow and LibreChat share the service host
+              (Schedule Job? = No), so LibreChat can reach the proxy on localhost.
+          proxy_port:
+            label: Langflow Proxy Port
+            type: integer
+            default: 8092
+            optional: true
+            tooltip: |
+              Fixed port the Langflow proxy listens on; LibreChat connects to it at
+              http://localhost:<port>/v1. Must be free on the service host. Only
+              used when Langflow Proxy Path is set.
+          proxy_flows_file:
+            label: Proxy Flow Configs File
+            type: string
+            optional: true
+            tooltip: |
+              Optional path to a YAML file containing a top-level 'flows:' block
+              with per-flow model routing for the proxy, e.g.:
+                flows:
+                  chatbot:
+                    model_configs:
+                      general: { provider: "GenAI.mil", model: "gemini-3.1-pro-preview" }
+              If empty, 'flows.yaml' next to the proxy code is used when present;
+              otherwise all flows are exposed with default settings.
+
       env:
         type: group
         label: Environment Variables

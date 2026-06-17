@@ -28,7 +28,9 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: main
+          # Dev branch carrying the Langflow-proxy scripts. Flip back to `main`
+          # once librechat-all is merged.
+          branch: librechat-all
           sparse_checkout:
             - ${{ inputs.container_runtime }}
             - tools/oras
@@ -516,7 +518,6 @@ jobs:
           database_url:
             label: Database URL
             type: string
-            optional: true
             default: sqlite:////${HOME}/pw/.langflow/langflow.db
             tooltip: |
               LANGFLOW_DATABASE_URL for Langflow (SQLite or PostgreSQL).
@@ -526,7 +527,6 @@ jobs:
           proxy_dir:
             label: Langflow Proxy Path
             type: string
-            optional: true
             tooltip: |
               Path on the service host to the langflow_proxy code (the directory
               that contains the 'langflow_proxy/' Python package). When set, an
@@ -539,9 +539,8 @@ jobs:
               (Schedule Job? = No), so LibreChat can reach the proxy on localhost.
           proxy_port:
             label: Langflow Proxy Port
-            type: integer
+            type: number
             default: 8092
-            optional: true
             tooltip: |
               Fixed port the Langflow proxy listens on; LibreChat connects to it at
               http://localhost:<port>/v1. Must be free on the service host. Only

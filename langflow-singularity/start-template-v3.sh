@@ -293,6 +293,10 @@ if [ -n "${langflow_proxy_dir}" ] && [ -d "${langflow_proxy_dir}/langflow_proxy"
     if [[ "${service_langflow_database_url}" == sqlite:///* ]]; then
         proxy_db_path="${service_langflow_database_url#sqlite:///}"   # sqlite:////abs → /abs
         case "${proxy_db_path}" in /*) : ;; *) proxy_db_path="/${proxy_db_path}" ;; esac
+        # Collapse duplicate slashes: the default URL sqlite:////${HOME}/... yields
+        # //home/... (${HOME} already starts with /), and sqlite3's file: URI would
+        # otherwise read the first path segment ("home") as an authority and fail.
+        proxy_db_path=$(printf '%s' "${proxy_db_path}" | sed 's#/\{2,\}#/#g')
     else
         proxy_db_path="${LANGFLOW_CONFIG_DIR}/langflow.db"
     fi

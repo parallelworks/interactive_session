@@ -1,8 +1,8 @@
-# LibreChat + Langflow Proxy (hsp-all.yaml)
+# LibreChat + Langflow Proxy
 
-`hsp-all.yaml` launches **LibreChat**, the **Manager** dashboard, and **Langflow** as one
-workflow, and adds an optional **Langflow proxy** that turns each Langflow flow into a
-model you can pick and chat with inside LibreChat.
+This workflow launches **LibreChat**, the **Manager** dashboard, and **Langflow** together,
+with a **Langflow proxy** that turns each Langflow flow into a model you can pick and chat
+with inside LibreChat.
 
 > For the LibreChat + Manager basics see [README-ALL.md](README-ALL.md); for Langflow itself
 > see [langflow-singularity/README.md](../langflow-singularity/README.md). This file covers
@@ -68,25 +68,13 @@ through a single file: **`${PW_PARENT_JOB_DIR}/LANGFLOW_PROXY_PORT`**.
 
 ## Form inputs (Langflow Settings)
 
-| Field | Default | Purpose |
-|---|---|---|
-| **Start Langflow Proxy?** (`enable_proxy`) | `true` (hidden) | Master switch. Not `true` → plain workflow, no proxy. |
-| **Langflow Proxy Path** (`proxy_dir`) | — | Path to the `langflow_proxy` code (the dir holding the `langflow_proxy/` package). **Required to start the proxy.** Flows in `<proxy_dir>/flows/*.json` are auto-imported. |
-| **Proxy Flow Configs File** (`proxy_flows_file`) | — | Optional YAML with a top-level `flows:` block for per-flow model routing. Falls back to `<proxy_dir>/flows.yaml`, else flows run with their own model settings. |
+| Field | Purpose |
+|---|---|
+| **Langflow Proxy Path** (`proxy_dir`) | Path to the `langflow_proxy` code (the dir holding the `langflow_proxy/` package). Flows in `<proxy_dir>/flows/*.json` are auto-imported into Langflow. |
+| **Proxy Flow Configs File** (`proxy_flows_file`) | Optional YAML with a top-level `flows:` block for per-flow model routing. Falls back to `<proxy_dir>/flows.yaml`, else flows run with their own model settings. |
 
 Optional auth: if **Langflow API Key** (`LANGFLOW_API_KEY`, in Environment Variables) is
 set, the proxy requires it and the LibreChat endpoint sends it automatically.
-
-## On / off
-
-| `enable_proxy` | `proxy_dir` | Result |
-|---|---|---|
-| `true` (default) | set | **Proxy on** — flows imported, proxy launched, LibreChat "Langflow" endpoint added |
-| `true` | empty | No proxy (no code to run) — plain LibreChat + Manager + Langflow |
-| `false` / empty | any | **Original workflow**, no proxy artifacts |
-
-Every proxy hook (venv, flow import, proxy launch, LibreChat endpoint) is guarded by the
-switch, so any workflow that doesn't set it runs exactly as before.
 
 ## Assumptions & requirements
 
@@ -106,6 +94,3 @@ switch, so any workflow that doesn't set it runs exactly as before.
    (e.g. `~/pw/langflow_proxy`). Put your flow JSONs in `<proxy_dir>/flows/`.
 3. Launch. Open the **langflow** link to confirm your flow imported; open **librechat**,
    pick the **Langflow** endpoint, choose your flow, and chat.
-
-To turn the integration off, leave **Langflow Proxy Path** empty — the workflow runs as
-plain LibreChat + Manager + Langflow.

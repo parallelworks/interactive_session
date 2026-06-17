@@ -527,6 +527,7 @@ jobs:
           enable_proxy:
             label: Start Langflow Proxy?
             type: boolean
+            hidden: true
             default: true
             tooltip: |
               Master switch for the OpenAI-compatible Langflow proxy that exposes

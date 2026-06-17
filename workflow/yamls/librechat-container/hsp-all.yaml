@@ -66,8 +66,8 @@ jobs:
           domain_client="${{ inputs.librechat.domain_client }}"
           librechat_db="${{ inputs.librechat.db }}"
           librechat_config="${{ inputs.librechat.config }}"
+          langflow_enable_proxy="${{ inputs.langflow.enable_proxy }}"
           langflow_proxy_dir="${{ inputs.langflow.proxy_dir }}"
-          langflow_proxy_port="${{ inputs.langflow.proxy_port }}"
           EOF
           echo basepath=${basepath} >> inputs.sh
           echo password=${password} >> inputs.sh
@@ -232,8 +232,8 @@ jobs:
           service_langflow_config_dir="${{ inputs.langflow.config_dir }}"
           service_langflow_components_path="${{ inputs.langflow.components_path }}"
           service_langflow_database_url="${{ inputs.langflow.database_url }}"
+          langflow_enable_proxy="${{ inputs.langflow.enable_proxy }}"
           langflow_proxy_dir="${{ inputs.langflow.proxy_dir }}"
-          langflow_proxy_port="${{ inputs.langflow.proxy_port }}"
           langflow_proxy_flows_file="${{ inputs.langflow.proxy_flows_file }}"
           EOF
 
@@ -524,27 +524,30 @@ jobs:
               For SQLite use: sqlite:////absolute/path/to/langflow.db
               The database directory is bind-mounted automatically.
               Defaults to a persistent SQLite file in the home directory.
+          enable_proxy:
+            label: Start Langflow Proxy?
+            type: boolean
+            default: true
+            tooltip: |
+              Master switch for the OpenAI-compatible Langflow proxy that exposes
+              each Langflow flow as a model in LibreChat. true (default) starts it
+              (also requires Langflow Proxy Path). false or empty runs the plain
+              Langflow + LibreChat workflow — no proxy, no flow auto-import, and no
+              LibreChat "Langflow" endpoint.
           proxy_dir:
             label: Langflow Proxy Path
             type: string
+            optional: true
             tooltip: |
               Path on the service host to the langflow_proxy code (the directory
-              that contains the 'langflow_proxy/' Python package). When set, an
-              OpenAI-compatible proxy is launched alongside Langflow and registered
-              in LibreChat as the "Langflow" endpoint, exposing each Langflow flow
-              as a selectable model. Leave empty to disable the proxy.
-              Any flow JSONs in <Langflow Proxy Path>/flows are auto-imported into
-              Langflow on startup (owned by the superuser) so they show up as models.
+              that contains the 'langflow_proxy/' Python package). Required when
+              Start Langflow Proxy? is true. An OpenAI-compatible proxy is launched
+              alongside Langflow (on a port allocated at runtime) and registered in
+              LibreChat as the "Langflow" endpoint, exposing each Langflow flow as a
+              selectable model. Flow JSONs in <Langflow Proxy Path>/flows are
+              auto-imported into Langflow on startup (owned by the superuser).
               NOTE: assumes Langflow and LibreChat share the service host
               (Schedule Job? = No), so LibreChat can reach the proxy on localhost.
-          proxy_port:
-            label: Langflow Proxy Port
-            type: number
-            default: 8092
-            tooltip: |
-              Fixed port the Langflow proxy listens on; LibreChat connects to it at
-              http://localhost:<port>/v1. Must be free on the service host. Only
-              used when Langflow Proxy Path is set.
           proxy_flows_file:
             label: Proxy Flow Configs File
             type: string

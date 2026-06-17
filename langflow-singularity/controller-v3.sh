@@ -64,7 +64,7 @@ echo "::notice::Langflow container ready at ${container_dir}"
 # a venv with the proxy's dependencies so the start script can launch the
 # OpenAI-compatible proxy alongside Langflow. The proxy CODE lives at
 # ${langflow_proxy_dir} and is intentionally NOT shipped in this repo.
-if [ -n "${langflow_proxy_dir}" ]; then
+if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ]; then
     if [ ! -d "${langflow_proxy_dir}/langflow_proxy" ]; then
         echo "::warning::langflow_proxy_dir='${langflow_proxy_dir}' has no 'langflow_proxy' package — proxy will be skipped at start."
     else

@@ -225,7 +225,7 @@ echo "::endgroup::"
 # and let Langflow import them on startup via LANGFLOW_LOAD_FLOWS_PATH. Imported
 # flows are upserted (idempotent) and owned by the superuser, so they get a
 # non-null user_id and the proxy discovers them as selectable models.
-if [ -n "${langflow_proxy_dir}" ] && [ -d "${langflow_proxy_dir}/flows" ]; then
+if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ] && [ -d "${langflow_proxy_dir}/flows" ]; then
     proxy_flows_import_dir="${langflow_proxy_dir}/flows"
     EXTRA_BINDS+=(--bind "${proxy_flows_import_dir}:${proxy_flows_import_dir}")
     EXTRA_ENVS+=(--env "LANGFLOW_LOAD_FLOWS_PATH=${proxy_flows_import_dir}")
@@ -282,10 +282,14 @@ echo "::notice::Langflow → http://localhost:${service_port}"
 # LibreChat user can pick each Langflow flow as a model. The proxy reads the
 # Langflow DB directly (flow discovery) and forwards chat turns to Langflow's run
 # API on localhost. Auth, when LANGFLOW_API_KEY is set, is shared with LibreChat.
-if [ -n "${langflow_proxy_dir}" ] && [ -d "${langflow_proxy_dir}/langflow_proxy" ]; then
+if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ] && [ -d "${langflow_proxy_dir}/langflow_proxy" ]; then
     echo "::group::Starting Langflow proxy"
     proxy_venv="${service_parent_install_dir}/tools/langflow_proxy_venv"
-    proxy_port="${langflow_proxy_port:-8092}"
+    # Allocate a port dynamically and publish it to the shared job dir so the
+    # (parallel) LibreChat job can read it and register the proxy endpoint.
+    proxy_port=$(pw agent open-port)
+    [ -n "${proxy_port}" ] && echo "${proxy_port}" > "${PW_PARENT_JOB_DIR}/LANGFLOW_PROXY_PORT"
+    echo "::notice::Langflow proxy port ${proxy_port} → ${PW_PARENT_JOB_DIR}/LANGFLOW_PROXY_PORT"
 
     # Resolve the Langflow DB file the proxy queries for flows. SQLAlchemy URLs use
     # four slashes for an absolute path (sqlite:////abs/x.db → /abs/x.db); strip the

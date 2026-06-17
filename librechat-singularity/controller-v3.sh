@@ -148,14 +148,26 @@ echo "::notice::LibreChat YAML config written to $DIR/librechat.yaml"
 # model. The proxy is co-located on the service host, reachable at localhost:<port>.
 # Appended as another item under endpoints.custom (same 4-space indent).
 # Only effective when LibreChat uses this generated config (librechat_config unset).
-if [ -n "${langflow_proxy_dir}" ] && [ -n "${langflow_proxy_port}" ]; then
-    if [ -n "${LANGFLOW_API_KEY}" ]; then
-        _upsert LANGFLOW_API_KEY "${LANGFLOW_API_KEY}" "$DIR/.env"
-        _proxy_api_key='${LANGFLOW_API_KEY}'   # resolved from .env by LibreChat at runtime
-    else
-        _proxy_api_key='langflow-proxy'        # placeholder; proxy auth is disabled
-    fi
-    cat >> "$DIR/librechat.yaml" <<YAML_EOF
+if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ]; then
+    # The proxy port is allocated by the (parallel) Langflow job and published to
+    # ${PW_PARENT_JOB_DIR}/LANGFLOW_PROXY_PORT. Wait for it (bounded) before writing
+    # the endpoint; skip gracefully if it never appears so LibreChat still starts.
+    _port_file="${PW_PARENT_JOB_DIR}/LANGFLOW_PROXY_PORT"
+    _retries=40
+    while [ ! -s "${_port_file}" ] && [ "${_retries}" -gt 0 ]; do
+        echo "::notice::Waiting for Langflow proxy port (${_port_file}) — retries left: ${_retries}"
+        sleep 15
+        _retries=$(( _retries - 1 ))
+    done
+    if [ -s "${_port_file}" ]; then
+        langflow_proxy_port=$(tr -d '[:space:]' < "${_port_file}")
+        if [ -n "${LANGFLOW_API_KEY}" ]; then
+            _upsert LANGFLOW_API_KEY "${LANGFLOW_API_KEY}" "$DIR/.env"
+            _proxy_api_key='${LANGFLOW_API_KEY}'   # resolved from .env by LibreChat at runtime
+        else
+            _proxy_api_key='langflow-proxy'        # placeholder; proxy auth is disabled
+        fi
+        cat >> "$DIR/librechat.yaml" <<YAML_EOF
     - name: "Langflow"
       apiKey: "${_proxy_api_key}"
       baseURL: "http://localhost:${langflow_proxy_port}/v1"
@@ -166,5 +178,8 @@ if [ -n "${langflow_proxy_dir}" ] && [ -n "${langflow_proxy_port}" ]; then
       summarize: false
       displayLabelEnabled: true
 YAML_EOF
-    echo "::notice::Added Langflow proxy endpoint (http://localhost:${langflow_proxy_port}/v1) to librechat.yaml"
+        echo "::notice::Added Langflow proxy endpoint (http://localhost:${langflow_proxy_port}/v1) to librechat.yaml"
+    else
+        echo "::warning::Langflow proxy port not found at ${_port_file} after waiting — LibreChat will start without the Langflow endpoint."
+    fi
 fi

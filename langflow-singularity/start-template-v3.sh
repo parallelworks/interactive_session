@@ -226,15 +226,19 @@ echo "::endgroup::"
 # flows are upserted (idempotent) and owned by the superuser, so they get a
 # non-null user_id and the proxy discovers them as selectable models.
 if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ]; then
-    # Merge flow JSONs from the proxy dir and from the repo's langflow-singularity/flows
-    # (e.g. the ACTIVATE test flow shipped with this workflow) into a single import
-    # directory so one LANGFLOW_LOAD_FLOWS_PATH imports both sets. Imported flows are
-    # owned by the superuser, so the proxy discovers them as selectable models.
+    # Import the user's own flows from ${langflow_proxy_dir}/flows. Optionally also import
+    # the test flows bundled in this repo (langflow-singularity/flows, e.g. pw-test-one) —
+    # only when ${langflow_import_bundled_flows} is true (on for general-all, off for hsp-all).
+    # Everything is merged into one directory so a single LANGFLOW_LOAD_FLOWS_PATH imports it;
+    # imported flows are owned by the superuser, so the proxy discovers them as models.
     proxy_flows_import_dir="${PW_PARENT_JOB_DIR}/langflow/import-flows"
     repo_flows_dir="${PW_PARENT_JOB_DIR}/langflow-singularity/flows"
     mkdir -p "${proxy_flows_import_dir}"
     [ -d "${langflow_proxy_dir}/flows" ] && cp -f "${langflow_proxy_dir}/flows/"*.json "${proxy_flows_import_dir}/" 2>/dev/null || true
-    [ -d "${repo_flows_dir}" ]           && cp -f "${repo_flows_dir}/"*.json           "${proxy_flows_import_dir}/" 2>/dev/null || true
+    if [ "${langflow_import_bundled_flows}" = "true" ] && [ -d "${repo_flows_dir}" ]; then
+        cp -f "${repo_flows_dir}/"*.json "${proxy_flows_import_dir}/" 2>/dev/null || true
+        echo "::notice::Importing bundled repo flows from ${repo_flows_dir}"
+    fi
     if ls "${proxy_flows_import_dir}/"*.json >/dev/null 2>&1; then
         EXTRA_BINDS+=(--bind "${proxy_flows_import_dir}:${proxy_flows_import_dir}")
         EXTRA_ENVS+=(--env "LANGFLOW_LOAD_FLOWS_PATH=${proxy_flows_import_dir}")

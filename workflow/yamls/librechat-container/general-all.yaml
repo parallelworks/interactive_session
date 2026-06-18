@@ -253,6 +253,7 @@ jobs:
           langflow_enable_proxy="${{ inputs.langflow.enable_proxy }}"
           langflow_proxy_dir="${{ inputs.langflow.proxy_dir }}"
           langflow_proxy_flows_file="${{ inputs.langflow.proxy_flows_file }}"
+          langflow_import_bundled_flows="${{ inputs.langflow.import_bundled_flows }}"
           EOF
 
           # Remove empty variables
@@ -545,6 +546,16 @@ jobs:
               (also requires Langflow Proxy Path). false or empty runs the plain
               Langflow + LibreChat workflow — no proxy, no flow auto-import, and no
               LibreChat "Langflow" endpoint.
+          import_bundled_flows:
+            label: Import bundled test flows?
+            type: boolean
+            hidden: true
+            default: true
+            tooltip: |
+              When true, the test flows shipped in this repo
+              (langflow-singularity/flows, e.g. pw-test-one) are imported alongside
+              the user's own flows from <Langflow Proxy Path>/flows. Set false to
+              import only the flows in <Langflow Proxy Path>/flows.
           proxy_dir:
             label: Langflow Proxy Path
             type: string

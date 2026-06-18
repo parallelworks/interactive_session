@@ -139,25 +139,45 @@ export service_port=${service_port}
 export basepath="${basepath:-}"
 ENVEOF
 
-# ── Forward the Langflow proxy port (cross-host setup) ────────────────────────
-# When Langflow runs on a *different* resource than LibreChat, the OpenAI-compatible
-# Langflow proxy is not on this node's localhost. The controller already fetched the
-# proxy port (over pw ssh) and mirrored it to ${PW_PARENT_JOB_DIR}/LANGFLOW_PROXY_PORT.
-# Use `pw forward` to expose <langflow_resource>:<port> at this node's localhost:<port>
-# so the librechat.yaml endpoint (http://localhost:<port>/v1) keeps resolving — the
-# LibreChat container shares the host network namespace, so it reaches this listener.
-# pw forward auto-reconnects, which suits a long-lived tunnel. When Langflow shares
-# this host no forward is needed (the proxy is already on localhost).
+# ── Reach the Langflow proxy (cross-node / cross-cluster) ─────────────────────
+# The OpenAI-compatible Langflow proxy binds 0.0.0.0:<port> on whichever node the
+# Langflow job runs on, and librechat.yaml points at http://localhost:<port>/v1.
+# Unless that proxy is already on THIS login node we bridge it here with `pw forward`
+# so the localhost endpoint keeps resolving (the LibreChat container shares the host
+# network namespace, so it reaches the listener). pw forward auto-reconnects.
+#
+# Crucially, the proxy is NOT always on its resource's login node: when the Langflow
+# job is scheduled to a partition it runs on a *compute* node. session_runner records
+# the node in the Langflow job's HOSTNAME file (`localhost` for a login node, else the
+# compute node's hostname). We forward to that host *through* the Langflow resource's
+# login node, so `pw forward -L <port>:<LF_HOST>:<port> <langflow_resource>` works for
+# both login-node (LF_HOST=localhost) and compute-node (LF_HOST=<compute>) proxies.
+# HOSTNAME lives on the Langflow host's filesystem: read it locally when Langflow shares
+# this resource, or over `pw ssh` when it is on another cluster.
 _lf_port_file="${PW_PARENT_JOB_DIR}/LANGFLOW_PROXY_PORT"
+_lf_hostname_file="${PW_PARENT_JOB_DIR}/langflow/HOSTNAME"
 if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ] \
-   && [ "${langflow_same_host}" != "true" ] && [ -n "${langflow_resource_name}" ] \
-   && [ -s "${_lf_port_file}" ]; then
+   && [ -n "${langflow_resource_name}" ] && [ -s "${_lf_port_file}" ]; then
     LF_PROXY_PORT=$(tr -d '[:space:]' < "${_lf_port_file}")
-    if [ -n "${LF_PROXY_PORT}" ]; then
-        echo "::notice::Forwarding Langflow proxy: localhost:${LF_PROXY_PORT} -> ${langflow_resource_name}:${LF_PROXY_PORT}"
-        pw forward -L "${LF_PROXY_PORT}:localhost:${LF_PROXY_PORT}" "${langflow_resource_name}" \
+    if [ "${langflow_same_host}" = "true" ]; then
+        LF_HOST=$(tr -d '[:space:]' < "${_lf_hostname_file}" 2>/dev/null)
+    else
+        LF_HOST=$(pw ssh "${langflow_resource_name}" "cat '${_lf_hostname_file}' 2>/dev/null" 2>/dev/null | tr -d '[:space:]')
+    fi
+    LF_HOST="${LF_HOST:-localhost}"
+    # Skip the forward only when the proxy is on THIS very node (Langflow co-located on
+    # the same login/compute node) — there localhost already reaches its 0.0.0.0 bind, and
+    # a forward would clash with the proxy's own port. HOSTNAME holds the real node name
+    # (not literally "localhost"), so compare against this node's hostname.
+    _my_host=$(hostname 2>/dev/null); _my_short=$(hostname -s 2>/dev/null || echo "${_my_host}")
+    if [ -n "${LF_PROXY_PORT}" ] \
+       && [ "${LF_HOST}" != "localhost" ] && [ "${LF_HOST}" != "${_my_host}" ] && [ "${LF_HOST}" != "${_my_short}" ]; then
+        echo "::notice::Forwarding Langflow proxy: localhost:${LF_PROXY_PORT} -> ${langflow_resource_name} (${LF_HOST}):${LF_PROXY_PORT}"
+        pw forward -L "${LF_PROXY_PORT}:${LF_HOST}:${LF_PROXY_PORT}" "${langflow_resource_name}" \
             > "$LOG_DIR/langflow-proxy-forward.log" 2>&1 &
         echo "kill $! #langflow-proxy-forward" >> ./cancel.sh
+    else
+        echo "::notice::Langflow proxy is on this node (${LF_HOST}:${LF_PROXY_PORT}) — no forward needed"
     fi
 fi
 

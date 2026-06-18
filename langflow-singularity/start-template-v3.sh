@@ -329,6 +329,14 @@ echo "::notice::Langflow → http://localhost:${service_port}"
 # LibreChat user can pick each Langflow flow as a model. The proxy reads the
 # Langflow DB directly (flow discovery) and forwards chat turns to Langflow's run
 # API on localhost. Auth, when LANGFLOW_API_KEY is set, is shared with LibreChat.
+#
+# If the proxy is enabled, it MUST be launchable here — otherwise LANGFLOW_PROXY_PORT is
+# never published and LibreChat waits forever. The controller already fails fast on a
+# missing proxy dir; re-check (defense in depth) and error rather than silently skip.
+if [ "${langflow_enable_proxy}" = "true" ] && { [ -z "${langflow_proxy_dir}" ] || [ ! -d "${langflow_proxy_dir}/langflow_proxy" ]; }; then
+    echo "::error title=Langflow proxy code not found::'Start Langflow Proxy?' is enabled but the langflow_proxy package was not found at Langflow Proxy Path '${langflow_proxy_dir:-<empty>}' on the Langflow host ($(hostname)). Stage the proxy code there, or disable the proxy."
+    exit 1
+fi
 if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ] && [ -d "${langflow_proxy_dir}/langflow_proxy" ]; then
     echo "::group::Starting Langflow proxy"
     proxy_venv="${service_parent_install_dir}/tools/langflow_proxy_venv"
@@ -400,7 +408,8 @@ PROXYCFG
         tail -f langflow-proxy.log &
         echo "kill $! #langflow-proxy-logs" >> cancel.sh
     else
-        echo "::warning::Langflow proxy venv missing at ${proxy_venv} — run the controller first. Skipping proxy."
+        echo "::error title=Langflow proxy venv missing::Proxy venv not found at ${proxy_venv} (controller did not build it). Cannot start the proxy that 'Start Langflow Proxy?' requires."
+        exit 1
     fi
     echo "::endgroup::"
 fi

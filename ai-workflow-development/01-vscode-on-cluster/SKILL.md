@@ -208,6 +208,17 @@ non-repetitive; point at an existing tutorial instead.
   unset on a SLURM/PBS compute node — the home FS is shared, so relative paths work).
 - **Pin subworkflow versions** (`v1.4`, `v3.6`) so a marketplace update can't silently
   change behavior.
+- **Cross-node service reach (multi-resource workflows).** When one job/service must reach
+  another resource's service, expose it on localhost with `pw forward -L p:host:p
+  <resource>` (`host` = `localhost` if unscheduled, the `HOSTNAME` value if scheduled —
+  see Common pitfalls). Read the other job's runtime values (its allocated port, its
+  `HOSTNAME`) with `pw ssh <resource> "cat ${PW_PARENT_JOB_DIR}/<file>"` — that path is the
+  same on every resource in a run. Reference §6.
+- **Gate dependent sessions without hanging.** If session A needs session B's runtime
+  output (e.g. a dynamically-allocated port), have A **wait** for it, but make B **fail loud**
+  on any misconfiguration and rely on `early-cancel: any-job-failed` so B's failure cancels
+  A — otherwise an indefinite wait hangs forever. Mirror B's values locally in A once read,
+  so later steps don't re-query across hosts.
 - **Clean up:** provide `cancel.sh`/cleanup scripts, and cancel runs you're done with
   (`pw workflows runs cancel`) so nothing lingers (`sleep inf`, SLURM allocations).
 
@@ -241,6 +252,17 @@ non-repetitive; point at an existing tutorial instead.
 - **`pw sessions stop` 404s** if the run was already canceled (cancel tears the
   session down). Not an error.
 - **Always `--dry-run`** before a real run; it catches schema/YAML problems cheaply.
+- **`pw forward` target host (verified):** forward a service to localhost with
+  `pw forward -L p:host:p <resource>` — `host=localhost` when the service is on the
+  **login node** (unscheduled; its external hostname is NOT reachable), `host=<HOSTNAME
+  file value>` when it's on a **compute node** (scheduled). Pick by the scheduler flag.
+- **Input group named `env` + a top-level `env:` block** referencing `${{ inputs.env.* }}`
+  → `Expression Parser Error: max recursion exceeded`, failing **both `--dry-run` and
+  `pw workflows run`** (the web UI may still submit). Rename the group (e.g. `env_vars`).
+- **Cross-cluster filesystems are separate:** a code/data path staged on one resource is
+  absent on another — stage it on the resource that runs it. If a required path is missing,
+  **fail loud (exit non-zero), don't silently skip**: a silent skip upstream plus a
+  downstream job waiting on its output (e.g. a port file) becomes an indefinite hang.
 
 ## Lessons from LLM-backed & multi-session builds (hermes-agent)
 

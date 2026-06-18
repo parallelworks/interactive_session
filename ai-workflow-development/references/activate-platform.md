@@ -86,7 +86,7 @@ Top of file (enables editor autocomplete; harmless at runtime):
 | `permissions` | list of users/groups allowed to run; `['*']` = everyone. **Also required for the `pw` client to be auto-authenticated inside the workflow** — without `permissions: ['*']`, in-workflow `pw` calls (e.g. `pw agent open-port`) fail to authenticate. Always set it. |
 | `sessions` | named session objects this workflow creates |
 | `jobs` | the job DAG |
-| `env` | workflow-level environment variables injected into every job/step's runtime env. **The canonical way to make `PW_API_KEY` available to your workflow code** — set `env: { PW_API_KEY: ${PW_API_KEY} }` (see §12). |
+| `env` | workflow-level environment variables injected into every job/step's runtime env. **The canonical way to make `PW_API_KEY` available to your workflow code** — set `env: { PW_API_KEY: ${PW_API_KEY} }` (see §12). **⚠ Do NOT also name an input *group* `env`** if this block references `${{ inputs.env.* }}`: the shared `env` name makes the expression engine recurse → `400 Expression Parser Error: max recursion exceeded`, which fails **both `--dry-run` and `pw workflows run`** (the web UI may still submit it). Name the group e.g. `env_vars`. |
 | `'on'.execute.inputs` | the input form (note the quoted `'on'` to avoid YAML's bool) |
 
 ### `sessions`
@@ -434,9 +434,30 @@ A running tunnel session shows `STATUS=running`, `TYPE=tunnel`, `REMOTE HOST`,
 ### Other useful
 ```bash
 pw cluster ls [-o json]            # resources + status
-pw ssh <resource>                  # shell onto a resource's node (to inspect remote job dirs)
-pw forward ...                     # SSH port-forward
+pw ssh <resource> ["cmd"]          # shell on a resource's node, or run "cmd" and exit
+pw forward -L [bind:]lport:host:rport <resource>   # local→remote tunnel (auto-reconnects)
 ```
+
+### Reaching a service on another node/cluster (`pw forward` / `pw ssh`) — verified
+`pw forward` opens a **local** listener that tunnels to `host:rport` *as seen from the
+`<resource>` login node* (it auto-reconnects — background it with `&` and add the kill to
+`cancel.sh`). **Choosing `host` is the subtle part:**
+- service on the resource's **login node** (job *not* scheduled) → use **`localhost`**. A
+  login-node service answers only on the login node's own loopback — forwarding to its
+  *external hostname* does **not** connect.
+- service on a **compute node** (scheduled job) → use that node's name from the job's
+  **`HOSTNAME` file**; the tunnel hops login→compute. **Rule: `localhost` when not scheduled,
+  the `HOSTNAME` value when scheduled.** (Both require the service to bind `0.0.0.0`.)
+
+`pw ssh <resource> "cat <path>"` reads a file off another resource — handy because
+`${PW_PARENT_JOB_DIR}` resolves to the **same path on every resource** in a run (same
+user/home/run number), so one job can fetch a sibling job's published file (a port it
+allocated, its `HOSTNAME`) cross-cluster. **Each cluster has its own filesystem** — code or
+data staged on one resource is absent on another; stage it on the resource that uses it.
+
+A Singularity/Apptainer container shares the **host network namespace** by default, so an
+in-container service reaches a host-side `pw forward` listener (and host `localhost:<port>`)
+with no extra flags.
 
 ---
 
@@ -454,7 +475,7 @@ Contents after a `session_runner` launch (all verified on a live run):
 ├── start-service-<JOBID>.sh               # inputs.sh + port/trap glue + your start script
 ├── run.sh / run-template.sh               # script_submitter's generated wrapper
 ├── run.<JOBID>.out                        # script_submitter stdout/stderr
-├── HOSTNAME                               # node the service is on (localhost if scheduler:false)
+├── HOSTNAME                               # the service node's REAL hostname (login *-mgmt or compute node) — not literally "localhost"; it's the pw forward target for a scheduled job (§6)
 ├── SESSION_PORT                           # the allocated service_port
 ├── job.started                            # marker session_runner waits for
 ├── cancel.sh                              # your shutdown script (run on cancel)
@@ -596,7 +617,11 @@ with `name`/`unit`/`total`/`used`; e.g. `Private LLM Group`). Discover models wi
 `pw ai models ls [-o json]`; chat from the CLI with `pw ai chats new -p "..."
 "<model-id>"`. The connected GLM models support OpenAI tool/function calling, so
 you can build tool-using agents straight against the endpoint. (LibreChat points at
-the same endpoint — see `librechat-singularity/controller-v3.sh`.)
+the same endpoint — see `librechat-singularity/controller-v3.sh`.) `PW_API_KEY` also
+authenticates `GET /api/allocations`, so a job can auto-discover an allocation name at
+runtime. To send `X-Allocation` from a client that takes default headers, pass it there —
+e.g. langchain `ChatOpenAI(base_url=..., api_key=PW_API_KEY, default_headers={"X-Allocation": name})`
+(verified) — it then rides on every request, streaming included.
 
 ### `PW_API_KEY` at runtime — the platform credential (don't persist it)
 **Whenever you need `PW_API_KEY` anywhere in the workflow's code, expose it once with

@@ -88,6 +88,8 @@ if [ "${langflow_enable_proxy}" = "true" ]; then
         # access to the code dir; install the declared deps directly instead.
         "${proxy_venv}/bin/pip" install --quiet --upgrade pip
         "${proxy_venv}/bin/pip" install --quiet fastapi uvicorn pydantic aiohttp pyyaml
+        # Make the venv usable by any user (shared install under service_parent_install_dir).
+        chmod -R a+rX "${proxy_venv}" || true
         echo "::endgroup::"
     fi
     echo "::notice::Langflow proxy venv ready at ${proxy_venv}"

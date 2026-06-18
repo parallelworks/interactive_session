@@ -7,6 +7,7 @@ env:
   JWT_REFRESH_SECRET: ${{ inputs.env.JWT_REFRESH_SECRET }}
   LIBRECHAT_API_KEY: ${{ inputs.env.LIBRECHAT_API_KEY }}
   LANGFLOW_API_KEY: ${{ inputs.env.LANGFLOW_API_KEY }}
+  service_parent_install_dir: /home/alvaro/pw/software
 
 sessions:
   librechat:
@@ -107,14 +108,6 @@ jobs:
           sed -i '/=""/d' inputs.sh # remove var=""
           # Add export= to all lines
           sed -i 's/^/export /' inputs.sh
-          # HSP default: mirror the Langflow proxy-path default so LibreChat treats the
-          # proxy as enabled (waits for / registers / forwards it). Only needs to be
-          # non-empty here — the actual directory is used on the Langflow host.
-          if [ "${{ inputs.langflow.enable_proxy }}" = "true" ] && [ -z "${{ inputs.langflow.proxy_dir }}" ]; then
-            _default_proxy_dir="${WORKDIR/$USER/avidalto}/hsp/tools/langflow_proxy-main"
-            echo "export langflow_proxy_dir=\"${_default_proxy_dir}\"" >> inputs.sh
-            echo "::notice::Defaulted langflow_proxy_dir to ${_default_proxy_dir}"
-          fi
       - name: Lock librechat_dir
         run: |
           set -e
@@ -139,7 +132,7 @@ jobs:
         uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
-          $yaml: workflow/session_runner/v1.4/hsp.yaml
+          $yaml: workflow/session_runner/v1.4/general.yaml
           session: ${{ sessions.librechat }}
           resource: ${{ inputs.librechat_resource }}
           cluster:
@@ -147,17 +140,10 @@ jobs:
             slurm:
               is_enabled: ${{ inputs.librechat_cluster.slurm.is_enabled }}
               partition: ${{ inputs.librechat_cluster.slurm.partition }}
-              account: ${{ inputs.librechat_cluster.slurm.account }}
-              qos: ${{ inputs.librechat_cluster.slurm.qos }}
-              cpus_per_task: ${{ inputs.librechat_cluster.slurm.cpus_per_task }}
-              nodes: ${{ inputs.librechat_cluster.slurm.nodes }}
-              gpus: ${{ inputs.librechat_cluster.slurm.gpus }}
-              node_type: ${{ inputs.librechat_cluster.slurm.node_type }}
               scheduler_directives: ${{ inputs.librechat_cluster.slurm.scheduler_directives }}
               time: ${{ inputs.librechat_cluster.slurm.time }}
             pbs:
               is_enabled: ${{ inputs.librechat_cluster.pbs.is_enabled }}
-              account: ${{ inputs.librechat_cluster.pbs.account }}
               scheduler_directives: ${{ inputs.librechat_cluster.pbs.scheduler_directives }}
           service:
             start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.container_runtime }}/start-template-v3.sh
@@ -217,7 +203,7 @@ jobs:
         uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
-          $yaml: workflow/session_runner/v1.4/hsp.yaml
+          $yaml: workflow/session_runner/v1.4/general.yaml
           session: ${{ sessions.manager }}
           resource: ${{ inputs.librechat_resource }}
           cluster:
@@ -225,17 +211,10 @@ jobs:
             slurm:
               is_enabled: ${{ inputs.librechat_cluster.slurm.is_enabled }}
               partition: ${{ inputs.librechat_cluster.slurm.partition }}
-              account: ${{ inputs.librechat_cluster.slurm.account }}
-              qos: ${{ inputs.librechat_cluster.slurm.qos }}
-              cpus_per_task: ${{ inputs.librechat_cluster.slurm.cpus_per_task }}
-              nodes: ${{ inputs.librechat_cluster.slurm.nodes }}
-              gpus: ${{ inputs.librechat_cluster.slurm.gpus }}
-              node_type: ${{ inputs.librechat_cluster.slurm.node_type }}
               scheduler_directives: ${{ inputs.librechat_cluster.slurm.scheduler_directives }}
               time: ${{ inputs.librechat_cluster.slurm.time }}
             pbs:
               is_enabled: ${{ inputs.librechat_cluster.pbs.is_enabled }}
-              account: ${{ inputs.librechat_cluster.pbs.account }}
               scheduler_directives: ${{ inputs.librechat_cluster.pbs.scheduler_directives }}
           service:
             start_service_script: ${PW_PARENT_JOB_DIR}/librechat-singularity-manager/start-template-v3.sh
@@ -282,13 +261,6 @@ jobs:
           sed -i '/=""/d' inputs.sh
           # Add export to all lines
           sed -i 's/^/export /' inputs.sh
-          # HSP default: if the proxy is enabled but no Langflow Proxy Path was given,
-          # point it at the shared staged copy before it is written to inputs.sh.
-          if [ "${{ inputs.langflow.enable_proxy }}" = "true" ] && [ -z "${{ inputs.langflow.proxy_dir }}" ]; then
-            _default_proxy_dir="${WORKDIR/$USER/avidalto}/hsp/tools/langflow_proxy-main"
-            echo "export langflow_proxy_dir=\"${_default_proxy_dir}\"" >> inputs.sh
-            echo "::notice::Defaulted langflow_proxy_dir to ${_default_proxy_dir}"
-          fi
 
   langflow_session_runner:
     working-directory: ${PW_PARENT_JOB_DIR}/langflow
@@ -301,7 +273,7 @@ jobs:
         uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
-          $yaml: workflow/session_runner/v1.4/hsp.yaml
+          $yaml: workflow/session_runner/v1.4/general.yaml
           session: ${{ sessions.langflow }}
           resource: ${{ inputs.langflow_resource }}
           cluster:
@@ -309,17 +281,10 @@ jobs:
             slurm:
               is_enabled: ${{ inputs.langflow_cluster.slurm.is_enabled }}
               partition: ${{ inputs.langflow_cluster.slurm.partition }}
-              account: ${{ inputs.langflow_cluster.slurm.account }}
-              qos: ${{ inputs.langflow_cluster.slurm.qos }}
-              cpus_per_task: ${{ inputs.langflow_cluster.slurm.cpus_per_task }}
-              nodes: ${{ inputs.langflow_cluster.slurm.nodes }}
-              gpus: ${{ inputs.langflow_cluster.slurm.gpus }}
-              node_type: ${{ inputs.langflow_cluster.slurm.node_type }}
               scheduler_directives: ${{ inputs.langflow_cluster.slurm.scheduler_directives }}
               time: ${{ inputs.langflow_cluster.slurm.time }}
             pbs:
               is_enabled: ${{ inputs.langflow_cluster.pbs.is_enabled }}
-              account: ${{ inputs.librechat_cluster.pbs.account }}
               scheduler_directives: ${{ inputs.langflow_cluster.pbs.scheduler_directives }}
           service:
             start_service_script: ${PW_PARENT_JOB_DIR}/langflow-singularity/start-template-v3.sh
@@ -376,88 +341,12 @@ jobs:
                 hidden: true
                 default: true
                 label: Is SLURM enabled? Yes, unless the slurm section is hidden and ignored
-              account:
-                label: SLURM account
-                type: slurm-accounts
-                resource: ${{ inputs.librechat_resource }}
-                tooltip: '--account=value slurm directive'
-                ignore: ${{ 'existing' != inputs.librechat_resource.provider }}
-                hidden: ${{ .ignore }}
               partition:
                 type: slurm-partitions
                 label: SLURM partition
                 optional: true
                 resource: ${{ inputs.librechat_resource }}
                 tooltip: '--qos=partition slurm directive'
-              qos:
-                label: Quality of Service [QoS]
-                type: slurm-qos
-                resource: ${{ inputs.librechat_resource }}
-                tooltip: '--qos=value slurm directive'
-                ignore: ${{ 'existing' != inputs.librechat_resource.provider }}
-                hidden: ${{ .ignore }}
-              cpus_per_task:
-                label: CPUs per task
-                type: number
-                default: 1
-                tooltip: '--cpus-per-task= SLURM directive to set the number of CPUs per task'
-                ignore: ${{ 'existing' != inputs.librechat_resource.provider }}
-                hidden: ${{ .ignore }}
-              nodes:
-                label: Number of nodes
-                type: number
-                default: 1
-                tooltip: '--nodes=value slurm directive'
-                ignore: ${{ 'existing' != inputs.librechat_resource.provider }}
-                hidden: ${{ .ignore }}
-              gpus:
-                label: Number of GPUs
-                type: number
-                default: 0
-                tooltip: '--gres=gpu:value slurm directive'
-                ignore: ${{ 'existing' != inputs.librechat_resource.provider }}
-                hidden: ${{ .ignore }}
-              node_type:
-                label: Node Type
-                type: dropdown
-                optional: true
-                default: ""
-                option-key: ${{ inputs.librechat_resource.ip }}
-                tooltip: '--constraint=<value> slurm directive'
-                ignore: ${{ 'existing' != inputs.librechat_resource.provider || (inputs.librechat_resource.ip != 'blueback.navydsrc.hpc.mil' && inputs.librechat_resource.ip != 'narwhal.navydsrc.hpc.mil' && inputs.librechat_resource.ip != 'nautilus.navydsrc.hpc.mil' && inputs.librechat_resource.ip != 'raider.afrl.hpc.mil' && inputs.librechat_resource.ip != 'crux.mhpcc.hpc.mil') }}
-                hidden: ${{ .ignore }}
-                options:
-                  blueback.navydsrc.hpc.mil:
-                    - standard
-                    - bigmem
-                    - mla
-                    - viz
-                    - transfer
-                  narwhal.navydsrc.hpc.mil:
-                    - standard
-                    - bigmem
-                    - mla
-                    - smla
-                    - dmla
-                    - viz
-                    - transfer
-                  nautilus.navydsrc.hpc.mil:
-                    - standard
-                    - highclock
-                    - bigmem
-                    - mla
-                    - viz
-                    - transfer
-                  raider.afrl.hpc.mil:
-                    - standard
-                    - highclock
-                    - bigmem
-                    - mla
-                    - viz
-                    - transfer
-                  crux.mhpcc.hpc.mil:
-                    - AMD
-                    - Intel
               time:
                 label: Walltime
                 type: string
@@ -483,9 +372,6 @@ jobs:
                 hidden: true
                 default: true
                 label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
-              account:
-                label: Account
-                type: string
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
@@ -529,88 +415,12 @@ jobs:
                 hidden: true
                 default: true
                 label: Is SLURM enabled? Yes, unless the slurm section is hidden and ignored
-              account:
-                label: SLURM account
-                type: slurm-accounts
-                resource: ${{ inputs.langflow_resource }}
-                tooltip: '--account=value slurm directive'
-                ignore: ${{ 'existing' != inputs.langflow_resource.provider }}
-                hidden: ${{ .ignore }}
               partition:
                 type: slurm-partitions
                 label: SLURM partition
                 optional: true
                 resource: ${{ inputs.langflow_resource }}
                 tooltip: '--qos=partition slurm directive'
-              qos:
-                label: Quality of Service [QoS]
-                type: slurm-qos
-                resource: ${{ inputs.langflow_resource }}
-                tooltip: '--qos=value slurm directive'
-                ignore: ${{ 'existing' != inputs.langflow_resource.provider }}
-                hidden: ${{ .ignore }}
-              cpus_per_task:
-                label: CPUs per task
-                type: number
-                default: 1
-                tooltip: '--cpus-per-task= SLURM directive to set the number of CPUs per task'
-                ignore: ${{ 'existing' != inputs.langflow_resource.provider }}
-                hidden: ${{ .ignore }}
-              nodes:
-                label: Number of nodes
-                type: number
-                default: 1
-                tooltip: '--nodes=value slurm directive'
-                ignore: ${{ 'existing' != inputs.langflow_resource.provider }}
-                hidden: ${{ .ignore }}
-              gpus:
-                label: Number of GPUs
-                type: number
-                default: 0
-                tooltip: '--gres=gpu:value slurm directive'
-                ignore: ${{ 'existing' != inputs.langflow_resource.provider }}
-                hidden: ${{ .ignore }}
-              node_type:
-                label: Node Type
-                type: dropdown
-                optional: true
-                default: ""
-                option-key: ${{ inputs.langflow_resource.ip }}
-                tooltip: '--constraint=<value> slurm directive'
-                ignore: ${{ 'existing' != inputs.langflow_resource.provider || (inputs.langflow_resource.ip != 'blueback.navydsrc.hpc.mil' && inputs.langflow_resource.ip != 'narwhal.navydsrc.hpc.mil' && inputs.langflow_resource.ip != 'nautilus.navydsrc.hpc.mil' && inputs.langflow_resource.ip != 'raider.afrl.hpc.mil' && inputs.langflow_resource.ip != 'crux.mhpcc.hpc.mil') }}
-                hidden: ${{ .ignore }}
-                options:
-                  blueback.navydsrc.hpc.mil:
-                    - standard
-                    - bigmem
-                    - mla
-                    - viz
-                    - transfer
-                  narwhal.navydsrc.hpc.mil:
-                    - standard
-                    - bigmem
-                    - mla
-                    - smla
-                    - dmla
-                    - viz
-                    - transfer
-                  nautilus.navydsrc.hpc.mil:
-                    - standard
-                    - highclock
-                    - bigmem
-                    - mla
-                    - viz
-                    - transfer
-                  raider.afrl.hpc.mil:
-                    - standard
-                    - highclock
-                    - bigmem
-                    - mla
-                    - viz
-                    - transfer
-                  crux.mhpcc.hpc.mil:
-                    - AMD
-                    - Intel
               time:
                 label: Walltime
                 type: string
@@ -636,9 +446,6 @@ jobs:
                 hidden: true
                 default: true
                 label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
-              account:
-                label: Account
-                type: string
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
@@ -743,7 +550,7 @@ jobs:
             label: Import bundled test flows?
             type: boolean
             hidden: true
-            default: false
+            default: true
             tooltip: |
               When true, the test flows shipped in this repo
               (langflow-singularity/flows, e.g. pw-test-one) are imported alongside
@@ -752,7 +559,6 @@ jobs:
           proxy_dir:
             label: Langflow Proxy Path
             type: string
-            optional: true
             tooltip: |
               Path on the service host to the langflow_proxy code (the directory
               that contains the 'langflow_proxy/' Python package). Required when

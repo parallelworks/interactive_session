@@ -219,6 +219,71 @@ PYEOF
 echo "::notice::Frontend patched — binding ${SESSION_FRONTEND} → ${FRONTEND_INSIDE}"
 echo "::endgroup::"
 
+# ── Optional: auto-import bundled flows ────────────────────────────────────────
+# When the combined LibreChat + Langflow workflow ships flow JSONs alongside the
+# proxy code (${langflow_proxy_dir}/flows), bind that directory into the container
+# and let Langflow import them on startup via LANGFLOW_LOAD_FLOWS_PATH. Imported
+# flows are upserted (idempotent) and owned by the superuser, so they get a
+# non-null user_id and the proxy discovers them as selectable models.
+if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ]; then
+    # Import the user's own flows from ${langflow_proxy_dir}/flows. Optionally also import
+    # the test flows bundled in this repo (langflow-singularity/flows, e.g. pw-test-one) —
+    # only when ${langflow_import_bundled_flows} is true (on for general-all, off for hsp-all).
+    # Everything is merged into one directory so a single LANGFLOW_LOAD_FLOWS_PATH imports it;
+    # imported flows are owned by the superuser, so the proxy discovers them as models.
+    proxy_flows_import_dir="${PW_PARENT_JOB_DIR}/langflow/import-flows"
+    repo_flows_dir="${PW_PARENT_JOB_DIR}/langflow-singularity/flows"
+    mkdir -p "${proxy_flows_import_dir}"
+    [ -d "${langflow_proxy_dir}/flows" ] && cp -f "${langflow_proxy_dir}/flows/"*.json "${proxy_flows_import_dir}/" 2>/dev/null || true
+    if [ "${langflow_import_bundled_flows}" = "true" ] && [ -d "${repo_flows_dir}" ]; then
+        cp -f "${repo_flows_dir}/"*.json "${proxy_flows_import_dir}/" 2>/dev/null || true
+        echo "::notice::Importing bundled repo flows from ${repo_flows_dir}"
+    fi
+    if ls "${proxy_flows_import_dir}/"*.json >/dev/null 2>&1; then
+        EXTRA_BINDS+=(--bind "${proxy_flows_import_dir}:${proxy_flows_import_dir}")
+        EXTRA_ENVS+=(--env "LANGFLOW_LOAD_FLOWS_PATH=${proxy_flows_import_dir}")
+        EXTRA_ENVS+=(--env "LANGFLOW_LOAD_FLOWS_OVERWRITE_ON_NAME_MATCH=true")
+        echo "::notice::Auto-importing Langflow flows from ${proxy_flows_import_dir}"
+    fi
+
+    # ── ACTIVATE platform credentials for OpenAI-compatible flows ───────────────
+    # A flow whose Language Model node uses the "OpenAI Compatible API" provider
+    # reads its key from ~/.secrets/<PROVIDER>_API_KEY (OPENAI_COMPATIBLE_API_API_KEY).
+    # Publish the platform key there and bind ~/.secrets into the container so the
+    # flow can call https://${PW_PLATFORM_HOST}/api/openai/v1 with the platform key.
+    # Platform org models (org:*) also require an X-Allocation header, which the flow
+    # forwards from $PW_ALLOCATION — discover one here. No-op for the GenAI.mil flow.
+    if [ -n "${PW_API_KEY}" ]; then
+        { set +x; } 2>/dev/null   # do not trace the platform key
+        mkdir -p "${HOME}/.secrets"
+        printf '%s' "${PW_API_KEY}" > "${HOME}/.secrets/OPENAI_COMPATIBLE_API_API_KEY"
+        chmod 600 "${HOME}/.secrets/OPENAI_COMPATIBLE_API_API_KEY" 2>/dev/null || true
+        _plat="${PW_PLATFORM_HOST#https://}"
+        pw_alloc=""
+        for _try in 1 2 3; do
+            pw_alloc=$(curl -s -m 15 "https://${_plat}/api/allocations" \
+                -H "Authorization: Bearer ${PW_API_KEY}" 2>/dev/null | python3 -c '
+import sys, json
+try:
+    a = json.load(sys.stdin)
+    names = [x.get("name", "") for x in a if x.get("name")]
+    print(next((n for n in names if "LLM" in n), names[0] if names else ""))
+except Exception:
+    print("")' 2>/dev/null)
+            [ -n "${pw_alloc}" ] && break
+            sleep 3
+        done
+        set -x
+        EXTRA_BINDS+=(--bind "${HOME}/.secrets:${HOME}/.secrets")
+        if [ -n "${pw_alloc}" ]; then
+            EXTRA_ENVS+=(--env "PW_ALLOCATION=${pw_alloc}")
+            echo "::notice::Platform X-Allocation for org models: ${pw_alloc}"
+        else
+            echo "::notice::No platform allocation discovered (org models may need X-Allocation)"
+        fi
+    fi
+fi
+
 # ── Start Langflow ─────────────────────────────────────────────────────────────
 echo "::group::Starting Langflow"
 echo "::notice::Port: ${service_port}"
@@ -262,5 +327,95 @@ echo "kill ${logs_pid} #langflow-logs" >> cancel.sh
 echo "::endgroup::"
 
 echo "::notice::Langflow → http://localhost:${service_port}"
+
+# ── Optional: OpenAI-compatible Langflow proxy ──────────────────────────────────
+# When ${langflow_proxy_dir} is set, launch the proxy co-located with Langflow so a
+# LibreChat user can pick each Langflow flow as a model. The proxy reads the
+# Langflow DB directly (flow discovery) and forwards chat turns to Langflow's run
+# API on localhost. Auth, when LANGFLOW_API_KEY is set, is shared with LibreChat.
+#
+# If the proxy is enabled, it MUST be launchable here — otherwise LANGFLOW_PROXY_PORT is
+# never published and LibreChat waits forever. The controller already fails fast on a
+# missing proxy dir; re-check (defense in depth) and error rather than silently skip.
+if [ "${langflow_enable_proxy}" = "true" ] && { [ -z "${langflow_proxy_dir}" ] || [ ! -d "${langflow_proxy_dir}/langflow_proxy" ]; }; then
+    echo "::error title=Langflow proxy code not found::'Start Langflow Proxy?' is enabled but the langflow_proxy package was not found at Langflow Proxy Path '${langflow_proxy_dir:-<empty>}' on the Langflow host ($(hostname)). Stage the proxy code there, or disable the proxy."
+    exit 1
+fi
+if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ] && [ -d "${langflow_proxy_dir}/langflow_proxy" ]; then
+    echo "::group::Starting Langflow proxy"
+    proxy_venv="${service_parent_install_dir}/tools/langflow_proxy_venv"
+    # Allocate a port dynamically and publish it to the shared job dir so the
+    # (parallel) LibreChat job can read it and register the proxy endpoint.
+    proxy_port=$(pw agent open-port)
+    [ -n "${proxy_port}" ] && echo "${proxy_port}" > "${PW_PARENT_JOB_DIR}/LANGFLOW_PROXY_PORT"
+    echo "::notice::Langflow proxy port ${proxy_port} → ${PW_PARENT_JOB_DIR}/LANGFLOW_PROXY_PORT"
+
+    # Resolve the Langflow DB file the proxy queries for flows. SQLAlchemy URLs use
+    # four slashes for an absolute path (sqlite:////abs/x.db → /abs/x.db); strip the
+    # sqlite:/// prefix exactly as the proxy's own DB layer does.
+    if [[ "${service_langflow_database_url}" == sqlite:///* ]]; then
+        proxy_db_path="${service_langflow_database_url#sqlite:///}"   # sqlite:////abs → /abs
+        case "${proxy_db_path}" in /*) : ;; *) proxy_db_path="/${proxy_db_path}" ;; esac
+        # Collapse duplicate slashes: the default URL sqlite:////${HOME}/... yields
+        # //home/... (${HOME} already starts with /), and sqlite3's file: URI would
+        # otherwise read the first path segment ("home") as an authority and fail.
+        proxy_db_path=$(printf '%s' "${proxy_db_path}" | sed 's#/\{2,\}#/#g')
+    else
+        proxy_db_path="${LANGFLOW_CONFIG_DIR}/langflow.db"
+    fi
+
+    proxy_config="${PW_PARENT_JOB_DIR}/langflow/proxy-config.yaml"
+
+    # Optional API-key auth, shared with the LibreChat endpoint via LANGFLOW_API_KEY.
+    proxy_api_key_line=""
+    if [ -n "${LANGFLOW_API_KEY}" ]; then
+        proxy_key_file="${PW_PARENT_JOB_DIR}/langflow/.proxy_api_key"
+        printf '%s' "${LANGFLOW_API_KEY}" > "${proxy_key_file}"
+        chmod 600 "${proxy_key_file}" || true
+        proxy_api_key_line="  api_key_file: \"${proxy_key_file}\""
+    fi
+
+    cat > "${proxy_config}" <<PROXYCFG
+proxy:
+  host: 0.0.0.0
+  port: ${proxy_port}
+${proxy_api_key_line}
+langflow:
+  host: 127.0.0.1
+  port: ${service_port}
+  database_path: "${proxy_db_path}"
+PROXYCFG
+
+    # Append an optional user-provided top-level `flows:` block (per-flow model
+    # routing). Looked up at ${langflow_proxy_flows_file} first, else flows.yaml
+    # next to the proxy code. Without it, every flow is exposed with defaults.
+    proxy_flows_file=""
+    if [ -n "${langflow_proxy_flows_file}" ] && [ -s "${langflow_proxy_flows_file}" ]; then
+        proxy_flows_file="${langflow_proxy_flows_file}"
+    elif [ -s "${langflow_proxy_dir}/flows.yaml" ]; then
+        proxy_flows_file="${langflow_proxy_dir}/flows.yaml"
+    fi
+    [ -n "${proxy_flows_file}" ] && cat "${proxy_flows_file}" >> "${proxy_config}"
+
+    if [ -x "${proxy_venv}/bin/python" ]; then
+        # Launch uvicorn directly (not bin/langflow_proxy) so a not-yet-created
+        # Langflow DB doesn't trip the strict pre-flight validator; the proxy
+        # discovers flows lazily and re-reads its config on every request.
+        APP_CONFIG_PATH="${proxy_config}" \
+        PYTHONPATH="${langflow_proxy_dir}:${PYTHONPATH:-}" \
+        "${proxy_venv}/bin/python" -m uvicorn langflow_proxy.main:app \
+            --host 0.0.0.0 --port "${proxy_port}" \
+            > langflow-proxy.log 2>&1 &
+        proxy_pid=$!
+        echo "kill ${proxy_pid} #langflow-proxy" >> cancel.sh
+        echo "::notice::Langflow proxy → http://localhost:${proxy_port}/v1 (pid ${proxy_pid})"
+        tail -f langflow-proxy.log &
+        echo "kill $! #langflow-proxy-logs" >> cancel.sh
+    else
+        echo "::error title=Langflow proxy venv missing::Proxy venv not found at ${proxy_venv} (controller did not build it). Cannot start the proxy that 'Start Langflow Proxy?' requires."
+        exit 1
+    fi
+    echo "::endgroup::"
+fi
 
 sleep inf

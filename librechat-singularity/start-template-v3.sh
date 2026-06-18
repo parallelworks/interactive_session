@@ -139,6 +139,54 @@ export service_port=${service_port}
 export basepath="${basepath:-}"
 ENVEOF
 
+# ── Reach the Langflow proxy (cross-node / cross-cluster) ─────────────────────
+# The OpenAI-compatible Langflow proxy binds 0.0.0.0:<port> on whichever node the
+# Langflow job runs on, and librechat.yaml points at http://localhost:<port>/v1.
+# Unless that proxy is already on THIS login node we bridge it here with `pw forward`
+# so the localhost endpoint keeps resolving (the LibreChat container shares the host
+# network namespace, so it reaches the listener). pw forward auto-reconnects.
+#
+# Crucially, the proxy is NOT always on its resource's login node: when the Langflow
+# job is scheduled to a partition it runs on a *compute* node. session_runner records
+# the node in the Langflow job's HOSTNAME file (`localhost` for a login node, else the
+# compute node's hostname). We forward to that host *through* the Langflow resource's
+# login node, so `pw forward -L <port>:<LF_HOST>:<port> <langflow_resource>` works for
+# both login-node (LF_HOST=localhost) and compute-node (LF_HOST=<compute>) proxies.
+# HOSTNAME lives on the Langflow host's filesystem: read it locally when Langflow shares
+# this resource, or over `pw ssh` when it is on another cluster.
+_lf_port_file="${PW_PARENT_JOB_DIR}/LANGFLOW_PROXY_PORT"
+_lf_host_file="${PW_PARENT_JOB_DIR}/LANGFLOW_PROXY_HOST"
+if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ] \
+   && [ -n "${langflow_resource_name}" ] && [ -s "${_lf_port_file}" ]; then
+    LF_PROXY_PORT=$(tr -d '[:space:]' < "${_lf_port_file}")
+    # Langflow's real node name, mirrored by the controller after it confirmed the proxy
+    # is up (so there is no race and no second cross-host query here).
+    _proxy_node=$(tr -d '[:space:]' < "${_lf_host_file}" 2>/dev/null)
+    # Forward target (the host the Langflow resource's login node connects to):
+    #   - Langflow NOT scheduled → proxy is on the login node → reach it via that login
+    #     node's "localhost" (a login-node service is only reachable this way, not by its
+    #     external hostname).
+    #   - Langflow scheduled to a partition → proxy is on a *compute* node → reach it by
+    #     that node's name.
+    if [ "${langflow_scheduler}" = "true" ]; then
+        LF_HOST="${_proxy_node:-localhost}"
+    else
+        LF_HOST="localhost"
+    fi
+    # Skip only when the proxy is on THIS very node (Langflow co-located here): localhost
+    # already reaches its 0.0.0.0 bind and a forward would clash with the proxy's own port.
+    _my_host=$(hostname 2>/dev/null); _my_short=$(hostname -s 2>/dev/null || echo "${_my_host}")
+    if [ -n "${LF_PROXY_PORT}" ] \
+       && [ "${_proxy_node}" != "${_my_host}" ] && [ "${_proxy_node}" != "${_my_short}" ]; then
+        echo "::notice::Forwarding Langflow proxy: localhost:${LF_PROXY_PORT} -> ${langflow_resource_name} (${LF_HOST}):${LF_PROXY_PORT}"
+        pw forward -L "${LF_PROXY_PORT}:${LF_HOST}:${LF_PROXY_PORT}" "${langflow_resource_name}" \
+            > "$LOG_DIR/langflow-proxy-forward.log" 2>&1 &
+        echo "kill $! #langflow-proxy-forward" >> ./cancel.sh
+    else
+        echo "::notice::Langflow proxy is co-located on this node (localhost:${LF_PROXY_PORT}) — no forward needed"
+    fi
+fi
+
 # ── Start services ────────────────────────────────────────────────────────────
 
 echo "::group::Starting services"

@@ -16,7 +16,7 @@ set -x
 #   - service_langflow_data_dir:  Langflow data dir (default: ${HOME}/pw/.langflow)
 ################################################################################
 
-source tools/oras/libs.sh
+source ${PW_PARENT_JOB_DIR}/tools/oras/libs.sh
 
 mkdir -p "${service_parent_install_dir}" || true
 if [ -n "${service_parent_install_dir}" ]; then
@@ -58,3 +58,39 @@ if ! [ -d "${container_dir}" ]; then
 fi
 
 echo "::notice::Langflow container ready at ${container_dir}"
+
+# ── Optional: Langflow proxy Python environment ────────────────────────────────
+# When ${langflow_proxy_dir} is set (combined LibreChat + Langflow workflow), build
+# a venv with the proxy's dependencies so the start script can launch the
+# OpenAI-compatible proxy alongside Langflow. The proxy CODE lives at
+# ${langflow_proxy_dir} and is intentionally NOT shipped in this repo.
+if [ "${langflow_enable_proxy}" = "true" ]; then
+    # The proxy is enabled, so a valid proxy code directory is REQUIRED on this (Langflow)
+    # host. The proxy CODE is intentionally NOT shipped in this repo — it must be staged on
+    # the Langflow host at ${langflow_proxy_dir}. Fail loudly here rather than silently
+    # skipping the proxy: a skipped proxy never publishes LANGFLOW_PROXY_PORT, which would
+    # leave LibreChat waiting indefinitely for an endpoint that never appears. Because this
+    # controller exits non-zero, the Langflow job fails and `early-cancel: any-job-failed`
+    # tears the LibreChat job down too — no hang.
+    if [ -z "${langflow_proxy_dir}" ]; then
+        echo "::error title=Langflow proxy not configured::'Start Langflow Proxy?' is enabled but no 'Langflow Proxy Path' was provided. Set it to the langflow_proxy code directory on the Langflow host ($(hostname)), or disable the proxy."
+        exit 1
+    fi
+    if [ ! -d "${langflow_proxy_dir}/langflow_proxy" ]; then
+        echo "::error title=Langflow proxy code not found::'Langflow Proxy Path' = '${langflow_proxy_dir}' has no 'langflow_proxy/' package on the Langflow host ($(hostname)). Stage the langflow_proxy code there (it is not shipped in this repo; remember each cluster has its own filesystem), or disable the proxy."
+        exit 1
+    fi
+    proxy_venv="${service_parent_install_dir}/tools/langflow_proxy_venv"
+    if [ ! -x "${proxy_venv}/bin/python" ]; then
+        echo "::group::Langflow proxy venv setup"
+        python3 -m venv "${proxy_venv}"
+        # requirements.txt is an editable self-install (-e .) which needs write
+        # access to the code dir; install the declared deps directly instead.
+        "${proxy_venv}/bin/pip" install --quiet --upgrade pip
+        "${proxy_venv}/bin/pip" install --quiet fastapi uvicorn pydantic aiohttp pyyaml
+        # Make the venv usable by any user (shared install under service_parent_install_dir).
+        chmod -R a+rX "${proxy_venv}" || true
+        echo "::endgroup::"
+    fi
+    echo "::notice::Langflow proxy venv ready at ${proxy_venv}"
+fi

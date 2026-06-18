@@ -16,7 +16,7 @@ set -x
 #   - service_langflow_data_dir:  Langflow data dir (default: ${HOME}/pw/.langflow)
 ################################################################################
 
-source ${${PW_PARENT_JOB_DIR}}/tools/oras/libs.sh
+source ${PW_PARENT_JOB_DIR}/tools/oras/libs.sh
 
 mkdir -p "${service_parent_install_dir}" || true
 if [ -n "${service_parent_install_dir}" ]; then

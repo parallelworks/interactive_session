@@ -31,7 +31,7 @@ jobs:
           repo: https://github.com/parallelworks/interactive_session.git
           # Dev branch carrying the Langflow-proxy scripts. Flip back to `main`
           # once librechat-all is merged.
-          branch: librechat-all-v4
+          branch: librechat-all-v5
           sparse_checkout:
             - ${{ inputs.container_runtime }}
             - tools/oras
@@ -46,7 +46,7 @@ jobs:
           repo: https://github.com/parallelworks/interactive_session.git
           # Dev branch carrying the Langflow-proxy scripts. Flip back to `main`
           # once librechat-all is merged.
-          branch: librechat-all-v4
+          branch: librechat-all-v5
           sparse_checkout:
             - ${{ inputs.container_runtime }}
             - tools/oras
@@ -60,7 +60,7 @@ jobs:
           repo: https://github.com/parallelworks/interactive_session.git
           # Dev branch carrying the Langflow-proxy scripts. Flip back to `main`
           # once librechat-all is merged.
-          branch: librechat-all-v4
+          branch: librechat-all-v5
           sparse_checkout:
             - tools/oras
             - langflow-singularity

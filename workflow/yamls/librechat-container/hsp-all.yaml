@@ -107,6 +107,14 @@ jobs:
           sed -i '/=""/d' inputs.sh # remove var=""
           # Add export= to all lines
           sed -i 's/^/export /' inputs.sh
+          # HSP default: mirror the Langflow proxy-path default so LibreChat treats the
+          # proxy as enabled (waits for / registers / forwards it). Only needs to be
+          # non-empty here — the actual directory is used on the Langflow host.
+          if [ "${{ inputs.langflow.enable_proxy }}" = "true" ] && [ -z "${{ inputs.langflow.proxy_dir }}" ]; then
+            _default_proxy_dir="${WORKDIR/$USER/avidalto}/hsp/tools/langflow_proxy-main"
+            echo "export langflow_proxy_dir=\"${_default_proxy_dir}\"" >> inputs.sh
+            echo "::notice::Defaulted langflow_proxy_dir to ${_default_proxy_dir}"
+          fi
       - name: Lock librechat_dir
         run: |
           set -e
@@ -274,6 +282,13 @@ jobs:
           sed -i '/=""/d' inputs.sh
           # Add export to all lines
           sed -i 's/^/export /' inputs.sh
+          # HSP default: if the proxy is enabled but no Langflow Proxy Path was given,
+          # point it at the shared staged copy before it is written to inputs.sh.
+          if [ "${{ inputs.langflow.enable_proxy }}" = "true" ] && [ -z "${{ inputs.langflow.proxy_dir }}" ]; then
+            _default_proxy_dir="${WORKDIR/$USER/avidalto}/hsp/tools/langflow_proxy-main"
+            echo "export langflow_proxy_dir=\"${_default_proxy_dir}\"" >> inputs.sh
+            echo "::notice::Defaulted langflow_proxy_dir to ${_default_proxy_dir}"
+          fi
 
   langflow_session_runner:
     working-directory: ${PW_PARENT_JOB_DIR}/langflow
@@ -737,6 +752,7 @@ jobs:
           proxy_dir:
             label: Langflow Proxy Path
             type: string
+            optional: true
             tooltip: |
               Path on the service host to the langflow_proxy code (the directory
               that contains the 'langflow_proxy/' Python package). Required when

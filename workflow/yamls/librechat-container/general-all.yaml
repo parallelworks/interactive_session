@@ -99,6 +99,7 @@ jobs:
           langflow_resource_name="${{ inputs.langflow_resource.name }}"
           librechat_resource_name="${{ inputs.librechat_resource.name }}"
           langflow_same_host="${{ inputs.librechat_resource.ip == inputs.langflow_resource.ip }}"
+          langflow_scheduler="${{ inputs.langflow_cluster.scheduler }}"
           EOF
           echo basepath=${basepath} >> inputs.sh
           echo password=${password} >> inputs.sh

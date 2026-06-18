@@ -159,25 +159,37 @@ _lf_hostname_file="${PW_PARENT_JOB_DIR}/langflow/HOSTNAME"
 if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ] \
    && [ -n "${langflow_resource_name}" ] && [ -s "${_lf_port_file}" ]; then
     LF_PROXY_PORT=$(tr -d '[:space:]' < "${_lf_port_file}")
-    if [ "${langflow_same_host}" = "true" ]; then
-        LF_HOST=$(tr -d '[:space:]' < "${_lf_hostname_file}" 2>/dev/null)
+    # The forward target (the host the Langflow resource's login node connects to):
+    #   - Langflow NOT scheduled → proxy is on the login node → reach it via that login
+    #     node's "localhost" (a login-node service is only reachable this way, not by its
+    #     external hostname).
+    #   - Langflow scheduled to a partition → proxy is on a *compute* node → reach it by the
+    #     node name session_runner recorded in the Langflow job's HOSTNAME file (read locally
+    #     when Langflow shares this resource, else over pw ssh on the other cluster).
+    if [ "${langflow_scheduler}" = "true" ]; then
+        if [ "${langflow_same_host}" = "true" ]; then
+            LF_HOST=$(tr -d '[:space:]' < "${_lf_hostname_file}" 2>/dev/null)
+        else
+            LF_HOST=$(pw ssh "${langflow_resource_name}" "cat '${_lf_hostname_file}' 2>/dev/null" 2>/dev/null | tr -d '[:space:]')
+        fi
+        LF_HOST="${LF_HOST:-localhost}"
     else
-        LF_HOST=$(pw ssh "${langflow_resource_name}" "cat '${_lf_hostname_file}' 2>/dev/null" 2>/dev/null | tr -d '[:space:]')
+        LF_HOST="localhost"
     fi
-    LF_HOST="${LF_HOST:-localhost}"
-    # Skip the forward only when the proxy is on THIS very node (Langflow co-located on
-    # the same login/compute node) — there localhost already reaches its 0.0.0.0 bind, and
-    # a forward would clash with the proxy's own port. HOSTNAME holds the real node name
-    # (not literally "localhost"), so compare against this node's hostname.
+    # Skip only when the proxy is on THIS very node (Langflow co-located here): localhost
+    # already reaches its 0.0.0.0 bind and a forward would clash with the proxy's port.
+    # That happens only when Langflow shares this resource and lands on this node.
+    _proxy_node=""
+    [ "${langflow_same_host}" = "true" ] && _proxy_node=$(tr -d '[:space:]' < "${_lf_hostname_file}" 2>/dev/null)
     _my_host=$(hostname 2>/dev/null); _my_short=$(hostname -s 2>/dev/null || echo "${_my_host}")
     if [ -n "${LF_PROXY_PORT}" ] \
-       && [ "${LF_HOST}" != "localhost" ] && [ "${LF_HOST}" != "${_my_host}" ] && [ "${LF_HOST}" != "${_my_short}" ]; then
+       && ! { [ "${langflow_same_host}" = "true" ] && { [ "${_proxy_node}" = "${_my_host}" ] || [ "${_proxy_node}" = "${_my_short}" ]; }; }; then
         echo "::notice::Forwarding Langflow proxy: localhost:${LF_PROXY_PORT} -> ${langflow_resource_name} (${LF_HOST}):${LF_PROXY_PORT}"
         pw forward -L "${LF_PROXY_PORT}:${LF_HOST}:${LF_PROXY_PORT}" "${langflow_resource_name}" \
             > "$LOG_DIR/langflow-proxy-forward.log" 2>&1 &
         echo "kill $! #langflow-proxy-forward" >> ./cancel.sh
     else
-        echo "::notice::Langflow proxy is on this node (${LF_HOST}:${LF_PROXY_PORT}) — no forward needed"
+        echo "::notice::Langflow proxy is co-located on this node (localhost:${LF_PROXY_PORT}) — no forward needed"
     fi
 fi
 

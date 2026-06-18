@@ -150,17 +150,32 @@ echo "::notice::LibreChat YAML config written to $DIR/librechat.yaml"
 # Only effective when LibreChat uses this generated config (librechat_config unset).
 if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ]; then
     # The proxy port is allocated by the (parallel) Langflow job and published to
-    # ${PW_PARENT_JOB_DIR}/LANGFLOW_PROXY_PORT. Wait for it (bounded) before writing
-    # the endpoint; skip gracefully if it never appears so LibreChat still starts.
+    # ${PW_PARENT_JOB_DIR}/LANGFLOW_PROXY_PORT on the *Langflow* host. When Langflow
+    # shares this host (langflow_same_host=true) we read it from the local, shared
+    # job dir. When Langflow runs on a different resource we fetch it over
+    # `pw ssh <langflow_resource>` — the parent job dir path is identical on both
+    # hosts (same user/home/run). Either way we mirror the value to the local job
+    # dir so the start script can `pw forward` the port. Bounded wait; skip
+    # gracefully if it never appears so LibreChat still starts.
     _port_file="${PW_PARENT_JOB_DIR}/LANGFLOW_PROXY_PORT"
     _retries=40
-    while [ ! -s "${_port_file}" ] && [ "${_retries}" -gt 0 ]; do
-        echo "::notice::Waiting for Langflow proxy port (${_port_file}) — retries left: ${_retries}"
-        sleep 15
-        _retries=$(( _retries - 1 ))
+    langflow_proxy_port=""
+    while [ -z "${langflow_proxy_port}" ] && [ "${_retries}" -gt 0 ]; do
+        if [ "${langflow_same_host}" = "true" ] || [ -z "${langflow_resource_name}" ]; then
+            [ -s "${_port_file}" ] && langflow_proxy_port=$(tr -d '[:space:]' < "${_port_file}")
+        else
+            langflow_proxy_port=$(pw ssh "${langflow_resource_name}" "cat '${_port_file}' 2>/dev/null" 2>/dev/null | tr -d '[:space:]')
+        fi
+        if [ -z "${langflow_proxy_port}" ]; then
+            echo "::notice::Waiting for Langflow proxy port (host=${langflow_resource_name:-local}) — retries left: ${_retries}"
+            sleep 15
+            _retries=$(( _retries - 1 ))
+        fi
     done
-    if [ -s "${_port_file}" ]; then
-        langflow_proxy_port=$(tr -d '[:space:]' < "${_port_file}")
+    if [ -n "${langflow_proxy_port}" ]; then
+        # Mirror the port to the local job dir so the start script's pw forward
+        # (cross-host case) can read it without another pw ssh round-trip.
+        echo "${langflow_proxy_port}" > "${_port_file}"
         if [ -n "${LANGFLOW_API_KEY}" ]; then
             _upsert LANGFLOW_API_KEY "${LANGFLOW_API_KEY}" "$DIR/.env"
             _proxy_api_key='${LANGFLOW_API_KEY}'   # resolved from .env by LibreChat at runtime
@@ -180,6 +195,6 @@ if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ]; th
 YAML_EOF
         echo "::notice::Added Langflow proxy endpoint (http://localhost:${langflow_proxy_port}/v1) to librechat.yaml"
     else
-        echo "::warning::Langflow proxy port not found at ${_port_file} after waiting — LibreChat will start without the Langflow endpoint."
+        echo "::warning::Langflow proxy port not found (host=${langflow_resource_name:-local}) after waiting — LibreChat will start without the Langflow endpoint."
     fi
 fi

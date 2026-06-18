@@ -96,6 +96,9 @@ jobs:
           librechat_config="${{ inputs.librechat.config }}"
           langflow_enable_proxy="${{ inputs.langflow.enable_proxy }}"
           langflow_proxy_dir="${{ inputs.langflow.proxy_dir }}"
+          langflow_resource_name="${{ inputs.langflow_resource.name }}"
+          librechat_resource_name="${{ inputs.librechat_resource.name }}"
+          langflow_same_host="${{ inputs.librechat_resource.ip == inputs.langflow_resource.ip }}"
           EOF
           echo basepath=${basepath} >> inputs.sh
           echo password=${password} >> inputs.sh

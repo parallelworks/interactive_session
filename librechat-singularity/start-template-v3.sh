@@ -139,6 +139,28 @@ export service_port=${service_port}
 export basepath="${basepath:-}"
 ENVEOF
 
+# ── Forward the Langflow proxy port (cross-host setup) ────────────────────────
+# When Langflow runs on a *different* resource than LibreChat, the OpenAI-compatible
+# Langflow proxy is not on this node's localhost. The controller already fetched the
+# proxy port (over pw ssh) and mirrored it to ${PW_PARENT_JOB_DIR}/LANGFLOW_PROXY_PORT.
+# Use `pw forward` to expose <langflow_resource>:<port> at this node's localhost:<port>
+# so the librechat.yaml endpoint (http://localhost:<port>/v1) keeps resolving — the
+# LibreChat container shares the host network namespace, so it reaches this listener.
+# pw forward auto-reconnects, which suits a long-lived tunnel. When Langflow shares
+# this host no forward is needed (the proxy is already on localhost).
+_lf_port_file="${PW_PARENT_JOB_DIR}/LANGFLOW_PROXY_PORT"
+if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ] \
+   && [ "${langflow_same_host}" != "true" ] && [ -n "${langflow_resource_name}" ] \
+   && [ -s "${_lf_port_file}" ]; then
+    LF_PROXY_PORT=$(tr -d '[:space:]' < "${_lf_port_file}")
+    if [ -n "${LF_PROXY_PORT}" ]; then
+        echo "::notice::Forwarding Langflow proxy: localhost:${LF_PROXY_PORT} -> ${langflow_resource_name}:${LF_PROXY_PORT}"
+        pw forward -L "${LF_PROXY_PORT}:localhost:${LF_PROXY_PORT}" "${langflow_resource_name}" \
+            > "$LOG_DIR/langflow-proxy-forward.log" 2>&1 &
+        echo "kill $! #langflow-proxy-forward" >> ./cancel.sh
+    fi
+fi
+
 # ── Start services ────────────────────────────────────────────────────────────
 
 echo "::group::Starting services"

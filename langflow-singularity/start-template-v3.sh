@@ -225,12 +225,54 @@ echo "::endgroup::"
 # and let Langflow import them on startup via LANGFLOW_LOAD_FLOWS_PATH. Imported
 # flows are upserted (idempotent) and owned by the superuser, so they get a
 # non-null user_id and the proxy discovers them as selectable models.
-if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ] && [ -d "${langflow_proxy_dir}/flows" ]; then
-    proxy_flows_import_dir="${langflow_proxy_dir}/flows"
-    EXTRA_BINDS+=(--bind "${proxy_flows_import_dir}:${proxy_flows_import_dir}")
-    EXTRA_ENVS+=(--env "LANGFLOW_LOAD_FLOWS_PATH=${proxy_flows_import_dir}")
-    EXTRA_ENVS+=(--env "LANGFLOW_LOAD_FLOWS_OVERWRITE_ON_NAME_MATCH=true")
-    echo "::notice::Auto-importing Langflow flows from ${proxy_flows_import_dir}"
+if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ]; then
+    # Merge flow JSONs from the proxy dir and from the repo's langflow-singularity/flows
+    # (e.g. the ACTIVATE test flow shipped with this workflow) into a single import
+    # directory so one LANGFLOW_LOAD_FLOWS_PATH imports both sets. Imported flows are
+    # owned by the superuser, so the proxy discovers them as selectable models.
+    proxy_flows_import_dir="${PW_PARENT_JOB_DIR}/langflow/import-flows"
+    repo_flows_dir="${PW_PARENT_JOB_DIR}/langflow-singularity/flows"
+    mkdir -p "${proxy_flows_import_dir}"
+    [ -d "${langflow_proxy_dir}/flows" ] && cp -f "${langflow_proxy_dir}/flows/"*.json "${proxy_flows_import_dir}/" 2>/dev/null || true
+    [ -d "${repo_flows_dir}" ]           && cp -f "${repo_flows_dir}/"*.json           "${proxy_flows_import_dir}/" 2>/dev/null || true
+    if ls "${proxy_flows_import_dir}/"*.json >/dev/null 2>&1; then
+        EXTRA_BINDS+=(--bind "${proxy_flows_import_dir}:${proxy_flows_import_dir}")
+        EXTRA_ENVS+=(--env "LANGFLOW_LOAD_FLOWS_PATH=${proxy_flows_import_dir}")
+        EXTRA_ENVS+=(--env "LANGFLOW_LOAD_FLOWS_OVERWRITE_ON_NAME_MATCH=true")
+        echo "::notice::Auto-importing Langflow flows from ${proxy_flows_import_dir}"
+    fi
+
+    # ── ACTIVATE platform credentials for OpenAI-compatible flows ───────────────
+    # A flow whose Language Model node uses the "OpenAI Compatible API" provider
+    # reads its key from ~/.secrets/<PROVIDER>_API_KEY (OPENAI_COMPATIBLE_API_API_KEY).
+    # Publish the platform key there and bind ~/.secrets into the container so the
+    # flow can call https://${PW_PLATFORM_HOST}/api/openai/v1 with the platform key.
+    # Platform org models (org:*) also require an X-Allocation header, which the flow
+    # forwards from $PW_ALLOCATION — discover one here. No-op for the GenAI.mil flow.
+    if [ -n "${PW_API_KEY}" ]; then
+        { set +x; } 2>/dev/null   # do not trace the platform key
+        mkdir -p "${HOME}/.secrets"
+        printf '%s' "${PW_API_KEY}" > "${HOME}/.secrets/OPENAI_COMPATIBLE_API_API_KEY"
+        chmod 600 "${HOME}/.secrets/OPENAI_COMPATIBLE_API_API_KEY" 2>/dev/null || true
+        _plat="${PW_PLATFORM_HOST#https://}"
+        pw_alloc=$(curl -s -m 10 "https://${_plat}/api/allocations" \
+            -H "Authorization: Bearer ${PW_API_KEY}" 2>/dev/null | python3 -c '
+import sys, json
+try:
+    a = json.load(sys.stdin)
+    names = [x.get("name", "") for x in a if x.get("name")]
+    print(next((n for n in names if "LLM" in n), names[0] if names else ""))
+except Exception:
+    print("")' 2>/dev/null)
+        set -x
+        EXTRA_BINDS+=(--bind "${HOME}/.secrets:${HOME}/.secrets")
+        if [ -n "${pw_alloc}" ]; then
+            EXTRA_ENVS+=(--env "PW_ALLOCATION=${pw_alloc}")
+            echo "::notice::Platform X-Allocation for org models: ${pw_alloc}"
+        else
+            echo "::notice::No platform allocation discovered (org models may need X-Allocation)"
+        fi
+    fi
 fi
 
 # ── Start Langflow ─────────────────────────────────────────────────────────────

@@ -255,8 +255,10 @@ if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ]; th
         printf '%s' "${PW_API_KEY}" > "${HOME}/.secrets/OPENAI_COMPATIBLE_API_API_KEY"
         chmod 600 "${HOME}/.secrets/OPENAI_COMPATIBLE_API_API_KEY" 2>/dev/null || true
         _plat="${PW_PLATFORM_HOST#https://}"
-        pw_alloc=$(curl -s -m 10 "https://${_plat}/api/allocations" \
-            -H "Authorization: Bearer ${PW_API_KEY}" 2>/dev/null | python3 -c '
+        pw_alloc=""
+        for _try in 1 2 3; do
+            pw_alloc=$(curl -s -m 15 "https://${_plat}/api/allocations" \
+                -H "Authorization: Bearer ${PW_API_KEY}" 2>/dev/null | python3 -c '
 import sys, json
 try:
     a = json.load(sys.stdin)
@@ -264,6 +266,9 @@ try:
     print(next((n for n in names if "LLM" in n), names[0] if names else ""))
 except Exception:
     print("")' 2>/dev/null)
+            [ -n "${pw_alloc}" ] && break
+            sleep 3
+        done
         set -x
         EXTRA_BINDS+=(--bind "${HOME}/.secrets:${HOME}/.secrets")
         if [ -n "${pw_alloc}" ]; then

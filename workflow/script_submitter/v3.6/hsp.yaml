@@ -340,12 +340,35 @@ jobs:
               export job_status=$(echo ${status_response} | awk -v id="${jobid}" -v col="$status_column" '{print $col}')
           }
 
+          # A transient squeue/slurmctld failure (e.g. "slurm_load_jobs error:
+          # Socket timed out on send/recv operation") returns no rows, which is
+          # indistinguishable from the job having ended. Treating it as an exit
+          # fires the cleanup scancel and kills a still-running session, so
+          # confirm a terminal state with sacct before tearing the session down.
+          missing_polls=0
+          max_missing_polls=3
           while true; do
             sleep 15
             get_slurm_job_status
-            if [ -z "${job_status}" ]; then
-              job_status=$(sacct -j ${jobid}  --format=state | tail -n1)
-              echo "::notice::Job exited with status ${job_status}"
+            if [ -n "${job_status}" ]; then
+              missing_polls=0
+              continue
+            fi
+            sacct_state=$(sacct -n -X -j ${jobid} --format=state 2>/dev/null | head -n1 | tr -d ' ')
+            case "${sacct_state}" in
+              RUNNING|PENDING|REQUEUED|RESIZING|SUSPENDED|COMPLETING|CONFIGURING)
+                missing_polls=0
+                continue
+                ;;
+              ?*)
+                echo "::notice::Job exited with status ${sacct_state}"
+                exit 0
+                ;;
+            esac
+            missing_polls=$((missing_polls + 1))
+            echo "::warning::Job ${jobid} missing from squeue and sacct state unavailable (${missing_polls}/${max_missing_polls}); retrying"
+            if [ "${missing_polls}" -ge "${max_missing_polls}" ]; then
+              echo "::notice::Job exited with status ${sacct_state:-UNKNOWN}"
               exit 0
             fi
           done

@@ -270,10 +270,7 @@ jobs:
               export job_status=$(echo ${status_response} | awk -v id="${jobid}" -v col="$status_column" '{print $col}')
           }
 
-          # Don't mistake a transient scheduler failure for the job ending: an
-          # empty squeue (e.g. "slurm_load_jobs error: Socket timed out") would
-          # otherwise fire the cleanup scancel and kill a live session. Trust
-          # squeue's exit code and sacct as the authority before tearing down.
+          # An empty squeue can be a transient slurmctld failure, not job exit; confirm via sacct before cleanup scancels a live session.
           missing_polls=0
           max_missing_polls=3
           while true; do
@@ -290,7 +287,6 @@ jobs:
                 break
                 ;;
               ?*)
-                # Non-terminal or unrecognized state: the job is still alive.
                 missing_polls=0
                 continue
                 ;;

@@ -87,7 +87,10 @@ fi
 
 if [ -n "${resource_uri:-}" ]; then
     if [ "${scheduler:-false}" = "true" ] && [ -n "${LIBRECHAT_HOSTNAME:-}" ]; then
-        LIBRECHAT_SSH="pw ssh ${resource_uri} ssh ${LIBRECHAT_HOSTNAME}"
+        # Inner `ssh <compute-node>` runs with no TTY, so it can't answer a host-key
+        # prompt; skip the check and send known_hosts to /dev/null so it works on nodes
+        # not yet trusted without writing any persistent file on the cluster.
+        LIBRECHAT_SSH="pw ssh ${resource_uri} ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${LIBRECHAT_HOSTNAME}"
     else
         LIBRECHAT_SSH="pw ssh ${resource_uri}"
     fi

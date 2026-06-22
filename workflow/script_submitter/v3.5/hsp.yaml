@@ -266,18 +266,43 @@ jobs:
                   export SQUEUE_HEADER="$(eval squeue | awk 'NR==1')"
               fi
               status_column=$(echo "${SQUEUE_HEADER}" | awk '{ for (i=1; i<=NF; i++) if ($i ~ /^S/) { print i; exit } }')
-              status_response=$(eval squeue | awk -v jobid="${jobid}" '$1 == jobid')
+              squeue_output=$(eval squeue)
+              export squeue_rc=$?
+              status_response=$(echo "${squeue_output}" | awk -v jobid="${jobid}" '$1 == jobid')
               echo "${SQUEUE_HEADER}"
               echo "${status_response}"
               export job_status=$(echo ${status_response} | awk -v id="${jobid}" -v col="$status_column" '{print $col}')
           }
 
+          # An empty squeue can be a transient slurmctld failure, not job exit; confirm via sacct before cleanup scancels a live session.
+          missing_polls=0
+          max_missing_polls=3
           while true; do
             sleep 15
             get_slurm_job_status
-            if [ -z "${job_status}" ]; then
-              job_status=$(sacct -j ${jobid}  --format=state | tail -n1)
-              echo "::notice::Job exited with status ${job_status}"
+            if [ -n "${job_status}" ]; then
+              missing_polls=0
+              continue
+            fi
+            sacct_state=$(sacct -n -X -P -j ${jobid} --format=state 2>/dev/null | head -n1 | awk '{print $1}')
+            case "${sacct_state}" in
+              COMPLETED|FAILED|TIMEOUT|CANCELLED|NODE_FAIL|PREEMPTED|BOOT_FAIL|DEADLINE|OUT_OF_MEMORY|REVOKED)
+                echo "::notice::Job exited with status ${sacct_state}"
+                break
+                ;;
+              ?*)
+                missing_polls=0
+                continue
+                ;;
+            esac
+            if [ "${squeue_rc}" -ne 0 ]; then
+              echo "::warning::squeue query failed (exit ${squeue_rc}); retrying"
+              continue
+            fi
+            missing_polls=$((missing_polls + 1))
+            echo "::warning::Job ${jobid} absent from squeue with no sacct record (${missing_polls}/${max_missing_polls}); retrying"
+            if [ "${missing_polls}" -ge "${max_missing_polls}" ]; then
+              echo "::notice::Job exited with status ${sacct_state:-UNKNOWN}"
               break
             fi
           done

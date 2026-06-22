@@ -89,6 +89,10 @@ Always use `marketplace/session_runner` (current version: `v1.3` or `v1.4`). Do 
 - `scheduler: false` → job runs on the login/controller node
 - Support both SLURM and PBS
 
+### Comments
+- Default to writing no comments. Only add one when the WHY is non-obvious: a hidden constraint, a subtle invariant, a workaround for a specific bug, or behavior that would surprise a reader. If removing the comment wouldn't confuse a future reader, don't write it.
+- Avoid WHAT comments (the code already says what), conventions that hold across the repo, and references to the current task or fix.
+
 ## Git and Deployment
 
 - Push directly to `main` branch (`git@github.com:parallelworks/interactive_session.git`)

@@ -87,7 +87,16 @@ fi
 
 if [ -n "${resource_uri:-}" ]; then
     if [ "${scheduler:-false}" = "true" ] && [ -n "${LIBRECHAT_HOSTNAME:-}" ]; then
-        LIBRECHAT_SSH="pw ssh ${resource_uri} ssh ${LIBRECHAT_HOSTNAME}"
+        # Reach LibreChat's compute node: `pw ssh <login> -- ssh <node> <cmd>`.
+        #  - `--` stops `pw`'s own (cobra) flag parser from eating the inner ssh's -o
+        #    flags; without it `pw ssh ... ssh -o ...` fails: "unknown shorthand flag: 'o'".
+        #  - The inner ssh runs with no TTY, so it can't answer a host-key prompt:
+        #    StrictHostKeyChecking=no + UserKnownHostsFile=/dev/null accept the node
+        #    without prompting and without writing any persistent file on the cluster.
+        #  - BatchMode + ConnectTimeout fail fast instead of hanging; LogLevel=ERROR
+        #    silences the "Permanently added"/"known by other names" warnings; -T because
+        #    we always run a command, never an interactive shell.
+        LIBRECHAT_SSH="pw ssh ${resource_uri} -- ssh -T -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=15 ${LIBRECHAT_HOSTNAME}"
     else
         LIBRECHAT_SSH="pw ssh ${resource_uri}"
     fi

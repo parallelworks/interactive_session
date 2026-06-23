@@ -265,26 +265,27 @@ def serve(model_id, route, list_models, role, port, host="0.0.0.0",
 
             try:
                 delta({"role": "assistant"})
-                for kind, text in responder.run(messages):
-                    if text:
-                        delta({"content": text + "\n" if kind == "step" else text})
+                try:
+                    for kind, text in responder.run(messages):
+                        if text:
+                            delta({"content": text + "\n" if kind == "step" else text})
+                except Exception as exc:  # noqa: BLE001 - surface brain/tool errors in the chat
+                    # NOTE: catch agent errors here, *inside* the writer's OSError
+                    # guard below. urllib's HTTPError/URLError subclass OSError, so a
+                    # brain failure (e.g. a 400 "budget exhausted") would otherwise be
+                    # swallowed by `except OSError` as a phantom client-disconnect,
+                    # leaving the chunked stream unterminated -> the proxy resets it
+                    # (INTERNAL_ERROR shows as a "network error" in the chat).
+                    delta({"content": "\n[error: %s]" % exc})
+                # Always terminate the stream cleanly, whether the turn succeeded or
+                # surfaced an error, so the proxy never sees a truncated response.
                 delta({}, "stop")
                 chunk(b"data: [DONE]\n\n")
                 with lock:
                     self.wfile.write(b"0\r\n\r\n")   # terminating chunk: clean end of stream
                     self.wfile.flush()
             except OSError:
-                pass   # client disconnected mid-stream
-            except Exception as exc:  # noqa: BLE001 - surface brain/tool errors in the chat
-                try:
-                    delta({"content": "\n[error: %s]" % exc})
-                    delta({}, "stop")
-                    chunk(b"data: [DONE]\n\n")
-                    with lock:
-                        self.wfile.write(b"0\r\n\r\n")   # terminate the chunked stream too, or the proxy resets it (INTERNAL_ERROR)
-                        self.wfile.flush()
-                except OSError:
-                    pass
+                pass   # client genuinely disconnected mid-write; nothing more to send
             finally:
                 done.set()
 

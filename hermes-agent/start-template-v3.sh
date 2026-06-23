@@ -63,41 +63,14 @@ export HERMES_YOLO_MODE=1
 : > "${PW_PARENT_JOB_DIR}/cancel.sh"
 
 if [ "${service_interface}" = "dashboard" ]; then
-    # Hermes' native web UI. As of the June 2026 hardening (Hermes >= v0.17.0)
-    # the dashboard REFUSES to bind off-loopback unless an auth provider is
-    # configured -- `--insecure` is now a documented no-op, not an
-    # unauthenticated public bind. The session tunnel is already the access
-    # boundary, so rather than bolt a password gate in front of it we bind the
-    # dashboard to loopback (where the auth gate does NOT engage) and put a
-    # byte-transparent TCP relay (tcp_proxy.py) on the tunnel-facing
-    # ${service_port}. The relay forwards HTTP/SSE/WebSocket and the
-    # X-Forwarded-Prefix header verbatim, so the SPA still works under the
-    # session base path -- exactly as the direct 0.0.0.0 bind did before the
-    # hardening. The controller pre-builds the SPA; --skip-build skips rebuild.
-    dash_port=$(( ${service_port} + 1 ))
+    # Hermes' native web UI on ${service_port}. --insecure is required to bind
+    # off-loopback (the session tunnel is the access boundary). The SPA is
+    # pre-built by the controller; --skip-build avoids rebuilding on launch.
     log="${PW_PARENT_JOB_DIR}/hermes-dashboard.out"
-    proxy_log="${PW_PARENT_JOB_DIR}/dashboard-proxy.out"
-    hermes dashboard --port "${dash_port}" --host 127.0.0.1 --no-open --skip-build > "${log}" 2>&1 &
+    hermes dashboard --port "${service_port}" --host 0.0.0.0 --insecure --no-open --skip-build > "${log}" 2>&1 &
     pid=$!
-    # Expose the relay only once the loopback dashboard accepts connections, so
-    # the session readiness probe never races a not-yet-listening backend; fail
-    # loud if it never comes up (e.g. a future auth change) instead of leaving
-    # create_session to spin until timeout.
-    ready=""
-    for _ in $(seq 1 60); do
-        if curl -fsS -m 2 -o /dev/null "http://127.0.0.1:${dash_port}/"; then ready=1; break; fi
-        kill -0 "${pid}" 2>/dev/null || break
-        sleep 1
-    done
-    if [ -z "${ready}" ]; then
-        echo "::error title=Dashboard failed to start::loopback dashboard never came up; see ${log}"
-        tail -n 40 "${log}" 2>/dev/null || true
-        exit 1
-    fi
-    python3 "${AGENT_DIR}/tcp_proxy.py" --listen "0.0.0.0:${service_port}" --upstream "127.0.0.1:${dash_port}" > "${proxy_log}" 2>&1 &
-    proxy_pid=$!
-    echo "kill ${pid} ${proxy_pid} 2>/dev/null; pkill -P ${pid} 2>/dev/null; rm -f ${HERMES_HOME}/config.yaml" >> "${PW_PARENT_JOB_DIR}/cancel.sh"
-    echo "::notice::hermes dashboard started (pid ${pid}, loopback :${dash_port}) | relay pid ${proxy_pid} on 0.0.0.0:${service_port} | log: ${log}"
+    echo "kill ${pid} 2>/dev/null; pkill -P ${pid} 2>/dev/null; rm -f ${HERMES_HOME}/config.yaml" >> "${PW_PARENT_JOB_DIR}/cancel.sh"
+    echo "::notice::hermes dashboard started (pid ${pid}) on 0.0.0.0:${service_port} | log: ${log}"
 else
     # OpenAI api_server (private loopback port) + key-injecting proxy on the
     # tunnel-facing port (the api_server requires a bearer the tunnel can't send).

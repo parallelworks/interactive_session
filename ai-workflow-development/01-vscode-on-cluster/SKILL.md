@@ -319,6 +319,14 @@ workspace + a worker per cluster). Platform mechanics are in **reference §12**.
   loopback port until it answers; `exit 1` if the backend dies) so the session probe
   never races startup and a real failure surfaces loud. (Verified fixing
   `hermes-agent`'s dashboard.)
+- **In a streaming agent handler, don't let `except OSError` wrap the brain call —
+  `HTTPError`/`URLError` subclass `OSError`.** A catch meant for client-disconnects will
+  silently swallow a brain `HTTPError` (e.g. 400 "budget exhausted"), leaving the SSE
+  stream unterminated so the proxy resets it (a "network error" in chat). Surface
+  agent/brain errors as a content delta in an inner handler and always send the
+  terminating 0-chunk. Tell-tale: streams fine while the brain has budget, resets the
+  moment it errors, but the non-streaming path shows the error cleanly. (Verified fixing
+  `agent-orchestrator`; reference §12.)
 - **A streaming keepalive must be a valid OpenAI chunk, never an SSE `:` comment.**
   The built-in chat JSON-parses every SSE `data:` field; a bare comment line (no
   `data:`) makes it parse `""` and kill the chat with **`unexpected end of JSON

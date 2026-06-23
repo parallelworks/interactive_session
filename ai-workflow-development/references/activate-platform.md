@@ -702,6 +702,19 @@ peer` (and your server logs a `BrokenPipeError`). Two requirements, both needed:
 4. **Don't duplicate `Server`/`Date` when proxying.** A `BaseHTTPRequestHandler`
    emits its own; if a relay also forwards the upstream's, the response carries two of
    each. Tolerated here, but strip them from forwarded headers to be safe.
+5. **Never let `except OSError` wrap the agent loop in a streaming handler — `urllib`'s
+   `HTTPError`/`URLError` subclass `OSError`** (verified fixing `agent-orchestrator`). A
+   `_chat_stream` that did `try: …run the brain & write… except OSError: pass` (intending
+   to ignore client disconnects) silently swallowed a brain **`HTTPError`** (e.g. a 400
+   "budget exhausted") as a phantom disconnect, so it never wrote the error nor the
+   terminating `0\r\n\r\n` — the chunked stream hung unterminated and the proxy reset it
+   (`INTERNAL_ERROR` → "network error"). Catch agent/brain errors in an **inner** handler
+   that renders them as a content delta, keep the bare `except OSError` only around the
+   socket writes, and **always** emit `stop` + `[DONE]` + the 0-chunk. Tell-tale: a
+   streamed agent that works while its brain has budget but resets the moment the brain
+   errors — and the same code's *non-streaming* path returns the error fine (its
+   `except Exception` isn't shadowed by an `OSError` clause). Reproduce offline with a
+   fake `call_brain` that raises `HTTPError` — no platform needed.
 
 
 ### Runtime session discovery

@@ -111,6 +111,21 @@ else
     proxy_log="${PW_PARENT_JOB_DIR}/auth-proxy.out"
     hermes gateway > "${gw_log}" 2>&1 &
     gw_pid=$!
+    # The api_server takes tens of seconds to bind. Wait for it before exposing
+    # the relay, otherwise create_session sees the relay's liveness 200 and marks
+    # the session "ready" while chat requests still 502 against the not-yet-up
+    # gateway. Fail loud if the gateway dies instead of serving a broken session.
+    ready=""
+    for _ in $(seq 1 120); do
+        if curl -fsS -m 2 -o /dev/null "http://127.0.0.1:${hermes_api_port}/health"; then ready=1; break; fi
+        kill -0 "${gw_pid}" 2>/dev/null || break
+        sleep 1
+    done
+    if [ -z "${ready}" ]; then
+        echo "::error title=Gateway failed to start::api_server never came up; see ${gw_log}"
+        tail -n 40 "${gw_log}" 2>/dev/null || true
+        exit 1
+    fi
     python3 "${AGENT_DIR}/auth_proxy.py" \
         --listen "0.0.0.0:${service_port}" \
         --upstream "127.0.0.1:${hermes_api_port}" \

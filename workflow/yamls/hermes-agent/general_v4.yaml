@@ -44,7 +44,7 @@ jobs:
           service_fresh_start="${{ inputs.service.fresh_start }}"
           service_model="${{ inputs.service.hermes_model }}"
           service_allocation="${{ inputs.service.allocation }}"
-          service_hermes_commit="${{ inputs.service.hermes_commit }}"
+          service_hermes_version="${{ inputs.service.hermes_version }}"
           EOF
           # Brain key is the runtime PW_API_KEY -- intentionally NOT written to inputs.sh
           # (the start script writes it into the per-session Hermes config instead).
@@ -188,15 +188,15 @@ jobs:
             type: string
             default: Private LLM Group
             tooltip: Which allocation to bill model usage against (for org:* models).
-          hermes_commit:
-            label: Hermes version (pinned commit)
+          hermes_version:
+            label: Hermes version
             type: string
-            default: 5ecf3bf0e0726b8b33682bb5c3aad9679b7b5be4
+            default: v2026.6.19
             tooltip: >-
-              Pins Hermes to a specific tested commit of NousResearch/hermes-agent
-              so an upstream release can't change its behavior and break the
-              session. Full or short commit SHA (the project publishes no version
-              tags). Change only to adopt a newer build you have verified.
+              Pins Hermes to a tested release of NousResearch/hermes-agent so an
+              upstream update can't change its behavior and break the session.
+              A release tag (e.g. v2026.6.19), or a branch or commit SHA for
+              advanced use. Change only to adopt a newer release you have verified.
           soul:
             label: Persona
             type: editor

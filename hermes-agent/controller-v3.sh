@@ -14,16 +14,16 @@ set -o pipefail
 #   service_interface     dashboard | chat (dashboard needs the web UI pre-built)
 #   service_model         brain model id (as `pw ai models ls` lists it)
 #   service_allocation    X-Allocation for org:* models (e.g. "Private LLM Group")
-#   service_hermes_commit pinned NousResearch/hermes-agent commit (empty -> default below)
+#   service_hermes_version pinned NousResearch/hermes-agent ref (empty -> default below)
 ################################################################################
 
-# Pin Hermes to a tested commit. NousResearch/hermes-agent ships from `main`
-# with NO version tags, so a plain install always pulls the latest -- and its
+# Pin Hermes to a tested release. A plain install pulls the latest main, whose
 # behavior has broken this workflow before (the v0.17 auth hardening stopped the
 # dashboard binding 0.0.0.0; a 64-char X-Forwarded-Prefix cap blanked long
-# session URLs). Pinning a commit makes launches reproducible; the form can
-# override it. Update this default only after verifying a newer build.
-HERMES_PINNED_COMMIT_DEFAULT="5ecf3bf0e0726b8b33682bb5c3aad9679b7b5be4"
+# session URLs). NousResearch/hermes-agent publishes date-based tags, so we pin
+# one for reproducibility; the form can override it (a tag, branch, or commit
+# SHA). Update this default only after verifying a newer release.
+HERMES_VERSION_DEFAULT="v2026.6.19"
 
 echo "::group::Prerequisites"
 for bin in python3 curl bash; do
@@ -34,31 +34,37 @@ echo "::endgroup::"
 
 export PATH="${HOME}/.local/bin:${PATH}"
 
-HERMES_COMMIT="${service_hermes_commit:-$HERMES_PINNED_COMMIT_DEFAULT}"
+HERMES_VERSION="${service_hermes_version:-$HERMES_VERSION_DEFAULT}"
 hermes_repo="${HOME}/.hermes/hermes-agent"
+hermes_url="https://github.com/NousResearch/hermes-agent.git"
+# Resolve the pin to a commit SHA so the compare-and-install is exact. For a
+# tag/branch, ls-remote returns its SHA (peeled to the commit for annotated tags
+# via the ^{} ref, which sorts last); for a raw SHA it returns nothing and we
+# use the value as-is. We hand the resolved SHA to --commit so the installer
+# never has to resolve a ref itself (and a moved tag can't silently change it).
+target_sha="$(git ls-remote "${hermes_url}" "${HERMES_VERSION}" "${HERMES_VERSION}^{}" 2>/dev/null | awk 'END{print $1}')"
+target="${target_sha:-$HERMES_VERSION}"
 installed_commit="$(git -C "${hermes_repo}" rev-parse HEAD 2>/dev/null || true)"
-# Match a full installed SHA against the pin (which may be a short or full SHA).
 case "${installed_commit}" in
-    "${HERMES_COMMIT}"*) at_pin=1 ;;
+    "${target}"*) at_pin=1 ;;
     *) at_pin=0 ;;
 esac
 
 if command -v hermes >/dev/null 2>&1 && [ "${at_pin}" = 1 ]; then
-    echo "::notice::Hermes already at pinned commit ${HERMES_COMMIT} ($(hermes --version 2>&1 | head -1))"
+    echo "::notice::Hermes already at pinned ${HERMES_VERSION} (${target}) ($(hermes --version 2>&1 | head -1))"
 else
-    echo "::group::Install Hermes Agent @ ${HERMES_COMMIT} (this can take a few minutes)"
-    # --commit: pin the checkout to the tested commit (installer git-fetches +
-    # checks it out, switching an existing install if the pin changed);
-    # --skip-setup: no interactive wizard; --non-interactive: no prompts;
-    # --skip-browser: skip the Playwright/browser-tool download we don't need.
+    echo "::group::Install Hermes Agent @ ${HERMES_VERSION} (${target}) (this can take a few minutes)"
+    # --commit: pin the checkout (installer git-fetches + checks it out, switching
+    # an existing install if the pin changed); --skip-setup: no wizard;
+    # --non-interactive: no prompts; --skip-browser: skip the browser-tool download.
     curl -fsSL https://hermes-agent.nousresearch.com/install.sh \
-        | bash -s -- --skip-setup --non-interactive --skip-browser --commit "${HERMES_COMMIT}"
+        | bash -s -- --skip-setup --non-interactive --skip-browser --commit "${target}"
     echo "::endgroup::"
     command -v hermes >/dev/null 2>&1 || { echo "::error title=Install failed::hermes not on PATH after install"; exit 1; }
     new_commit="$(git -C "${hermes_repo}" rev-parse HEAD 2>/dev/null || true)"
     case "${new_commit}" in
-        "${HERMES_COMMIT}"*) : ;;
-        *) echo "::warning::Hermes HEAD ${new_commit:-unknown} does not match pin ${HERMES_COMMIT} after install" ;;
+        "${target}"*) : ;;
+        *) echo "::warning::Hermes HEAD ${new_commit:-unknown} does not match pin ${HERMES_VERSION} (${target}) after install" ;;
     esac
     echo "::notice::Installed: $(hermes --version 2>&1 | head -1)"
 fi

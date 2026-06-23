@@ -319,6 +319,14 @@ workspace + a worker per cluster). Platform mechanics are in **reference §12**.
   loopback port until it answers; `exit 1` if the backend dies) so the session probe
   never races startup and a real failure surfaces loud. (Verified fixing
   `hermes-agent`'s dashboard.)
+- **A streaming keepalive must be a valid OpenAI chunk, never an SSE `:` comment.**
+  The built-in chat JSON-parses every SSE `data:` field; a bare comment line (no
+  `data:`) makes it parse `""` and kill the chat with **`unexpected end of JSON
+  input`** before the first token. Send an empty-content delta instead, and inject it
+  only *between* complete events. Tell-tale: **works through the agent-orchestrator
+  (which calls workers `stream:false`) but fails in the built-in chat** — that gap
+  isolates it to the streamed keepalive, not the agent. (Verified fixing
+  `hermes-agent`'s chat interface; reference §12.)
 - **`pw workflows run` uses the STORED def — `pw workflows update` after every YAML
   edit**, or the run silently uses the old form.
 - **Discover related sessions by the `sessions:` key marker in the session name**

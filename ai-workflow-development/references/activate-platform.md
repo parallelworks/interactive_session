@@ -685,10 +685,23 @@ peer` (and your server logs a `BrokenPipeError`). Two requirements, both needed:
    An HTTP/1.0 close-delimited body reads as *truncated* to the HTTP/2 proxy.
 2. **Keep bytes flowing while you think.** A real LLM streams tokens continuously;
    an agent loop goes silent for seconds during each brain/tool call, and the proxy
-   resets an idle stream. Emit a keepalive (an empty-content delta, or an SSE `:`
-   comment) ~every second from a background thread until real output is ready.
-   (Verified: a 3-second silent gap was enough to get reset.) `--dry-run` and
-   non-streaming both pass while streaming fails — only a real chat exercises this.
+   resets an idle stream. Emit a keepalive ~every second from a background thread
+   until real output is ready. (Verified: a 3-second silent gap was enough to get
+   reset.) `--dry-run` and non-streaming both pass while streaming fails — only a
+   real chat exercises this.
+3. **The keepalive MUST be a valid OpenAI chunk — NOT an SSE `:` comment** (verified
+   fixing `hermes-agent`). The built-in chat's SSE client JSON-parses every event's
+   `data:` field; a bare comment line (no `data:`) makes it parse `""` and abort the
+   whole chat with **`unexpected end of JSON input`** before the first token. Send an
+   empty-content delta instead — `data: {"object":"chat.completion.chunk","choices":
+   [{"index":0,"delta":{"content":""},"finish_reason":null}]}\n\n` — a no-op for the
+   client. (A *non-streaming* caller like the agent-orchestrator, `stream:false`, is
+   immune — so "works via the orchestrator but `unexpected end of JSON input` in the
+   built-in chat" points straight at the streamed keepalive.) Inject keepalives only
+   **between** complete SSE events, never mid-event, or you corrupt an event's JSON.
+4. **Don't duplicate `Server`/`Date` when proxying.** A `BaseHTTPRequestHandler`
+   emits its own; if a relay also forwards the upstream's, the response carries two of
+   each. Tolerated here, but strip them from forwarded headers to be safe.
 
 
 ### Runtime session discovery

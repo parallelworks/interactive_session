@@ -303,6 +303,38 @@ workspace + a worker per cluster). Platform mechanics are in **reference §12**.
   code, expose it with a top-level `env:` block (`PW_API_KEY: ${PW_API_KEY}`); keep
   it out of `inputs.sh` (the `grep -v PW_API_KEY` convention) and read it from the
   runtime env. (Reference §12.)
+- **A vendored web UI can start refusing an off-loopback bind after an upgrade —
+  front it with a transparent TCP relay instead of fighting its auth gate.** The
+  Hermes dashboard (>= v0.17.0, the "June 2026 hardening") now *refuses* to bind
+  `0.0.0.0` without an auth provider, and `--insecure` became a no-op — so the old
+  `hermes dashboard --host 0.0.0.0 --insecure` exited at once, nothing listened on
+  `${service_port}`, and the session hung in `pending`. **The job-dir log
+  (`hermes-dashboard.out`) named the exact reason** — always read the service's own
+  stdout first. Fix: bind the app to a private **loopback** port (no auth gate there)
+  and run a **byte-transparent TCP relay** (`hermes-agent/tcp_proxy.py`, stdlib
+  `socket`) on `0.0.0.0:${service_port}` → `127.0.0.1:<private>`. A raw relay (not an
+  HTTP proxy) forwards HTTP, SSE, **and** WebSocket plus the `X-Forwarded-Prefix`
+  header verbatim, so a base-path SPA keeps working exactly as the direct bind did —
+  no nginx, nothing to install. Gate the relay behind a readiness loop (`curl` the
+  loopback port until it answers; `exit 1` if the backend dies) so the session probe
+  never races startup and a real failure surfaces loud. (Verified fixing
+  `hermes-agent`'s dashboard.)
+- **In a streaming agent handler, don't let `except OSError` wrap the brain call —
+  `HTTPError`/`URLError` subclass `OSError`.** A catch meant for client-disconnects will
+  silently swallow a brain `HTTPError` (e.g. 400 "budget exhausted"), leaving the SSE
+  stream unterminated so the proxy resets it (a "network error" in chat). Surface
+  agent/brain errors as a content delta in an inner handler and always send the
+  terminating 0-chunk. Tell-tale: streams fine while the brain has budget, resets the
+  moment it errors, but the non-streaming path shows the error cleanly. (Verified fixing
+  `agent-orchestrator`; reference §12.)
+- **A streaming keepalive must be a valid OpenAI chunk, never an SSE `:` comment.**
+  The built-in chat JSON-parses every SSE `data:` field; a bare comment line (no
+  `data:`) makes it parse `""` and kill the chat with **`unexpected end of JSON
+  input`** before the first token. Send an empty-content delta instead, and inject it
+  only *between* complete events. Tell-tale: **works through the agent-orchestrator
+  (which calls workers `stream:false`) but fails in the built-in chat** — that gap
+  isolates it to the streamed keepalive, not the agent. (Verified fixing
+  `hermes-agent`'s chat interface; reference §12.)
 - **`pw workflows run` uses the STORED def — `pw workflows update` after every YAML
   edit**, or the run silently uses the old form.
 - **Discover related sessions by the `sessions:` key marker in the session name**

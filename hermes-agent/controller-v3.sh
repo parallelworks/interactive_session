@@ -41,6 +41,23 @@ fi
 # Dashboard interface needs the web UI built once (login node has node/npm via
 # the installer). The build lands in hermes_cli/web_dist; start uses --skip-build.
 if [ "${service_interface}" = "dashboard" ]; then
+    # Raise Hermes' 64-char X-Forwarded-Prefix cap (normalise_prefix() in
+    # hermes_cli/dashboard_auth/prefix.py). ACTIVATE session base paths
+    # (/me/session/<user>/<workflow>_<run>_<key>) routinely exceed 64 chars; the
+    # dashboard then rejects the prefix, leaves __HERMES_BASE_PATH__ empty, and
+    # serves absolute /assets URLs that 404 under the session path -> blank page.
+    # Raising the cap lets Hermes' own prefix-rewriting (assets, fonts, base
+    # path, websockets) work for our long paths. Idempotent; verified per launch.
+    prefix_py="$(find "${HOME}/.hermes" -path '*/hermes_cli/dashboard_auth/prefix.py' 2>/dev/null | head -1)"
+    if [ -n "${prefix_py}" ] && grep -q 'len(p) > 64' "${prefix_py}"; then
+        sed -i 's/len(p) > 64/len(p) > 1024/' "${prefix_py}"
+        echo "::notice::Raised Hermes X-Forwarded-Prefix cap 64->1024 (${prefix_py})"
+    elif [ -n "${prefix_py}" ] && grep -q 'len(p) > 1024' "${prefix_py}"; then
+        echo "::notice::Hermes X-Forwarded-Prefix cap already raised"
+    else
+        echo "::warning::Could not find Hermes' X-Forwarded-Prefix cap to raise; long session URLs may blank-screen (see ${prefix_py:-prefix.py not found})"
+    fi
+
     web_dist_index="${HOME}/.hermes/hermes-agent/hermes_cli/web_dist/index.html"
     if [ -f "${web_dist_index}" ]; then
         echo "::notice::Dashboard web UI already built"

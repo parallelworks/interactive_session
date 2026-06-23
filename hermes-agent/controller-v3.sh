@@ -11,10 +11,19 @@ set -o pipefail
 # Called by: session_runner, after inputs.sh is sourced
 #
 # Variables from inputs.sh:
-#   service_interface   dashboard | chat (dashboard needs the web UI pre-built)
-#   service_model       brain model id (as `pw ai models ls` lists it)
-#   service_allocation  X-Allocation for org:* models (e.g. "Private LLM Group")
+#   service_interface     dashboard | chat (dashboard needs the web UI pre-built)
+#   service_model         brain model id (as `pw ai models ls` lists it)
+#   service_allocation    X-Allocation for org:* models (e.g. "Private LLM Group")
+#   service_hermes_commit pinned NousResearch/hermes-agent commit (empty -> default below)
 ################################################################################
+
+# Pin Hermes to a tested commit. NousResearch/hermes-agent ships from `main`
+# with NO version tags, so a plain install always pulls the latest -- and its
+# behavior has broken this workflow before (the v0.17 auth hardening stopped the
+# dashboard binding 0.0.0.0; a 64-char X-Forwarded-Prefix cap blanked long
+# session URLs). Pinning a commit makes launches reproducible; the form can
+# override it. Update this default only after verifying a newer build.
+HERMES_PINNED_COMMIT_DEFAULT="5ecf3bf0e0726b8b33682bb5c3aad9679b7b5be4"
 
 echo "::group::Prerequisites"
 for bin in python3 curl bash; do
@@ -25,16 +34,32 @@ echo "::endgroup::"
 
 export PATH="${HOME}/.local/bin:${PATH}"
 
-if command -v hermes >/dev/null 2>&1; then
-    echo "::notice::Hermes already installed: $(hermes --version 2>&1 | head -1)"
+HERMES_COMMIT="${service_hermes_commit:-$HERMES_PINNED_COMMIT_DEFAULT}"
+hermes_repo="${HOME}/.hermes/hermes-agent"
+installed_commit="$(git -C "${hermes_repo}" rev-parse HEAD 2>/dev/null || true)"
+# Match a full installed SHA against the pin (which may be a short or full SHA).
+case "${installed_commit}" in
+    "${HERMES_COMMIT}"*) at_pin=1 ;;
+    *) at_pin=0 ;;
+esac
+
+if command -v hermes >/dev/null 2>&1 && [ "${at_pin}" = 1 ]; then
+    echo "::notice::Hermes already at pinned commit ${HERMES_COMMIT} ($(hermes --version 2>&1 | head -1))"
 else
-    echo "::group::Install Hermes Agent (this can take a few minutes)"
+    echo "::group::Install Hermes Agent @ ${HERMES_COMMIT} (this can take a few minutes)"
+    # --commit: pin the checkout to the tested commit (installer git-fetches +
+    # checks it out, switching an existing install if the pin changed);
     # --skip-setup: no interactive wizard; --non-interactive: no prompts;
     # --skip-browser: skip the Playwright/browser-tool download we don't need.
     curl -fsSL https://hermes-agent.nousresearch.com/install.sh \
-        | bash -s -- --skip-setup --non-interactive --skip-browser
+        | bash -s -- --skip-setup --non-interactive --skip-browser --commit "${HERMES_COMMIT}"
     echo "::endgroup::"
     command -v hermes >/dev/null 2>&1 || { echo "::error title=Install failed::hermes not on PATH after install"; exit 1; }
+    new_commit="$(git -C "${hermes_repo}" rev-parse HEAD 2>/dev/null || true)"
+    case "${new_commit}" in
+        "${HERMES_COMMIT}"*) : ;;
+        *) echo "::warning::Hermes HEAD ${new_commit:-unknown} does not match pin ${HERMES_COMMIT} after install" ;;
+    esac
     echo "::notice::Installed: $(hermes --version 2>&1 | head -1)"
 fi
 

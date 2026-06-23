@@ -15,10 +15,15 @@ Three behaviors matter for the platform:
   * Non-streaming responses (`/v1/models`, non-stream chat) are buffered and
     returned with a clean `Content-Length` (maximally compatible).
   * Streaming responses (`text/event-stream`) are forwarded chunked, and a
-    keepalive SSE comment is injected during silent gaps. Hermes' agent goes
-    quiet for several seconds while it thinks / runs tools, and the platform
-    proxy resets an idle stream after only ~3s — without keepalives the chat
-    dies mid-turn and the UI reports the session as unreachable.
+    keepalive event is injected during silent gaps. Hermes' agent goes quiet for
+    several seconds while it thinks / runs tools, and the platform proxy resets
+    an idle stream after only ~3s — without keepalives the chat dies mid-turn and
+    the UI reports the session as unreachable. The keepalive MUST be a valid
+    OpenAI streaming chunk (an empty-content delta), NOT an SSE `: comment`: the
+    platform chat's SSE parser JSON-parses every event's `data:` field, so a bare
+    comment line (no `data:`) makes it parse "" and abort the whole chat with
+    "unexpected end of JSON input" before the first token. (Verified: direct chat
+    fails on the comment; the same empty-content delta the lite-agent uses works.)
 
 Standard library only (Python 3.9+), so there is nothing to install.
 """
@@ -32,11 +37,18 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 # Hop-by-hop headers (RFC 7230) plus framing headers we re-derive ourselves.
 HOP = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
        "te", "trailers", "transfer-encoding", "upgrade", "content-length", "host"}
+# Response headers we must NOT copy from upstream: BaseHTTPRequestHandler emits
+# its own Server/Date, so forwarding the upstream's too yields duplicates.
+SKIP_RESP = HOP | {"server", "date"}
 
 # Paths the shim answers itself (liveness), instead of forwarding to Hermes.
 LOCAL_OK_PATHS = {"", "/", "/health", "/healthz", "/ping"}
 
-KEEPALIVE_SECS = 1.0   # emit an SSE comment after this many seconds of upstream silence
+KEEPALIVE_SECS = 1.0   # emit a keepalive after this many seconds of upstream silence
+# A keepalive must be a VALID OpenAI streaming chunk (empty-content delta), not an
+# SSE comment — see the streaming note in the module docstring.
+KEEPALIVE_CHUNK = (b'data: {"id":"chatcmpl-keepalive","object":"chat.completion.chunk",'
+                   b'"choices":[{"index":0,"delta":{"content":""},"finish_reason":null}]}\n\n')
 
 
 def make_handler(up_host, up_port, bearer, marker):
@@ -116,7 +128,7 @@ def make_handler(up_host, up_port, bearer, marker):
             data = resp.read()
             self.send_response(resp.status)
             for k, v in resp.getheaders():
-                if k.lower() not in HOP:
+                if k.lower() not in SKIP_RESP:
                     self.send_header(k, v)
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
@@ -126,10 +138,13 @@ def make_handler(up_host, up_port, bearer, marker):
                 pass
 
         def _relay_stream(self, resp):
-            """SSE: forward chunked, injecting a keepalive comment on silent gaps."""
+            """SSE: forward chunked, injecting a keepalive *chunk* on silent gaps.
+            The keepalive is a valid empty-content delta (never an SSE comment)
+            and is emitted only between complete events, so it can never split an
+            event mid-JSON."""
             self.send_response(resp.status)
             for k, v in resp.getheaders():
-                if k.lower() not in HOP:
+                if k.lower() not in SKIP_RESP:
                     self.send_header(k, v)
             self.send_header("Transfer-Encoding", "chunked")
             self.end_headers()
@@ -137,23 +152,27 @@ def make_handler(up_host, up_port, bearer, marker):
             lock = threading.Lock()
             done = threading.Event()
             data_seen = threading.Event()
+            at_boundary = [True]   # last bytes completed an SSE event (start = boundary)
 
-            def write_chunk(raw):
-                with lock:
-                    self.wfile.write(b"%x\r\n%s\r\n" % (len(raw), raw))
-                    self.wfile.flush()
+            def emit(raw, boundary):   # caller MUST hold `lock`
+                self.wfile.write(b"%x\r\n%s\r\n" % (len(raw), raw))
+                self.wfile.flush()
+                at_boundary[0] = boundary
 
             def keepalive():
-                # Emit an SSE comment only after a full silent interval, so it
-                # lands between events (never mid-event) and stays quiet while
-                # real tokens are flowing.
+                # After a full silent interval, inject a keepalive — but only when
+                # the last forwarded bytes ended an event, so real tokens (which
+                # may span reads) are never interrupted.
                 while not done.is_set():
                     data_seen.clear()
                     if not data_seen.wait(KEEPALIVE_SECS):
-                        try:
-                            write_chunk(b": keepalive\n\n")
-                        except OSError:
-                            return
+                        with lock:
+                            if not at_boundary[0]:
+                                continue
+                            try:
+                                emit(KEEPALIVE_CHUNK, True)
+                            except OSError:
+                                return
             threading.Thread(target=keepalive, daemon=True).start()
 
             try:
@@ -161,7 +180,8 @@ def make_handler(up_host, up_port, bearer, marker):
                     chunk = resp.read(2048)
                     if not chunk:
                         break
-                    write_chunk(chunk)
+                    with lock:
+                        emit(chunk, chunk.endswith(b"\n\n"))
                     data_seen.set()
             except (BrokenPipeError, ConnectionResetError, OSError):
                 pass

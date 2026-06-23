@@ -280,6 +280,9 @@ def serve(model_id, route, list_models, role, port, host="0.0.0.0",
                     delta({"content": "\n[error: %s]" % exc})
                     delta({}, "stop")
                     chunk(b"data: [DONE]\n\n")
+                    with lock:
+                        self.wfile.write(b"0\r\n\r\n")   # terminate the chunked stream too, or the proxy resets it (INTERNAL_ERROR)
+                        self.wfile.flush()
                 except OSError:
                     pass
             finally:

@@ -151,7 +151,6 @@ jobs:
               qos: ${{ inputs.librechat_cluster.slurm.qos }}
               cpus_per_task: ${{ inputs.librechat_cluster.slurm.cpus_per_task }}
               nodes: ${{ inputs.librechat_cluster.slurm.nodes }}
-              gpus: ${{ inputs.librechat_cluster.slurm.gpus }}
               node_type: ${{ inputs.librechat_cluster.slurm.node_type }}
               scheduler_directives: ${{ inputs.librechat_cluster.slurm.scheduler_directives }}
               time: ${{ inputs.librechat_cluster.slurm.time }}
@@ -229,7 +228,6 @@ jobs:
               qos: ${{ inputs.librechat_cluster.slurm.qos }}
               cpus_per_task: ${{ inputs.librechat_cluster.slurm.cpus_per_task }}
               nodes: ${{ inputs.librechat_cluster.slurm.nodes }}
-              gpus: ${{ inputs.librechat_cluster.slurm.gpus }}
               node_type: ${{ inputs.librechat_cluster.slurm.node_type }}
               scheduler_directives: ${{ inputs.librechat_cluster.slurm.scheduler_directives }}
               time: ${{ inputs.librechat_cluster.slurm.time }}
@@ -313,7 +311,6 @@ jobs:
               qos: ${{ inputs.langflow_cluster.slurm.qos }}
               cpus_per_task: ${{ inputs.langflow_cluster.slurm.cpus_per_task }}
               nodes: ${{ inputs.langflow_cluster.slurm.nodes }}
-              gpus: ${{ inputs.langflow_cluster.slurm.gpus }}
               node_type: ${{ inputs.langflow_cluster.slurm.node_type }}
               scheduler_directives: ${{ inputs.langflow_cluster.slurm.scheduler_directives }}
               time: ${{ inputs.langflow_cluster.slurm.time }}
@@ -408,13 +405,6 @@ jobs:
                 type: number
                 default: 1
                 tooltip: '--nodes=value slurm directive'
-                ignore: ${{ 'existing' != inputs.librechat_resource.provider }}
-                hidden: ${{ .ignore }}
-              gpus:
-                label: Number of GPUs
-                type: number
-                default: 0
-                tooltip: '--gres=gpu:value slurm directive'
                 ignore: ${{ 'existing' != inputs.librechat_resource.provider }}
                 hidden: ${{ .ignore }}
               node_type:
@@ -561,13 +551,6 @@ jobs:
                 type: number
                 default: 1
                 tooltip: '--nodes=value slurm directive'
-                ignore: ${{ 'existing' != inputs.langflow_resource.provider }}
-                hidden: ${{ .ignore }}
-              gpus:
-                label: Number of GPUs
-                type: number
-                default: 0
-                tooltip: '--gres=gpu:value slurm directive'
                 ignore: ${{ 'existing' != inputs.langflow_resource.provider }}
                 hidden: ${{ .ignore }}
               node_type:

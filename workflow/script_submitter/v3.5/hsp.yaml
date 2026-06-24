@@ -69,9 +69,6 @@ jobs:
             echo "#SBATCH --qos=${{ inputs.slurm.qos }}" >> headers.sh
             echo "#SBATCH --cpus-per-task=${{ inputs.slurm.cpus_per_task }}" >> headers.sh
             echo "#SBATCH --nodes=${{ inputs.slurm.nodes }}" >> headers.sh
-            if [[ 0 != '0' ]]; then
-              echo "#SBATCH --gres=gpu:0" >> headers.sh
-            fi
           fi
 
           echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS

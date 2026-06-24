@@ -151,7 +151,6 @@ jobs:
               qos: ${{ inputs.librechat_cluster.slurm.qos }}
               cpus_per_task: ${{ inputs.librechat_cluster.slurm.cpus_per_task }}
               nodes: ${{ inputs.librechat_cluster.slurm.nodes }}
-              gpus: 0
               node_type: ${{ inputs.librechat_cluster.slurm.node_type }}
               scheduler_directives: ${{ inputs.librechat_cluster.slurm.scheduler_directives }}
               time: ${{ inputs.librechat_cluster.slurm.time }}
@@ -229,7 +228,6 @@ jobs:
               qos: ${{ inputs.librechat_cluster.slurm.qos }}
               cpus_per_task: ${{ inputs.librechat_cluster.slurm.cpus_per_task }}
               nodes: ${{ inputs.librechat_cluster.slurm.nodes }}
-              gpus: 0
               node_type: ${{ inputs.librechat_cluster.slurm.node_type }}
               scheduler_directives: ${{ inputs.librechat_cluster.slurm.scheduler_directives }}
               time: ${{ inputs.librechat_cluster.slurm.time }}
@@ -313,7 +311,6 @@ jobs:
               qos: ${{ inputs.langflow_cluster.slurm.qos }}
               cpus_per_task: ${{ inputs.langflow_cluster.slurm.cpus_per_task }}
               nodes: ${{ inputs.langflow_cluster.slurm.nodes }}
-              gpus: 0
               node_type: ${{ inputs.langflow_cluster.slurm.node_type }}
               scheduler_directives: ${{ inputs.langflow_cluster.slurm.scheduler_directives }}
               time: ${{ inputs.langflow_cluster.slurm.time }}

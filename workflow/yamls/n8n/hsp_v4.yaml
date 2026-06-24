@@ -62,7 +62,6 @@ jobs:
               qos: ${{ inputs.cluster.slurm.qos }}
               cpus_per_task: ${{ inputs.cluster.slurm.cpus_per_task }}
               nodes: ${{ inputs.cluster.slurm.nodes }}
-              gpus: 0
               node_type: ${{ inputs.cluster.slurm.node_type }}
               scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
               time: ${{ inputs.cluster.slurm.time }}

@@ -44,7 +44,7 @@ Ask it things like:
 | **Cluster** | Which cluster Hermes runs on | — |
 | **Interface** | Web dashboard (native UI) or Built-in platform chat | Web dashboard |
 | **Fleet marker** | In Built-in chat mode, groups it for an [Agent Orchestrator](../agent-orchestrator/) | `worker` |
-| **Model** | The LLM behind Hermes (must support tool calling). Accepts any id from `pw ai models ls` or the short name shown in the Chat model picker (e.g. `glm-5.1`, or `/gpt-oss-20b` for a session-served model) | `org:glm/glm-5.1` |
+| **Model** | The LLM behind Hermes (must support tool calling) | `org:glm/glm-5.1` |
 | **AI allocation** | Which allocation model usage is billed to (for `org:*` models) | `Private LLM Group` |
 | **Persona** | Hermes' personality + instructions (its `SOUL.md`) | generic cluster assistant |
 | **Data directory** | Where history, skills, and memory live | `~/.hermes-agent` |

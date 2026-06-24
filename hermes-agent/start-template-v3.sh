@@ -45,18 +45,11 @@ fi
 # Brain -> ACTIVATE platform OpenAI-compatible endpoint (used by BOTH interfaces).
 # Hermes' "custom" provider reads the bearer from model.api_key (NOT OPENAI_API_KEY),
 # and org:* models need the X-Allocation header, sent via default_headers.
-brain_base_url="https://${PW_PLATFORM_HOST}/api/openai/v1"
-# The Chat model picker shows a short name (e.g. /gpt-oss-20b for a session-served
-# model); the endpoint routes by the full provider id. Resolve it before handing it
-# to Hermes (warnings, incl. "not an exact id", go to this start log).
-resolved_model="$(OPENAI_BASE_URL="${brain_base_url}" OPENAI_API_KEY="${PW_API_KEY}" \
-    X_ALLOCATION="${service_allocation}" \
-    python3 "${PW_PARENT_JOB_DIR}/tools/utils/resolve_model.py" "${service_model:-org:glm/glm-5.1}")"
 cat > "${HERMES_HOME}/config.yaml" <<EOF
 model:
-  default: "${resolved_model:-org:glm/glm-5.1}"
+  default: "${service_model:-org:glm/glm-5.1}"
   provider: "custom"
-  base_url: "${brain_base_url}"
+  base_url: "https://${PW_PLATFORM_HOST}/api/openai/v1"
   api_key: "${PW_API_KEY}"
   default_headers:
     X-Allocation: "${service_allocation:-Private LLM Group}"

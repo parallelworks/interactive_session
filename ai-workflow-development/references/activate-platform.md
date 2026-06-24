@@ -623,22 +623,6 @@ runtime. To send `X-Allocation` from a client that takes default headers, pass i
 e.g. langchain `ChatOpenAI(base_url=..., api_key=PW_API_KEY, default_headers={"X-Allocation": name})`
 (verified) — it then rides on every request, streaming included.
 
-**The `model` you send must be the FULL id from `pw ai models ls` / `GET /v1/models`,
-not the short name the Chat model picker shows (verified, lite-agent).** The endpoint
-routes by a fully-qualified id: `org:owner/provider` (e.g. `org:glm/glm-5.1`) or — for a
-**session-served** model (one exposed by another `openAI: true` session, e.g. a vLLM
-session) — `session:<user>:<provider>/<model>` (e.g.
-`session:alvaro:marketplace.vllmrag.latest_35_session//gpt-oss-20b`; the leading `/` in
-the model name yields the `//`). The picker only displays the trailing short name
-(`/gpt-oss-20b`); sending that verbatim fails with
-`400 "Invalid provider identifier format. Expected 'owner:provider-name'"`, which
-surfaces in the built-in chat as a generic **"network error"** (the agent's brain call
-500s/aborts the stream). Resolve a short name to its full id by matching it against
-`GET /v1/models` (the id whose trailing segment equals the name). Session model ids embed
-the *backing* session's run number and so change when it relaunches — resolve at runtime,
-don't hardcode. `X-Allocation` is required for `org:*` but harmless for session models.
-Session-served models can support tool calling too (gpt-oss-20b does).
-
 ### `PW_API_KEY` at runtime — the platform credential (don't persist it)
 **Whenever you need `PW_API_KEY` anywhere in the workflow's code, expose it once with
 a top-level `env:` block** so the platform injects it into every job/step's runtime

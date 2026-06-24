@@ -12,8 +12,10 @@ call; we run them and feed the results back; it writes the final answer. This
 module holds that loop, the brain client, and the HTTP/SSE framing, so each role
 only has to declare its own tools, system prompt, and any extra endpoints.
 
-Standard library only, so it runs on a clean Python 3 (the cluster nodes ship
-3.9) with nothing to install.
+Standard library only, so it runs on a clean Python 3 with nothing to install.
+Must stay Python 3.6-compatible: HSP (activate.hpc.mil) login nodes ship 3.6.15,
+so avoid 3.7+ stdlib (e.g. http.server.ThreadingHTTPServer, subprocess.run's
+capture_output=/text= -- use the fallbacks already wired below / in agent_server).
 """
 import json
 import os
@@ -21,7 +23,15 @@ import threading
 import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+try:
+    from http.server import ThreadingHTTPServer
+except ImportError:  # Python 3.6 (e.g. HSP login nodes) -- it is just this mixin
+    from socketserver import ThreadingMixIn
+
+    class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+        daemon_threads = True
 
 from resolve_model import resolve_model
 

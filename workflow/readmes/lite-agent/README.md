@@ -35,7 +35,7 @@ discover this agent and coordinate it with others. Use a custom value (e.g.
 |---|---|---|
 | **Cluster** | Which cluster the agent runs on | — |
 | **Fleet marker** | Group label for orchestrator discovery | `worker` |
-| **Model** | The LLM behind the agent (must support tool calling). Accepts any id from `pw ai models ls` or the short name shown in the Chat model picker (e.g. `glm-5.1`, or `/gpt-oss-20b` for a session-served model) | `org:glm/glm-5.1` |
+| **Model** | The LLM behind the agent (must support tool calling) | `org:glm/glm-5.1` |
 | **AI allocation** | Which allocation usage is billed to (for `org:*` models) | `Private LLM Group` |
 
 ## Good to know

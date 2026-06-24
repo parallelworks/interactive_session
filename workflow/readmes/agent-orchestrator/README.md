@@ -41,7 +41,7 @@ Launch or stop an agent any time — it joins or drops off automatically.
 | Setting | What it does | Default |
 |---|---|---|
 | **Fleet marker** | Only agents with this marker are coordinated | `worker` |
-| **Model** | The LLM behind the orchestrator (must support tool calling). Accepts any id from `pw ai models ls` or the short name shown in the Chat model picker (e.g. `glm-5.1`, or `/gpt-oss-20b` for a session-served model) | `org:glm/glm-5.1` |
+| **Model** | The LLM behind the orchestrator (must support tool calling) | `org:glm/glm-5.1` |
 | **AI allocation** | Which allocation usage is billed to (for `org:*` models) | `Private LLM Group` |
 | **Per-cluster timeout** | How long to wait for a cluster's agent to answer | 300 s |
 

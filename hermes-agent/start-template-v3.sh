@@ -25,6 +25,11 @@ set -x
 AGENT_DIR="${PW_PARENT_JOB_DIR}/${service_name:-hermes-agent}"
 export PATH="${HOME}/.local/bin:${HOME}/pw:${PATH}"   # hermes + pw on PATH
 
+# Private venv python for the small resolve_model helper (see tools/utils/agent_env.sh).
+# Hermes itself runs from its own installer-provided Python.
+. "${PW_PARENT_JOB_DIR}/tools/utils/agent_env.sh"
+PYBIN="$(agent_python_bin)"
+
 # Persistent Hermes home: conversation history (sessions/, state.db), skills/,
 # memories/, kanban.db, cron/ and SOUL.md live here and SURVIVE cancel/rerun --
 # it is NOT the per-run job dir. Default ~/.hermes-agent; the form can repoint it.
@@ -51,7 +56,7 @@ brain_base_url="https://${PW_PLATFORM_HOST}/api/openai/v1"
 # to Hermes (warnings, incl. "not an exact id", go to this start log).
 resolved_model="$(OPENAI_BASE_URL="${brain_base_url}" OPENAI_API_KEY="${PW_API_KEY}" \
     X_ALLOCATION="${service_allocation}" \
-    python3 "${PW_PARENT_JOB_DIR}/tools/utils/resolve_model.py" "${service_model:-org:glm/glm-5.1}")"
+    "${PYBIN}" "${PW_PARENT_JOB_DIR}/tools/utils/resolve_model.py" "${service_model:-org:glm/glm-5.1}")"
 cat > "${HERMES_HOME}/config.yaml" <<EOF
 model:
   default: "${resolved_model:-org:glm/glm-5.1}"
@@ -101,7 +106,7 @@ if [ "${service_interface}" = "dashboard" ]; then
         tail -n 40 "${log}" 2>/dev/null || true
         exit 1
     fi
-    python3 "${AGENT_DIR}/tcp_proxy.py" --listen "0.0.0.0:${service_port}" --upstream "127.0.0.1:${dash_port}" > "${proxy_log}" 2>&1 &
+    "${PYBIN}" "${AGENT_DIR}/tcp_proxy.py" --listen "0.0.0.0:${service_port}" --upstream "127.0.0.1:${dash_port}" > "${proxy_log}" 2>&1 &
     proxy_pid=$!
     echo "kill ${pid} ${proxy_pid} 2>/dev/null; pkill -P ${pid} 2>/dev/null; rm -f ${HERMES_HOME}/config.yaml" >> "${PW_PARENT_JOB_DIR}/cancel.sh"
     echo "::notice::hermes dashboard started (pid ${pid}, loopback :${dash_port}) | relay pid ${proxy_pid} on 0.0.0.0:${service_port} | log: ${log}"
@@ -133,13 +138,27 @@ else
         tail -n 40 "${gw_log}" 2>/dev/null || true
         exit 1
     fi
-    python3 "${AGENT_DIR}/auth_proxy.py" \
+    "${PYBIN}" "${AGENT_DIR}/auth_proxy.py" \
         --listen "0.0.0.0:${service_port}" \
         --upstream "127.0.0.1:${hermes_api_port}" \
         --bearer "${api_key}" \
         --marker "${service_marker:-worker}" > "${proxy_log}" 2>&1 &
     proxy_pid=$!
     echo "kill ${gw_pid} ${proxy_pid} 2>/dev/null; rm -f ${HERMES_HOME}/config.yaml" >> "${PW_PARENT_JOB_DIR}/cancel.sh"
+    # Fail loud if the proxy didn't come up (e.g. it crashed on import): otherwise
+    # the gateway is healthy but nothing listens on the tunnel port and the session
+    # just hangs "pending" with no obvious cause.
+    proxy_ready=""
+    for _ in $(seq 1 15); do
+        if curl -fsS -m 2 -o /dev/null "http://127.0.0.1:${service_port}/health"; then proxy_ready=1; break; fi
+        kill -0 "${proxy_pid}" 2>/dev/null || break
+        sleep 1
+    done
+    if [ -z "${proxy_ready}" ]; then
+        echo "::error title=Auth proxy failed to start::nothing listening on ${service_port}; see ${proxy_log}"
+        tail -n 40 "${proxy_log}" 2>/dev/null || true
+        exit 1
+    fi
     echo "::notice::hermes chat started | gateway pid ${gw_pid} (api 127.0.0.1:${hermes_api_port}) | proxy pid ${proxy_pid} (tunnel 0.0.0.0:${service_port})"
 fi
 

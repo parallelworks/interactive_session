@@ -44,8 +44,9 @@ def run_shell(command):
     if not command:
         return "(no command given)"
     try:
-        out = subprocess.run(command, shell=True, capture_output=True,
-                             text=True, timeout=SHELL_TIMEOUT)
+        out = subprocess.run(command, shell=True, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, universal_newlines=True,
+                             timeout=SHELL_TIMEOUT)
     except subprocess.TimeoutExpired:
         return "(command timed out after %ss)" % SHELL_TIMEOUT
     text = ((out.stdout or "") + (out.stderr or "")).strip()

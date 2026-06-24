@@ -22,6 +22,10 @@ if ! command -v python3 >/dev/null 2>&1; then
     exit 1
 fi
 echo "::notice::python3 $(python3 --version 2>&1)"
+
+# Provision the agent's private Python venv under the install dir.
+. "${PW_PARENT_JOB_DIR}/tools/utils/agent_env.sh"
+agent_python_setup
 echo "::endgroup::"
 
 echo "::notice::Agent orchestrator ready | marker=${service_marker} | brain=https://${PW_PLATFORM_HOST}/api/openai/v1 | model=${service_model}"

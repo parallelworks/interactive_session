@@ -46,6 +46,7 @@ jobs:
           service_model="${{ inputs.service.hermes_model }}"
           service_allocation="${{ inputs.service.allocation }}"
           service_hermes_version="${{ inputs.service.hermes_version }}"
+          service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
           EOF
           # Brain key is the runtime PW_API_KEY -- intentionally NOT written to inputs.sh
           # (the start script writes it into the per-session Hermes config instead).
@@ -193,6 +194,13 @@ jobs:
             type: string
             default: Private LLM Group
             tooltip: Which allocation to bill model usage against (for org:* models).
+          parent_install_dir:
+            label: Parent install directory
+            type: string
+            default: ${HOME}/pw/software
+            tooltip: >-
+              Where a small private Python virtualenv is created for the
+              resolve_model helper (isolated from the system Python).
           hermes_version:
             label: Hermes version
             type: string

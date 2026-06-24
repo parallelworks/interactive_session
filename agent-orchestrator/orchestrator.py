@@ -29,7 +29,7 @@ ASK_TIMEOUT = int(os.environ.get("AGENT_ASK_TIMEOUT") or 300)
 # When set, reach workers on localhost instead of via `pw ssh` (local testing).
 LOCAL_TEST = os.environ.get("AGENT_LOCAL_TEST") == "1"
 
-SYSTEM = (
+DEFAULT_SYSTEM = (
     "You are an orchestrator that coordinates agents, one per compute cluster. Call "
     "list_clusters to see which clusters are available, then ask_cluster(cluster, "
     "question) to have that cluster's agent inspect or act on its machine and report "
@@ -37,6 +37,8 @@ SYSTEM = (
     "relevant cluster in the SAME turn so they run in parallel, then synthesize their "
     "replies into one clear recommendation. Only ask clusters returned by list_clusters."
 )
+# The workflow form can override this; falls back to DEFAULT_SYSTEM (see agent_common).
+SYSTEM = hc.load_system_prompt(DEFAULT_SYSTEM)
 TOOLS = [
     {"type": "function", "function": {
         "name": "list_clusters",
@@ -62,7 +64,8 @@ def probe_marker(cluster, port):
     """Read a candidate worker's advertised marker from its `/_agent` endpoint."""
     remote = "curl -s -m 5 http://localhost:%d/_agent" % port
     try:
-        out = subprocess.run(_pw_ssh(cluster, remote), capture_output=True, text=True, timeout=40)
+        out = subprocess.run(_pw_ssh(cluster, remote), stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, universal_newlines=True, timeout=40)
         return (json.loads(out.stdout) or {}).get("marker")
     except Exception:  # noqa: BLE001 - not an agent / unreachable -> no marker
         return None
@@ -78,7 +81,8 @@ def discover_workers(ttl=5):
         return _cache["workers"]
     try:
         out = subprocess.run(["pw", "sessions", "ls", "-o", "json"],
-                             capture_output=True, text=True, timeout=30)
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                             universal_newlines=True, timeout=30)
         rows = json.loads(out.stdout or "[]")
     except Exception:  # noqa: BLE001
         return _cache["workers"]
@@ -115,7 +119,8 @@ def ask_worker(cluster, port, messages):
               "-H 'Content-Type: application/json' --data-binary @- "
               "http://localhost:%d/v1/chat/completions") % (payload, ASK_TIMEOUT, port)
     try:
-        out = subprocess.run(_pw_ssh(cluster, remote), capture_output=True, text=True, timeout=ASK_TIMEOUT + 60)
+        out = subprocess.run(_pw_ssh(cluster, remote), stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, universal_newlines=True, timeout=ASK_TIMEOUT + 60)
     except Exception as exc:  # noqa: BLE001
         return "(could not reach %s: %s)" % (cluster, exc)
     try:

@@ -26,17 +26,23 @@ AGENT_DIR="${PW_PARENT_JOB_DIR}/${service_name:-agent-orchestrator}"
 export PATH="${HOME}/pw:${PATH}"
 # Shared resolve_model utility, sparse-checked-out to tools/utils (see the YAML).
 export PYTHONPATH="${PW_PARENT_JOB_DIR}/tools/utils${PYTHONPATH:+:${PYTHONPATH}}"
+# Run with the agent's private venv python (see tools/utils/agent_env.sh).
+. "${PW_PARENT_JOB_DIR}/tools/utils/agent_env.sh"
+PYBIN="$(agent_python_bin)"
 export OPENAI_BASE_URL="https://${PW_PLATFORM_HOST}/api/openai/v1"
 export OPENAI_API_KEY="${PW_API_KEY}"      # runtime platform key (not persisted)
 export X_ALLOCATION="${service_allocation}"
 export MODEL="${service_model}"
 export AGENT_MARKER="${service_marker:-worker}"
+# System prompt from the form (written by preprocessing); falls back to the
+# built-in default if this file is missing/empty.
+export AGENT_SYSTEM_PROMPT_FILE="${PW_PARENT_JOB_DIR}/system_prompt.txt"
 
 cd ~/
 : > "${PW_PARENT_JOB_DIR}/cancel.sh"
 
 log="${PW_PARENT_JOB_DIR}/orchestrator.out"
-python3 "${AGENT_DIR}/orchestrator.py" --port "${service_port}" --host 0.0.0.0 > "${log}" 2>&1 &
+"${PYBIN}" "${AGENT_DIR}/orchestrator.py" --port "${service_port}" --host 0.0.0.0 > "${log}" 2>&1 &
 pid=$!
 echo "kill ${pid}" >> "${PW_PARENT_JOB_DIR}/cancel.sh"
 echo "::notice::agent orchestrator started (pid ${pid}) on port ${service_port} | marker=${AGENT_MARKER} | log: ${log}"

@@ -40,6 +40,7 @@ jobs:
           service_marker="${{ inputs.service.marker }}"
           service_model="${{ inputs.service.model }}"
           service_allocation="${{ inputs.service.allocation }}"
+          service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
           AGENT_ASK_TIMEOUT="${{ inputs.service.ask_timeout }}"
           EOF
           # Workers are auto-discovered at runtime via `pw sessions ls` + marker probe.
@@ -47,6 +48,11 @@ jobs:
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
           sed -i '/=""/d' inputs.sh
           sed -i 's/^/export /' inputs.sh
+          # System prompt -> a file (kept out of inputs.sh so multi-line text can't
+          # break the sourced shell). The start script points AGENT_SYSTEM_PROMPT_FILE at it.
+          cat > system_prompt.txt <<'__SYSTEM_PROMPT_EOF__'
+          ${{ inputs.service.system_prompt }}
+          __SYSTEM_PROMPT_EOF__
 
   session_runner:
     needs:
@@ -103,6 +109,18 @@ jobs:
               Only agents launched with this SAME marker are discovered and
               coordinated. Use a custom value (e.g. "gpuworker") to target a
               specific fleet.
+          system_prompt:
+            label: System prompt
+            type: editor
+            default: >-
+              You are an orchestrator that coordinates agents, one per compute
+              cluster. Call list_clusters to see which clusters are available, then
+              ask_cluster(cluster, question) to have that cluster's agent inspect or
+              act on its machine and report back. To compare clusters (e.g. 'where
+              should I run this GPU job?'), ask each relevant cluster in the SAME turn
+              so they run in parallel, then synthesize their replies into one clear
+              recommendation. Only ask clusters returned by list_clusters.
+            tooltip: Instructions that define how the orchestrator coordinates the cluster agents.
           model:
             label: Model
             type: string
@@ -117,6 +135,13 @@ jobs:
             type: string
             default: Private LLM Group
             tooltip: Which allocation to bill model usage against (for org:* models).
+          parent_install_dir:
+            label: Parent install directory
+            type: string
+            default: ${HOME}/pw/software
+            tooltip: >-
+              Where the agent creates its small private Python virtualenv
+              (isolated from the system Python). Needs a little free space.
           ask_timeout:
             label: Per-cluster timeout (seconds)
             type: integer

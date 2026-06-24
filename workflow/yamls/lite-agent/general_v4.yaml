@@ -39,11 +39,18 @@ jobs:
           service_marker="${{ inputs.service.marker }}"
           service_model="${{ inputs.service.model }}"
           service_allocation="${{ inputs.service.allocation }}"
+          service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
           EOF
           # Brain key is the runtime PW_API_KEY -- intentionally NOT written to inputs.sh.
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
           sed -i '/=""/d' inputs.sh
           sed -i 's/^/export /' inputs.sh
+          # System prompt -> a file (kept out of inputs.sh so multi-line text can't
+          # break the sourced shell). The start script points AGENT_SYSTEM_PROMPT_FILE
+          # at it; "{cluster}" in it is replaced with the cluster name at runtime.
+          cat > system_prompt.txt <<'__SYSTEM_PROMPT_EOF__'
+          ${{ inputs.service.system_prompt }}
+          __SYSTEM_PROMPT_EOF__
 
   session_runner:
     needs:
@@ -151,6 +158,19 @@ jobs:
               Group label. An agent-orchestrator launched with the SAME marker
               discovers and coordinates this agent. Use a custom value (e.g.
               "gpuworker") to keep separate fleets apart.
+          system_prompt:
+            label: System prompt
+            type: editor
+            default: >-
+              You are an agent running on the compute cluster '{cluster}'. Use the
+              run_shell tool to inspect or act on THIS machine and answer from real
+              command output — never guess. For long-running work (simulations,
+              training, big downloads), submit it to the scheduler or start it in the
+              background and report how to check on it; do not block waiting for it to
+              finish. Keep answers concise and specific to this cluster.
+            tooltip: >-
+              Instructions that define the agent's behavior. "{cluster}" is replaced
+              with the cluster name at runtime.
           model:
             label: Model
             type: string
@@ -165,3 +185,10 @@ jobs:
             type: string
             default: Private LLM Group
             tooltip: Which allocation to bill model usage against (for org:* models).
+          parent_install_dir:
+            label: Parent install directory
+            type: string
+            default: ${HOME}/pw/software
+            tooltip: >-
+              Where the agent creates its small private Python virtualenv
+              (isolated from the system Python). Needs a little free space.

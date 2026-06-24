@@ -25,14 +25,22 @@ Three behaviors matter for the platform:
     "unexpected end of JSON input" before the first token. (Verified: direct chat
     fails on the comment; the same empty-content delta the lite-agent uses works.)
 
-Standard library only (Python 3.9+), so there is nothing to install.
+Standard library only (Python 3.6+), so there is nothing to install.
 """
 import argparse
 import http.client
 import json
 import sys
 import threading
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+try:
+    from http.server import ThreadingHTTPServer
+except ImportError:  # Python 3.6 (e.g. HSP login nodes) -- it is just this mixin
+    from socketserver import ThreadingMixIn
+
+    class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+        daemon_threads = True
 
 # Hop-by-hop headers (RFC 7230) plus framing headers we re-derive ourselves.
 HOP = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization",

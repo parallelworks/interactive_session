@@ -30,6 +30,11 @@ for bin in python3 curl bash; do
     command -v "$bin" >/dev/null 2>&1 || { echo "::error title=Missing $bin::$bin is required on this node but was not found"; exit 1; }
 done
 echo "::notice::python3 $(python3 --version 2>&1)"
+
+# Private Python venv used to run the small resolve_model helper (Hermes itself
+# brings its own Python via the installer).
+. "${PW_PARENT_JOB_DIR}/tools/utils/agent_env.sh"
+agent_python_setup
 echo "::endgroup::"
 
 export PATH="${HOME}/.local/bin:${PATH}"

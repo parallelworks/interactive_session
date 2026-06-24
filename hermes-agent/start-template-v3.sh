@@ -51,7 +51,7 @@ brain_base_url="https://${PW_PLATFORM_HOST}/api/openai/v1"
 # to Hermes (warnings, incl. "not an exact id", go to this start log).
 resolved_model="$(OPENAI_BASE_URL="${brain_base_url}" OPENAI_API_KEY="${PW_API_KEY}" \
     X_ALLOCATION="${service_allocation}" \
-    python3 "${AGENT_DIR}/resolve_model.py" "${service_model:-org:glm/glm-5.1}")"
+    python3 "${PW_PARENT_JOB_DIR}/tools/utils/resolve_model.py" "${service_model:-org:glm/glm-5.1}")"
 cat > "${HERMES_HOME}/config.yaml" <<EOF
 model:
   default: "${resolved_model:-org:glm/glm-5.1}"

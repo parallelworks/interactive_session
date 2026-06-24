@@ -28,6 +28,7 @@ jobs:
           branch: main
           sparse_checkout:
             - ${{ inputs.service.name }}
+            - tools/utils
       - name: Create Inputs
         run: |
           set -x

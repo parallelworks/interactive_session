@@ -21,6 +21,8 @@ set -x
 AGENT_DIR="${PW_PARENT_JOB_DIR}/${service_name:-lite-agent}"
 
 export PATH="${HOME}/pw:${PATH}"
+# Shared resolve_model utility, sparse-checked-out to tools/utils (see the YAML).
+export PYTHONPATH="${PW_PARENT_JOB_DIR}/tools/utils${PYTHONPATH:+:${PYTHONPATH}}"
 export OPENAI_BASE_URL="https://${PW_PLATFORM_HOST}/api/openai/v1"
 export OPENAI_API_KEY="${PW_API_KEY}"      # runtime platform key (not persisted)
 export X_ALLOCATION="${service_allocation}"

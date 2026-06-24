@@ -32,6 +32,9 @@ export X_ALLOCATION="${service_allocation}"
 export MODEL="${service_model}"
 export AGENT_CLUSTER="${service_cluster:-${PW_USER}}"
 export AGENT_MARKER="${service_marker:-worker}"
+# System prompt from the form (written by preprocessing); the agent falls back to
+# its built-in default if this file is missing/empty.
+export AGENT_SYSTEM_PROMPT_FILE="${PW_PARENT_JOB_DIR}/system_prompt.txt"
 
 cd ~/
 : > "${PW_PARENT_JOB_DIR}/cancel.sh"

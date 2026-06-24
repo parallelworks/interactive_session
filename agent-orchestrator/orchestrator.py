@@ -29,7 +29,7 @@ ASK_TIMEOUT = int(os.environ.get("AGENT_ASK_TIMEOUT") or 300)
 # When set, reach workers on localhost instead of via `pw ssh` (local testing).
 LOCAL_TEST = os.environ.get("AGENT_LOCAL_TEST") == "1"
 
-SYSTEM = (
+DEFAULT_SYSTEM = (
     "You are an orchestrator that coordinates agents, one per compute cluster. Call "
     "list_clusters to see which clusters are available, then ask_cluster(cluster, "
     "question) to have that cluster's agent inspect or act on its machine and report "
@@ -37,6 +37,8 @@ SYSTEM = (
     "relevant cluster in the SAME turn so they run in parallel, then synthesize their "
     "replies into one clear recommendation. Only ask clusters returned by list_clusters."
 )
+# The workflow form can override this; falls back to DEFAULT_SYSTEM (see agent_common).
+SYSTEM = hc.load_system_prompt(DEFAULT_SYSTEM)
 TOOLS = [
     {"type": "function", "function": {
         "name": "list_clusters",

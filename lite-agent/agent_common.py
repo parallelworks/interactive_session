@@ -23,6 +23,8 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+from resolve_model import resolve_model
+
 # Brain = the platform OpenAI-compatible endpoint. The key is the runtime
 # PW_API_KEY (the start script exports it as OPENAI_API_KEY); org:* models also
 # require the X-Allocation header. None of this is persisted to disk.
@@ -37,18 +39,41 @@ def brain_ready():
     return bool(BRAIN_URL and BRAIN_KEY)
 
 
-def call_brain(messages, tools=None):
-    """One chat-completion call to the platform brain -> the reply message dict.
-    Raises on transport/HTTP errors; the caller turns that into a chat error."""
-    body = {"model": BRAIN_MODEL, "messages": messages}
-    if tools:
-        body["tools"] = tools
-        body["tool_choice"] = "auto"
+def _brain_headers():
     headers = {"Authorization": "Bearer " + BRAIN_KEY, "Content-Type": "application/json"}
     if ALLOCATION:
         headers["X-Allocation"] = ALLOCATION
+    return headers
+
+
+_RESOLVED_MODEL = None
+
+
+def brain_model():
+    """The brain model id to send, resolved from the configured name and cached.
+    Resolution (the shared resolve_model utility) maps a short Chat-picker name to
+    its full provider id and warns if it wasn't an exact id. A resolved
+    (fully-qualified) id is cached; an unresolved bare name is retried on the next
+    call so it self-heals once its backing model (e.g. a not-yet-started session
+    model) appears."""
+    global _RESOLVED_MODEL
+    if _RESOLVED_MODEL:
+        return _RESOLVED_MODEL
+    resolved = resolve_model(BRAIN_MODEL, BRAIN_URL, BRAIN_KEY, ALLOCATION)
+    if ":" in resolved:
+        _RESOLVED_MODEL = resolved
+    return resolved
+
+
+def call_brain(messages, tools=None):
+    """One chat-completion call to the platform brain -> the reply message dict.
+    Raises on transport/HTTP errors; the caller turns that into a chat error."""
+    body = {"model": brain_model(), "messages": messages}
+    if tools:
+        body["tools"] = tools
+        body["tool_choice"] = "auto"
     req = urllib.request.Request(BRAIN_URL + "/chat/completions",
-                                 data=json.dumps(body).encode(), headers=headers)
+                                 data=json.dumps(body).encode(), headers=_brain_headers())
     with urllib.request.urlopen(req, timeout=BRAIN_TIMEOUT) as resp:
         return json.load(resp)["choices"][0]["message"]
 

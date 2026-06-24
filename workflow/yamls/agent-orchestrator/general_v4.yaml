@@ -28,6 +28,7 @@ jobs:
           branch: main
           sparse_checkout:
             - ${{ inputs.service.name }}
+            - tools/utils
       - name: Create Inputs
         run: |
           set -x
@@ -106,7 +107,11 @@ jobs:
             label: Model
             type: string
             default: org:glm/glm-5.1
-            tooltip: The LLM that powers the orchestrator. Must support tool calling. See `pw ai models ls`.
+            tooltip: >-
+              The LLM that powers the orchestrator (must support tool calling). Any
+              id from `pw ai models ls`, or the short name shown in the Chat model
+              picker (e.g. glm-5.1, or /gpt-oss-20b for a session-served model) --
+              it is resolved to the full provider id automatically.
           allocation:
             label: AI allocation
             type: string

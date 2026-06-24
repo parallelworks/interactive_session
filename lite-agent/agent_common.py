@@ -37,18 +37,84 @@ def brain_ready():
     return bool(BRAIN_URL and BRAIN_KEY)
 
 
-def call_brain(messages, tools=None):
-    """One chat-completion call to the platform brain -> the reply message dict.
-    Raises on transport/HTTP errors; the caller turns that into a chat error."""
-    body = {"model": BRAIN_MODEL, "messages": messages}
-    if tools:
-        body["tools"] = tools
-        body["tool_choice"] = "auto"
+def _brain_headers():
     headers = {"Authorization": "Bearer " + BRAIN_KEY, "Content-Type": "application/json"}
     if ALLOCATION:
         headers["X-Allocation"] = ALLOCATION
+    return headers
+
+
+def list_brain_models():
+    """The models the platform endpoint exposes (GET /v1/models) -> [{id,name,..}].
+    Empty on any error, so model resolution degrades to the literal id."""
+    if not brain_ready():
+        return []
+    try:
+        req = urllib.request.Request(BRAIN_URL + "/models", headers=_brain_headers())
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.load(resp)
+        return data.get("data", []) if isinstance(data, dict) else []
+    except Exception:  # noqa: BLE001 - resolution is best-effort
+        return []
+
+
+def resolve_brain_model(want):
+    """Map a model name to the id the brain endpoint routes by.
+
+    The platform routes by a fully-qualified id ('org:owner/provider' or
+    'session:user:provider/model'); the chat model picker only shows the short
+    name ('/gpt-oss-20b', 'glm-5.1'). Sending that short name fails with
+    400 "Invalid provider identifier format". So when `want` has no provider
+    prefix (no ':'), look it up in GET /v1/models and return the full id whose
+    trailing name segment matches. Already-qualified ids (and unknown names, if
+    the lookup turns up nothing) pass through unchanged."""
+    want = (want or "").strip()
+    if not want or ":" in want:
+        return want
+    tail = want.lstrip("/")  # session ids look like '..provider//gpt-oss-20b'
+    models = list_brain_models()
+    for m in models:
+        if m.get("id") == want:
+            return want
+    for m in models:
+        mid = m.get("id", "")
+        if mid.rsplit("/", 1)[-1] == tail:
+            return mid
+    for m in models:  # last resort: the parenthetical display name 'provider (name)'
+        name = m.get("name", "")
+        if "(" in name and name.rsplit("(", 1)[-1].rstrip(")").strip().lstrip("/") == tail:
+            return m.get("id", want)
+    return want
+
+
+_RESOLVED_MODEL = None
+
+
+def brain_model():
+    """The brain model id to send, resolved from the configured name and cached.
+    A successful resolution (a fully-qualified id) is cached; an unresolved bare
+    name is retried on the next call so it self-heals once its backing model
+    (e.g. a not-yet-started session model) appears."""
+    global _RESOLVED_MODEL
+    if _RESOLVED_MODEL:
+        return _RESOLVED_MODEL
+    resolved = resolve_brain_model(BRAIN_MODEL)
+    if ":" in resolved:
+        if resolved != BRAIN_MODEL:
+            print("brain model %r resolved to %r" % (BRAIN_MODEL, resolved), flush=True)
+        _RESOLVED_MODEL = resolved
+    return resolved
+
+
+def call_brain(messages, tools=None):
+    """One chat-completion call to the platform brain -> the reply message dict.
+    Raises on transport/HTTP errors; the caller turns that into a chat error."""
+    body = {"model": brain_model(), "messages": messages}
+    if tools:
+        body["tools"] = tools
+        body["tool_choice"] = "auto"
     req = urllib.request.Request(BRAIN_URL + "/chat/completions",
-                                 data=json.dumps(body).encode(), headers=headers)
+                                 data=json.dumps(body).encode(), headers=_brain_headers())
     with urllib.request.urlopen(req, timeout=BRAIN_TIMEOUT) as resp:
         return json.load(resp)["choices"][0]["message"]
 

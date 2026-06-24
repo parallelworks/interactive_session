@@ -35,6 +35,8 @@ except ImportError:  # Python 3.6 (e.g. HSP login nodes) -- it is just this mixi
 
 from resolve_model import resolve_model
 
+from resolve_model import resolve_model
+
 # Brain = the platform OpenAI-compatible endpoint. The key is the runtime
 # PW_API_KEY (the start script exports it as OPENAI_API_KEY); org:* models also
 # require the X-Allocation header. None of this is persisted to disk.

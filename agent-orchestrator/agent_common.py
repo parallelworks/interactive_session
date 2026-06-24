@@ -23,6 +23,8 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+from resolve_model import resolve_model
+
 # Brain = the platform OpenAI-compatible endpoint. The key is the runtime
 # PW_API_KEY (the start script exports it as OPENAI_API_KEY); org:* models also
 # require the X-Allocation header. None of this is persisted to disk.
@@ -44,64 +46,21 @@ def _brain_headers():
     return headers
 
 
-def list_brain_models():
-    """The models the platform endpoint exposes (GET /v1/models) -> [{id,name,..}].
-    Empty on any error, so model resolution degrades to the literal id."""
-    if not brain_ready():
-        return []
-    try:
-        req = urllib.request.Request(BRAIN_URL + "/models", headers=_brain_headers())
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.load(resp)
-        return data.get("data", []) if isinstance(data, dict) else []
-    except Exception:  # noqa: BLE001 - resolution is best-effort
-        return []
-
-
-def resolve_brain_model(want):
-    """Map a model name to the id the brain endpoint routes by.
-
-    The platform routes by a fully-qualified id ('org:owner/provider' or
-    'session:user:provider/model'); the chat model picker only shows the short
-    name ('/gpt-oss-20b', 'glm-5.1'). Sending that short name fails with
-    400 "Invalid provider identifier format". So when `want` has no provider
-    prefix (no ':'), look it up in GET /v1/models and return the full id whose
-    trailing name segment matches. Already-qualified ids (and unknown names, if
-    the lookup turns up nothing) pass through unchanged."""
-    want = (want or "").strip()
-    if not want or ":" in want:
-        return want
-    tail = want.lstrip("/")  # session ids look like '..provider//gpt-oss-20b'
-    models = list_brain_models()
-    for m in models:
-        if m.get("id") == want:
-            return want
-    for m in models:
-        mid = m.get("id", "")
-        if mid.rsplit("/", 1)[-1] == tail:
-            return mid
-    for m in models:  # last resort: the parenthetical display name 'provider (name)'
-        name = m.get("name", "")
-        if "(" in name and name.rsplit("(", 1)[-1].rstrip(")").strip().lstrip("/") == tail:
-            return m.get("id", want)
-    return want
-
-
 _RESOLVED_MODEL = None
 
 
 def brain_model():
     """The brain model id to send, resolved from the configured name and cached.
-    A successful resolution (a fully-qualified id) is cached; an unresolved bare
-    name is retried on the next call so it self-heals once its backing model
-    (e.g. a not-yet-started session model) appears."""
+    Resolution (the shared resolve_model utility) maps a short Chat-picker name to
+    its full provider id and warns if it wasn't an exact id. A resolved
+    (fully-qualified) id is cached; an unresolved bare name is retried on the next
+    call so it self-heals once its backing model (e.g. a not-yet-started session
+    model) appears."""
     global _RESOLVED_MODEL
     if _RESOLVED_MODEL:
         return _RESOLVED_MODEL
-    resolved = resolve_brain_model(BRAIN_MODEL)
+    resolved = resolve_model(BRAIN_MODEL, BRAIN_URL, BRAIN_KEY, ALLOCATION)
     if ":" in resolved:
-        if resolved != BRAIN_MODEL:
-            print("brain model %r resolved to %r" % (BRAIN_MODEL, resolved), flush=True)
         _RESOLVED_MODEL = resolved
     return resolved
 

@@ -40,6 +40,7 @@ jobs:
           service_marker="${{ inputs.service.marker }}"
           service_model="${{ inputs.service.model }}"
           service_allocation="${{ inputs.service.allocation }}"
+          service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
           AGENT_ASK_TIMEOUT="${{ inputs.service.ask_timeout }}"
           EOF
           # Workers are auto-discovered at runtime via `pw sessions ls` + marker probe.
@@ -117,6 +118,13 @@ jobs:
             type: string
             default: Private LLM Group
             tooltip: Which allocation to bill model usage against (for org:* models).
+          parent_install_dir:
+            label: Parent install directory
+            type: string
+            default: ${HOME}/pw/software
+            tooltip: >-
+              Where the agent creates its small private Python virtualenv
+              (isolated from the system Python). Needs a little free space.
           ask_timeout:
             label: Per-cluster timeout (seconds)
             type: integer

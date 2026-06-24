@@ -39,6 +39,7 @@ jobs:
           service_marker="${{ inputs.service.marker }}"
           service_model="${{ inputs.service.model }}"
           service_allocation="${{ inputs.service.allocation }}"
+          service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
           EOF
           # Brain key is the runtime PW_API_KEY -- intentionally NOT written to inputs.sh.
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
@@ -165,3 +166,10 @@ jobs:
             type: string
             default: Private LLM Group
             tooltip: Which allocation to bill model usage against (for org:* models).
+          parent_install_dir:
+            label: Parent install directory
+            type: string
+            default: ${HOME}/pw/software
+            tooltip: >-
+              Where the agent creates its small private Python virtualenv
+              (isolated from the system Python). Needs a little free space.

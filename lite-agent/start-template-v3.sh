@@ -23,6 +23,9 @@ AGENT_DIR="${PW_PARENT_JOB_DIR}/${service_name:-lite-agent}"
 export PATH="${HOME}/pw:${PATH}"
 # Shared resolve_model utility, sparse-checked-out to tools/utils (see the YAML).
 export PYTHONPATH="${PW_PARENT_JOB_DIR}/tools/utils${PYTHONPATH:+:${PYTHONPATH}}"
+# Run with the agent's private venv python (see tools/utils/agent_env.sh).
+. "${PW_PARENT_JOB_DIR}/tools/utils/agent_env.sh"
+PYBIN="$(agent_python_bin)"
 export OPENAI_BASE_URL="https://${PW_PLATFORM_HOST}/api/openai/v1"
 export OPENAI_API_KEY="${PW_API_KEY}"      # runtime platform key (not persisted)
 export X_ALLOCATION="${service_allocation}"
@@ -34,7 +37,7 @@ cd ~/
 : > "${PW_PARENT_JOB_DIR}/cancel.sh"
 
 log="${PW_PARENT_JOB_DIR}/lite-agent.out"
-python3 "${AGENT_DIR}/agent_server.py" --port "${service_port}" --host 0.0.0.0 > "${log}" 2>&1 &
+"${PYBIN}" "${AGENT_DIR}/agent_server.py" --port "${service_port}" --host 0.0.0.0 > "${log}" 2>&1 &
 pid=$!
 echo "kill ${pid}" >> "${PW_PARENT_JOB_DIR}/cancel.sh"
 echo "::notice::lite agent started (pid ${pid}) on port ${service_port} | marker=${AGENT_MARKER} | cluster=${AGENT_CLUSTER}"

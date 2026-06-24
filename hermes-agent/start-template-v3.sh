@@ -25,6 +25,11 @@ set -x
 AGENT_DIR="${PW_PARENT_JOB_DIR}/${service_name:-hermes-agent}"
 export PATH="${HOME}/.local/bin:${HOME}/pw:${PATH}"   # hermes + pw on PATH
 
+# Private venv python for the small resolve_model helper (see tools/utils/agent_env.sh).
+# Hermes itself runs from its own installer-provided Python.
+. "${PW_PARENT_JOB_DIR}/tools/utils/agent_env.sh"
+PYBIN="$(agent_python_bin)"
+
 # Persistent Hermes home: conversation history (sessions/, state.db), skills/,
 # memories/, kanban.db, cron/ and SOUL.md live here and SURVIVE cancel/rerun --
 # it is NOT the per-run job dir. Default ~/.hermes-agent; the form can repoint it.
@@ -51,7 +56,7 @@ brain_base_url="https://${PW_PLATFORM_HOST}/api/openai/v1"
 # to Hermes (warnings, incl. "not an exact id", go to this start log).
 resolved_model="$(OPENAI_BASE_URL="${brain_base_url}" OPENAI_API_KEY="${PW_API_KEY}" \
     X_ALLOCATION="${service_allocation}" \
-    python3 "${PW_PARENT_JOB_DIR}/tools/utils/resolve_model.py" "${service_model:-org:glm/glm-5.1}")"
+    "${PYBIN}" "${PW_PARENT_JOB_DIR}/tools/utils/resolve_model.py" "${service_model:-org:glm/glm-5.1}")"
 cat > "${HERMES_HOME}/config.yaml" <<EOF
 model:
   default: "${resolved_model:-org:glm/glm-5.1}"

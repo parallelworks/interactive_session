@@ -126,7 +126,7 @@ jobs:
             echo "#SBATCH --qos=${{ inputs.slurm.qos }}" >> headers.sh
             echo "#SBATCH --cpus-per-task=${{ inputs.slurm.cpus_per_task }}" >> headers.sh
             echo "#SBATCH --nodes=${{ inputs.slurm.nodes }}" >> headers.sh
-            GPUS="${{ inputs.slurm.gpus }}"
+            GPUS="0"
             if [[ "${GPUS:-0}" != "0" ]]; then
               echo "#SBATCH --gres=gpu:${GPUS}" >> headers.sh
             fi
@@ -560,14 +560,6 @@ jobs:
             type: number
             default: 1
             tooltip: '--nodes=value slurm directive'
-            ignore: ${{ 'existing' != inputs.resource.provider }}
-            hidden: ${{ .ignore }}
-          gpus:
-            label: Number of GPUs
-            type: number
-            default: 0
-            min: 0
-            tooltip: '--gres=gpu:value slurm directive'
             ignore: ${{ 'existing' != inputs.resource.provider }}
             hidden: ${{ .ignore }}
           node_type:

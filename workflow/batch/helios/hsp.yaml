@@ -69,7 +69,7 @@ jobs:
             qos: ${{ inputs.slurm.qos }}
             cpus_per_task: ${{ inputs.slurm.cpus_per_task }}
             nodes: ${{ inputs.slurm.nodes }}
-            gpus: ${{ inputs.slurm.gpus }}
+            gpus: 0
             node_type: ${{ inputs.slurm.node_type }}
             time: ${{ inputs.slurm.time }}
             scheduler_directives: ${{ inputs.slurm.scheduler_directives }}
@@ -172,14 +172,6 @@ jobs:
             type: number
             default: 1
             tooltip: '--nodes=value slurm directive'
-            ignore: ${{ 'existing' != inputs.resource.provider }}
-            hidden: ${{ .ignore }}
-          gpus:
-            label: Number of GPUs
-            type: number
-            default: 0
-            min: 0
-            tooltip: '--gres=gpu:value slurm directive'
             ignore: ${{ 'existing' != inputs.resource.provider }}
             hidden: ${{ .ignore }}
           node_type:

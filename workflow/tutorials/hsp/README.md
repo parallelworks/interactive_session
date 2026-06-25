@@ -13,6 +13,7 @@ By the end of the stages built so far you will understand how to:
 - Surface messages in the workflow UI with log annotations (`::notice::`, `::warning::`, `::error::`)
 - Submit the job to the cluster scheduler (SLURM) — then stream its output, monitor it, and clean it up
 - Build a form that adapts to the chosen resource with dynamic dropdowns and show/hide rules
+- Replace the hand-rolled scheduler logic with a reusable subworkflow that submits your script (SLURM and PBS)
 
 ---
 
@@ -227,6 +228,9 @@ sessions:
   fractal:
     redirect: true
 
+env:                                          # NEW: a workflow-level variable, visible to every step
+  RESOLUTION: ${{ inputs.resolution }}
+
 jobs:
   install:
     ssh:
@@ -249,7 +253,7 @@ jobs:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
       - name: Render and Serve                # CHANGED: serve on the chosen port
-        run: RESOLUTION=${{ inputs.resolution }} PORT=${{ needs.install.outputs.PORT }} ./fractal-demo/run.sh
+        run: PORT=${{ needs.install.outputs.PORT }} ./fractal-demo/run.sh   # RESOLUTION now comes from env
 
   session:
     needs:
@@ -279,6 +283,9 @@ The `pw` CLI is available in every step. `open-port` asks the platform for a por
 
 **`$OUTPUTS`.**
 `$OUTPUTS` is a file the platform injects into each step. Writing `KEY=VALUE` lines to it publishes those values as outputs of the job. `tee -a` appends to the file *and* echoes the line to the log so you can see it. Here it publishes `PORT`.
+
+**Workflow-level `env`.**
+The top-level `env:` block defines variables available to every step in the workflow. We set `RESOLUTION` there once, so `run.sh` reads it from the environment and the run step only has to pass the port. (Earlier stages set it inline on the command — this is the same idea, hoisted to one place.)
 
 **`needs.<job>.outputs.<name>`.**
 This reads a value published by an upstream job. `${{ needs.install.outputs.PORT }}` is used in two places — the `run` job and the `session` job — so both use the exact port chosen in `install`.
@@ -315,20 +322,20 @@ This is by far the most involved file in the series — [`04-slurm.yaml`](04-slu
         # ... unchanged ...
       - name: Create Run Script               # build the body the job will run, wherever it runs
         run: |
-          cat <<'EOF' >> run-template.sh
+          cat <<'EOF' >> script.sh
           hostname > HOSTNAME                  # record which node we land on
           export PORT=$(pw agent open-port)    # and which port we serve on
           echo ${PORT} > PORT
-          export RESOLUTION=${{ inputs.resolution }}
-          ./fractal-demo/run.sh
+          ./fractal-demo/run.sh                # RESOLUTION comes from the workflow env
           EOF
+          chmod +x script.sh
 ```
 
 `install` always targets `inputs.resource.ip`, the controller node — it has internet for the checkout and the venv build. Even when the fractal will later run on a compute node, setup happens here, once.
 
-Notice the new idea: instead of running `run.sh` directly, `install` writes `run-template.sh` — a script body that, *wherever it eventually runs*, records its `hostname`, opens a port **on that machine**, and starts the fractal. For a scheduled job that machine is a compute node, so the port and hostname must be discovered there, not on the controller.
+Notice the new idea: instead of running `run.sh` directly, `install` writes `script.sh` — a script body that, *wherever it eventually runs*, records its `hostname`, opens a port **on that machine**, and starts the fractal. For a scheduled job that machine is a compute node, so the port and hostname must be discovered there, not on the controller. (`RESOLUTION` is not baked in — it comes from the workflow-level `env` from Stage 3.)
 
-> Jobs default to the same working directory (`~/pw/jobs/<workflow>/<job-number>/` on the resource). That is how files one job writes — `run-template.sh`, `PORT`, `HOSTNAME`, the output log — are visible to the others.
+> Jobs default to the same working directory (`~/pw/jobs/<workflow>/<job-number>/` on the resource). That is how files one job writes — `script.sh`, `PORT`, `HOSTNAME`, the output log — are visible to the others.
 
 ### Two paths, chosen by the resource
 
@@ -341,7 +348,7 @@ Notice the new idea: instead of running `run.sh` directly, `install` writes `run
     ...
 ```
 
-Exactly one of these runs, selected by `if`. `ssh_job` turns `run-template.sh` into a script and runs it on the controller; `slurm_job` prepends `#SBATCH` headers and submits it with `sbatch`. Which one fires is driven by the form (below), which keys off **`inputs.resource.schedulerType`** — an attribute of the chosen resource that says which scheduler it uses (`slurm`, `pbs`, or empty for none).
+Exactly one of these runs, selected by `if`. `ssh_job` wraps `script.sh` with a shebang and runs it on the controller; `slurm_job` prepends `#SBATCH` headers and submits it with `sbatch`. Which one fires is driven by the form (below), which keys off **`inputs.resource.schedulerType`** — an attribute of the chosen resource that says which scheduler it uses (`slurm`, `pbs`, or empty for none).
 
 ### Streaming the output live — `early-cancel` and `cancel-jobs`
 
@@ -400,7 +407,7 @@ Now `slurm_job` stays alive for the lifetime of the SLURM job. By the time `clea
 
 ### Waiting for the job to come up — `retry`
 
-The server's host and port only exist once `run-template.sh` actually runs — which, for a queued SLURM job, may be minutes later. The session job polls for them:
+The server's host and port only exist once `script.sh` actually runs — which, for a queued SLURM job, may be minutes later. The session job polls for them:
 
 ```yaml
   session:
@@ -470,4 +477,57 @@ The inputs do the work of only asking for what the chosen resource needs.
 - **Dynamic dropdowns** — the `slurm-partitions`, `slurm-qos`, and `slurm-accounts` types fetch their choices from the cluster you picked (`resource: ${{ inputs.resource }}`), so you only see options that actually exist on it. A plain `dropdown` can vary its option list per resource with `option-key`.
 - **`is_enabled`** is the trick behind the two `if`s: a hidden boolean defaulting to `true`. When the `slurm` group is ignored (no scheduler, or the toggle off), `is_enabled` is never sent, so `slurm.is_enabled != true` and `ssh_job` runs. When the group is active it is `true`, so `slurm_job` runs instead.
 
-This one file does a lot — branching on the scheduler, building `sbatch` headers, streaming, monitoring, cleaning up, and a form that reshapes itself per resource. A later stage rebuilds the same behavior with **subworkflows** (`05-subworkflows`) to hide most of this machinery behind a reusable building block.
+This one file does a lot — branching on the scheduler, building `sbatch` headers, streaming, monitoring, cleaning up, and a form that reshapes itself per resource. The next stage rebuilds the same behavior with a **subworkflow** that hides most of this machinery behind a reusable building block.
+
+---
+
+## Stage 5 — Let a subworkflow submit the job (`05-subworkflow.yaml`)
+
+Stage 4 worked, but it hand-rolled everything: branching on the scheduler, building headers, submitting, streaming, monitoring, cleaning up — hundreds of lines, SLURM only. The **recommended** approach is not to reimplement any of that. Instead, write your script and hand it to a **subworkflow** that already knows how to submit scripts to a cluster. This is [`05-subworkflow.yaml`](05-subworkflow.yaml).
+
+`install` just writes the script body (as in Stage 4), and the whole submit/stream/monitor/cleanup dance collapses into a single job:
+
+```yaml
+  install:
+    # ... checkout + install + write script.sh (as in Stage 4) ...
+
+  script_submitter:
+    needs:
+      - install
+    steps:
+      - name: Script Submitter
+        uses: github/parallelworks/interactive_session@main   # run another workflow as a step
+        with:
+          $yaml: workflow/script_submitter/v3.6/hsp.yaml       # which subworkflow to run
+          resource: ${{ inputs.resource }}
+          rundir: ${PW_PARENT_JOB_DIR}                         # the shared job directory
+          shebang: '#!/bin/bash'
+          script: ${PW_PARENT_JOB_DIR}/script.sh               # the script to submit
+          scheduler: ${{ inputs.scheduler }}
+          slurm:                                               # pass the SLURM group straight through
+            is_enabled: ${{ inputs.slurm.is_enabled }}
+            partition: ${{ inputs.slurm.partition }}
+            # ... account, qos, nodes, time, scheduler_directives ...
+          pbs:                                                 # ...and a PBS group
+            is_enabled: ${{ inputs.pbs.is_enabled }}
+            account: ${{ inputs.pbs.account }}
+            scheduler_directives: ${{ inputs.pbs.scheduler_directives }}
+```
+
+The `session` job is unchanged from Stage 4 — it polls for `PORT`/`HOSTNAME` and creates the tunnel.
+
+### Concepts introduced
+
+**Subworkflows (`uses:` + `$yaml`).**
+`uses: github/parallelworks/interactive_session@main` runs *another workflow* as a step. `$yaml` selects which workflow file inside that repo to run (here `workflow/script_submitter/v3.6/hsp.yaml`), and the remaining `with:` keys are that subworkflow's inputs. The subworkflow runs as part of your run.
+
+**The `script_submitter` subworkflow does the scheduler work.**
+You give it your `script`, the `scheduler` flag, and the `slurm`/`pbs` directive groups; it does everything Stage 4 did by hand — choosing SLURM vs PBS vs running on the controller, building the headers, submitting, streaming the output, monitoring the job, and cleaning it up. It is versioned (`v3.6`) — pin a version. Because it is maintained centrally, your workflow shrinks to "write a script, hand it over."
+
+**SLURM *and* PBS for free.**
+Stage 4 only handled SLURM. The subworkflow handles both, so 05 simply adds a `pbs` input group next to `slurm` and passes it through — no new submission logic to write.
+
+**`${PW_PARENT_JOB_DIR}`.**
+The shared job directory on the resource. We pass it as `rundir` and use it to locate `script.sh`, so the subworkflow runs the script in the same directory where `install` wrote it — and where the `session` job later reads `PORT` and `HOSTNAME`.
+
+Compared with Stage 4, the bespoke `ssh_job`, `slurm_job`, and `stream_output` jobs and the monitor-and-cleanup dance are gone, replaced by one `script_submitter` job. This is the recommended way to run a script on a cluster: don't reimplement scheduler handling — delegate it.

@@ -4,6 +4,10 @@ permissions:
 sessions:
   fractal:
     redirect: true
+    
+
+env:
+  RESOLUTION: ${{ inputs.resolution }}
 
 jobs:
   install:
@@ -36,7 +40,7 @@ jobs:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
       - name: Render and Serve
-        run: RESOLUTION=${{ inputs.resolution }} PORT=${{ needs.install.outputs.PORT }} ./fractal-demo/run.sh
+        run: PORT=${{ needs.install.outputs.PORT }} ./fractal-demo/run.sh
 
   session:
     needs:

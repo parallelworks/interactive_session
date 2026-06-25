@@ -5,6 +5,9 @@ sessions:
   fractal:
     redirect: true
 
+env:
+  RESOLUTION: ${{ inputs.resolution }}
+
 jobs:
   install:
     ssh:
@@ -25,14 +28,14 @@ jobs:
           ./fractal-demo/install.sh
       - name: Create Run Script
         run: |
-          cat <<'EOF' >> run-template.sh
+          cat <<'EOF' >> script.sh
           # The session needs to know the hostname and PORT for the tunnel
           hostname > HOSTNAME
           export PORT=$(pw agent open-port)
           echo ${PORT} > PORT
-          export RESOLUTION=${{ inputs.resolution }}
           ./fractal-demo/run.sh
           EOF
+          chmod +x script.sh
 
   stream_output:
     needs:
@@ -60,7 +63,7 @@ jobs:
           ls
           set -x
           echo '#!/bin/bash' > run.sh
-          cat run-template.sh >> run.sh
+          cat script.sh >> run.sh
           chmod +x run.sh
           cat run.sh
       - name: Submit Script
@@ -121,7 +124,7 @@ jobs:
         run: |
           echo '#!/bin/bash' > run.sh
           cat headers.sh >> run.sh
-          cat run-template.sh >> run.sh
+          cat script.sh >> run.sh
           chmod +x run.sh
           cat run.sh
       - name: Submit SLURM Script

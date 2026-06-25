@@ -27,6 +27,7 @@ jobs:
         run: |
           PORT=$(pw agent open-port)
           echo "PORT=${PORT}" | tee -a $OUTPUTS
+          echo "::notice::Fractal will be served on port ${PORT}"
 
   run:
     needs:

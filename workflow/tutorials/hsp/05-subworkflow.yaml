@@ -34,164 +34,35 @@ jobs:
           ./fractal-demo/run.sh
           EOF
 
-  stream_output:
-    needs:
-      - install
-    working-directory: ${{ inputs.rundir }}
-    ssh:
-      remoteHost: ${{ inputs.resource.ip }}
-    steps:
-      - name: Stream Output
-        early-cancel: any-job-failed
-        run: |
-          touch run.${PW_JOB_ID}.out
-          tail -f run.${PW_JOB_ID}.out 
 
-
-  ssh_job:
-    if: ${{ inputs.slurm.is_enabled != true }}
-    needs:
-      - install
-    ssh:
-      remoteHost: ${{ inputs.resource.ip }}
+  script_submitter:
     steps:
-      - name: Create Script
-        run: |
-          ls
-          set -x
-          echo '#!/bin/bash' > run.sh
-          cat run-template.sh >> run.sh
-          chmod +x run.sh
-          cat run.sh
-      - name: Submit Script
-        run: ./run.sh > run.${PW_JOB_ID}.out 2>&1
-      - name: Cancel Streaming
-        uses: parallelworks/cancel-jobs
+      - name: Session Runner
+        uses: github/parallelworks/interactive_session@main
         with:
-          jobs:
-            - stream_output
-          
-  slurm_job:
-    if: ${{ inputs.slurm.is_enabled == true }}
-    needs:
-      - install
-    ssh:
-      remoteHost: ${{ inputs.resource.ip }}
-    steps:
-      - name: Create SLURM Headers
-        run: |
-          # Need to evaluate the env variables here
-          cat <<EOF > headers.sh
-          #SBATCH --job-name=${PW_JOB_ID}
-          #SBATCH --chdir=${PWD}
-          #SBATCH -o ${PWD}/run.${PW_JOB_ID}.out
-          #SBATCH -e ${PWD}/run.${PW_JOB_ID}.out
-          EOF
+          $yaml: workflow/script_submitter/v3.6/hsp.yaml
+          resource: ${{ inputs.resource }}
+          rundir: ${PW_PARENT_JOB_DIR}
+          shebang: ${{ inputs.advanced_options.shebang }}
+          use_existing_script: false
+          script: ${PW_PARENT_JOB_DIR}/run-template.sh
+          scheduler: ${{ inputs.scheduler }}
+          use_scheduler_agent: false
+          slurm:
+            is_enabled: ${{ inputs.slurm.is_enabled }}
+            account: ${{ inputs.slurm.account }}
+            partition: ${{ inputs.slurm.partition }}
+            qos: ${{ inputs.slurm.qos }}
+            cpus_per_task: ${{ inputs.slurm.cpus_per_task }}
+            nodes: ${{ inputs.slurm.nodes }}
+            node_type: ${{ inputs.slurm.node_type }}
+            time: ${{ inputs.slurm.time }}
+            scheduler_directives: ${{ inputs.slurm.scheduler_directives }}
+          pbs:
+            is_enabled: ${{ inputs.pbs.is_enabled }}
+            account: ${{ inputs.pbs.account }}
+            scheduler_directives: ${{ inputs.pbs.scheduler_directives }}
 
-          # The partitions directive parameter is always optional
-          if ! [ -z "${{ inputs.slurm.partition }}" ]; then
-            echo "#SBATCH --partition=${{ inputs.slurm.partition }}" >> headers.sh
-          fi
-
-          if ! [ -z "${{ inputs.slurm.time }}" ]; then
-            echo "#SBATCH --time=${{ inputs.slurm.time }}" >> headers.sh
-          fi
-
-          if [[ ${{ inputs.resource.provider }} == 'existing' ]]; then
-            echo "#SBATCH --account=${{ inputs.slurm.account }}" >> headers.sh
-            echo "#SBATCH --qos=${{ inputs.slurm.qos }}" >> headers.sh
-            echo "#SBATCH --cpus-per-task=${{ inputs.slurm.cpus_per_task }}" >> headers.sh
-            echo "#SBATCH --nodes=${{ inputs.slurm.nodes }}" >> headers.sh
-            if ! [ -z "${{ inputs.slurm.node_type }}" ]; then
-              echo "#SBATCH --constraint=${{ inputs.slurm.node_type }}" >> headers.sh
-            fi
-          fi
-
-          # The scheduler directives parameter is always optional
-          # Scheduler directives must be the last to be added to avoid format issues
-          if ! [ -z "${{ inputs.slurm.scheduler_directives }}" ]; then
-            echo "${{ inputs.slurm.scheduler_directives }}" >> headers.sh
-          fi
-
-          # Remove lines that don't start with #
-          sed -i '/^#/!d' headers.sh
-          echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
-          echo "SCHEDULER_TYPE=slurm" | tee -a $OUTPUTS
-      - name: Create SLURM Script
-        run: |
-          echo '#!/bin/bash' > run.sh
-          cat headers.sh >> run.sh
-          cat run-template.sh >> run.sh
-          chmod +x run.sh
-          cat run.sh
-      - name: Submit SLURM Script
-        run: |
-          set -x
-          echo "::notice::Submitting SLURM Job"
-          sbatch_output=$(sbatch run.sh 2>&1)
-          jobid=$(echo "${sbatch_output}" | tail -1 | awk -F ' ' '{print $4}')
-          if ! [[ "${jobid}" =~ ^[0-9]+$ ]]; then
-            echo "::error title=Error::Job submission failed: ${sbatch_output}."
-            exit 1
-          fi
-          echo "jobid=${jobid}"  | tee -a $OUTPUTS
-        cleanup: scancel ${{ needs.slurm_job.outputs.jobid }}
-      - name: Monitor SLURM Job
-        run: |
-          jobid=${{ needs.slurm_job.outputs.jobid }}
-          echo "::notice::Monitoring SLURM job ${jobid}"
-
-          get_slurm_job_status() {
-              # Get the header line to determine the column index corresponding to the job status
-              if [ -z "${SQUEUE_HEADER}" ]; then
-                  export SQUEUE_HEADER="$(eval squeue | awk 'NR==1')"
-              fi
-              status_column=$(echo "${SQUEUE_HEADER}" | awk '{ for (i=1; i<=NF; i++) if ($i ~ /^S/) { print i; exit } }')
-              squeue_output=$(eval squeue)
-              export squeue_rc=$?
-              status_response=$(echo "${squeue_output}" | awk -v jobid="${jobid}" '$1 == jobid')
-              echo "${SQUEUE_HEADER}"
-              echo "${status_response}"
-              export job_status=$(echo ${status_response} | awk -v id="${jobid}" -v col="$status_column" '{print $col}')
-          }
-
-          # An empty squeue can be a transient slurmctld failure, not job exit; confirm via sacct before cleanup scancels a live session.
-          missing_polls=0
-          max_missing_polls=3
-          while true; do
-            sleep 15
-            get_slurm_job_status
-            if [ -n "${job_status}" ]; then
-              missing_polls=0
-              continue
-            fi
-            sacct_state=$(sacct -n -X -P -j ${jobid} --format=state 2>/dev/null | head -n1 | awk '{print $1}')
-            case "${sacct_state}" in
-              COMPLETED|FAILED|TIMEOUT|CANCELLED|NODE_FAIL|PREEMPTED|BOOT_FAIL|DEADLINE|OUT_OF_MEMORY|REVOKED)
-                echo "::notice::Job exited with status ${sacct_state}"
-                exit 0
-                ;;
-              ?*)
-                missing_polls=0
-                continue
-                ;;
-            esac
-            if [ "${squeue_rc}" -ne 0 ]; then
-              echo "::warning::squeue query failed (exit ${squeue_rc}); retrying"
-              continue
-            fi
-            missing_polls=$((missing_polls + 1))
-            echo "::warning::Job ${jobid} absent from squeue with no sacct record (${missing_polls}/${max_missing_polls}); retrying"
-            if [ "${missing_polls}" -ge "${max_missing_polls}" ]; then
-              echo "::notice::Job exited with status ${sacct_state:-UNKNOWN}"
-              exit 0
-            fi
-          done
-      - name: Cancel Streaming
-        uses: parallelworks/cancel-jobs
-        with:
-          jobs:
-            - stream_output
 
   session:
     needs:
@@ -352,3 +223,39 @@ jobs:
               #SBATCH --nodelist=<node-name>
             default: |
               ##SBATCH --constraint=mla # uncomment for Navy and AFRL DSRC systems
+      pbs:
+        type: group
+        label: PBS Directives
+        hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+        ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+        items:
+          is_enabled:
+            type: boolean
+            hidden: true
+            default: true
+            label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
+          account:
+            label: Account
+            type: string
+            tooltip: PBS account for job submission (-A)
+          scheduler_directives:
+            label: Scheduler Directives
+            type: editor
+            tooltip: |
+              Add extra PBS directives, one per line, using the #PBS prefix. For example:
+              #PBS -l mem=16gb
+              #PBS -l ngpus=1
+            default: |
+              # Parameters that apply to all sites
+              #PBS -l walltime=01:00:00
+              #PBS -V
+              #PBS -q standard
+              # Remove first # to activate specific lines
+              #=====Ruth (Lustre, only vis has NVIDIA)=====
+              ##PBS -l select=1:ncpus=128:mpiprocs=128
+              #=====Warhawk (Lustre)====
+              ##PBS -l select=1:ncpus=128:mpiprocs=128
+              #=====Wheat (WEKA, nmlas=4|6)====
+              ##PBS -l select=1:ncpus=92:mpiprocs=92:nmlas=4
+              #=====Carpenter===
+              ##PBS -l select=1:ncpus=192:mpiprocs=192

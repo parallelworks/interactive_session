@@ -10,6 +10,9 @@ By the end of the stages built so far you will understand how to:
 - Pass workflow inputs into your scripts as environment variables
 - Create a browser session automatically with the `update-session` action
 - Pick a free port at runtime with `pw agent` and pass values between jobs as outputs
+- Surface messages in the workflow UI with log annotations (`::notice::`, `::warning::`, `::error::`)
+- Submit the job to the cluster scheduler (SLURM) — then stream its output, monitor it, and clean it up
+- Build a form that adapts to the chosen resource with dynamic dropdowns and show/hide rules
 
 ---
 
@@ -237,6 +240,7 @@ jobs:
         run: |
           PORT=$(pw agent open-port)              # ask the platform for a port free on the cluster
           echo "PORT=${PORT}" | tee -a $OUTPUTS   # publish it as an output of the install job
+          echo "::notice::Fractal will be served on port ${PORT}"   # show a message in the UI
 
   run:
     needs:
@@ -285,4 +289,185 @@ You can only read a job's outputs by listing it under `needs`, and `needs` waits
 **`permissions: ['*']`.**
 The `pw` CLI authenticates against the Activate API. `permissions` grants the workflow a token with the same access as the user who runs it. Without it, `pw agent open-port` fails.
 
+**Log annotations (`::notice::`).**
+A line a step prints in the form `::notice::message` is surfaced as a notice in the workflow UI (there are also `::warning::` and `::error::`). It is a clean way to surface a value — here, the port that was chosen. The next stage uses these heavily.
+
 Now each run gets its own port, so two runs on the same cluster no longer collide — and you are still redirected straight to the progress page.
+
+---
+
+## Stage 4 — Submit to the SLURM scheduler (`04-slurm.yaml`)
+
+Until now everything ran on the **controller** (login) node. But heavy work belongs on a **compute node**, requested through the cluster's scheduler. This stage adds a "Schedule Job?" toggle: leave it off and the fractal runs on the controller as before; turn it on and the workflow writes an `sbatch` script, submits it, watches it, and tunnels the session to the compute node where the server actually ends up running.
+
+This is by far the most involved file in the series — [`04-slurm.yaml`](04-slurm.yaml). We will walk through it idea by idea rather than as one block.
+
+### Install always runs on the controller node
+
+```yaml
+  install:
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}   # the controller / login node
+    steps:
+      - name: Checkout Fractal Demo
+        # ... unchanged ...
+      - name: Install Dependencies
+        # ... unchanged ...
+      - name: Create Run Script               # build the body the job will run, wherever it runs
+        run: |
+          cat <<'EOF' >> run-template.sh
+          hostname > HOSTNAME                  # record which node we land on
+          export PORT=$(pw agent open-port)    # and which port we serve on
+          echo ${PORT} > PORT
+          export RESOLUTION=${{ inputs.resolution }}
+          ./fractal-demo/run.sh
+          EOF
+```
+
+`install` always targets `inputs.resource.ip`, the controller node — it has internet for the checkout and the venv build. Even when the fractal will later run on a compute node, setup happens here, once.
+
+Notice the new idea: instead of running `run.sh` directly, `install` writes `run-template.sh` — a script body that, *wherever it eventually runs*, records its `hostname`, opens a port **on that machine**, and starts the fractal. For a scheduled job that machine is a compute node, so the port and hostname must be discovered there, not on the controller.
+
+> Jobs default to the same working directory (`~/pw/jobs/<workflow>/<job-number>/` on the resource). That is how files one job writes — `run-template.sh`, `PORT`, `HOSTNAME`, the output log — are visible to the others.
+
+### Two paths, chosen by the resource
+
+```yaml
+  ssh_job:
+    if: ${{ inputs.slurm.is_enabled != true }}    # run directly on the controller
+    ...
+  slurm_job:
+    if: ${{ inputs.slurm.is_enabled == true }}    # submit to SLURM
+    ...
+```
+
+Exactly one of these runs, selected by `if`. `ssh_job` turns `run-template.sh` into a script and runs it on the controller; `slurm_job` prepends `#SBATCH` headers and submits it with `sbatch`. Which one fires is driven by the form (below), which keys off **`inputs.resource.schedulerType`** — an attribute of the chosen resource that says which scheduler it uses (`slurm`, `pbs`, or empty for none).
+
+### Streaming the output live — `early-cancel` and `cancel-jobs`
+
+```yaml
+  stream_output:
+    needs:
+      - install
+    steps:
+      - name: Stream Output
+        early-cancel: any-job-failed            # stop early if any job fails
+        run: |
+          touch run.${PW_JOB_ID}.out
+          tail -f run.${PW_JOB_ID}.out          # follow the job's output in the workflow log
+```
+
+`tail -f` never returns on its own, so this job would otherwise run forever. Two things bound it:
+
+- **`early-cancel: any-job-failed`** (the only supported value) cancels the step if any other job fails — otherwise a failure elsewhere would leave it tailing forever.
+- The path job ends by stopping it explicitly:
+
+```yaml
+      - name: Cancel Streaming
+        uses: parallelworks/cancel-jobs         # built-in action: cancel other jobs by name
+        with:
+          jobs:
+            - stream_output
+```
+
+`parallelworks/cancel-jobs` cancels named jobs from inside the workflow — here, the streaming job once the real work is submitted and done.
+
+### Keeping a scheduled job alive — `cleanup` and a monitor step
+
+`sbatch` returns immediately: it queues the job and exits while the job runs later on a compute node. We want the SLURM job torn down if the workflow is canceled, so the submit step declares a cleanup:
+
+```yaml
+      - name: Submit SLURM Script
+        run: |
+          echo "::notice::Submitting SLURM Job"
+          jobid=$(sbatch run.sh | tail -1 | awk '{print $4}')
+          echo "jobid=${jobid}" | tee -a $OUTPUTS
+        cleanup: scancel ${{ needs.slurm_job.outputs.jobid }}   # tear down the SLURM job on exit
+```
+
+But **`cleanup` runs as soon as the job exits or is canceled, in reverse order of the steps**. If `slurm_job` finished right after `sbatch`, its cleanup would immediately `scancel` the job we just submitted — killing the session before it starts. So we must *not let `slurm_job` finish* while the SLURM job is alive. The fix is a step that blocks until the job is really done:
+
+```yaml
+      - name: Monitor SLURM Job
+        run: |
+          jobid=${{ needs.slurm_job.outputs.jobid }}
+          echo "::notice::Monitoring SLURM job ${jobid}"
+          # poll squeue (confirming with sacct) until the job leaves the queue, then exit 0
+          ...
+```
+
+Now `slurm_job` stays alive for the lifetime of the SLURM job. By the time `cleanup` runs, the job has already exited and the `scancel` is a harmless no-op.
+
+### Waiting for the job to come up — `retry`
+
+The server's host and port only exist once `run-template.sh` actually runs — which, for a queued SLURM job, may be minutes later. The session job polls for them:
+
+```yaml
+  session:
+    needs:
+      - install
+    steps:
+      - name: Read hostname and port
+        retry:
+          max-retries: 180
+          interval: 10s                          # poll for up to ~30 minutes
+        run: |
+          if [ ! -s PORT ] || [ ! -s HOSTNAME ]; then
+            echo "::notice:: PORT or HOSTNAME not ready yet"
+            exit 1                                # non-zero → the retry fires again
+          fi
+          echo "PORT=$(cat PORT)" | tee -a $OUTPUTS
+          echo "HOSTNAME=$(cat HOSTNAME)" | tee -a $OUTPUTS
+      - name: Create Session
+        uses: parallelworks/update-session
+        with:
+          remotePort: '${{ needs.session.outputs.PORT }}'
+          remoteHost: ${{ needs.session.outputs.HOSTNAME }}   # the COMPUTE node, for a scheduled job
+          target: ${{ inputs.resource.id }}
+          name: ${{ sessions.fractal }}
+```
+
+**`retry`** re-runs a step on failure — `max-retries: 180` at `interval: 10s` keeps trying for about 30 minutes. The step exits non-zero until both files exist, so the loop effectively waits for the job to start. Note the new `remoteHost`: the tunnel now points at the compute node's hostname (it was implicitly the controller in earlier stages).
+
+### A form that adapts to the resource — `hidden`, `ignore`, dynamic dropdowns
+
+The inputs do the work of only asking for what the chosen resource needs.
+
+```yaml
+      scheduler:
+        type: boolean
+        label: Schedule Job?
+        hidden: ${{ inputs.resource.schedulerType == '' }}   # hide if the resource has no scheduler
+        ignore: ${{ .hidden }}                                # ...and drop the value when hidden
+      slurm:
+        type: group
+        label: SLURM Directives
+        hidden: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        ignore: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        items:
+          is_enabled:
+            type: boolean
+            hidden: true
+            default: true        # true unless the whole group is hidden+ignored — the ssh/slurm switch
+          partition:
+            type: slurm-partitions             # dynamic dropdown, populated from the resource
+            resource: ${{ inputs.resource }}
+          qos:
+            type: slurm-qos
+            resource: ${{ inputs.resource }}
+            ignore: ${{ 'existing' != inputs.resource.provider }}   # only for user-registered clusters
+            hidden: ${{ .ignore }}
+          node_type:
+            type: dropdown
+            option-key: ${{ inputs.resource.ip }}   # which option list to show, keyed per resource
+            options:
+              some.cluster.hostname: [standard, bigmem, ...]
+```
+
+- **`hidden`** controls whether a field appears in the form; **`ignore`** controls whether its value is sent to the workflow at all. They are usually linked: `ignore: ${{ .hidden }}` (or `hidden: ${{ .ignore }}`) makes one mirror the other — `.hidden` and `.ignore` are self-references to this field's own values.
+- **`inputs.resource.schedulerType`** drives the visibility: no scheduler → the toggle is hidden; not SLURM → the whole `slurm` group is hidden and ignored.
+- **`inputs.resource.provider`** distinguishes a user-registered on-prem cluster (`provider == 'existing'`) from a cloud-provisioned one. Directives like account, QoS, CPUs, and nodes only make sense on `existing` clusters, so they use `ignore: ${{ 'existing' != inputs.resource.provider }}` — visible only there.
+- **Dynamic dropdowns** — the `slurm-partitions`, `slurm-qos`, and `slurm-accounts` types fetch their choices from the cluster you picked (`resource: ${{ inputs.resource }}`), so you only see options that actually exist on it. A plain `dropdown` can vary its option list per resource with `option-key`.
+- **`is_enabled`** is the trick behind the two `if`s: a hidden boolean defaulting to `true`. When the `slurm` group is ignored (no scheduler, or the toggle off), `is_enabled` is never sent, so `slurm.is_enabled != true` and `ssh_job` runs. When the group is active it is `true`, so `slurm_job` runs instead.
+
+This one file does a lot — branching on the scheduler, building `sbatch` headers, streaming, monitoring, cleaning up, and a form that reshapes itself per resource. A later stage rebuilds the same behavior with **subworkflows** (`05-subworkflows`) to hide most of this machinery behind a reusable building block.

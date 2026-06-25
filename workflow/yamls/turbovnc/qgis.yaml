@@ -288,11 +288,11 @@ jobs:
           load_env:
             label: Command to load QGIS
             type: string
-            default: source /contrib/software/miniconda/miniconda/etc/profile.d/conda.sh; conda activate qgis_stable
+            default: source /opt/miniconda3/etc/profile.d/conda.sh; conda activate /opt/qgis-344
             optional: true
             tooltip: 'To load the environment, enter the appropriate command, for exampl, module load module-name or source path/to/env.sh.'
           bin:
             label: Launch command
             type: string
-            default: qgis
+            default: QGIS_PLUGINPATH=/ngencerf-app/coastal-calibration/qgis_plugin qgis
             tooltip: Command to start QGIS

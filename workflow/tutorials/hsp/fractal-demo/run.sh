@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 #
-# run.sh - Compute a Mandelbrot fractal, one row at a time.
+# run.sh - Render a Mandelbrot fractal and serve a live progress page.
 #
-# This is the "job" of the example. On a PBS or SLURM cluster a wrapper runs
-# this script on a compute node. It writes its progress (a status file and a
-# progressively-rendered image) into a shared work directory that server.sh
-# reads to display live progress.
+# This is the whole job. It starts a small web server that shows the rendering
+# as it happens, then computes the fractal row by row, writing its progress
+# (a status file and the image) into the folder the server reads from. When the
+# render finishes it keeps serving so the result stays viewable.
 #
 # Inputs (all passed as environment variables, so a wrapper can set them):
 #   RESOLUTION=N   image width and height in pixels (default 1000). This is the
-#                  runtime knob: the work grows with the square of the resolution,
-#                  so 1400 takes about twice as long as 1000.
+#                  runtime knob: the work grows with the square of the resolution.
+#   PORT=N         port the progress page is served on (default 8000).
 #   MAX_ITER=N     fractal detail / work per pixel (default 200).
-#   WORK_DIR=path  shared folder for the output (default ./output next to this).
+#   WORK_DIR=path  folder for the output (default ./output next to this script).
 #
 # Example:
-#   RESOLUTION=1500 ./run.sh
+#   RESOLUTION=1500 PORT=8000 ./run.sh
 #
 set -euo pipefail
 
@@ -23,13 +23,10 @@ set -euo pipefail
 # which directory the job is launched from (compute nodes often start in $HOME).
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Inputs arrive as environment variables (a wrapper sets them); fall back to
-# sensible defaults when the script is run by hand.
+# Inputs arrive as environment variables; fall back to defaults for manual runs.
 RESOLUTION="${RESOLUTION:-1000}"
+PORT="${PORT:-8000}"
 MAX_ITER="${MAX_ITER:-200}"
-
-# Shared work directory. Override WORK_DIR to point at cluster scratch storage
-# that both the compute node and the server can see.
 WORK_DIR="${WORK_DIR:-$SCRIPT_DIR/output}"
 mkdir -p "$WORK_DIR"
 
@@ -37,11 +34,12 @@ mkdir -p "$WORK_DIR"
 check_positive_int() {  # name value
   if ! [[ "$2" =~ ^[0-9]+$ ]] || [ "$2" -lt 1 ]; then
     echo "ERROR: $1 must be a positive whole number (got '$2')." >&2
-    echo "Set it like: RESOLUTION=1500 ./run.sh" >&2
+    echo "Set it like: RESOLUTION=1500 PORT=8000 ./run.sh" >&2
     exit 1
   fi
 }
 check_positive_int "RESOLUTION" "$RESOLUTION"
+check_positive_int "PORT" "$PORT"
 check_positive_int "MAX_ITER" "$MAX_ITER"
 
 # Use the Python environment created by install.sh.
@@ -53,15 +51,72 @@ if [ ! -x "$PYTHON" ]; then
   exit 1
 fi
 
-echo "Computing a ${RESOLUTION}x${RESOLUTION} Mandelbrot fractal (max_iter=${MAX_ITER})."
-echo "Work directory: $WORK_DIR"
-echo "Start ./server.sh in another terminal to watch it render."
+# Write the progress page into the work directory. The quoted 'HTML' marker
+# means nothing here is expanded by the shell, so the JavaScript is left as-is.
+cat > "$WORK_DIR/index.html" <<'HTML'
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fractal Progress</title>
+  <style>
+    body { background:#0d1117; color:#e6edf3; font-family:system-ui,sans-serif;
+           margin:0; padding:2rem; text-align:center; }
+    h1 { font-weight:600; margin:0 0 1rem; }
+    #meta { font-family:ui-monospace,monospace; color:#8b949e; margin-bottom:1rem; }
+    .bar { width:min(90vw,640px); height:14px; margin:0 auto 1.5rem;
+           background:#21262d; border-radius:7px; overflow:hidden; }
+    #fill { height:100%; width:0; background:linear-gradient(90deg,#1f6feb,#a371f7);
+            transition:width .3s ease; }
+    img { width:min(90vw,640px); image-rendering:pixelated;
+          border:1px solid #30363d; border-radius:8px; background:#000; }
+  </style>
+</head>
+<body>
+  <h1>Mandelbrot Fractal</h1>
+  <div id="meta">Waiting for the render to start&hellip;</div>
+  <div class="bar"><div id="fill"></div></div>
+  <img id="img" src="fractal.png" alt="fractal render">
+  <script>
+    async function tick() {
+      try {
+        const status = await (await fetch('status.json?t=' + Date.now())).json();
+        document.getElementById('fill').style.width = status.percent + '%';
+        if (status.state === 'running' || status.state === 'done') {
+          document.getElementById('meta').textContent =
+            status.state.toUpperCase() + ' — ' + status.percent + '%  (' +
+            status.rows_done + '/' + status.rows_total + ' rows)   ' +
+            status.resolution + '×' + status.resolution + ' px, ' +
+            status.max_iter + ' iter, ' + status.elapsed_seconds + 's';
+          document.getElementById('img').src = 'fractal.png?t=' + Date.now();
+        } else {
+          document.getElementById('meta').textContent = 'Waiting for the render to start…';
+        }
+        if (status.state === 'done') return;   // stop polling when finished
+      } catch (e) { /* files not there yet; try again next tick */ }
+      setTimeout(tick, 1000);
+    }
+    tick();
+  </script>
+</body>
+</html>
+HTML
+
+# Start the web server in the background so the page is live while we render.
+# It serves the work directory; cd first so it works on older Python versions.
+( cd "$WORK_DIR" && exec "$PYTHON" -m http.server "$PORT" ) &
+SERVER_PID=$!
+trap 'kill "$SERVER_PID" 2>/dev/null' EXIT   # stop the server when this script ends
+
+echo "Serving the progress page on port ${PORT}."
+echo "Rendering a ${RESOLUTION}x${RESOLUTION} fractal (max_iter=${MAX_ITER})..."
 echo
 
 export WORK_DIR MAX_ITER RESOLUTION
 
-# The whole computation lives in this Python program. It uses only the Python
-# standard library, so there is nothing to install and it runs offline.
+# Compute the fractal. It writes status.json and fractal.png into WORK_DIR as it
+# goes, which the page above polls and displays. Standard library only.
 "$PYTHON" - <<'PYTHON'
 import json
 import os
@@ -141,7 +196,7 @@ def write_png():
 
 
 def write_status(rows_done, state):
-    """Record progress so the server can show it."""
+    """Record progress so the page can show it."""
     status = {
         "state": state,                                  # "running" or "done"
         "rows_done": rows_done,
@@ -176,8 +231,9 @@ for row in range(height):
         print("  row %d/%d (%.0f%%)" % (row + 1, height, 100.0 * (row + 1) / height))
 
 write_status(height, "done")
-print("Done in %.1fs -> %s" % (time.time() - start, png_path))
+print("Done in %.1fs" % (time.time() - start))
 PYTHON
 
 echo
-echo "Finished. Image saved to: $WORK_DIR/fractal.png"
+echo "Render complete. Still serving on port ${PORT} — press Ctrl+C to stop."
+wait "$SERVER_PID"   # keep serving so the finished image stays viewable

@@ -1,0 +1,260 @@
+permissions:
+  - '*'
+
+sessions:
+  fractal:
+    redirect: true
+
+jobs:
+  install:
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Checkout Fractal Demo
+        uses: parallelworks/checkout
+        with:
+          repo: https://github.com/parallelworks/interactive_session.git
+          branch: hsp-tutorial
+          sparse_checkout:
+            - workflow/tutorials/hsp/fractal-demo
+      - name: Install Dependencies
+        run: |
+          # keep only the example directory from the sparse checkout
+          mv workflow/tutorials/hsp/fractal-demo .
+          rm -r workflow
+          ./fractal-demo/install.sh
+      - name: Select Port
+        run: |
+          PORT=$(pw agent open-port)
+          echo "PORT=${PORT}" | tee -a $OUTPUTS
+
+  slurm_job:
+    if: ${{ inputs.slurm.is_enabled == true }}
+    needs:
+      - install
+    steps:
+      - name: Create SLURM Headers
+        run: |
+          # Need to evaluate the env variables here
+          cat <<EOF > headers.sh
+          #SBATCH --job-name=${PW_JOB_ID}
+          #SBATCH --chdir=${PWD}
+          #SBATCH -o ${PWD}/run.${PW_JOB_ID}.out
+          #SBATCH -e ${PWD}/run.${PW_JOB_ID}.out
+          EOF
+
+          # The partitions directive parameter is always optional
+          if ! [ -z "${{ inputs.slurm.partition }}" ]; then
+            echo "#SBATCH --partition=${{ inputs.slurm.partition }}" >> headers.sh
+          fi
+
+          if ! [ -z "${{ inputs.slurm.time }}" ]; then
+            echo "#SBATCH --time=${{ inputs.slurm.time }}" >> headers.sh
+          fi
+
+          if [[ ${{ inputs.resource.provider }} == 'existing' ]]; then
+            echo "#SBATCH --account=${{ inputs.slurm.account }}" >> headers.sh
+            echo "#SBATCH --qos=${{ inputs.slurm.qos }}" >> headers.sh
+            echo "#SBATCH --cpus-per-task=${{ inputs.slurm.cpus_per_task }}" >> headers.sh
+            echo "#SBATCH --nodes=${{ inputs.slurm.nodes }}" >> headers.sh
+            if ! [ -z "${{ inputs.slurm.node_type }}" ]; then
+              echo "#SBATCH --constraint=${{ inputs.slurm.node_type }}" >> headers.sh
+            fi
+          fi
+
+          # The scheduler directives parameter is always optional
+          # Scheduler directives must be the last to be added to avoid format issues
+          if ! [ -z "${{ inputs.slurm.scheduler_directives }}" ]; then
+            echo "${{ inputs.slurm.scheduler_directives }}" >> headers.sh
+          fi
+
+          # Remove lines that don't start with #
+          sed -i '/^#/!d' headers.sh
+          echo "HEADERS=$(cat headers.sh)" | tee -a $OUTPUTS
+          echo "SCHEDULER_TYPE=slurm" | tee -a $OUTPUTS
+      - name: Create SLURM Script
+        run: |
+          echo '#!/bin/bash' > run.sh
+          cat headers.sh >> run.sh
+          cat <<EOF >> run.sh
+          # The session needs to know the hostname and PORT for the tunnel
+          hostname > HOSTNAME
+          PORT=$(pw agent open-port)
+          echo ${PORT} > PORT
+          RESOLUTION=${{ inputs.resolution }} ./fractal-demo/run.sh &
+          PORT=${{ needs.install.outputs.PORT }} ./fractal-demo/server.sh
+          
+          EOF
+
+          echo "RESOLUTION=${{ inputs.resolution }} ./fractal-demo/run.sh" >> run.sh
+          echo "PORT=${{ needs.install.outputs.PORT }} ./fractal-demo/server.sh" >> run.sh
+          echo "hostname > HOSTNAME" >> run.sh
+          chmod +x run.sh
+          cat run.sh
+      - name: Submit SLURM Script
+        run: |
+          set -x
+          echo "::notice::Submitting SLURM Job"
+          sbatch_output=$(sbatch run.sh 2>&1)
+          jobid=$(echo "${sbatch_output}" | tail -1 | awk -F ' ' '{print $4}')
+          if ! [[ "${jobid}" =~ ^[0-9]+$ ]]; then
+            echo "::error title=Error::Job submission failed: ${sbatch_output}."
+            exit 1
+          fi
+          echo "jobid=${jobid}"  | tee -a $OUTPUTS
+
+  compute:
+    needs:
+      - install
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Compute Fractal
+        run: RESOLUTION=${{ inputs.resolution }} ./fractal-demo/run.sh
+
+  server:
+    needs:
+      - install
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Start Server
+        run: PORT=${{ needs.install.outputs.PORT }} ./fractal-demo/server.sh
+
+  session:
+    needs:
+      - install
+    steps:
+      - name: Create Session
+        uses: parallelworks/update-session
+        with:
+          remotePort: '${{ needs.install.outputs.PORT }}'
+          target: ${{ inputs.resource.id }}
+          name: ${{ sessions.fractal }}
+
+'on':
+  execute:
+    inputs:
+      resource:
+        type: compute-clusters
+        label: Resource Target
+        tooltip: The compute cluster to run the fractal example on.
+        autoselect: true
+        optional: false
+      resolution:
+        type: number
+        label: Resolution
+        tooltip: Image size in pixels. Larger values look sharper but take longer to render.
+        default: 1000
+        min: 100
+        max: 10000
+      scheduler:
+        type: boolean
+        default: false
+        label: Schedule Job?
+        hidden: ${{ inputs.resource.schedulerType == '' }}
+        ignore: ${{ .hidden }}
+        tooltip: |
+          Yes → Job is submitted to the scheduler using sbatch, qsub, etc
+          No  → Job is executed in the controller or login node instead
+      slurm:
+        type: group
+        label: SLURM Directives
+        hidden: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        ignore: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        items:
+          is_enabled:
+            type: boolean
+            hidden: true
+            default: true
+            label: Is SLURM Enabled? Yes, unless the slurm section is hidden and ignored
+          account:
+            label: SLURM account
+            type: slurm-accounts
+            resource: ${{ inputs.resource }}
+            tooltip: '--account=value slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
+          partition:
+            type: slurm-partitions
+            label: SLURM partition
+            optional: true
+            resource: ${{ inputs.resource }}
+            tooltip: '--qos=partition slurm directive'
+          qos:
+            label: Quality of Service [QoS]
+            type: slurm-qos
+            resource: ${{ inputs.resource }}
+            tooltip: '--qos=value slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
+          cpus_per_task:
+            label: CPUs per task
+            type: number
+            default: 1
+            tooltip: '--cpus-per-task= SLURM directive to set the number of CPUs per task'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
+          nodes:
+            label: Number of Nodes
+            type: number
+            default: 1
+            tooltip: '--nodes=value slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
+          node_type:
+            label: Node Type
+            type: dropdown
+            optional: true
+            default: ""
+            option-key: ${{ inputs.resource.ip }}
+            tooltip: '--constraint=<value> slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider || (inputs.resource.ip != 'blueback.navydsrc.hpc.mil' && inputs.resource.ip != 'narwhal.navydsrc.hpc.mil' && inputs.resource.ip != 'nautilus.navydsrc.hpc.mil' && inputs.resource.ip != 'raider.afrl.hpc.mil' && inputs.resource.ip != 'crux.mhpcc.hpc.mil') }}
+            hidden: ${{ .ignore }}
+            options:
+              blueback.navydsrc.hpc.mil:
+                - standard
+                - bigmem
+                - mla
+                - viz
+                - transfer
+              narwhal.navydsrc.hpc.mil:
+                - standard
+                - bigmem
+                - mla
+                - smla
+                - dmla
+                - viz
+                - transfer
+              nautilus.navydsrc.hpc.mil:
+                - standard
+                - highclock
+                - bigmem
+                - mla
+                - viz
+                - transfer
+              raider.afrl.hpc.mil:
+                - standard
+                - highclock
+                - bigmem
+                - mla
+                - viz
+                - transfer
+              crux.mhpcc.hpc.mil:
+                - AMD
+                - Intel
+
+          time:
+            label: Walltime
+            type: string
+            default: '00:30:00'
+            tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job (format: D-HH:MM:SS or HH:MM:SS, e.g. 7-00:00:00 or 01:00:00)'
+          scheduler_directives:
+            type: editor
+            optional: true
+            tooltip: |
+              Add extra SLURM directives, one per line, using the #SBATCH prefix. For example:
+              #SBATCH --exclusive
+              #SBATCH --nodelist=<node-name>
+            default: |
+              ##SBATCH --constraint=mla # uncomment for Navy and AFRL DSRC systems

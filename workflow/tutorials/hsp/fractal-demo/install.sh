@@ -5,8 +5,8 @@
 # Builds a self-contained Python virtual environment at
 #   ${PW_SOFTWARE:-$HOME/pw/software}/fractal-demo
 # The example uses only the Python standard library, so no packages are
-# downloaded - the environment simply gives the job and the server a consistent,
-# isolated Python interpreter that behaves the same on every node.
+# downloaded - the environment simply gives the job a consistent, isolated
+# Python interpreter that behaves the same on every node.
 #
 set -euo pipefail
 
@@ -52,10 +52,9 @@ fi
 echo "  Environment Python: $("$VENV_PYTHON" --version 2>&1)"
 echo "  No third-party packages are required (standard library only)."
 
-# Make the other scripts executable.
-chmod +x "$SCRIPT_DIR/run.sh" "$SCRIPT_DIR/server.sh" 2>/dev/null || true
+# Make the run script executable.
+chmod +x "$SCRIPT_DIR/run.sh" 2>/dev/null || true
 
 echo
-echo "Install complete. Next steps:"
-echo "  1. Start the progress server:   ./server.sh"
-echo "  2. Run the job (any terminal):  RESOLUTION=1000 ./run.sh"
+echo "Install complete. Next step:"
+echo "  Render and serve the fractal:  RESOLUTION=1000 PORT=8000 ./run.sh"

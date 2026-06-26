@@ -36,6 +36,7 @@ jobs:
           ${PWD}/fractal-demo/run.sh
           EOF
           chmod +x script.sh
+          # We need to pass the PATH to the script submitter subworkflow
           echo "SCRIPT_PATH=${PWD}/script.sh" | tee -a $OUTPUTS
 
 
@@ -76,11 +77,13 @@ jobs:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
       - name: Read hostname and port
+        early-cancel: any-job-failed
         retry:
           max-retries: 180
           interval: 10s
         run: |
           # Exit non-zero until the run script has published both files, so the retry above keeps polling
+          # Use relative PATHs
           SCRIPT_SUBMITTER_RUNDIR=./subworkflows/script_submitter/step_0/
           PORT_PATH=${SCRIPT_SUBMITTER_RUNDIR}/PORT
           HOSTNAME_PATH=${SCRIPT_SUBMITTER_RUNDIR}/HOSTNAME

@@ -1,0 +1,71 @@
+permissions:
+  - '*'
+
+sessions:
+  fractal:
+    redirect: true
+    
+
+env:
+  RESOLUTION: ${{ inputs.resolution }}
+
+jobs:
+  install:
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Checkout Fractal Demo
+        uses: parallelworks/checkout
+        with:
+          repo: https://github.com/parallelworks/interactive_session.git
+          branch: hsp-tutorial
+          sparse_checkout:
+            - workflow/tutorials/hsp/fractal-demo
+      - name: Install Dependencies
+        run: |
+          # keep only the example directory from the sparse checkout
+          mv workflow/tutorials/hsp/fractal-demo .
+          rm -r workflow
+          ./fractal-demo/install.sh
+      - name: Select Port
+        run: |
+          PORT=$(pw agent open-port)
+          echo "PORT=${PORT}" | tee -a $OUTPUTS
+          echo "::notice::Fractal will be served on port ${PORT}"
+
+  run:
+    needs:
+      - install
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Render and Serve
+        run: PORT=${{ needs.install.outputs.PORT }} ./fractal-demo/run.sh
+
+  session:
+    needs:
+      - install
+    steps:
+      - name: Create Session
+        uses: parallelworks/update-session
+        with:
+          remotePort: '${{ needs.install.outputs.PORT }}'
+          target: ${{ inputs.resource.id }}
+          name: ${{ sessions.fractal }}
+
+'on':
+  execute:
+    inputs:
+      resource:
+        type: compute-clusters
+        label: Resource Target
+        tooltip: The compute cluster to run the fractal example on.
+        autoselect: true
+        optional: false
+      resolution:
+        type: number
+        label: Resolution
+        tooltip: Image size in pixels. Larger values look sharper but take longer to render.
+        default: 1000
+        min: 100
+        max: 10000

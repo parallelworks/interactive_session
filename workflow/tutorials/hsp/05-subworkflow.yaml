@@ -28,14 +28,15 @@ jobs:
           ./fractal-demo/install.sh
       - name: Create Run Script
         run: |
-          cat <<'EOF' >> script.sh
+          cat <<EOF >> script.sh
           # The session needs to know the hostname and PORT for the tunnel
           hostname > HOSTNAME
-          export PORT=$(pw agent open-port)
-          echo ${PORT} > PORT
-          ./fractal-demo/run.sh
+          export PORT=\$(pw agent open-port)
+          echo \${PORT} > PORT
+          ${PWD}/fractal-demo/run.sh
           EOF
           chmod +x script.sh
+          echo "SCRIPT_PATH=${PWD}/script.sh" | tee -a $OUTPUTS
 
 
   script_submitter:
@@ -47,10 +48,9 @@ jobs:
         with:
           $yaml: workflow/script_submitter/v3.6/hsp.yaml
           resource: ${{ inputs.resource }}
-          rundir: ${PW_PARENT_JOB_DIR}
           shebang: '#!/bin/bash'
-          use_existing_script: false
-          script: ${PW_PARENT_JOB_DIR}/script.sh
+          use_existing_script: true
+          script_path: ${{ needs.install.outputs.SCRIPT_PATH }}
           scheduler: ${{ inputs.scheduler }}
           use_scheduler_agent: false
           slurm:

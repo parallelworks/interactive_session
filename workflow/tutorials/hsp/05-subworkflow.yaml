@@ -81,13 +81,17 @@ jobs:
           interval: 10s
         run: |
           # Exit non-zero until the run script has published both files, so the retry above keeps polling
-          if [ ! -s PORT ] || [ ! -s HOSTNAME ]; then
+          SCRIPT_SUBMITTER_RUNDIR=./subworkflows/script_submitter/step_0/
+          PORT_PATH=${SCRIPT_SUBMITTER_RUNDIR}/PORT
+          HOSTNAME_PATH=${SCRIPT_SUBMITTER_RUNDIR}/HOSTNAME
+
+          if [ ! -s ${PORT_PATH} ] || [ ! -s ${HOSTNAME_PATH} ]; then
             echo "::notice:: PORT or HOSTNAME not ready yet"
             exit 1
           fi
-          PORT=$(cat PORT)
+          PORT=$(cat ${PORT_PATH})
           if [[ ${{ inputs.scheduler }} == "true" ]]; then
-            HOSTNAME=$(cat HOSTNAME)
+            HOSTNAME=$(cat ${HOSTNAME_PATH})
           else
             HOSTNAME=localhost
           fi

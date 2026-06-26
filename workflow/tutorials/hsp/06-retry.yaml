@@ -1,74 +1,33 @@
 jobs:
-  # Round-robin failover, then hand the winner to the subworkflow. A `uses:` step's
-  # `with:` is resolved by the expression layer (no shell), so it cannot read the retry
-  # counter and cannot change per retry. We therefore do the failover in a shell `select`
-  # step — where ${PW_WORKFLOW_STEP_CURRENT_RETRY} is available — which probes the list
-  # one resource at a time and publishes the index of the first usable one. The subworkflow
-  # job then indexes the list by that published IDX with the `get` operator.
-  select:
-    steps:
-      - name: Count Resources
-        run: |
-          # inputs.workers is proper JSON — parse it with python3 to count the entries
-          NUM_WORKERS=$(echo '${{ inputs.workers }}' | \
-            python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
-          echo "NUM_WORKERS=${NUM_WORKERS}" | tee -a $OUTPUTS
-      - name: Select First Usable Resource
-        retry:
-          # first try + (N-1) retries = N attempts → each resource is probed once, in order
-          max-retries: ${{ needs.select.outputs.NUM_WORKERS - 1 }}
-          interval: 5s
-          timeout: 60s
-        run: |
-          # This attempt targets workers[ retry_index % N ].
-          IDX=$(( ${PW_WORKFLOW_STEP_CURRENT_RETRY} % ${{ needs.select.outputs.NUM_WORKERS }} ))
-          IFS='|' read -r IP NAME <<< "$(echo '${{ inputs.workers }}' | python3 -c "import sys,json; w=json.load(sys.stdin); r=w[${IDX}]['resource']; print('|'.join([r.get('ip',''), r.get('name','')]))")"
-          echo "::notice::Attempt ${PW_WORKFLOW_STEP_CURRENT_RETRY}/${PW_WORKFLOW_STEP_MAX_RETRIES}: trying ${NAME} (${IP:-no IP})"
-
-          # A usable resource must be reachable over SSH and have python3 (the demo needs it).
-          if [ -z "${IP}" ]; then
-            echo "::warning::${NAME} has no IP (not running?) — failing over"
-            exit 1
-          fi
-          ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=15 "${IP}" 'command -v python3 >/dev/null'
-          EXIT_CODE=$?
-          if [ "${EXIT_CODE}" -ne 0 ]; then
-            echo "::warning::${NAME} is not usable (exit ${EXIT_CODE}) — failing over to the next resource"
-            exit ${EXIT_CODE}
-          fi
-
-          # Publish the index of the chosen worker; the subworkflow job reads workers[IDX].
-          echo "::notice::Selected worker ${IDX}: ${NAME} (${IP})"
-          echo "IDX=${IDX}" | tee -a $OUTPUTS
-
-  # Render the fractal on the selected worker. Everything scheduler-related (SLURM/PBS,
-  # streaming, monitoring, cleanup) plus the session, permissions, and RESOLUTION env are
-  # handled inside 04-subworkflow.yaml — this job only points it at workers[IDX].
   fractal_demo:
-    needs:
-      - select
     steps:
       - name: Script Submitter
+        retry:
+          max-retries: 3
+          interval: 5s
+          timeout: 60s
         uses: github/parallelworks/interactive_session@hsp-tutorial-3
         with:
-          $yaml: workflow/tutorials/hsp/04-subworkflow.yaml
-          resource: '${{ inputs.workers get needs.select.outputs.IDX get "resource" }}'
+          $yaml: workflow/tutorials/hsp/05-subworkflow.yaml
+          resource: ${{ inputs.workers.[${PW_WORKFLOW_STEP_CURRENT_RETRY}].resource }}
+          rundir: ${{ inputs.rundir }}
           resolution: ${{ inputs.resolution }}
-          scheduler: '${{ inputs.workers get needs.select.outputs.IDX get "scheduler" }}'
+          scheduler: ${{ inputs.workers.[${PW_WORKFLOW_STEP_CURRENT_RETRY}].scheduler }}
           slurm:
-            is_enabled: '${{ inputs.workers get needs.select.outputs.IDX get "slurm" get "is_enabled" }}'
-            account: '${{ inputs.workers get needs.select.outputs.IDX get "slurm" get "account" }}'
-            partition: '${{ inputs.workers get needs.select.outputs.IDX get "slurm" get "partition" }}'
-            qos: '${{ inputs.workers get needs.select.outputs.IDX get "slurm" get "qos" }}'
-            cpus_per_task: '${{ inputs.workers get needs.select.outputs.IDX get "slurm" get "cpus_per_task" }}'
-            nodes: '${{ inputs.workers get needs.select.outputs.IDX get "slurm" get "nodes" }}'
-            node_type: '${{ inputs.workers get needs.select.outputs.IDX get "slurm" get "node_type" }}'
-            time: '${{ inputs.workers get needs.select.outputs.IDX get "slurm" get "time" }}'
-            scheduler_directives: '${{ inputs.workers get needs.select.outputs.IDX get "slurm" get "scheduler_directives" }}'
+            is_enabled: ${{ inputs.workers.[${PW_WORKFLOW_STEP_CURRENT_RETRY}].slurm.is_enabled }}
+            account: ${{ inputs.workers.[${PW_WORKFLOW_STEP_CURRENT_RETRY}].slurm.account }}
+            partition: ${{ inputs.workers.[${PW_WORKFLOW_STEP_CURRENT_RETRY}].slurm.partition }}
+            qos: ${{ inputs.workers.[${PW_WORKFLOW_STEP_CURRENT_RETRY}].slurm.qos }}
+            cpus_per_task: ${{ inputs.workers.[${PW_WORKFLOW_STEP_CURRENT_RETRY}].slurm.cpus_per_task }}
+            nodes: ${{ inputs.workers.[${PW_WORKFLOW_STEP_CURRENT_RETRY}].slurm.nodes }}
+            node_type: ${{ inputs.workers.[${PW_WORKFLOW_STEP_CURRENT_RETRY}].slurm.node_type }}
+            time: ${{ inputs.workers.[${PW_WORKFLOW_STEP_CURRENT_RETRY}].slurm.time }}
+            scheduler_directives: ${{ inputs.workers.[${PW_WORKFLOW_STEP_CURRENT_RETRY}].slurm.scheduler_directives }}
           pbs:
-            is_enabled: '${{ inputs.workers get needs.select.outputs.IDX get "pbs" get "is_enabled" }}'
-            account: '${{ inputs.workers get needs.select.outputs.IDX get "pbs" get "account" }}'
-            scheduler_directives: '${{ inputs.workers get needs.select.outputs.IDX get "pbs" get "scheduler_directives" }}'
+            is_enabled: ${{ inputs.workers.[${PW_WORKFLOW_STEP_CURRENT_RETRY}].pbs.is_enabled }}
+            account: ${{ inputs.workers.[${PW_WORKFLOW_STEP_CURRENT_RETRY}].pbs.account }}
+            scheduler_directives: ${{ inputs.workers.[${PW_WORKFLOW_STEP_CURRENT_RETRY}].pbs.scheduler_directives }}
+
 
 'on':
   execute:
@@ -83,11 +42,7 @@ jobs:
       workers:
         type: list
         label: Compute Resources
-        tooltip: >-
-          Ordered list of compute resources. The workflow tries them one at a time, in
-          list order, and renders the fractal on the first one it can reach and use —
-          failing over to the next if a resource is unavailable. Put your preferred
-          resource first; add more as fallbacks.
+        tooltip: Ordered list of compute resources to probe for an available GPU. They are tried one at a time, in list order, until one responds to nvidia-smi. Put your preferred resource first; add more as fallbacks.
         template:
           resource:
             type: compute-clusters

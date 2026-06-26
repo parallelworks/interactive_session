@@ -6,7 +6,7 @@ jobs:
           max-retries: 3
           interval: 5s
           timeout: 60s
-        uses: github/parallelworks/interactive_session@hsp-tutorial-3
+        uses: github/parallelworks/interactive_session@main
         with:
           $yaml: workflow/tutorials/hsp/05-subworkflow.yaml
           resource: ${{ inputs.workers.[${PW_WORKFLOW_STEP_CURRENT_RETRY}].resource }}

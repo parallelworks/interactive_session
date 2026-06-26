@@ -6,7 +6,7 @@ jobs:
         worker: ${{ inputs.workers }}
     steps:
       - name: Script Submitter
-        uses: github/parallelworks/interactive_session@hsp-tutorial-3
+        uses: github/parallelworks/interactive_session@main
         with:
           $yaml: workflow/tutorials/hsp/04-subworkflow.yaml
           resource: ${{ matrix.worker.resource }}

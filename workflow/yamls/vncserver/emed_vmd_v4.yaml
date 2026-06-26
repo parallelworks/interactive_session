@@ -163,8 +163,7 @@ jobs:
                   - large-mem
                   - quick
                   - test
-                  - test-cpu
-                  - test-gpu
+                  - test-rhel9
                   - unlimited
               cpus_per_task:
                 type: number

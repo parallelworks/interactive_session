@@ -1,0 +1,242 @@
+jobs:
+  # Round-robin failover, then hand the winner to the subworkflow. A `uses:` step's
+  # `with:` is resolved by the expression layer (no shell), so it cannot read the retry
+  # counter and cannot change per retry. We therefore do the failover in a shell `select`
+  # step — where ${PW_WORKFLOW_STEP_CURRENT_RETRY} is available — which probes the list
+  # one resource at a time and publishes the index of the first usable one. The subworkflow
+  # job then indexes the list by that published IDX with the `get` operator.
+  select:
+    steps:
+      - name: Count Resources
+        run: |
+          # inputs.workers is proper JSON — parse it with python3 to count the entries
+          NUM_WORKERS=$(echo '${{ inputs.workers }}' | \
+            python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
+          echo "NUM_WORKERS=${NUM_WORKERS}" | tee -a $OUTPUTS
+      - name: Select First Usable Resource
+        retry:
+          # first try + (N-1) retries = N attempts → each resource is probed once, in order
+          max-retries: ${{ needs.select.outputs.NUM_WORKERS - 1 }}
+          interval: 5s
+          timeout: 60s
+        run: |
+          # This attempt targets workers[ retry_index % N ].
+          IDX=$(( ${PW_WORKFLOW_STEP_CURRENT_RETRY} % ${{ needs.select.outputs.NUM_WORKERS }} ))
+          IFS='|' read -r IP NAME <<< "$(echo '${{ inputs.workers }}' | python3 -c "import sys,json; w=json.load(sys.stdin); r=w[${IDX}]['resource']; print('|'.join([r.get('ip',''), r.get('name','')]))")"
+          echo "::notice::Attempt ${PW_WORKFLOW_STEP_CURRENT_RETRY}/${PW_WORKFLOW_STEP_MAX_RETRIES}: trying ${NAME} (${IP:-no IP})"
+
+          # A usable resource must be reachable over SSH and have python3 (the demo needs it).
+          if [ -z "${IP}" ]; then
+            echo "::warning::${NAME} has no IP (not running?) — failing over"
+            exit 1
+          fi
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=15 "${IP}" 'command -v python3 >/dev/null'
+          EXIT_CODE=$?
+          if [ "${EXIT_CODE}" -ne 0 ]; then
+            echo "::warning::${NAME} is not usable (exit ${EXIT_CODE}) — failing over to the next resource"
+            exit ${EXIT_CODE}
+          fi
+
+          # Publish the index of the chosen worker; the subworkflow job reads workers[IDX].
+          echo "::notice::Selected worker ${IDX}: ${NAME} (${IP})"
+          echo "IDX=${IDX}" | tee -a $OUTPUTS
+
+  # Render the fractal on the selected worker. Everything scheduler-related (SLURM/PBS,
+  # streaming, monitoring, cleanup) plus the session, permissions, and RESOLUTION env are
+  # handled inside 04-subworkflow.yaml — this job only points it at workers[IDX].
+  fractal_demo:
+    needs:
+      - select
+    steps:
+      - name: Script Submitter
+        uses: github/parallelworks/interactive_session@hsp-tutorial-3
+        with:
+          $yaml: workflow/tutorials/hsp/04-subworkflow.yaml
+          resource: '${{ inputs.workers get needs.select.outputs.IDX get "resource" }}'
+          resolution: ${{ inputs.resolution }}
+          scheduler: '${{ inputs.workers get needs.select.outputs.IDX get "scheduler" }}'
+          slurm:
+            is_enabled: '${{ inputs.workers get needs.select.outputs.IDX get "slurm" get "is_enabled" }}'
+            account: '${{ inputs.workers get needs.select.outputs.IDX get "slurm" get "account" }}'
+            partition: '${{ inputs.workers get needs.select.outputs.IDX get "slurm" get "partition" }}'
+            qos: '${{ inputs.workers get needs.select.outputs.IDX get "slurm" get "qos" }}'
+            cpus_per_task: '${{ inputs.workers get needs.select.outputs.IDX get "slurm" get "cpus_per_task" }}'
+            nodes: '${{ inputs.workers get needs.select.outputs.IDX get "slurm" get "nodes" }}'
+            node_type: '${{ inputs.workers get needs.select.outputs.IDX get "slurm" get "node_type" }}'
+            time: '${{ inputs.workers get needs.select.outputs.IDX get "slurm" get "time" }}'
+            scheduler_directives: '${{ inputs.workers get needs.select.outputs.IDX get "slurm" get "scheduler_directives" }}'
+          pbs:
+            is_enabled: '${{ inputs.workers get needs.select.outputs.IDX get "pbs" get "is_enabled" }}'
+            account: '${{ inputs.workers get needs.select.outputs.IDX get "pbs" get "account" }}'
+            scheduler_directives: '${{ inputs.workers get needs.select.outputs.IDX get "pbs" get "scheduler_directives" }}'
+
+'on':
+  execute:
+    inputs:
+      resolution:
+        type: number
+        label: Resolution
+        tooltip: Image size in pixels. Larger values look sharper but take longer to render.
+        default: 1000
+        min: 100
+        max: 10000
+      workers:
+        type: list
+        label: Compute Resources
+        tooltip: >-
+          Ordered list of compute resources. The workflow tries them one at a time, in
+          list order, and renders the fractal on the first one it can reach and use —
+          failing over to the next if a resource is unavailable. Put your preferred
+          resource first; add more as fallbacks.
+        template:
+          resource:
+            type: compute-clusters
+            label: Resource Target
+            tooltip: The compute cluster to run the fractal example on.
+            autoselect: true
+            optional: false
+          scheduler:
+            type: boolean
+            default: false
+            label: Schedule Job?
+            hidden: ${{ inputs.workers.[index].resource.schedulerType == '' }}
+            ignore: ${{ .hidden }}
+            tooltip: |
+              Yes → Job is submitted to the scheduler using sbatch, qsub, etc
+              No  → Job is executed in the controller or login node instead
+          slurm:
+            type: group
+            label: SLURM Directives
+            hidden: ${{ inputs.workers.[index].resource.schedulerType != 'slurm' || inputs.workers.[index].scheduler == false }}
+            ignore: ${{ inputs.workers.[index].resource.schedulerType != 'slurm' || inputs.workers.[index].scheduler == false }}
+            items:
+              is_enabled:
+                type: boolean
+                hidden: true
+                default: true
+                label: Is SLURM Enabled? Yes, unless the slurm section is hidden and ignored
+              account:
+                label: SLURM account
+                type: slurm-accounts
+                resource: ${{ inputs.workers.[index].resource }}
+                tooltip: '--account=value slurm directive'
+                ignore: ${{ 'existing' != inputs.workers.[index].resource.provider }}
+                hidden: ${{ .ignore }}
+              partition:
+                type: slurm-partitions
+                label: SLURM partition
+                optional: true
+                resource: ${{ inputs.workers.[index].resource }}
+                tooltip: '--qos=partition slurm directive'
+              qos:
+                label: Quality of Service [QoS]
+                type: slurm-qos
+                resource: ${{ inputs.workers.[index].resource }}
+                tooltip: '--qos=value slurm directive'
+                ignore: ${{ 'existing' != inputs.workers.[index].resource.provider }}
+                hidden: ${{ .ignore }}
+              cpus_per_task:
+                label: CPUs per task
+                type: number
+                default: 1
+                tooltip: '--cpus-per-task= SLURM directive to set the number of CPUs per task'
+                ignore: ${{ 'existing' != inputs.workers.[index].resource.provider }}
+                hidden: ${{ .ignore }}
+              nodes:
+                label: Number of Nodes
+                type: number
+                default: 1
+                tooltip: '--nodes=value slurm directive'
+                ignore: ${{ 'existing' != inputs.workers.[index].resource.provider }}
+                hidden: ${{ .ignore }}
+              node_type:
+                label: Node Type
+                type: dropdown
+                optional: true
+                default: ''
+                option-key: ${{ inputs.workers.[index].resource.ip }}
+                tooltip: '--constraint=<value> slurm directive'
+                ignore: ${{ 'existing' != inputs.workers.[index].resource.provider || (inputs.workers.[index].resource.ip != 'blueback.navydsrc.hpc.mil' && inputs.workers.[index].resource.ip != 'narwhal.navydsrc.hpc.mil' && inputs.workers.[index].resource.ip != 'nautilus.navydsrc.hpc.mil' && inputs.workers.[index].resource.ip != 'raider.afrl.hpc.mil' && inputs.workers.[index].resource.ip != 'crux.mhpcc.hpc.mil') }}
+                hidden: ${{ .ignore }}
+                options:
+                  blueback.navydsrc.hpc.mil:
+                    - standard
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  narwhal.navydsrc.hpc.mil:
+                    - standard
+                    - bigmem
+                    - mla
+                    - smla
+                    - dmla
+                    - viz
+                    - transfer
+                  nautilus.navydsrc.hpc.mil:
+                    - standard
+                    - highclock
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  raider.afrl.hpc.mil:
+                    - standard
+                    - highclock
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  crux.mhpcc.hpc.mil:
+                    - AMD
+                    - Intel
+              time:
+                label: Walltime
+                type: string
+                default: '00:30:00'
+                tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job (format: D-HH:MM:SS or HH:MM:SS, e.g. 7-00:00:00 or 01:00:00)'
+              scheduler_directives:
+                type: editor
+                optional: true
+                tooltip: |
+                  Add extra SLURM directives, one per line, using the #SBATCH prefix. For example:
+                  #SBATCH --exclusive
+                  #SBATCH --nodelist=<node-name>
+                default: |
+                  ##SBATCH --constraint=mla # uncomment for Navy and AFRL DSRC systems
+          pbs:
+            type: group
+            label: PBS Directives
+            hidden: ${{ inputs.workers.[index].resource.schedulerType != 'pbs' || inputs.workers.[index].scheduler == false }}
+            ignore: ${{ inputs.workers.[index].resource.schedulerType != 'pbs' || inputs.workers.[index].scheduler == false }}
+            items:
+              is_enabled:
+                type: boolean
+                hidden: true
+                default: true
+                label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
+              account:
+                label: Account
+                type: string
+                tooltip: PBS account for job submission (-A)
+              scheduler_directives:
+                label: Scheduler Directives
+                type: editor
+                tooltip: |
+                  Add extra PBS directives, one per line, using the #PBS prefix. For example:
+                  #PBS -l mem=16gb
+                  #PBS -l ngpus=1
+                default: |-
+                  # Parameters that apply to all sites
+                  #PBS -l walltime=01:00:00
+                  #PBS -V
+                  #PBS -q standard
+                  # Remove first # to activate specific lines
+                  #=====Ruth (Lustre, only vis has NVIDIA)=====
+                  ##PBS -l select=1:ncpus=128:mpiprocs=128
+                  #=====Warhawk (Lustre)====
+                  ##PBS -l select=1:ncpus=128:mpiprocs=128
+                  #=====Wheat (WEKA, nmlas=4|6)====
+                  ##PBS -l select=1:ncpus=92:mpiprocs=92:nmlas=4
+                  #=====Carpenter===
+                  ##PBS -l select=1:ncpus=192:mpiprocs=192

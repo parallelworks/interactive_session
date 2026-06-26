@@ -11,9 +11,9 @@ By the end of the stages built so far you will understand how to:
 - Create a browser session automatically with the `update-session` action
 - Pick a free port at runtime with `pw agent` and pass values between jobs as outputs
 - Surface messages in the workflow UI with log annotations (`::notice::`, `::warning::`, `::error::`)
-- Submit the job to the cluster scheduler (SLURM) — then stream its output, monitor it, and clean it up
+- Hand a script to a reusable subworkflow that submits it to the cluster scheduler (SLURM or PBS) and streams, monitors, and cleans up the job for you
 - Build a form that adapts to the chosen resource with dynamic dropdowns and show/hide rules
-- Replace the hand-rolled scheduler logic with a reusable subworkflow that submits your script (SLURM and PBS)
+- Fan out the same workflow across a whole list of resources at once with a `matrix` strategy
 
 ---
 
@@ -303,231 +303,189 @@ Now each run gets its own port, so two runs on the same cluster no longer collid
 
 ---
 
-## Stage 4 — Submit to the SLURM scheduler (`04-slurm.yaml`)
+## Stage 4 — Submit to a scheduler with a subworkflow (`04-subworkflow.yaml`)
 
-Until now everything ran on the **controller** (login) node. But heavy work belongs on a **compute node**, requested through the cluster's scheduler. This stage adds a "Schedule Job?" toggle: leave it off and the fractal runs on the controller as before; turn it on and the workflow writes an `sbatch` script, submits it, watches it, and tunnels the session to the compute node where the server actually ends up running.
+Until now everything ran on the **controller** (login) node. Heavy work belongs on a **compute node**, requested through the cluster's scheduler. Doing that by hand is a lot of fiddly machinery — build the `#SBATCH`/`#PBS` headers, submit with `sbatch`/`qsub`, keep the workflow job alive while the queued job runs, stream its output, and tear everything down on cancel. The **recommended** approach is not to write any of that. Instead, write your script and hand it to the **`script_submitter` subworkflow**, which already does all of it. This is [`04-subworkflow.yaml`](04-subworkflow.yaml).
 
-This is by far the most involved file in the series — [`04-slurm.yaml`](04-slurm.yaml). We will walk through it idea by idea rather than as one block.
-
-### Install always runs on the controller node
+`install` does the same checkout and venv build as before, then writes the script body and publishes its path:
 
 ```yaml
   install:
     ssh:
-      remoteHost: ${{ inputs.resource.ip }}   # the controller / login node
+      remoteHost: ${{ inputs.resource.ip }}
     steps:
       - name: Checkout Fractal Demo
         # ... unchanged ...
       - name: Install Dependencies
         # ... unchanged ...
-      - name: Create Run Script               # build the body the job will run, wherever it runs
+      - name: Create Run Script               # build the body the job will run, wherever it lands
         run: |
-          cat <<'EOF' >> script.sh
+          cat <<EOF >> script.sh
           hostname > HOSTNAME                  # record which node we land on
-          export PORT=$(pw agent open-port)    # and which port we serve on
-          echo ${PORT} > PORT
-          ./fractal-demo/run.sh                # RESOLUTION comes from the workflow env
+          export PORT=\$(pw agent open-port)   # \$ escaped → evaluated when the script RUNS
+          echo \${PORT} > PORT
+          ${PWD}/fractal-demo/run.sh           # ${PWD} expands NOW → absolute path to the demo
           EOF
           chmod +x script.sh
+          echo "SCRIPT_PATH=${PWD}/script.sh" | tee -a $OUTPUTS   # hand the path to the subworkflow
 ```
 
-`install` always targets `inputs.resource.ip`, the controller node — it has internet for the checkout and the venv build. Even when the fractal will later run on a compute node, setup happens here, once.
-
-Notice the new idea: instead of running `run.sh` directly, `install` writes `script.sh` — a script body that, *wherever it eventually runs*, records its `hostname`, opens a port **on that machine**, and starts the fractal. For a scheduled job that machine is a compute node, so the port and hostname must be discovered there, not on the controller. (`RESOLUTION` is not baked in — it comes from the workflow-level `env` from Stage 3.)
-
-> Jobs default to the same working directory (`~/pw/jobs/<workflow>/<job-number>/` on the resource). That is how files one job writes — `script.sh`, `PORT`, `HOSTNAME`, the output log — are visible to the others.
-
-### Two paths, chosen by the resource
+The whole submit/stream/monitor/cleanup dance collapses into one job that calls the subworkflow:
 
 ```yaml
-  ssh_job:
-    if: ${{ inputs.slurm.is_enabled != true }}    # run directly on the controller
-    ...
-  slurm_job:
-    if: ${{ inputs.slurm.is_enabled == true }}    # submit to SLURM
-    ...
-```
-
-Exactly one of these runs, selected by `if`. `ssh_job` wraps `script.sh` with a shebang and runs it on the controller; `slurm_job` prepends `#SBATCH` headers and submits it with `sbatch`. Which one fires is driven by the form (below), which keys off **`inputs.resource.schedulerType`** — an attribute of the chosen resource that says which scheduler it uses (`slurm`, `pbs`, or empty for none).
-
-### Streaming the output live — `early-cancel` and `cancel-jobs`
-
-```yaml
-  stream_output:
-    needs:
-      - install
-    steps:
-      - name: Stream Output
-        early-cancel: any-job-failed            # stop early if any job fails
-        run: |
-          touch run.${PW_JOB_ID}.out
-          tail -f run.${PW_JOB_ID}.out          # follow the job's output in the workflow log
-```
-
-`tail -f` never returns on its own, so this job would otherwise run forever. Two things bound it:
-
-- **`early-cancel: any-job-failed`** (the only supported value) cancels the step if any other job fails — otherwise a failure elsewhere would leave it tailing forever.
-- The path job ends by stopping it explicitly:
-
-```yaml
-      - name: Cancel Streaming
-        uses: parallelworks/cancel-jobs         # built-in action: cancel other jobs by name
-        with:
-          jobs:
-            - stream_output
-```
-
-`parallelworks/cancel-jobs` cancels named jobs from inside the workflow — here, the streaming job once the real work is submitted and done.
-
-### Keeping a scheduled job alive — `cleanup` and a monitor step
-
-`sbatch` returns immediately: it queues the job and exits while the job runs later on a compute node. We want the SLURM job torn down if the workflow is canceled, so the submit step declares a cleanup:
-
-```yaml
-      - name: Submit SLURM Script
-        run: |
-          echo "::notice::Submitting SLURM Job"
-          jobid=$(sbatch run.sh | tail -1 | awk '{print $4}')
-          echo "jobid=${jobid}" | tee -a $OUTPUTS
-        cleanup: scancel ${{ needs.slurm_job.outputs.jobid }}   # tear down the SLURM job on exit
-```
-
-But **`cleanup` runs as soon as the job exits or is canceled, in reverse order of the steps**. If `slurm_job` finished right after `sbatch`, its cleanup would immediately `scancel` the job we just submitted — killing the session before it starts. So we must *not let `slurm_job` finish* while the SLURM job is alive. The fix is a step that blocks until the job is really done:
-
-```yaml
-      - name: Monitor SLURM Job
-        run: |
-          jobid=${{ needs.slurm_job.outputs.jobid }}
-          echo "::notice::Monitoring SLURM job ${jobid}"
-          # poll squeue (confirming with sacct) until the job leaves the queue, then exit 0
-          ...
-```
-
-Now `slurm_job` stays alive for the lifetime of the SLURM job. By the time `cleanup` runs, the job has already exited and the `scancel` is a harmless no-op.
-
-### Waiting for the job to come up — `retry`
-
-The server's host and port only exist once `script.sh` actually runs — which, for a queued SLURM job, may be minutes later. The session job polls for them:
-
-```yaml
-  session:
-    needs:
-      - install
-    steps:
-      - name: Read hostname and port
-        retry:
-          max-retries: 180
-          interval: 10s                          # poll for up to ~30 minutes
-        run: |
-          if [ ! -s PORT ] || [ ! -s HOSTNAME ]; then
-            echo "::notice:: PORT or HOSTNAME not ready yet"
-            exit 1                                # non-zero → the retry fires again
-          fi
-          echo "PORT=$(cat PORT)" | tee -a $OUTPUTS
-          echo "HOSTNAME=$(cat HOSTNAME)" | tee -a $OUTPUTS
-      - name: Create Session
-        uses: parallelworks/update-session
-        with:
-          remotePort: '${{ needs.session.outputs.PORT }}'
-          remoteHost: ${{ needs.session.outputs.HOSTNAME }}   # the COMPUTE node, for a scheduled job
-          target: ${{ inputs.resource.id }}
-          name: ${{ sessions.fractal }}
-```
-
-**`retry`** re-runs a step on failure — `max-retries: 180` at `interval: 10s` keeps trying for about 30 minutes. The step exits non-zero until both files exist, so the loop effectively waits for the job to start. Note the new `remoteHost`: the tunnel now points at the compute node's hostname (it was implicitly the controller in earlier stages).
-
-### A form that adapts to the resource — `hidden`, `ignore`, dynamic dropdowns
-
-The inputs do the work of only asking for what the chosen resource needs.
-
-```yaml
-      scheduler:
-        type: boolean
-        label: Schedule Job?
-        hidden: ${{ inputs.resource.schedulerType == '' }}   # hide if the resource has no scheduler
-        ignore: ${{ .hidden }}                                # ...and drop the value when hidden
-      slurm:
-        type: group
-        label: SLURM Directives
-        hidden: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
-        ignore: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
-        items:
-          is_enabled:
-            type: boolean
-            hidden: true
-            default: true        # true unless the whole group is hidden+ignored — the ssh/slurm switch
-          partition:
-            type: slurm-partitions             # dynamic dropdown, populated from the resource
-            resource: ${{ inputs.resource }}
-          qos:
-            type: slurm-qos
-            resource: ${{ inputs.resource }}
-            ignore: ${{ 'existing' != inputs.resource.provider }}   # only for user-registered clusters
-            hidden: ${{ .ignore }}
-          node_type:
-            type: dropdown
-            option-key: ${{ inputs.resource.ip }}   # which option list to show, keyed per resource
-            options:
-              some.cluster.hostname: [standard, bigmem, ...]
-```
-
-- **`hidden`** controls whether a field appears in the form; **`ignore`** controls whether its value is sent to the workflow at all. They are usually linked: `ignore: ${{ .hidden }}` (or `hidden: ${{ .ignore }}`) makes one mirror the other — `.hidden` and `.ignore` are self-references to this field's own values.
-- **`inputs.resource.schedulerType`** drives the visibility: no scheduler → the toggle is hidden; not SLURM → the whole `slurm` group is hidden and ignored.
-- **`inputs.resource.provider`** distinguishes a user-registered on-prem cluster (`provider == 'existing'`) from a cloud-provisioned one. Directives like account, QoS, CPUs, and nodes only make sense on `existing` clusters, so they use `ignore: ${{ 'existing' != inputs.resource.provider }}` — visible only there.
-- **Dynamic dropdowns** — the `slurm-partitions`, `slurm-qos`, and `slurm-accounts` types fetch their choices from the cluster you picked (`resource: ${{ inputs.resource }}`), so you only see options that actually exist on it. A plain `dropdown` can vary its option list per resource with `option-key`.
-- **`is_enabled`** is the trick behind the two `if`s: a hidden boolean defaulting to `true`. When the `slurm` group is ignored (no scheduler, or the toggle off), `is_enabled` is never sent, so `slurm.is_enabled != true` and `ssh_job` runs. When the group is active it is `true`, so `slurm_job` runs instead.
-
-This one file does a lot — branching on the scheduler, building `sbatch` headers, streaming, monitoring, cleaning up, and a form that reshapes itself per resource. The next stage rebuilds the same behavior with a **subworkflow** that hides most of this machinery behind a reusable building block.
-
----
-
-## Stage 5 — Let a subworkflow submit the job (`05-subworkflow.yaml`)
-
-Stage 4 worked, but it hand-rolled everything: branching on the scheduler, building headers, submitting, streaming, monitoring, cleaning up — hundreds of lines, SLURM only. The **recommended** approach is not to reimplement any of that. Instead, write your script and hand it to a **subworkflow** that already knows how to submit scripts to a cluster. This is [`05-subworkflow.yaml`](05-subworkflow.yaml).
-
-`install` just writes the script body (as in Stage 4), and the whole submit/stream/monitor/cleanup dance collapses into a single job:
-
-```yaml
-  install:
-    # ... checkout + install + write script.sh (as in Stage 4) ...
-
   script_submitter:
     needs:
       - install
     steps:
       - name: Script Submitter
-        uses: github/parallelworks/interactive_session@main   # run another workflow as a step
+        uses: github/parallelworks/interactive_session@main    # run another workflow as a step
         with:
-          $yaml: workflow/script_submitter/v3.6/hsp.yaml       # which subworkflow to run
+          $yaml: workflow/script_submitter/v3.6/hsp.yaml        # which subworkflow to run
           resource: ${{ inputs.resource }}
-          rundir: ${PW_PARENT_JOB_DIR}                         # the shared job directory
           shebang: '#!/bin/bash'
-          script: ${PW_PARENT_JOB_DIR}/script.sh               # the script to submit
+          use_existing_script: true                            # we built the script in install...
+          script_path: ${{ needs.install.outputs.SCRIPT_PATH }} # ...so pass its absolute path
           scheduler: ${{ inputs.scheduler }}
+          use_scheduler_agent: false
           slurm:                                               # pass the SLURM group straight through
             is_enabled: ${{ inputs.slurm.is_enabled }}
             partition: ${{ inputs.slurm.partition }}
-            # ... account, qos, nodes, time, scheduler_directives ...
+            # ... account, qos, cpus_per_task, nodes, node_type, time, scheduler_directives ...
           pbs:                                                 # ...and a PBS group
             is_enabled: ${{ inputs.pbs.is_enabled }}
             account: ${{ inputs.pbs.account }}
             scheduler_directives: ${{ inputs.pbs.scheduler_directives }}
 ```
 
-The `session` job is unchanged from Stage 4 — it polls for `PORT`/`HOSTNAME` and creates the tunnel.
+The `session` job still polls for `PORT`/`HOSTNAME` and opens the tunnel — but it reads them from the *subworkflow's* run directory, because that is where the script actually ran:
+
+```yaml
+  session:
+    needs:
+      - install
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Read hostname and port
+        retry:
+          max-retries: 180
+          interval: 10s                          # poll for up to ~30 minutes
+        run: |
+          rundir=./subworkflows/script_submitter/step_0        # where the subworkflow ran the script
+          if [ ! -s ${rundir}/PORT ] || [ ! -s ${rundir}/HOSTNAME ]; then
+            echo "::notice:: PORT or HOSTNAME not ready yet"
+            exit 1                                              # non-zero → the retry fires again
+          fi
+          echo "PORT=$(cat ${rundir}/PORT)" | tee -a $OUTPUTS
+          # HOSTNAME is the compute node when scheduled, else localhost
+          # ...
+      - name: Create Session
+        uses: parallelworks/update-session
+        with:
+          remotePort: '${{ needs.session.outputs.PORT }}'
+          remoteHost: ${{ needs.session.outputs.HOSTNAME }}
+          target: ${{ inputs.resource.id }}
+          name: ${{ sessions.fractal }}
+```
 
 ### Concepts introduced
 
 **Subworkflows (`uses:` + `$yaml`).**
-`uses: github/parallelworks/interactive_session@main` runs *another workflow* as a step. `$yaml` selects which workflow file inside that repo to run (here `workflow/script_submitter/v3.6/hsp.yaml`), and the remaining `with:` keys are that subworkflow's inputs. The subworkflow runs as part of your run.
+`uses: github/parallelworks/interactive_session@main` runs *another workflow* as a step. `$yaml` selects which workflow file inside that repo to run (here `workflow/script_submitter/v3.6/hsp.yaml`), and the remaining `with:` keys are that subworkflow's inputs. The subworkflow runs as part of your run. It is versioned (`v3.6`) — **pin a version** so a central update can't silently change its behavior.
 
-**The `script_submitter` subworkflow does the scheduler work.**
-You give it your `script`, the `scheduler` flag, and the `slurm`/`pbs` directive groups; it does everything Stage 4 did by hand — choosing SLURM vs PBS vs running on the controller, building the headers, submitting, streaming the output, monitoring the job, and cleaning it up. It is versioned (`v3.6`) — pin a version. Because it is maintained centrally, your workflow shrinks to "write a script, hand it over."
+**Hand it a script, not logic — `use_existing_script` + `script_path`.**
+`install` writes `script.sh` and publishes `SCRIPT_PATH`; the submitter takes `use_existing_script: true` + `script_path` and runs exactly that file. The heredoc is **unquoted**, so `${PWD}` expands at *write* time — the demo is referenced by an absolute path, so it resolves wherever the script ends up running — while `\$(pw agent open-port)` and `\${PORT}` are escaped and run later, on the compute node for a scheduled job.
 
-**SLURM *and* PBS for free.**
-Stage 4 only handled SLURM. The subworkflow handles both, so 05 simply adds a `pbs` input group next to `slurm` and passes it through — no new submission logic to write.
+**Reading the subworkflow's outputs — `./subworkflows/script_submitter/step_0`.**
+The submitter runs your script in *its own* job directory, so the `PORT` and `HOSTNAME` files the script writes land under `subworkflows/script_submitter/step_0/`, not the parent job dir. The `session` job reads them from that relative path. (This couples to the subworkflow's internal layout — fine here, but worth knowing.)
 
-**`${PW_PARENT_JOB_DIR}`.**
-The shared job directory on the resource. We pass it as `rundir` and use it to locate `script.sh`, so the subworkflow runs the script in the same directory where `install` wrote it — and where the `session` job later reads `PORT` and `HOSTNAME`.
+**`retry` — waiting for a queued job to come up.**
+The host and port only exist once the script actually runs, which for a queued SLURM job may be minutes later. `retry` re-runs the step on failure — `max-retries: 180` at `interval: 10s` ≈ 30 minutes — and the step exits non-zero until both files exist, so the loop waits the job out.
 
-Compared with Stage 4, the bespoke `ssh_job`, `slurm_job`, and `stream_output` jobs and the monitor-and-cleanup dance are gone, replaced by one `script_submitter` job. This is the recommended way to run a script on a cluster: don't reimplement scheduler handling — delegate it.
+**A form that adapts to the resource.**
+The "Schedule Job?" toggle and the `slurm`/`pbs` groups only appear when they apply: `hidden`/`ignore` key off `inputs.resource.schedulerType` (`slurm`, `pbs`, or empty) and `inputs.scheduler`. `slurm-partitions`/`slurm-qos`/`slurm-accounts` are **dynamic dropdowns** that fetch their choices from the chosen cluster, and `inputs.resource.provider == 'existing'` gates the directives that only make sense on a user-registered cluster. The hidden `is_enabled` boolean (default `true`, sent only when the group is active) is what tells the subworkflow which path to take.
+
+### Lessons from the script submitter (what it does for you)
+
+You hand the subworkflow a script and a few flags; in return it runs all the machinery you would otherwise hand-write. Reading [`workflow/script_submitter/v3.6/hsp.yaml`](../../script_submitter/v3.6/hsp.yaml) is the best way to see *why* each piece exists — the highlights:
+
+- **One path, chosen by `if`.** `ssh_job`, `slurm_job`, `pbs_job`, and `scheduler_agent_job` each carry an `if:` keyed off `slurm.is_enabled` / `pbs.is_enabled` / `use_scheduler_agent`. Exactly one runs — directly on the controller, via `sbatch`/`qsub`, or through the scheduler-agent — and a `preprocessing` job assembles the matching `#SBATCH`/`#PBS` headers from the form.
+- **Streaming with `early-cancel`.** A `stream_output` job runs `tail -f run.<JOB_ID>.out` so you watch progress live. `tail -f` never returns on its own, so `early-cancel: any-job-failed` stops it if anything fails, and the path job ends with `uses: parallelworks/cancel-jobs` to stop it explicitly once the work is done.
+- **`cleanup` runs on exit, in reverse step order.** The submit step declares `cleanup: scancel ${jobid}` (or `qdel`) so a canceled run tears the scheduled job down. But cleanup fires the moment the job *exits* — so if the job finished right after `sbatch`, its cleanup would `scancel` the job it just submitted, killing the session before it starts.
+- **A monitor step keeps the job alive.** That is why submission is followed by a **Monitor** step that polls `squeue` (confirming with `sacct`, because an empty `squeue` can be a transient controller hiccup rather than an exit) until the job truly leaves the queue. The submitting job stays alive for the job's lifetime, so by the time `cleanup` runs the `scancel` is a harmless no-op.
+- **Cleanup on the right node.** When you provide one (`define_cleanup_script` + `cleanup_script_path`), the cleanup `ssh`'s to the compute node — read from the `HOSTNAME` file — to run your `cancel.sh` *there*, since the controller can't stop a process living on the compute node.
+
+This is the recommended way to run a script on a cluster: don't reimplement scheduler handling — delegate it, and let the subworkflow carry the streaming, monitoring, and cleanup machinery for you.
+
+---
+
+## Stage 5 — Fan out across resources with a matrix (`05-matrix.yaml`)
+
+Every stage so far rendered one fractal on one resource you picked. Stage 5 runs the **same** Stage 4 workflow across a whole *list* of resources at once — each entry on its own cluster, each choosing its own controller-vs-scheduler path, each rendering its own fractal. The form turns the single resource picker into a repeatable **list** of "workers," and a **matrix strategy** turns that list into one job per entry. This is [`05-matrix.yaml`](05-matrix.yaml).
+
+The job itself is tiny: it just hands each worker to the Stage 4 subworkflow.
+
+```yaml
+jobs:
+  fractal_demo:
+    strategy:
+      fail-fast: true
+      matrix:
+        worker: ${{ inputs.workers }}        # one matrix job per element of the workers list
+    steps:
+      - name: Script Submitter
+        uses: github/parallelworks/interactive_session@main
+        with:
+          $yaml: workflow/tutorials/hsp/04-subworkflow.yaml   # run Stage 4 as a subworkflow, once per worker
+          resource: ${{ matrix.worker.resource }}             # THIS job's own worker — not the whole list
+          resolution: ${{ inputs.resolution }}
+          scheduler: ${{ matrix.worker.scheduler }}
+          slurm:                                              # the worker's own SLURM group, passed straight through
+            is_enabled: ${{ matrix.worker.slurm.is_enabled }}
+            # ... partition, qos, cpus_per_task, nodes, node_type, time, scheduler_directives ...
+          pbs:
+            is_enabled: ${{ matrix.worker.pbs.is_enabled }}
+            # ... account, scheduler_directives ...
+```
+
+The form replaces the single resource block with a list the user can grow:
+
+```yaml
+'on':
+  execute:
+    inputs:
+      resolution:
+        # ... unchanged ...
+      workers:
+        type: list                            # a repeatable group — one entry per resource
+        label: Compute Resources
+        template:                             # every list item has this shape
+          resource:
+            type: compute-clusters
+            # ... as before ...
+          scheduler:
+            type: boolean
+            hidden: ${{ inputs.workers.[index].resource.schedulerType == '' }}   # [index] = THIS list item
+            # ...
+          slurm:
+            # ... the same SLURM group as Stage 4, but every self-reference is inputs.workers.[index]... ...
+          pbs:
+            # ... same idea ...
+```
+
+### Concepts introduced
+
+**`strategy.matrix` — fan-out.**
+A `strategy.matrix` runs the job once for every value of a matrix variable. Setting `worker: ${{ inputs.workers }}` makes the variable the `workers` list itself, so the `fractal_demo` job expands into one copy per element — `fractal_demo-0`, `fractal_demo-1`, … — all running concurrently. Add a third worker in the form and a third job appears automatically; nothing in the YAML hardcodes the count.
+
+**`matrix.<name>` vs the template's `[index]` — two different "current item"s.**
+This is the subtle part, and the easiest thing to get wrong. Inside a *job*, the current matrix value is `${{ matrix.worker }}`, so each job reads *its own* worker with `matrix.worker.resource`, `matrix.worker.scheduler`, and so on. Inside the *form template*, `[index]` is a **separate** token meaning "the item being rendered" — which is why every `hidden`/`ignore`/`resource` expression in the `workers` template is written `inputs.workers.[index]...`. They are not interchangeable: `[index]` only resolves inside the list template, and in a job it silently falls back to the first element. Writing `inputs.workers.[index]` in the job (instead of `matrix.worker`) is exactly the trap that makes *every* matrix job inherit `workers[0]`'s settings.
+
+**`list` input with a `template`.**
+A `list` input renders an "add another" control in the form; `template` defines the shape of each entry. Here each entry is a full resource + "Schedule Job?" + SLURM/PBS form — the same controls Stage 4 introduced, nested one level deeper and keyed to `inputs.workers.[index]` so each row reads from its own values. The `slurm`/`pbs` groups still hide and `ignore` themselves per row based on that row's resource and scheduler choice.
+
+**`fail-fast` and `max-parallel`.**
+`fail-fast: true` cancels the remaining matrix jobs as soon as one fails. `max-parallel: N` (omitted here) would cap how many run at once; without it, every worker runs in parallel.
+
+**Each matrix job runs the full Stage 4 workflow.**
+Because the step's `$yaml` is `04-subworkflow.yaml`, every worker goes through the entire Stage 4 pipeline — install, pick a port, submit to its scheduler (or run on its controller), and register its own `fractal` session. A two-worker run where one worker has *Schedule Job?* off and the other on will run one fractal on a login node and submit the other to SLURM, side by side.

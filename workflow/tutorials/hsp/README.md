@@ -47,7 +47,7 @@ The thing we are automating lives in [`fractal-demo/`](fractal-demo/README.md): 
 Before automating anything, run the demo manually so the moving parts are familiar. SSH into your cluster's controller node and fetch the example:
 
 ```bash
-git clone -b hsp-tutorial https://github.com/parallelworks/interactive_session.git
+git clone https://github.com/parallelworks/interactive_session.git
 cd interactive_session/workflow/tutorials/hsp/fractal-demo
 ```
 
@@ -93,7 +93,7 @@ jobs:
         uses: parallelworks/checkout          # Built-in action: clone code onto the cluster
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: hsp-tutorial
+          branch: main
           sparse_checkout:                     # Fetch only the example directory, not the whole repo
             - workflow/tutorials/hsp/fractal-demo
       - name: Install Dependencies
@@ -125,7 +125,7 @@ jobs:
         type: number                          # Renders a validated number field
         label: Resolution
         tooltip: Image size in pixels. Larger values look sharper but take longer to render.
-        default: 1000
+        default: 2500
         min: 100
         max: 10000
       port:
@@ -145,6 +145,9 @@ By default every job in a workflow starts at the same time. `needs` makes a job 
 **`ssh` at the job level.**
 Setting `ssh.remoteHost` on a job runs every step in that job on the remote cluster over SSH. Each job sets it to `${{ inputs.resource.ip }}` — the IP of whichever cluster you pick in the form.
 
+**Where jobs run — `PW_JOB_DIR`.**
+By default every job runs from a per-run working directory on the node it lands on: `${HOME}/pw/jobs/<workflow-name>/<job-number>`, exported to your steps as `PW_JOB_DIR` (and as `PW_PARENT_JOB_DIR`, which a subworkflow reads to find the top-level run's directory). Both jobs here share that directory — which is why `run` can call `./fractal-demo/run.sh`: `install` checked the code out into the very same place. To run a job somewhere else, set `working-directory` at the job level. The run directory is **not** removed when the workflow finishes — whatever a job writes there persists until you delete it yourself (Stage 3 shows one way, with a step `cleanup`).
+
 **Expressions `${{ }}`.**
 Expressions are evaluated at runtime and replaced with their values. `${{ inputs.resource.ip }}` becomes the chosen cluster's IP; `${{ inputs.resolution }}` becomes the number entered in the form.
 
@@ -161,6 +164,33 @@ The `run` job's one step renders the fractal and then keeps the web server up, s
 This section defines the run form. Each input has a `type` (`compute-clusters` renders a cluster picker, `number` a validated numeric field), a `label` shown above it, and a `tooltip` shown on hover. `number` inputs add `default`, `min`, and `max`; the resource input adds `autoselect` (pre-select a cluster) and `optional: false` (required).
 
 To run it, open **Workflows** in the Activate UI, select this workflow, pick your cluster, adjust the resolution if you like, and click **Execute**. While it runs, open the session you created in Stage 0 to watch the fractal render.
+
+### Run it from the command line (`pw`)
+
+You can also run the workflow with the `pw` CLI. First create an inputs file — say `01-controller.json`:
+
+```json
+{
+  "port": 8000,
+  "resolution": 2500,
+  "resource": "<Resource URI>"
+}
+```
+
+Set `resource` to one of your active clusters, which you can list with `pw cluster list --status=active`. You can also copy the inputs JSON from any past run — click the run and open its **INPUTS** tab — where `resource` appears as a full object; you can replace that whole object with just its URI string, as above.
+
+Run the YAML directly. This does **not** create a workflow on the platform; it just runs the file:
+
+```bash
+pw workflows run -i 01-controller.json ./01-controller.yaml
+```
+
+Or create the workflow on the platform, then run it by name:
+
+```bash
+pw workflows create --yaml 01-controller.yaml --display-name "Fractal Demo" fractal_demo
+pw workflows run -i 01-controller.json fractal_demo
+```
 
 > At this stage the session is still created by hand. The next stage lets the workflow create it for you.
 
@@ -254,6 +284,7 @@ jobs:
     steps:
       - name: Render and Serve                # CHANGED: serve on the chosen port
         run: PORT=${{ needs.install.outputs.PORT }} ./fractal-demo/run.sh   # RESOLUTION now comes from env
+        cleanup: rm -r ${PW_JOB_DIR}          # NEW: delete the run directory when the step exits
 
   session:
     needs:
@@ -292,6 +323,9 @@ This reads a value published by an upstream job. `${{ needs.install.outputs.PORT
 
 **Why the port is chosen in `install`, not `run`.**
 You can only read a job's outputs by listing it under `needs`, and `needs` waits for that job to *finish*. The `run` job runs `run.sh`, which serves forever and never finishes — so no job could ever read an output from it. `install` finishes, so it is the right place to pick the port and hand it to everything downstream.
+
+**`cleanup` — teardown when the step exits.**
+The `run` step now carries a `cleanup`. A step's `cleanup` runs when that step exits — including when the run is cancelled — and undoes whatever the step set up. Here it is a stand-in: `rm -r ${PW_JOB_DIR}` deletes the run directory (the `${HOME}/pw/jobs/...` folder from Stage 1) once the step is done. Because `run.sh` serves forever, that only fires on cancel — so it is really a "clean up after yourself when stopped" hook. In a real workflow this is where you stop what the step started: `docker stop` / `docker rm` a container, `scancel` a SLURM job, or `qdel` a PBS job. Stage 4 leans on exactly this to tear scheduled jobs down.
 
 **`permissions: ['*']`.**
 The `pw` CLI authenticates against the Activate API. `permissions` grants the workflow a token with the same access as the user who runs it. Without it, `pw agent open-port` fails.
@@ -391,7 +425,7 @@ The `session` job still polls for `PORT`/`HOSTNAME` and opens the tunnel — but
 ### Concepts introduced
 
 **Subworkflows (`uses:` + `$yaml`).**
-`uses: github/parallelworks/interactive_session@main` runs *another workflow* as a step. `$yaml` selects which workflow file inside that repo to run (here `workflow/script_submitter/v3.6/hsp.yaml`), and the remaining `with:` keys are that subworkflow's inputs. The subworkflow runs as part of your run. It is versioned (`v3.6`) — **pin a version** so a central update can't silently change its behavior.
+`uses: github/parallelworks/interactive_session@main` runs *another workflow* as a step. `$yaml` selects which workflow file inside that repo to run (here `workflow/script_submitter/v3.6/hsp.yaml`), and the remaining `with:` keys are that subworkflow's inputs. 
 
 **Hand it a script, not logic — `use_existing_script` + `script_path`.**
 `install` writes `script.sh` and publishes `SCRIPT_PATH`; the submitter takes `use_existing_script: true` + `script_path` and runs exactly that file. The heredoc is **unquoted**, so `${PWD}` expands at *write* time — the demo is referenced by an absolute path, so it resolves wherever the script ends up running — while `\$(pw agent open-port)` and `\${PORT}` are escaped and run later, on the compute node for a scheduled job.

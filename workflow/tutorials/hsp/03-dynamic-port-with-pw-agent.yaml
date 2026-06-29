@@ -18,7 +18,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: hsp-tutorial
+          branch: main
           sparse_checkout:
             - workflow/tutorials/hsp/fractal-demo
       - name: Install Dependencies
@@ -41,6 +41,7 @@ jobs:
     steps:
       - name: Render and Serve
         run: PORT=${{ needs.install.outputs.PORT }} ./fractal-demo/run.sh
+        cleanup: rm -r ${PW_JOB_DIR}
 
   session:
     needs:
@@ -66,6 +67,6 @@ jobs:
         type: number
         label: Resolution
         tooltip: Image size in pixels. Larger values look sharper but take longer to render.
-        default: 1000
+        default: 2500
         min: 100
         max: 10000

@@ -182,8 +182,7 @@ jobs:
               it is resolved to the full provider id automatically.
           allocation:
             label: AI allocation
-            type: string
-            default: Private LLM Group
+            type: organization-groups
             tooltip: Which allocation to bill model usage against (for org:* models).
           parent_install_dir:
             label: Parent install directory

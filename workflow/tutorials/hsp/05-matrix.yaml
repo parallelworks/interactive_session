@@ -34,7 +34,7 @@ jobs:
         type: number
         label: Resolution
         tooltip: Image size in pixels. Larger values look sharper but take longer to render.
-        default: 1000
+        default: 2500
         min: 100
         max: 10000
       workers:

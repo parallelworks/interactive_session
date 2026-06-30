@@ -15,11 +15,13 @@ jobs:
           # This script prepares the target host and always runs in the controller node
           if [ -n "${service_parent_install_dir}" ]; then
             echo "::notice title=Install Directory::Using provided service_parent_install_dir: ${service_parent_install_dir}"
-          elif [ -z "${PROJECTS_HOME}" ]; then
-            echo "::error title=Install Directory::PROJECTS_HOME is empty"
-            exit 1
           else
-            hsp_install_dir="${PROJECTS_HOME}/hsp"
+            if [ -z "${PROJECTS_HOME}" ]; then
+              echo "::warning title=Install Directory::PROJECTS_HOME is empty - falling back to ${HOME}/pw/software"
+              hsp_install_dir="${HOME}/pw/software"
+            else
+              hsp_install_dir="${PROJECTS_HOME}/hsp"
+            fi
             if [ ! -d "${hsp_install_dir}" ]; then
               if ! mkdir -p "${hsp_install_dir}"; then
                 echo "::error title=Install Directory::Failed to create ${hsp_install_dir} - permission denied"

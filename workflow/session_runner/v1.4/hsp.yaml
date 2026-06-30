@@ -17,8 +17,8 @@ jobs:
             echo "::notice title=Install Directory::Using provided service_parent_install_dir: ${service_parent_install_dir}"
           else
             if [ -z "${PROJECTS_HOME}" ]; then
-              echo "::warning title=Install Directory::PROJECTS_HOME is empty - falling back to ${HOME}/pw/software"
-              hsp_install_dir="${HOME}/pw/software"
+              echo "::warning title=Install Directory::PROJECTS_HOME is empty - falling back to ${HOME}/pw"
+              hsp_install_dir="${HOME}/pw"
             else
               hsp_install_dir="${PROJECTS_HOME}/hsp"
             fi

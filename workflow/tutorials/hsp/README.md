@@ -467,7 +467,7 @@ jobs:
       matrix:
         worker: ${{ inputs.workers }}        # one matrix job per element of the workers list
     steps:
-      - name: Script Submitter
+      - name: Fractal Demo
         uses: github/parallelworks/interactive_session@main
         with:
           $yaml: workflow/tutorials/hsp/04-subworkflow.yaml   # run Stage 4 as a subworkflow, once per worker

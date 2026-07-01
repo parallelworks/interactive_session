@@ -1,0 +1,199 @@
+# permissions authenticates the in-workflow pw CLI — the subworkflow's autocancel
+# job calls `pw sessions ls/stop`, which only works if the parent grants this too.
+permissions:
+  - '*'
+
+jobs:
+  fractal_demo:
+    strategy:
+      fail-fast: true
+      matrix:
+        worker: ${{ inputs.workers }}
+    steps:
+      - name: Fractal Demo
+        uses: github/parallelworks/interactive_session@main
+        with:
+          $yaml: workflow/tutorials/hsp/06-first-start-wins-subworkflow.yaml
+          resource: ${{ matrix.worker.resource }}
+          resolution: ${{ inputs.resolution }}
+          scheduler: ${{ matrix.worker.scheduler }}
+          slurm:
+            is_enabled: ${{ matrix.worker.slurm.is_enabled }}
+            account: ${{ matrix.worker.slurm.account }}
+            partition: ${{ matrix.worker.slurm.partition }}
+            qos: ${{ matrix.worker.slurm.qos }}
+            cpus_per_task: ${{ matrix.worker.slurm.cpus_per_task }}
+            nodes: ${{ matrix.worker.slurm.nodes }}
+            node_type: ${{ matrix.worker.slurm.node_type }}
+            time: ${{ matrix.worker.slurm.time }}
+            scheduler_directives: ${{ matrix.worker.slurm.scheduler_directives }}
+          pbs:
+            is_enabled: ${{ matrix.worker.pbs.is_enabled }}
+            account: ${{ matrix.worker.pbs.account }}
+            scheduler_directives: ${{ matrix.worker.pbs.scheduler_directives }}
+'on':
+  execute:
+    inputs:
+      resolution:
+        type: number
+        label: Resolution
+        tooltip: Image size in pixels. Larger values look sharper but take longer to render.
+        default: 2500
+        min: 100
+        max: 10000
+      workers:
+        type: list
+        label: Compute Resources
+        tooltip: Ordered list of compute resources to probe for an available GPU. They are tried one at a time, in list order, until one responds to nvidia-smi. Put your preferred resource first; add more as fallbacks.
+        template:
+          resource:
+            type: compute-clusters
+            label: Resource Target
+            tooltip: The compute cluster to run the fractal example on.
+            autoselect: true
+            optional: false
+          scheduler:
+            type: boolean
+            default: false
+            label: Schedule Job?
+            hidden: ${{ inputs.workers.[index].resource.schedulerType == '' }}
+            ignore: ${{ .hidden }}
+            tooltip: |
+              Yes → Job is submitted to the scheduler using sbatch, qsub, etc
+              No  → Job is executed in the controller or login node instead
+          slurm:
+            type: group
+            label: SLURM Directives
+            hidden: ${{ inputs.workers.[index].resource.schedulerType != 'slurm' || inputs.workers.[index].scheduler == false }}
+            ignore: ${{ inputs.workers.[index].resource.schedulerType != 'slurm' || inputs.workers.[index].scheduler == false }}
+            items:
+              is_enabled:
+                type: boolean
+                hidden: true
+                default: true
+                label: Is SLURM Enabled? Yes, unless the slurm section is hidden and ignored
+              account:
+                label: SLURM account
+                type: slurm-accounts
+                resource: ${{ inputs.workers.[index].resource }}
+                tooltip: '--account=value slurm directive'
+                ignore: ${{ 'existing' != inputs.workers.[index].resource.provider }}
+                hidden: ${{ .ignore }}
+              partition:
+                type: slurm-partitions
+                label: SLURM partition
+                optional: true
+                resource: ${{ inputs.workers.[index].resource }}
+                tooltip: '--qos=partition slurm directive'
+              qos:
+                label: Quality of Service [QoS]
+                type: slurm-qos
+                resource: ${{ inputs.workers.[index].resource }}
+                tooltip: '--qos=value slurm directive'
+                ignore: ${{ 'existing' != inputs.workers.[index].resource.provider }}
+                hidden: ${{ .ignore }}
+              cpus_per_task:
+                label: CPUs per task
+                type: number
+                default: 1
+                tooltip: '--cpus-per-task= SLURM directive to set the number of CPUs per task'
+                ignore: ${{ 'existing' != inputs.workers.[index].resource.provider }}
+                hidden: ${{ .ignore }}
+              nodes:
+                label: Number of Nodes
+                type: number
+                default: 1
+                tooltip: '--nodes=value slurm directive'
+                ignore: ${{ 'existing' != inputs.workers.[index].resource.provider }}
+                hidden: ${{ .ignore }}
+              node_type:
+                label: Node Type
+                type: dropdown
+                optional: true
+                default: ''
+                option-key: ${{ inputs.workers.[index].resource.ip }}
+                tooltip: '--constraint=<value> slurm directive'
+                ignore: ${{ 'existing' != inputs.workers.[index].resource.provider || (inputs.workers.[index].resource.ip != 'blueback.navydsrc.hpc.mil' && inputs.workers.[index].resource.ip != 'narwhal.navydsrc.hpc.mil' && inputs.workers.[index].resource.ip != 'nautilus.navydsrc.hpc.mil' && inputs.workers.[index].resource.ip != 'raider.afrl.hpc.mil' && inputs.workers.[index].resource.ip != 'crux.mhpcc.hpc.mil') }}
+                hidden: ${{ .ignore }}
+                options:
+                  blueback.navydsrc.hpc.mil:
+                    - standard
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  narwhal.navydsrc.hpc.mil:
+                    - standard
+                    - bigmem
+                    - mla
+                    - smla
+                    - dmla
+                    - viz
+                    - transfer
+                  nautilus.navydsrc.hpc.mil:
+                    - standard
+                    - highclock
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  raider.afrl.hpc.mil:
+                    - standard
+                    - highclock
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  crux.mhpcc.hpc.mil:
+                    - AMD
+                    - Intel
+              time:
+                label: Walltime
+                type: string
+                default: '00:30:00'
+                tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job (format: D-HH:MM:SS or HH:MM:SS, e.g. 7-00:00:00 or 01:00:00)'
+              scheduler_directives:
+                type: editor
+                optional: true
+                tooltip: |
+                  Add extra SLURM directives, one per line, using the #SBATCH prefix. For example:
+                  #SBATCH --exclusive
+                  #SBATCH --nodelist=<node-name>
+                default: |
+                  ##SBATCH --constraint=mla # uncomment for Navy and AFRL DSRC systems
+          pbs:
+            type: group
+            label: PBS Directives
+            hidden: ${{ inputs.workers.[index].resource.schedulerType != 'pbs' || inputs.workers.[index].scheduler == false }}
+            ignore: ${{ inputs.workers.[index].resource.schedulerType != 'pbs' || inputs.workers.[index].scheduler == false }}
+            items:
+              is_enabled:
+                type: boolean
+                hidden: true
+                default: true
+                label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
+              account:
+                label: Account
+                type: string
+                tooltip: PBS account for job submission (-A)
+              scheduler_directives:
+                label: Scheduler Directives
+                type: editor
+                tooltip: |
+                  Add extra PBS directives, one per line, using the #PBS prefix. For example:
+                  #PBS -l mem=16gb
+                  #PBS -l ngpus=1
+                default: |-
+                  # Parameters that apply to all sites
+                  #PBS -l walltime=01:00:00
+                  #PBS -V
+                  #PBS -q standard
+                  # Remove first # to activate specific lines
+                  #=====Ruth (Lustre, only vis has NVIDIA)=====
+                  ##PBS -l select=1:ncpus=128:mpiprocs=128
+                  #=====Warhawk (Lustre)====
+                  ##PBS -l select=1:ncpus=128:mpiprocs=128
+                  #=====Wheat (WEKA, nmlas=4|6)====
+                  ##PBS -l select=1:ncpus=92:mpiprocs=92:nmlas=4
+                  #=====Carpenter===
+                  ##PBS -l select=1:ncpus=192:mpiprocs=192

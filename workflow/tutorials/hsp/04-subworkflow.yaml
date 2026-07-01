@@ -8,6 +8,57 @@ sessions:
 env:
   RESOLUTION: ${{ inputs.resolution }}
 
+# Ready-made presets for common PBS systems. Selecting one in the run form fills
+# in that system's sample #PBS scheduler directives (and turns scheduling on), so
+# you don't have to remember each site's node layout. Adapted from the sample
+# directives in workflow/script_submitter/v3.6/hsp.yaml — pick your resource, then
+# the matching configuration, and tweak the directives if you need to.
+configurations:
+  Carpenter:
+    inputs:
+      scheduler: true
+      pbs:
+        is_enabled: true
+        scheduler_directives: |
+          # Parameters that apply to all sites
+          #PBS -l walltime=00:30:00
+          #PBS -V
+          #PBS -q standard
+          #PBS -l select=1:ncpus=192:mpiprocs=192
+  Ruth:
+    inputs:
+      scheduler: true
+      pbs:
+        is_enabled: true
+        scheduler_directives: |
+          # Parameters that apply to all sites
+          #PBS -l walltime=00:30:00
+          #PBS -V
+          #PBS -q standard
+          #PBS -l select=1:ncpus=128:mpiprocs=128
+  Warhawk:
+    inputs:
+      scheduler: true
+      pbs:
+        is_enabled: true
+        scheduler_directives: |
+          # Parameters that apply to all sites
+          #PBS -l walltime=00:30:00
+          #PBS -V
+          #PBS -q standard
+          #PBS -l select=1:ncpus=128:mpiprocs=128
+  Wheat:
+    inputs:
+      scheduler: true
+      pbs:
+        is_enabled: true
+        scheduler_directives: |
+          # Parameters that apply to all sites
+          #PBS -l walltime=00:30:00
+          #PBS -V
+          #PBS -q standard
+          #PBS -l select=1:ncpus=92:mpiprocs=92:nmlas=4
+
 jobs:
   install:
     ssh:

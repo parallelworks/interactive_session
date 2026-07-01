@@ -440,6 +440,26 @@ The host and port only exist once the script actually runs, which for a queued S
 **A form that adapts to the resource.**
 The "Schedule Job?" toggle and the `slurm`/`pbs` groups only appear when they apply: `hidden`/`ignore` key off `inputs.resource.schedulerType` (`slurm`, `pbs`, or empty) and `inputs.scheduler`. `slurm-partitions`/`slurm-qos`/`slurm-accounts` are **dynamic dropdowns** that fetch their choices from the chosen cluster, and `inputs.resource.provider == 'existing'` gates the directives that only make sense on a user-registered cluster. The hidden `is_enabled` boolean (default `true`, sent only when the group is active) is what tells the subworkflow which path to take.
 
+**`configurations` — one-click presets for known PBS systems.**
+A top-level `configurations:` block defines named presets that pre-fill the run form. Each entry lists the `inputs:` to apply — here `scheduler: true`, `pbs.is_enabled: true`, and a `pbs.scheduler_directives` block carrying the sample `#PBS` node layout for one system (`Carpenter`, `Ruth`, `Warhawk`, `Wheat`):
+
+```yaml
+configurations:
+  Carpenter:
+    inputs:
+      scheduler: true
+      pbs:
+        is_enabled: true
+        scheduler_directives: |
+          #PBS -l walltime=00:30:00
+          #PBS -V
+          #PBS -q standard
+          #PBS -l select=1:ncpus=192:mpiprocs=192   # the per-site node layout
+  # Ruth / Warhawk (select=1:ncpus=128:mpiprocs=128), Wheat (…:nmlas=4) …
+```
+
+Pick your resource, choose the matching configuration, and the right directives are filled in for you — no need to memorize each site's `select=...`. The samples are lifted from [`workflow/script_submitter/v3.6/hsp.yaml`](../../script_submitter/v3.6/hsp.yaml); tweak the walltime, queue, or node counts in the form for a given run.
+
 ### Lessons from the script submitter (what it does for you)
 
 You hand the subworkflow a script and a few flags; in return it runs all the machinery you would otherwise hand-write. Reading [`workflow/script_submitter/v3.6/hsp.yaml`](../../script_submitter/v3.6/hsp.yaml) is the best way to see *why* each piece exists — the highlights:

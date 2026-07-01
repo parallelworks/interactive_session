@@ -1,3 +1,8 @@
+# permissions authenticates the in-workflow pw CLI — the subworkflow's autocancel
+# job calls `pw sessions ls/stop`, which only works if the parent grants this too.
+permissions:
+  - '*'
+
 jobs:
   fractal_demo:
     strategy:
@@ -10,7 +15,6 @@ jobs:
         with:
           $yaml: workflow/tutorials/hsp/06-first-start-wins-subworkflow.yaml
           resource: ${{ matrix.worker.resource }}
-          rundir: ${{ inputs.rundir }}
           resolution: ${{ inputs.resolution }}
           scheduler: ${{ matrix.worker.scheduler }}
           slurm:

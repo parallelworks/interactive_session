@@ -1,5 +1,3 @@
-permissions:
-  - '*'
 jobs:
   fractal_demo:
     strategy:
@@ -12,6 +10,7 @@ jobs:
         with:
           $yaml: workflow/tutorials/hsp/06-first-start-wins-subworkflow.yaml
           resource: ${{ matrix.worker.resource }}
+          rundir: ${{ inputs.rundir }}
           resolution: ${{ inputs.resolution }}
           scheduler: ${{ matrix.worker.scheduler }}
           slurm:
@@ -38,11 +37,6 @@ jobs:
         default: 2500
         min: 100
         max: 10000
-      rundir:
-        label: Run Directory
-        type: string
-        default: ${PW_PARENT_JOB_DIR}
-        tooltip: Run-wide directory shared across every resource in the run. Each worker's run script and the fractal demo are staged here on its own resource.
       workers:
         type: list
         label: Compute Resources

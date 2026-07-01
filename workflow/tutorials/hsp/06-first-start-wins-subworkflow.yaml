@@ -115,18 +115,42 @@ jobs:
     needs:
       - session
     steps:
-      - name: Wait for Cancel Signal
+      - name: First Start Wins
         retry:
           max-retries: 8640
           interval: 10s
         run: |
-          # Exit non-zero until the parent job drops the CANCEL file, so the retry above keeps polling
-          env | grep PW_
-          if [ ! -f CANCEL ]; then
-            echo "$(date) ${PWD}/CANCEL file not present yet"
-            exit 1
+          # This job needs the session job, so this worker's own session already
+          # exists by now. Among all of THIS run's fractal sessions, the winner is
+          # the one that started first — createdAt is the primary key and the
+          # session name breaks exact ties, so every worker agrees on one winner.
+          # If the winner isn't ours, another worker got there first: stop our
+          # session and fall through to Cancel Jobs to stop the render. The winner
+          # never matches this branch, so it keeps polling and stays up.
+          MY_SESSION="${{ sessions.fractal }}"
+          MY_NAME="${MY_SESSION##*/}"   # tolerate an optional "user/" prefix
+
+          winner=$(pw sessions ls -o json | PW_RUN_SLUG="${PW_RUN_SLUG}" python3 -c '
+          import json, os, sys
+          slug = os.environ.get("PW_RUN_SLUG", "")
+          rows = json.load(sys.stdin)
+          ours = [s for s in rows
+                  if (s.get("workflowRun") or {}).get("slug") == slug
+                  and s.get("name", "").endswith("_fractal")
+                  and s.get("status") == "running"]
+          ours.sort(key=lambda s: (s.get("createdAt", ""), s.get("name", "")))
+          print(ours[0]["name"] if ours else "")
+          ')
+
+          echo "$(date) run=${PW_RUN_SLUG} me=${MY_NAME} winner=${winner:-<none>}"
+
+          if [ -z "${winner}" ] || [ "${winner}" = "${MY_NAME}" ]; then
+            echo "::notice::${MY_NAME} is the first fractal session so far — keeping it up"
+            exit 1   # keep polling; the first-start winner stays in this loop
           fi
-          echo "::notice:: CANCEL file found on ${{ inputs.resource.ip }} — canceling the script_submitter and session jobs"
+
+          echo "::notice::${winner} started before ${MY_NAME} — stopping this session"
+          pw sessions stop "${MY_SESSION}" || true
 
 
       - name: Cancel Jobs

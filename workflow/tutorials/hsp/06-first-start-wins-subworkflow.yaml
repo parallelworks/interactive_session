@@ -115,8 +115,6 @@ jobs:
     # Wait for THIS worker's session to be fully created before deciding, so a
     # loser's `pw sessions stop` can't race the session job's update-session
     # (which 404s and faults the run if the session is deleted mid-creation).
-    needs:
-      - session
     steps:
       - name: First Start Wins
         retry:

@@ -160,10 +160,6 @@ jobs:
         type: string
         default: ${PW_PARENT_JOB_DIR}
         tooltip: Run-wide directory (same path on every resource) where the demo and run script are staged on this resource.
-      script_path:
-        label: Script Path
-        type: string
-        tooltip: Provide path to an existing script on the target resource.
       scheduler:
         type: boolean
         default: false

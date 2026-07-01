@@ -10,6 +10,7 @@ env:
 
 jobs:
   install:
+    working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
@@ -17,15 +18,19 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: main
+          branch: tutorial
           sparse_checkout:
             - workflow/tutorials/hsp/fractal-demo
       - name: Install Dependencies
         run: |
-          # keep only the example directory from the sparse checkout
-          mv workflow/tutorials/hsp/fractal-demo .
-          rm -r workflow
-          ./fractal-demo/install.sh
+          set -x
+          # Stage the demo at the run-wide rundir so the run script written by
+          # the parent (which references ${{ inputs.rundir }}/fractal-demo) finds
+          # it, on this resource, regardless of where checkout cloned.
+          rm -rf "${{ inputs.rundir }}/fractal-demo"
+          mv workflow/tutorials/hsp/fractal-demo "${{ inputs.rundir }}/fractal-demo"
+          rm -rf workflow
+          "${{ inputs.rundir }}/fractal-demo/install.sh"
 
   autocancel:
     needs:
@@ -136,6 +141,11 @@ jobs:
         default: 2500
         min: 100
         max: 10000
+      rundir:
+        label: Run Directory
+        type: string
+        default: ${PW_PARENT_JOB_DIR}
+        tooltip: Run-wide directory (same path on every resource) where the demo and run script are staged on this resource.
       script_path:
         label: Script Path
         type: string

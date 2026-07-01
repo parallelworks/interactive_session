@@ -16,8 +16,44 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PW_SOFTWARE="${PW_SOFTWARE:-$HOME/pw/software}"
 VENV_DIR="$PW_SOFTWARE/fractal-demo"
 VENV_PYTHON="$VENV_DIR/bin/python"
+LOCK_DIR="$PW_SOFTWARE/fractal-demo.lock"
 
 echo "Setting up the Python environment for the fractal demo."
+
+# 0. Serialize installs on this resource. Several workers can land on the same
+#    machine at once (matrix fan-out, re-runs), and two `python -m venv` writes
+#    into the same directory race and corrupt the environment. A little random
+#    jitter spreads out simultaneous starts, then an atomic `mkdir` lock lets
+#    exactly one process build the venv while the others wait and reuse it.
+mkdir -p "$PW_SOFTWARE"
+sleep "$(( RANDOM % 6 ))"
+
+acquired_lock=false
+release_lock() { [ "$acquired_lock" = true ] && rmdir "$LOCK_DIR" 2>/dev/null || true; }
+trap release_lock EXIT
+
+waited=0
+lock_timeout=300
+while true; do
+  if mkdir "$LOCK_DIR" 2>/dev/null; then
+    acquired_lock=true
+    break
+  fi
+  # Another install holds the lock. If it already produced a working venv there
+  # is nothing left to do, so reuse it without waiting for the lock.
+  if [ -x "$VENV_PYTHON" ]; then
+    echo "  Another install already built the environment; reusing $VENV_DIR"
+    break
+  fi
+  if [ "$waited" -ge "$lock_timeout" ]; then
+    echo "ERROR: Timed out after ${lock_timeout}s waiting for the install lock $LOCK_DIR." >&2
+    echo "If no other install is running, remove it and retry:  rmdir '$LOCK_DIR'" >&2
+    exit 1
+  fi
+  echo "  Waiting for another install on this resource to finish..."
+  sleep 5
+  waited=$(( waited + 5 ))
+done
 
 # 1. Find a Python 3 to build the environment from.
 PYTHON="$(command -v python3 || command -v python || true)"
@@ -33,7 +69,6 @@ fi
 echo "  Using $("$PYTHON" --version 2>&1) at $PYTHON"
 
 # 2. Create the virtual environment (reuse it if it is already there).
-mkdir -p "$PW_SOFTWARE"
 if [ -x "$VENV_PYTHON" ]; then
   echo "  Reusing existing environment: $VENV_DIR"
 else

@@ -144,11 +144,21 @@ jobs:
 
           echo "$(date) run=${PW_RUN_SLUG} me=${MY_NAME} winner=${winner:-<none>}"
 
-          if [ -z "${winner}" ] || [ "${winner}" = "${MY_NAME}" ]; then
-            echo "::notice::${MY_NAME} is the first fractal session so far — keeping it up"
-            exit 1   # keep polling; the first-start winner stays in this loop
+          # No fractal session listed yet (transient): keep polling via retry.
+          if [ -z "${winner}" ]; then
+            echo "::notice::No fractal session listed yet — waiting"
+            exit 1
           fi
 
+          # Our session started first — we win. Hold the job open so the session
+          # stays up; the loser branch below never runs for us.
+          if [ "${winner}" = "${MY_NAME}" ]; then
+            echo "::notice::${MY_NAME} started first — winner; keeping this session up"
+            sleep inf
+          fi
+
+          # Another worker started first: stop our session and fall through to
+          # Cancel Jobs to stop the render.
           echo "::notice::${winner} started before ${MY_NAME} — stopping this session"
           pw sessions stop "${MY_SESSION}" || true
 

@@ -11,7 +11,7 @@ jobs:
         worker: ${{ inputs.workers }}
     steps:
       - name: Fractal Demo
-        uses: github/parallelworks/interactive_session@tutorial
+        uses: github/parallelworks/interactive_session@main
         with:
           $yaml: workflow/tutorials/hsp/06-first-start-wins-subworkflow.yaml
           resource: ${{ matrix.worker.resource }}

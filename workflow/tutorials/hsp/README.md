@@ -14,6 +14,7 @@ By the end of the stages built so far you will understand how to:
 - Hand a script to a reusable subworkflow that submits it to the cluster scheduler (SLURM or PBS) and streams, monitors, and cleans up the job for you
 - Build a form that adapts to the chosen resource with dynamic dropdowns and show/hide rules
 - Fan out the same workflow across a whole list of resources at once with a `matrix` strategy
+- Turn that fan-out into a race where the first session to come up wins and the losing workers stop themselves
 
 ---
 
@@ -523,3 +524,81 @@ A `list` input renders an "add another" control in the form; `template` defines 
 
 **Each matrix job runs the full Stage 4 workflow.**
 Because the step's `$yaml` is `04-subworkflow.yaml`, every worker goes through the entire Stage 4 pipeline — install, pick a port, submit to its scheduler (or run on its controller), and register its own `fractal` session. A two-worker run where one worker has *Schedule Job?* off and the other on will run one fractal on a login node and submit the other to SLURM, side by side.
+
+---
+
+## Stage 6 — First start wins: race a list of resources (`06-first-start-wins.yaml`)
+
+Stage 5 fanned the render out to **every** resource and left you with one session per worker. Stage 6 keeps the same fan-out but treats the list as a **race**: every worker starts, the first one whose session comes up **wins** (that is the one you land on), and the rest **stop themselves** — their session and their render are torn down. Use it when you have several resources and want *whichever is ready first*, not all of them. This is [`06-first-start-wins.yaml`](06-first-start-wins.yaml) and its subworkflow [`06-first-start-wins-subworkflow.yaml`](06-first-start-wins-subworkflow.yaml).
+
+The parent is the Stage 5 matrix, almost unchanged — one job per worker, each handed to the subworkflow. The only additions are `permissions: ['*']` and the new subworkflow it calls:
+
+```yaml
+permissions:
+  - '*'                                    # NEW: lets the subworkflow's pw CLI authenticate
+
+jobs:
+  fractal_demo:
+    strategy:
+      fail-fast: true
+      matrix:
+        worker: ${{ inputs.workers }}       # one job per worker — exactly like Stage 5
+    steps:
+      - name: Fractal Demo
+        uses: github/parallelworks/interactive_session@main
+        with:
+          $yaml: workflow/tutorials/hsp/06-first-start-wins-subworkflow.yaml   # NEW subworkflow
+          resource: ${{ matrix.worker.resource }}
+          # ... resolution, scheduler, slurm, pbs — passed through exactly as in Stage 5 ...
+```
+
+All the racing lives in the subworkflow. It is Stage 4's `install` → `script_submitter` → `session` pipeline plus one new job, `first_start_wins`, that looks at the run's sessions and decides whether this worker won or lost:
+
+```yaml
+  first_start_wins:
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: First Start Wins
+        retry:                                  # poll until the sessions show up
+          max-retries: 8640
+          interval: 10s
+        run: |
+          MY_NAME="${{ sessions.fractal }}"
+          # The winner is the earliest of THIS run's fractal sessions.
+          winner=$(pw sessions ls -o json | ...keep this run's *_fractal sessions,
+                                                sort by (createdAt, name), print the first... )
+          [ -z "${winner}" ] && exit 1          # nothing up yet → keep polling
+          if [ "${winner}" = "${MY_NAME}" ]; then
+            # stay first for a few polls (the list is eventually consistent), then win
+            [ "${PW_WORKFLOW_STEP_CURRENT_RETRY:-0}" -lt 3 ] && exit 1
+            echo "CANCEL=false" | tee -a $OUTPUTS   # winner: leave the session up
+            exit 0
+          fi
+          pw sessions stop "${MY_NAME}"             # loser: drop our own session
+          echo "CANCEL=true" | tee -a $OUTPUTS
+      - name: Cancel Jobs
+        if: ${{ needs.first_start_wins.outputs.CANCEL == 'true' }}   # only losers reach here
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - script_submitter                  # stop the losing render...
+            - session                           # ...and its session job
+```
+
+### Concepts introduced
+
+**Same fan-out as Stage 5, but the list is a race.**
+Every worker still installs and starts rendering, and `redirect: true` drops you onto the `fractal` session as soon as one is up. What `first_start_wins` adds is making sure exactly **one** session survives instead of one per worker.
+
+**Choosing the winner from the session list.**
+`pw sessions ls -o json` returns every session; the job keeps only *this run's* fractal sessions — matched by `workflowRun.slug == ${PW_RUN_SLUG}` and a name ending in `_fractal` — and sorts them by `(createdAt, name)`. The earliest is the winner. `createdAt` is the real signal; the session **name** is only a tie-breaker so that every worker, reading the same list, independently agrees on the same winner.
+
+**`permissions: ['*']` in the parent *and* the subworkflow.**
+The race calls `pw sessions ls` and `pw sessions stop`. `permissions: ['*']` is what authenticates the in-workflow `pw` CLI — the same grant Stage 3 needed for `pw agent open-port` — and it must be granted by the **parent** too, or the subworkflow's `pw` calls come back `401 Unauthorized`.
+
+**Confirm before committing — the session list is eventually consistent.**
+Just after two sessions register, each worker can briefly see only *its own* and think it won. So a worker that is currently in front re-checks for a few polls (guarded by `PW_WORKFLOW_STEP_CURRENT_RETRY`) before it commits; a worker that was actually beaten sees the earlier session on a later poll and steps aside. Without this settle, two workers can both "win."
+
+**One output flag drives the cleanup — no `sleep inf`.**
+The winner writes `CANCEL=false` and simply finishes; its session stays up because its `script_submitter` job is still serving the page. A loser stops its own session and writes `CANCEL=true`, and the very next step keys its `if:` off `${{ needs.first_start_wins.outputs.CANCEL }}` to run `cancel-jobs`, tearing down that worker's render and session. Publishing a value with `tee -a $OUTPUTS` and gating a later step on it (the `$OUTPUTS` trick from Stage 3) is what lets the winner exit cleanly instead of parking a job on `sleep inf`.

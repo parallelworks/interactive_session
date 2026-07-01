@@ -113,7 +113,7 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     needs:
-      - session
+      - install
     steps:
       - name: First Start Wins
         retry:

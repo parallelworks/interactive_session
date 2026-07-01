@@ -1,38 +1,7 @@
 permissions:
   - '*'
 jobs:
-  create_script:
-    strategy:
-      matrix:
-        worker: ${{ inputs.workers }}
-    working-directory: ${{ inputs.rundir }}
-    ssh:
-      remoteHost: ${{ matrix.worker.resource.ip }}
-    steps:
-      - name: Create Run Script
-        run: |
-          set -x
-          # Key the script on the worker's id so two workers targeting the same
-          # resource don't overwrite each other's script.sh (each worker gets a
-          # distinct id from the hidden ${RANDOM} default in the form).
-          # The heredoc is unquoted, so ${{ inputs.rundir }} is baked in now as
-          # an absolute path (the same on every resource in the run), while the
-          # \$(...) / \${...} escapes stay literal and run later — on the compute
-          # node itself for a scheduled job.
-          echo ${{ matrix.worker.id }}.sh
-          cat <<EOF > script-${{ matrix.worker.id }}.sh
-          # Publish the node and port so the session job can open the tunnel.
-          hostname > HOSTNAME
-          export PORT=\$(pw agent open-port)
-          echo \${PORT} > PORT
-          export RESOLUTION=${{ inputs.resolution }}
-          ${{ inputs.rundir }}/fractal-demo/run.sh
-          EOF
-          chmod +x script-${{ matrix.worker.id }}.sh
-          echo "::notice::Wrote run script for ${{ matrix.worker.resource.ip }} (worker ${{ matrix.worker.id }})"
   fractal_demo:
-    needs:
-      - create_script
     strategy:
       fail-fast: true
       matrix:
@@ -43,8 +12,6 @@ jobs:
         with:
           $yaml: workflow/tutorials/hsp/06-first-start-wins-subworkflow.yaml
           resource: ${{ matrix.worker.resource }}
-          rundir: ${{ inputs.rundir }}
-          script_path: ${{ inputs.rundir }}/script-${{ matrix.worker.id }}.sh
           resolution: ${{ inputs.resolution }}
           scheduler: ${{ matrix.worker.scheduler }}
           slurm:
@@ -81,10 +48,6 @@ jobs:
         label: Compute Resources
         tooltip: Ordered list of compute resources to probe for an available GPU. They are tried one at a time, in list order, until one responds to nvidia-smi. Put your preferred resource first; add more as fallbacks.
         template:
-          id:
-            label: Worker ID
-            type: string
-            tooltip: Type in any string or number to identify this worker
           resource:
             type: compute-clusters
             label: Resource Target

@@ -31,8 +31,22 @@ jobs:
           mv workflow/tutorials/hsp/fractal-demo "${{ inputs.rundir }}/fractal-demo"
           rm -rf workflow
           "${{ inputs.rundir }}/fractal-demo/install.sh"
+      - name: Create Run Script
+        run: |
+          cat <<EOF >> script.sh
+          # The session needs to know the hostname and PORT for the tunnel
+          hostname > HOSTNAME
+          export PORT=\$(pw agent open-port)
+          echo \${PORT} > PORT
+          ${PWD}/fractal-demo/run.sh
+          EOF
+          chmod +x script.sh
+          # We need to pass the PATH to the script submitter subworkflow
+          echo "SCRIPT_PATH=${PWD}/script.sh" | tee -a $OUTPUTS
 
   autocancel:
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
     needs:
       - install
     steps:

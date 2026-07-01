@@ -173,13 +173,8 @@ jobs:
           echo "::notice::${winner} started before ${MY_NAME} — stopping this session"
           pw sessions stop "${MY_SESSION}" || true
           echo "CANCEL=true" | tee -a $OUTPUTS
-
-  cancel_render:
-    needs:
-      - first_start_wins
-    if: ${{ needs.first_start_wins.outputs.CANCEL == 'true' }}
-    steps:
       - name: Cancel Jobs
+        if: ${{ needs.first_start_wins.outputs.CANCEL == 'true' }}
         uses: parallelworks/cancel-jobs
         with:
           jobs:

@@ -7,6 +7,9 @@ sessions:
 
 env:
   RESOLUTION: ${{ inputs.resolution }}
+  # Expose the platform credential so `pw sessions ls/stop` in autocancel can
+  # authenticate (permissions grants the token; this puts it in the job env).
+  PW_API_KEY: ${PW_API_KEY}
 
 jobs:
   install:

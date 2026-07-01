@@ -359,6 +359,7 @@ Until now everything ran on the **controller** (login) node. Heavy work belongs 
           hostname > HOSTNAME                  # record which node we land on
           export PORT=\$(pw agent open-port)   # \$ escaped → evaluated when the script RUNS
           echo \${PORT} > PORT
+          export RESOLUTION=${{ inputs.resolution }}   # baked in NOW — env: can't reach the submitter
           ${PWD}/fractal-demo/run.sh           # ${PWD} expands NOW → absolute path to the demo
           EOF
           chmod +x script.sh
@@ -429,7 +430,7 @@ The `session` job still polls for `PORT`/`HOSTNAME` and opens the tunnel — but
 `uses: github/parallelworks/interactive_session@main` runs *another workflow* as a step. `$yaml` selects which workflow file inside that repo to run (here `workflow/script_submitter/v3.6/hsp.yaml`), and the remaining `with:` keys are that subworkflow's inputs. 
 
 **Hand it a script, not logic — `use_existing_script` + `script_path`.**
-`install` writes `script.sh` and publishes `SCRIPT_PATH`; the submitter takes `use_existing_script: true` + `script_path` and runs exactly that file. The heredoc is **unquoted**, so `${PWD}` expands at *write* time — the demo is referenced by an absolute path, so it resolves wherever the script ends up running — while `\$(pw agent open-port)` and `\${PORT}` are escaped and run later, on the compute node for a scheduled job.
+`install` writes `script.sh` and publishes `SCRIPT_PATH`; the submitter takes `use_existing_script: true` + `script_path` and runs exactly that file. The heredoc is **unquoted**, so `${PWD}` expands at *write* time — the demo is referenced by an absolute path, so it resolves wherever the script ends up running — while `\$(pw agent open-port)` and `\${PORT}` are escaped and run later, on the compute node for a scheduled job. The `resolution` input is baked in the same way (`export RESOLUTION=${{ inputs.resolution }}`): the workflow-level `env:` from Stage 3 does **not** cross into the `script_submitter` subworkflow that runs the script, so anything `run.sh` needs from the form has to travel *inside* the script.
 
 **Reading the subworkflow's outputs — `./subworkflows/script_submitter/step_0`.**
 The submitter runs your script in *its own* job directory, so the `PORT` and `HOSTNAME` files the script writes land under `subworkflows/script_submitter/step_0/`, not the parent job dir. The `session` job reads them from that relative path. (This couples to the subworkflow's internal layout — fine here, but worth knowing.)

@@ -109,7 +109,7 @@ jobs:
           target: ${{ inputs.resource.id }}
           name: ${{ sessions.fractal }}
 
-  autocancel:
+  first_start_wins:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     needs:
@@ -120,14 +120,13 @@ jobs:
           max-retries: 8640
           interval: 10s
         run: |
-          # This job needs the session job, so this worker's own session already
-          # exists by now. Among all of THIS run's fractal sessions, the winner is
-          # the one that started first — createdAt is the primary key and the
-          # session name breaks exact ties, so every worker agrees on one winner.
-          # If the winner isn't ours, another worker got there first: stop our
-          # session and fall through to Cancel Jobs to stop the render. The winner
-          # never matches this branch, so it sleeps and stays up.
-          # permissions: ['*'] authenticates the pw CLI here — no API key needed.
+          # Among all of THIS run's fractal sessions, the winner is the one that
+          # started first — createdAt is the primary key and the session name
+          # breaks exact ties, so every worker agrees on one winner. The winner
+          # publishes CANCEL=false and finishes (its session keeps serving via the
+          # script_submitter job); a loser stops its own session and publishes
+          # CANCEL=true, which the cancel_render job reads to stop the render — so
+          # no job has to sit on `sleep inf`. permissions: ['*'] authenticates pw.
           MY_SESSION="${{ sessions.fractal }}"
           MY_NAME="${MY_SESSION##*/}"   # tolerate an optional "user/" prefix
 
@@ -163,16 +162,22 @@ jobs:
               echo "::notice::${MY_NAME} leading so far — confirming (attempt ${PW_WORKFLOW_STEP_CURRENT_RETRY:-0})"
               exit 1
             fi
-            echo "::notice::${MY_NAME} started first — winner; keeping this session up"
-            sleep inf
+            echo "::notice::${MY_NAME} started first — winner; leaving its session up"
+            echo "CANCEL=false" | tee -a $OUTPUTS
+            exit 0
           fi
 
-          # Another worker started first: stop our session, then fall through to
-          # Cancel Jobs to stop the render.
+          # Another worker started first: stop our session and tell cancel_render
+          # to stop the render.
           echo "::notice::${winner} started before ${MY_NAME} — stopping this session"
           pw sessions stop "${MY_SESSION}" || true
+          echo "CANCEL=true" | tee -a $OUTPUTS
 
-
+  cancel_render:
+    needs:
+      - first_start_wins
+    if: ${{ needs.first_start_wins.outputs.CANCEL == 'true' }}
+    steps:
       - name: Cancel Jobs
         uses: parallelworks/cancel-jobs
         with:

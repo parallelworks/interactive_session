@@ -154,9 +154,15 @@ jobs:
             exit 1
           fi
 
-          # Our session started first — we win. Hold the job open so the session
-          # stays up; the loser branch below never runs for us.
+          # We are the earliest session visible so far. The session list is
+          # eventually consistent, so a worker that started earlier may not be
+          # listed yet — confirm we stay first across a few polls before
+          # committing, or two workers each seeing only themselves both "win".
           if [ "${winner}" = "${MY_NAME}" ]; then
+            if [ "${PW_WORKFLOW_STEP_CURRENT_RETRY:-0}" -lt 3 ]; then
+              echo "::notice::${MY_NAME} leading so far — confirming (attempt ${PW_WORKFLOW_STEP_CURRENT_RETRY:-0})"
+              exit 1
+            fi
             echo "::notice::${MY_NAME} started first — winner; keeping this session up"
             sleep inf
           fi

@@ -130,13 +130,24 @@ jobs:
           # If the winner isn't ours, another worker got there first: stop our
           # session and fall through to Cancel Jobs to stop the render. The winner
           # never matches this branch, so it keeps polling and stays up.
+          # The pw CLI can't authenticate here, so talk to the platform API
+          # directly with PW_API_KEY (exposed via the env block above).
+          API="https://${PW_PLATFORM_HOST}/api"
+          AUTH="Authorization: Bearer ${PW_API_KEY}"
           MY_SESSION="${{ sessions.fractal }}"
           MY_NAME="${MY_SESSION##*/}"   # tolerate an optional "user/" prefix
 
-          winner=$(pw sessions ls -o json | PW_RUN_SLUG="${PW_RUN_SLUG}" python3 -c '
+          # Winner = the fractal session of THIS run that started first. createdAt
+          # is the primary key; the session name breaks exact ties so every worker
+          # agrees on the same winner.
+          sessions_json=$(curl -s -H "${AUTH}" "${API}/sessions")
+          winner=$(printf '%s' "${sessions_json}" | PW_RUN_SLUG="${PW_RUN_SLUG}" python3 -c '
           import json, os, sys
           slug = os.environ.get("PW_RUN_SLUG", "")
-          rows = json.load(sys.stdin)
+          try:
+              rows = json.load(sys.stdin)
+          except Exception:
+              sys.exit(0)   # non-JSON (e.g. transient error) -> no winner, retry
           ours = [s for s in rows
                   if (s.get("workflowRun") or {}).get("slug") == slug
                   and s.get("name", "").endswith("_fractal")
@@ -149,7 +160,7 @@ jobs:
 
           # No fractal session listed yet (transient): keep polling via retry.
           if [ -z "${winner}" ]; then
-            echo "::notice::No fractal session listed yet — waiting"
+            echo "::notice::No fractal session listed yet — waiting (resp: $(printf '%s' "${sessions_json}" | head -c 120))"
             exit 1
           fi
 
@@ -160,10 +171,11 @@ jobs:
             sleep inf
           fi
 
-          # Another worker started first: stop our session and fall through to
+          # Another worker started first: delete our session, then fall through to
           # Cancel Jobs to stop the render.
           echo "::notice::${winner} started before ${MY_NAME} — stopping this session"
-          pw sessions stop "${MY_SESSION}" || true
+          ORG=$(curl -s -H "${AUTH}" "${API}/v2/auth/session" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("organization",""))')
+          curl -s -X DELETE -H "${AUTH}" "${API}/organizations/${ORG}/users/${PW_USER}/sessions/${MY_NAME}" || true
 
 
       - name: Cancel Jobs

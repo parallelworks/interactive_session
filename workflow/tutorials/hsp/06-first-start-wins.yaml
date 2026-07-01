@@ -1,12 +1,6 @@
 permissions:
   - '*'
-
 jobs:
-  # Build one run script per worker, each on that worker's own resource. The
-  # script submitter later reads the script from the resource it runs on, so the
-  # file has to exist there — hence one matrix job per worker, each SSH'd into
-  # its resource. This mirrors the `preprocessing` job in
-  # workflow/tutorials/matrix/workflow.yaml, split per resource.
   create_script:
     strategy:
       matrix:
@@ -25,6 +19,7 @@ jobs:
           # an absolute path (the same on every resource in the run), while the
           # \$(...) / \${...} escapes stay literal and run later — on the compute
           # node itself for a scheduled job.
+          echo ${{ matrix.worker.id }}.sh
           cat <<EOF > script-${{ matrix.worker.id }}.sh
           # Publish the node and port so the session job can open the tunnel.
           hostname > HOSTNAME
@@ -35,7 +30,6 @@ jobs:
           EOF
           chmod +x script-${{ matrix.worker.id }}.sh
           echo "::notice::Wrote run script for ${{ matrix.worker.resource.ip }} (worker ${{ matrix.worker.id }})"
-
   fractal_demo:
     needs:
       - create_script
@@ -90,8 +84,7 @@ jobs:
           id:
             label: Worker ID
             type: string
-            hidden: true
-            default: ${RANDOM}
+            tooltip: Type in any string or number to identify this worker
           resource:
             type: compute-clusters
             label: Resource Target

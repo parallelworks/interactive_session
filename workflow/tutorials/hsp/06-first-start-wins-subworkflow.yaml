@@ -42,8 +42,8 @@ jobs:
           interval: 10s
         run: |
           # Exit non-zero until the parent job drops the CANCEL file, so the retry above keeps polling
-          if [ ! -f ${PW_PARENT_JOB_DIR}/CANCEL ]; then
-            echo "$(date) CANCEL file not present yet"
+          if [ ! -f CANCEL ]; then
+            echo "$(date) ${PWD}/CANCEL file not present yet"
             exit 1
           fi
           echo "::notice:: CANCEL file found on ${{ inputs.resource.ip }} — canceling the script_submitter and session jobs"

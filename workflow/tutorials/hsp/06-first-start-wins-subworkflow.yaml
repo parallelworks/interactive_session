@@ -93,7 +93,7 @@ jobs:
             exit 1
           fi
           PORT=$(cat ${PORT_PATH})
-          if [[ ${{ inputs.scheduler }} == "true" ]]; then
+          if [[ "${{ inputs.scheduler }}" == "true" ]]; then
             HOSTNAME=$(cat ${HOSTNAME_PATH})
           else
             HOSTNAME=localhost

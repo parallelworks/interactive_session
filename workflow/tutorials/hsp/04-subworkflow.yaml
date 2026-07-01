@@ -84,6 +84,10 @@ jobs:
           hostname > HOSTNAME
           export PORT=\$(pw agent open-port)
           echo \${PORT} > PORT
+          # Bake RESOLUTION into the script (expanded now). The workflow-level
+          # env: does NOT reach here — run.sh runs inside the separate
+          # script_submitter subworkflow — so it must travel in the script itself.
+          export RESOLUTION=${{ inputs.resolution }}
           ${PWD}/fractal-demo/run.sh
           EOF
           chmod +x script.sh

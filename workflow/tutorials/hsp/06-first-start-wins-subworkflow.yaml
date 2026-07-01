@@ -10,7 +10,6 @@ env:
 
 jobs:
   install:
-    working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
@@ -24,9 +23,10 @@ jobs:
       - name: Install Dependencies
         run: |
           set -x
-          # Stage the demo at the run-wide rundir so the run script written by
-          # the parent (which references ${{ inputs.rundir }}/fractal-demo) finds
-          # it, on this resource, regardless of where checkout cloned.
+          # checkout clones into this step's own dir, so `workflow/` is relative
+          # to the cwd here. Move the demo to the run-wide rundir so the run
+          # script written by the parent (which references
+          # ${{ inputs.rundir }}/fractal-demo) finds it on this resource.
           rm -rf "${{ inputs.rundir }}/fractal-demo"
           mv workflow/tutorials/hsp/fractal-demo "${{ inputs.rundir }}/fractal-demo"
           rm -rf workflow

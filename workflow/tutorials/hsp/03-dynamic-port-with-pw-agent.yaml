@@ -1,10 +1,7 @@
-permissions:
-  - '*'
-
 sessions:
   fractal:
     redirect: true
-    
+
 
 env:
   RESOLUTION: ${{ inputs.resolution }}

@@ -252,9 +252,6 @@ Run this workflow and Activate drops you straight onto the progress page as the 
 So far the port is hardcoded through the `port` input. If two people run the workflow on the same cluster, they collide on port 8000. Instead, let the platform hand us a free port at runtime. We drop the `port` input, ask `pw agent` for a port, and feed that one port to both `run` and the session. This is [`03-dynamic-port-with-pw-agent.yaml`](03-dynamic-port-with-pw-agent.yaml):
 
 ```yaml
-permissions:                                  # NEW: lets the `pw` CLI authenticate inside the workflow
-  - '*'
-
 sessions:
   fractal:
     redirect: true
@@ -327,9 +324,6 @@ You can only read a job's outputs by listing it under `needs`, and `needs` waits
 
 **`cleanup` — teardown when the step exits.**
 The `run` step now carries a `cleanup`. A step's `cleanup` runs when that step exits — including when the run is cancelled — and undoes whatever the step set up. Here it is a stand-in: `rm -r ${PW_JOB_DIR}` deletes the run directory (the `${HOME}/pw/jobs/...` folder from Stage 1) once the step is done. Because `run.sh` serves forever, that only fires on cancel — so it is really a "clean up after yourself when stopped" hook. In a real workflow this is where you stop what the step started: `docker stop` / `docker rm` a container, `scancel` a SLURM job, or `qdel` a PBS job. Stage 4 leans on exactly this to tear scheduled jobs down.
-
-**`permissions: ['*']`.**
-The `pw` CLI authenticates against the Activate API. `permissions` grants the workflow a token with the same access as the user who runs it. Without it, `pw agent open-port` fails.
 
 **Log annotations (`::notice::`).**
 A line a step prints in the form `::notice::message` is surfaced as a notice in the workflow UI (there are also `::warning::` and `::error::`). It is a clean way to surface a value — here, the port that was chosen. The next stage uses these heavily.
@@ -615,8 +609,8 @@ Every worker still installs and starts rendering, and `redirect: true` drops you
 **Choosing the winner from the session list.**
 `pw sessions ls -o json` returns every session; the job keeps only *this run's* fractal sessions — matched by `workflowRun.slug == ${PW_RUN_SLUG}` and a name ending in `_fractal` — and sorts them by `(createdAt, name)`. The earliest is the winner. `createdAt` is the real signal; the session **name** is only a tie-breaker so that every worker, reading the same list, independently agrees on the same winner.
 
-**`permissions: ['*']` in the parent *and* the subworkflow.**
-The race calls `pw sessions ls` and `pw sessions stop`. `permissions: ['*']` is what authenticates the in-workflow `pw` CLI — the same grant Stage 3 needed for `pw agent open-port` — and it must be granted by the **parent** too, or the subworkflow's `pw` calls come back `401 Unauthorized`.
+**`permissions: ['*']` — introduced here, in the parent *and* the subworkflow.**
+This is the first stage that needs it. `permissions: ['*']` grants the workflow a token with the same access as the user who runs it, which is what authenticates the in-workflow `pw` CLI for calls that touch the platform API — here `pw sessions ls` and `pw sessions stop`. Earlier stages did **not** need it: `pw agent open-port` (Stages 3–5) works without any `permissions` grant. Because the `pw sessions` calls run inside the subworkflow, the grant must be present on the **parent** too — otherwise those calls come back `401 Unauthorized` even if the subworkflow declares it.
 
 **Confirm before committing — the session list is eventually consistent.**
 Just after two sessions register, each worker can briefly see only *its own* and think it won. So a worker that is currently in front re-checks for a few polls (guarded by `PW_WORKFLOW_STEP_CURRENT_RETRY`) before it commits; a worker that was actually beaten sees the earlier session on a later poll and steps aside. Without this settle, two workers can both "win."

@@ -214,6 +214,20 @@ A step can declare a `retry` block; it re-runs the step while it exits **non-zer
 - **Per-attempt env vars:** `PW_WORKFLOW_STEP_CURRENT_RETRY` (0 on the first try) and
   `PW_WORKFLOW_STEP_MAX_RETRIES` are exported each attempt. `index % N` over a list turns
   the retry counter into a **round-robin selector** (fail over to the next resource).
+- **You CANNOT drive per-attempt failover into a subworkflow `with:` block with the
+  retry counter (verified the hard way).** Three separate limits combine:
+  (1) `env.PW_WORKFLOW_STEP_CURRENT_RETRY` is **not available inside a `uses:` step's
+  `with:`** — in the same block `resolution: ${{ inputs.resolution }}` resolved but any
+  `env.PW_WORKFLOW_STEP_CURRENT_RETRY` expression came out empty; (2) indexing a `list`
+  with `get` works in `run:`/`ssh:` but is **index-type sensitive** — `get 0` (number)
+  returns a hydrated resource with `.ip`, while `get env.PW_WORKFLOW_STEP_CURRENT_RETRY`
+  (string `"0"`) returns the raw object carrying `publicIp`/`privateIp` and **no `.ip`**;
+  (3) a resource passed to a subworkflow as a **URI string does not re-hydrate** through
+  `with:` (you get `inputs.resource.ip == ""`). To hand a per-item resource to a
+  subworkflow, pass the native object `matrix.worker.resource` (a `matrix` strategy — it
+  carries `.ip`). Per-attempt SSH failover on a **plain** `ssh:`/`run:` step is fine
+  (that's `round-robin-failover`); failing over a *subworkflow* needs a different shape
+  (e.g. a sequential `max-parallel: 1` matrix — not yet verified end-to-end).
 - **`max-retries` can be computed:** `max-retries: ${{ needs.<job>.outputs.N - 1 }}` —
   arithmetic is evaluated in the expression layer. An upstream step writing `N` to
   `$OUTPUTS` lets a later step in the **same job** size its own retries

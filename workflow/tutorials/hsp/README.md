@@ -592,8 +592,7 @@ All the racing lives in the subworkflow. It is Stage 4's `install` → `script_s
             echo "CANCEL=false" | tee -a $OUTPUTS   # winner: leave the session up
             exit 0
           fi
-          pw sessions stop "${MY_NAME}"             # loser: drop our own session (if running)
-          echo "CANCEL=true" | tee -a $OUTPUTS
+          echo "CANCEL=true" | tee -a $OUTPUTS      # loser
       - name: Cancel Jobs
         if: ${{ needs.first_start_wins.outputs.CANCEL == 'true' }}   # only losers reach here
         uses: parallelworks/cancel-jobs
@@ -601,6 +600,9 @@ All the racing lives in the subworkflow. It is Stage 4's `install` → `script_s
           jobs:
             - script_submitter                  # stop the losing render...
             - session                           # ...and its session job
+      - name: Stop Session
+        if: ${{ needs.first_start_wins.outputs.CANCEL == 'true' }}   # only losers reach here
+        run: pw sessions stop "${{ sessions.fractal }}" || true      # delete the dead session
 ```
 
 ### Concepts introduced
@@ -618,4 +620,4 @@ This is the first stage that needs it. `permissions: ['*']` grants the workflow 
 Just after two sessions register, each worker can briefly see only *its own* running and think it won. So a worker that is currently in front re-checks for a few polls (guarded by `PW_WORKFLOW_STEP_CURRENT_RETRY`) before it commits; a worker that was actually beaten sees the winning session on a later poll and steps aside. Without this settle, two workers can both "win."
 
 **One output flag drives the cleanup — no `sleep inf`.**
-The winner writes `CANCEL=false` and simply finishes; its session stays up because its `script_submitter` job is still serving the page. A loser writes `CANCEL=true`, and the very next step keys its `if:` off `${{ needs.first_start_wins.outputs.CANCEL }}` to run `cancel-jobs`, tearing down that worker's render and session. A loser also `pw sessions stop`s its own session — but only when that session is already **running**, because deleting a session while its `session` job's `update-session` is still creating it would `404` and fault the run; a not-yet-running loser leaves teardown entirely to `cancel-jobs`. Publishing a value with `tee -a $OUTPUTS` and gating a later step on it (the `$OUTPUTS` trick from Stage 3) is what lets the winner exit cleanly instead of parking a job on `sleep inf`.
+The winner writes `CANCEL=false` and simply finishes; its session stays up because its `script_submitter` job is still serving the page. A loser writes `CANCEL=true`, and two later steps key their `if:` off `${{ needs.first_start_wins.outputs.CANCEL }}`: **Cancel Jobs** runs `cancel-jobs` to tear down that worker's render and its `session` job, and **Stop Session** then runs `pw sessions stop` to delete the session object itself. Both are needed — canceling the `session` job stops `update-session` but leaves the registered session behind as a dead tunnel, so the explicit `pw sessions stop` is what actually removes it. Stop Session runs **after** Cancel Jobs on purpose: with `update-session` already stopped, deleting the session can't `404` an in-flight creation and fault the run. Publishing a value with `tee -a $OUTPUTS` and gating a later step on it (the `$OUTPUTS` trick from Stage 3) is what lets the winner exit cleanly instead of parking a job on `sleep inf`.

@@ -183,15 +183,7 @@ jobs:
           jobs:
             - script_submitter
             - session
-      - name: Stop Session
-        if: ${{ needs.first_start_wins.outputs.CANCEL == 'true' }}
-        run: |
-          # Delete the losing session so it doesn't linger as a dead tunnel.
-          # Canceling the session job above stops the render but leaves the session
-          # object registered, so stop it explicitly here. Running after Cancel Jobs
-          # means update-session is no longer in flight, so this can't 404 it and
-          # fault the run. || true tolerates a session that was never created.
-          pw sessions stop "${{ sessions.fractal }}" || true
+        cleanup: pw sessions stop "${{ sessions.fractal }}" || true
 
 
 'on':

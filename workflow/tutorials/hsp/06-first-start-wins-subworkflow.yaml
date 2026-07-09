@@ -161,7 +161,7 @@ jobs:
 
           # No session running for this run yet (or a transient empty list): keep polling.
           if [ "${decision}" = "WAIT" ] || [ -z "${decision}" ]; then
-            echo "::notice::No running session for this run yet — waiting"
+            echo "No running session for this run yet — waiting"
             exit 1
           fi
 

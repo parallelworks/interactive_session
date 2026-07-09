@@ -116,66 +116,76 @@ jobs:
   first_start_wins:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
-    # Wait for THIS worker's session to be fully created before deciding, so a
-    # loser's `pw sessions stop` can't race the session job's update-session
-    # (which 404s and faults the run if the session is deleted mid-creation).
     steps:
       - name: First Start Wins
         retry:
           max-retries: 8640
           interval: 10s
         run: |
-          # Among all of THIS run's fractal sessions, the winner is the one that
-          # started first — createdAt is the primary key and the session name
-          # breaks exact ties, so every worker agrees on one winner. The winner
-          # publishes CANCEL=false and finishes (its session keeps serving via the
-          # script_submitter job); a loser stops its own session and publishes
-          # CANCEL=true, which the cancel_render job reads to stop the render — so
-          # no job has to sit on `sleep inf`. permissions: ['*'] authenticates pw.
+          # Decide whether this worker keeps its session or stands down, looking
+          # only at THIS run's fractal sessions (workflowRun.slug == PW_RUN_SLUG,
+          # name ends in _fractal). "First start wins" = the first session that is
+          # actually RUNNING keeps serving; every other worker cancels itself. The
+          # tie-break is list order — whichever running session `pw sessions ls`
+          # returns first is the winner, and every worker reads the same list, so
+          # they all pick the same one. permissions: ['*'] authenticates pw.
           MY_SESSION="${{ sessions.fractal }}"
           MY_NAME="${MY_SESSION##*/}"   # tolerate an optional "user/" prefix
 
-          winner=$(pw sessions ls -o json | PW_RUN_SLUG="${PW_RUN_SLUG}" python3 -c '
+          # Prints "<decision> <mine_up>": decision is WAIT | WIN | LOSE, and
+          # mine_up is 1 when our own session is already running (so stopping it is
+          # safe), 0 otherwise.
+          verdict=$(pw sessions ls -o json | PW_RUN_SLUG="${PW_RUN_SLUG}" MY_NAME="${MY_NAME}" python3 -c '
           import json, os, sys
           slug = os.environ.get("PW_RUN_SLUG", "")
+          me   = os.environ.get("MY_NAME", "")
           try:
               rows = json.load(sys.stdin)
           except Exception:
-              sys.exit(0)   # non-JSON (transient) -> no winner, retry
-          ours = [s for s in rows
-                  if (s.get("workflowRun") or {}).get("slug") == slug
-                  and s.get("name", "").endswith("_fractal")
-                  and s.get("status") == "running"]
-          ours.sort(key=lambda s: (s.get("createdAt", ""), s.get("name", "")))
-          print(ours[0]["name"] if ours else "")
+              print("WAIT 0"); sys.exit(0)   # non-JSON/empty (transient) -> retry
+          running = [s.get("name", "") for s in rows
+                     if (s.get("workflowRun") or {}).get("slug") == slug
+                     and s.get("name", "").endswith("_fractal")
+                     and s.get("status") == "running"]
+          mine_up = "1" if me in running else "0"
+          if not running:
+              print("WAIT", mine_up)          # nothing running yet
+          elif running[0] == me:
+              print("WIN", mine_up)           # first running session -> winner
+          else:
+              print("LOSE", mine_up)          # someone else is running ahead of us
           ')
+          decision=${verdict%% *}
+          mine_up=${verdict##* }
+          echo "$(date) run=${PW_RUN_SLUG} me=${MY_NAME} decision=${decision:-<none>} mine_up=${mine_up}"
 
-          echo "$(date) run=${PW_RUN_SLUG} me=${MY_NAME} winner=${winner:-<none>}"
-
-          # No fractal session listed yet (transient): keep polling via retry.
-          if [ -z "${winner}" ]; then
-            echo "::notice::No fractal session listed yet — waiting"
+          # No session running for this run yet (or a transient empty list): keep polling.
+          if [ "${decision}" = "WAIT" ] || [ -z "${decision}" ]; then
+            echo "No running session for this run yet — waiting"
             exit 1
           fi
 
-          # We are the earliest session visible so far. The session list is
-          # eventually consistent, so a worker that started earlier may not be
-          # listed yet — confirm we stay first across a few polls before
-          # committing, or two workers each seeing only themselves both "win".
-          if [ "${winner}" = "${MY_NAME}" ]; then
+          if [ "${decision}" = "WIN" ]; then
+            # The session list is eventually consistent, so a worker that started
+            # earlier may not be listed yet — a worker that only sees itself would
+            # wrongly win. Confirm we stay first across a few polls before committing.
             if [ "${PW_WORKFLOW_STEP_CURRENT_RETRY:-0}" -lt 3 ]; then
               echo "::notice::${MY_NAME} leading so far — confirming (attempt ${PW_WORKFLOW_STEP_CURRENT_RETRY:-0})"
               exit 1
             fi
-            echo "::notice::${MY_NAME} started first — winner; leaving its session up"
+            echo "::notice::${MY_NAME} is the first running session — winner; leaving its session up"
             echo "CANCEL=false" | tee -a $OUTPUTS
             exit 0
           fi
 
-          # Another worker started first: stop our session and tell cancel_render
-          # to stop the render.
-          echo "::notice::${winner} started before ${MY_NAME} — stopping this session"
-          pw sessions stop "${MY_SESSION}" || true
+          # decision == LOSE: another worker's session is running ahead of us.
+          echo "::notice::another session is running ahead of ${MY_NAME} — standing down"
+          # Only stop our own session if it is already running; if it is still being
+          # created, deleting it now would 404 the session job's update-session and
+          # fault the run — Cancel Jobs tears the half-built session down instead.
+          if [ "${mine_up}" = "1" ]; then
+            pw sessions stop "${MY_SESSION}" || true
+          fi
           echo "CANCEL=true" | tee -a $OUTPUTS
       - name: Cancel Jobs
         if: ${{ needs.first_start_wins.outputs.CANCEL == 'true' }}

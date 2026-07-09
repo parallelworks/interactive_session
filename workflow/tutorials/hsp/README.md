@@ -580,17 +580,19 @@ All the racing lives in the subworkflow. It is Stage 4's `install` → `script_s
           interval: 10s
         run: |
           MY_NAME="${{ sessions.fractal }}"
-          # The winner is the earliest of THIS run's fractal sessions.
-          winner=$(pw sessions ls -o json | ...keep this run's *_fractal sessions,
-                                                sort by (createdAt, name), print the first... )
-          [ -z "${winner}" ] && exit 1          # nothing up yet → keep polling
-          if [ "${winner}" = "${MY_NAME}" ]; then
+          # Look only at THIS run's *_fractal sessions that are RUNNING. The first
+          # one in `pw sessions ls` order is the winner; everyone else stands down.
+          decision=$(pw sessions ls -o json | ...keep this run's running *_fractal
+                                                 sessions; WIN if we are the first,
+                                                 LOSE if another is ahead, else WAIT...)
+          [ "${decision}" = "WAIT" ] && exit 1    # nothing running yet → keep polling
+          if [ "${decision}" = "WIN" ]; then
             # stay first for a few polls (the list is eventually consistent), then win
             [ "${PW_WORKFLOW_STEP_CURRENT_RETRY:-0}" -lt 3 ] && exit 1
             echo "CANCEL=false" | tee -a $OUTPUTS   # winner: leave the session up
             exit 0
           fi
-          pw sessions stop "${MY_NAME}"             # loser: drop our own session
+          pw sessions stop "${MY_NAME}"             # loser: drop our own session (if running)
           echo "CANCEL=true" | tee -a $OUTPUTS
       - name: Cancel Jobs
         if: ${{ needs.first_start_wins.outputs.CANCEL == 'true' }}   # only losers reach here
@@ -607,13 +609,13 @@ All the racing lives in the subworkflow. It is Stage 4's `install` → `script_s
 Every worker still installs and starts rendering, and `redirect: true` drops you onto the `fractal` session as soon as one is up. What `first_start_wins` adds is making sure exactly **one** session survives instead of one per worker.
 
 **Choosing the winner from the session list.**
-`pw sessions ls -o json` returns every session; the job keeps only *this run's* fractal sessions — matched by `workflowRun.slug == ${PW_RUN_SLUG}` and a name ending in `_fractal` — and sorts them by `(createdAt, name)`. The earliest is the winner. `createdAt` is the real signal; the session **name** is only a tie-breaker so that every worker, reading the same list, independently agrees on the same winner.
+`pw sessions ls -o json` returns every session; the job keeps only *this run's* fractal sessions that are **running** — matched by `workflowRun.slug == ${PW_RUN_SLUG}` (the parent run's slug, shared by every worker) and a name ending in `_fractal`, filtered to `status == "running"`. Among those, the **first one the list returns** is the winner and every other worker stands down. We deliberately do **not** rank by `createdAt`: that is when a session was *created*, not when it started serving, so a session created first can still reach `running` last — ranking by it would hand the win to a session that isn't even up yet. List order is the universal tie-breaker: every worker reads the same list, so they all pick the same winner. Only running sessions count, so a worker whose own session isn't up yet while another's is simply loses.
 
 **`permissions: ['*']` — introduced here, in the parent *and* the subworkflow.**
 This is the first stage that needs it. `permissions: ['*']` grants the workflow a token with the same access as the user who runs it, which is what authenticates the in-workflow `pw` CLI for calls that touch the platform API — here `pw sessions ls` and `pw sessions stop`. Earlier stages did **not** need it: `pw agent open-port` (Stages 3–5) works without any `permissions` grant. Because the `pw sessions` calls run inside the subworkflow, the grant must be present on the **parent** too — otherwise those calls come back `401 Unauthorized` even if the subworkflow declares it.
 
 **Confirm before committing — the session list is eventually consistent.**
-Just after two sessions register, each worker can briefly see only *its own* and think it won. So a worker that is currently in front re-checks for a few polls (guarded by `PW_WORKFLOW_STEP_CURRENT_RETRY`) before it commits; a worker that was actually beaten sees the earlier session on a later poll and steps aside. Without this settle, two workers can both "win."
+Just after two sessions register, each worker can briefly see only *its own* running and think it won. So a worker that is currently in front re-checks for a few polls (guarded by `PW_WORKFLOW_STEP_CURRENT_RETRY`) before it commits; a worker that was actually beaten sees the winning session on a later poll and steps aside. Without this settle, two workers can both "win."
 
 **One output flag drives the cleanup — no `sleep inf`.**
-The winner writes `CANCEL=false` and simply finishes; its session stays up because its `script_submitter` job is still serving the page. A loser stops its own session and writes `CANCEL=true`, and the very next step keys its `if:` off `${{ needs.first_start_wins.outputs.CANCEL }}` to run `cancel-jobs`, tearing down that worker's render and session. Publishing a value with `tee -a $OUTPUTS` and gating a later step on it (the `$OUTPUTS` trick from Stage 3) is what lets the winner exit cleanly instead of parking a job on `sleep inf`.
+The winner writes `CANCEL=false` and simply finishes; its session stays up because its `script_submitter` job is still serving the page. A loser writes `CANCEL=true`, and the very next step keys its `if:` off `${{ needs.first_start_wins.outputs.CANCEL }}` to run `cancel-jobs`, tearing down that worker's render and session. A loser also `pw sessions stop`s its own session — but only when that session is already **running**, because deleting a session while its `session` job's `update-session` is still creating it would `404` and fault the run; a not-yet-running loser leaves teardown entirely to `cancel-jobs`. Publishing a value with `tee -a $OUTPUTS` and gating a later step on it (the `$OUTPUTS` trick from Stage 3) is what lets the winner exit cleanly instead of parking a job on `sleep inf`.

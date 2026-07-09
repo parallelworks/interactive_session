@@ -125,12 +125,10 @@ jobs:
           # Decide whether this worker keeps its session or stands down, looking
           # only at THIS run's fractal sessions (workflowRun.slug == PW_RUN_SLUG,
           # name ends in _fractal). "First start wins" = the first session that is
-          # actually RUNNING keeps serving; every other worker cancels itself. We
-          # do NOT rank by createdAt: that is when a session was *created*, not when
-          # it started serving, so a session created first can still reach "running"
-          # last. The tie-break is list order — whichever running session
-          # `pw sessions ls` returns first is the winner. Every worker reads the same
-          # list, so they all pick the same one. permissions: ['*'] authenticates pw.
+          # actually RUNNING keeps serving; every other worker cancels itself. The
+          # tie-break is list order — whichever running session `pw sessions ls`
+          # returns first is the winner, and every worker reads the same list, so
+          # they all pick the same one. permissions: ['*'] authenticates pw.
           MY_SESSION="${{ sessions.fractal }}"
           MY_NAME="${MY_SESSION##*/}"   # tolerate an optional "user/" prefix
 

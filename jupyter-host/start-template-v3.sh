@@ -289,6 +289,7 @@ echo "::endgroup::"
 #######################
 echo "::group::Nginx Proxy"
 echo "::notice::Starting nginx wrapper on service port ${service_port}"
+which singularity
 if sudo -n true 2>/dev/null && which docker >/dev/null 2>&1; then
     container_name="nginx-${service_port}"
     # Remove container when job is canceled

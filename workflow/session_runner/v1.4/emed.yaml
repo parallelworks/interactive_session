@@ -57,7 +57,6 @@ jobs:
           cat ${{ inputs.service.start_service_script }} >> ${{ inputs.service.rundir }}/start-service-${PW_JOB_ID}.sh
 
   script_submitter:
-    working-directory: ${{ inputs.service.rundir }}
     needs:
       - preprocessing
     ssh:

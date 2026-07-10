@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
 permissions:
-  - '*'
+  - "*"
 sessions:
   session:
     useTLS: false
@@ -8,52 +8,53 @@ sessions:
 
 jobs:
   preprocessing:
-      ssh:
-        remoteHost: ${{ inputs.resource.ip }}
-      steps:
-        - name: Checkout
-          uses: parallelworks/checkout
-          with:
-            repo: https://github.com/parallelworks/interactive_session.git
-            branch: main
-            sparse_checkout:
-              - ${{ inputs.service.name }}
-        - name: Create Inputs
-          run: |
-            set -x
-            # Write PW variables
-            env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
-            # Encase values between quotes so values containing spaces (e.g. PW_AUTHORIZED_KEYS_COMMAND) survive `export`
-            sed -i 's/=\(.*\)/="\1"/' inputs.sh
-            # Write input form variables and ensure the pw agent is in the PATH
-            cat <<'EOF' >> inputs.sh
-            basepath=/me/session/${PW_USER}/${{ sessions.session }}
-            PATH=$HOME/pw:$PATH
-            service_notebook_dir="${{ inputs.service.notebook_dir }}"
-            service_password="${{ inputs.service.password }}"
-            service_conda_install="${{ inputs.service.conda_install }}"
-            service_use_conda="${{ inputs.service.use_conda }}"
-            service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
-            service_conda_install_dir="${{ inputs.service.conda_install_dir }}"
-            service_conda_env="${{ inputs.service.conda_env }}"
-            service_load_env="${{ inputs.service.load_env_tag_cloud }}"
-            service_load_env="${{ inputs.service.load_env_tag_existing }}"
-            service_install_instructions="${{ inputs.service.install_instructions_tag_cloud }}"
-            service_install_instructions="${{ inputs.service.install_instructions_tag_existing }}"
-            service_yaml="${{ inputs.service.yaml }}"
-            service_install_kernels="${{ inputs.service.install_kernels }}"
-            service_install_command="${{ inputs.service.install_command }}"
-            EOF
-            if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
-              echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
-            fi
-            # Remove empty variables
-            sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
-            sed -i '/=""/d' inputs.sh # remove var=""
-            # Add export= to all lines
-            sed -i 's/^/export /' inputs.sh
-            # Copy YAMLs to job directory
-            cp ${{ inputs.service.name }}/*.yaml .
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+      disconnect-timeout: 60
+    steps:
+      - name: Checkout
+        uses: parallelworks/checkout
+        with:
+          repo: https://github.com/parallelworks/interactive_session.git
+          branch: main
+          sparse_checkout:
+            - ${{ inputs.service.name }}
+      - name: Create Inputs
+        run: |
+          set -x
+          # Write PW variables
+          env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+          # Encase values between quotes so values containing spaces (e.g. PW_AUTHORIZED_KEYS_COMMAND) survive `export`
+          sed -i 's/=\(.*\)/="\1"/' inputs.sh
+          # Write input form variables and ensure the pw agent is in the PATH
+          cat <<'EOF' >> inputs.sh
+          basepath=/me/session/${PW_USER}/${{ sessions.session }}
+          PATH=$HOME/pw:$PATH
+          service_notebook_dir="${{ inputs.service.notebook_dir }}"
+          service_password="${{ inputs.service.password }}"
+          service_conda_install="${{ inputs.service.conda_install }}"
+          service_use_conda="${{ inputs.service.use_conda }}"
+          service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
+          service_conda_install_dir="${{ inputs.service.conda_install_dir }}"
+          service_conda_env="${{ inputs.service.conda_env }}"
+          service_load_env="${{ inputs.service.load_env_tag_cloud }}"
+          service_load_env="${{ inputs.service.load_env_tag_existing }}"
+          service_install_instructions="${{ inputs.service.install_instructions_tag_cloud }}"
+          service_install_instructions="${{ inputs.service.install_instructions_tag_existing }}"
+          service_yaml="${{ inputs.service.yaml }}"
+          service_install_kernels="${{ inputs.service.install_kernels }}"
+          service_install_command="${{ inputs.service.install_command }}"
+          EOF
+          if ! [ -z "${{ org.JUICE_TOKEN }}" ]; then
+            echo "JUICE_TOKEN=${{ org.JUICE_TOKEN }}" >> inputs.sh
+          fi
+          # Remove empty variables
+          sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+          sed -i '/=""/d' inputs.sh # remove var=""
+          # Add export= to all lines
+          sed -i 's/^/export /' inputs.sh
+          # Copy YAMLs to job directory
+          cp ${{ inputs.service.name }}/*.yaml .
 
   session_runner:
     needs:
@@ -86,10 +87,10 @@ jobs:
             start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/start-template-v3.sh
             controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/controller-v3.sh
             inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
-            slug: 'tree?dt=0'
+            slug: "tree?dt=0"
             rundir: ${PW_PARENT_JOB_DIR}
 
-'on':
+"on":
   execute:
     inputs:
       resource:
@@ -97,6 +98,7 @@ jobs:
         label: Service host
         include-workspace: false
         tooltip: Resource to host the service
+        disconnect-timeout: 60
       cluster:
         hidden: ${{ inputs.resource.schedulerType == '' }}
         ignore: ${{ inputs.resource.schedulerType == '' }}
@@ -125,7 +127,7 @@ jobs:
                 label: SLURM account
                 type: slurm-accounts
                 resource: ${{ inputs.resource }}
-                tooltip: '--account=value slurm directive'
+                tooltip: "--account=value slurm directive"
                 ignore: ${{ 'existing' != inputs.resource.provider }}
                 hidden: ${{ .ignore }}
               partition:
@@ -133,33 +135,33 @@ jobs:
                 label: SLURM partition
                 optional: true
                 resource: ${{ inputs.resource }}
-                tooltip: '--partition=value SLURM directive'
+                tooltip: "--partition=value SLURM directive"
               qos:
                 label: Quality of Service [QoS]
                 type: slurm-qos
                 resource: ${{ inputs.resource }}
-                tooltip: '--qos=value slurm directive'
+                tooltip: "--qos=value slurm directive"
                 ignore: ${{ 'existing' != inputs.resource.provider }}
                 hidden: ${{ .ignore }}
               ntasks:
                 label: Number of tasks
                 type: number
                 default: 1
-                tooltip: '--ntasks=value slurm directive'
+                tooltip: "--ntasks=value slurm directive"
                 ignore: ${{ 'existing' != inputs.resource.provider }}
                 hidden: ${{ .ignore }}
               nodes:
                 label: Number of nodes
                 type: number
                 default: 1
-                tooltip: '--nodes=value slurm directive'
+                tooltip: "--nodes=value slurm directive"
                 ignore: ${{ 'existing' != inputs.resource.provider }}
                 hidden: true
               time:
                 label: Walltime
                 type: string
-                default: '01:00:00'
-                tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
+                default: "01:00:00"
+                tooltip: "--time= SLURM directive to set the maximum wall-clock time limit for the job"
               scheduler_directives:
                 type: editor
                 optional: true

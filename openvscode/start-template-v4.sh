@@ -60,7 +60,7 @@ echo "::group::Start Service"
 echo "::notice::Starting code-server: ${juice_cmd} ${service_exec} --bind-addr=0.0.0.0:${service_port} ${password_flag} ${service_directory}"
 
 set -x
-pw endpoints run -- ${service_exec} \
+pw endpoints run ${pw_endpoints_args} -- ${service_exec} \
     --bind-addr=0.0.0.0:${port} \
     ${gh_flag} \
     ${password_flag} \

@@ -27,6 +27,7 @@ jobs:
             service_download_url="${{ inputs.service.download_url }}"
             service_password="${{ inputs.service.password }}"
             service_directory="${{ inputs.service.directory }}"
+            pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_JOB_ID} --slug '?folder=${{ inputs.service.directory }}'"
             EOF
             # Remove empty variables
             sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh

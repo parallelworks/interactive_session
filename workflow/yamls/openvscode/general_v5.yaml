@@ -33,8 +33,6 @@ jobs:
             sed -i '/=""/d' inputs.sh # remove var=""
             # Add export= to all lines
             sed -i 's/^/export /' inputs.sh
-            # Create slug
-            echo "slug=?folder=${{ inputs.service.directory }}" | tee -a $OUTPUTS
         - name: Controller Preprocessing
           run: |
             set -x
@@ -73,17 +71,17 @@ jobs:
     needs:
       - preprocessing
     ssh:
-      remoteHost: ${{ inputs.resource.ip }}
+      remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
       - name: Session Runner
         uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
           $yaml: workflow/script_submitter/v3.6/general.yaml
-          resource: ${{ inputs.resource }}
+          resource: ${{ inputs.cluster.resource }}
           shebang: '#!/bin/bash'
           use_existing_script: true
-          script_path: ${{ needs.wait_for_job_start.outputs.SCRIPT_PATH }}
+          script_path: ${{ needs.preprocessing.outputs.SCRIPT_PATH }}
           define_cleanup_script: true
           cleanup_script_path: ./cancel.sh
           scheduler: ${{ inputs.cluster.scheduler }}

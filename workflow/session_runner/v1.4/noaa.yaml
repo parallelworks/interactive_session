@@ -11,11 +11,10 @@ jobs:
         run: |
           source inputs.sh
           set -x
-          source /etc/profile
           # This script prepares the target host and always runs in the controller node
-          if [ -z "${service_parent_install_dir}" ] && [ -d /pw/contrib ]; then
-            echo "::notice title=Install Directory::Using Install Directory: /pw/contrib"
-            echo "service_parent_install_dir=/pw/contrib" >> inputs.sh
+          if [ -z "${service_parent_install_dir}" ] && [ -d /contrib/pw ]; then
+            echo "::notice title=Install Directory::Using Install Directory: /contrib/pw"
+            echo "service_parent_install_dir=/contrib/pw" >> inputs.sh
           fi
       - name: Controller Preprocessing
         run: | 

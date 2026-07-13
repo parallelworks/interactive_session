@@ -119,46 +119,11 @@ if [ ! -f ${service_exec} ]; then
     install_code_server
 fi
 
-# Copilot extension
-# Note: Pinned to version 1.388.0 for stability - newer versions may have breaking changes
-#copilot_extension_path=${service_parent_install_dir}/github.copilot-1.388.0.vsix
-#if [ ! -f ${copilot_extension_path} ]; then
-#    echo "::notice::Copilot extension not found, downloading and installing..."
-#    curl -L -o ${copilot_extension_path} "https://github.gallery.vsassets.io/_apis/public/gallery/publisher/github/extension/copilot/1.388.0/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage"
-#    ${service_exec} --install-extension ${copilot_extension_path} --extensions-dir ${HOME}/.local/share/code-server/extensions
-#fi
-echo "::endgroup::"
 
-# Copilot chat extension
-#copilot_chat_extension_path=${service_parent_install_dir}/github.copilot-chat-0.32.2025100703.vsix
-#if [ ! -f ${copilot_chat_extension_path} ]; then
-#    echo "Extension ${copilot_chat_extension_path} not found"
-#    echo "Downloading and installing extension ${copilot_chat_extension_path}"
-#    curl -L -o ${copilot_chat_extension_path} "https://github.gallery.vsassets.io/_apis/public/gallery/publisher/github/extension/copilot-chat/0.32.2025100703/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage"
-#    ${service_exec} --install-extension ${copilot_chat_extension_path} --extensions-dir ${HOME}/.local/share/code-server/extensions
-#fi
+echo "::endgroup::"
 
 
 if [ ! -f ${service_exec} ]; then
     echo "::error title=Error::Missing executable ${service_exec}"
     exit 1
-fi
-
-# Juice
-if [[ "${juice_use_juice}" == "true" ]]; then
-    echo "::group::Juice Setup"
-    if [ -z "${juice_exec}" ]; then
-        juice_install_dir=${service_parent_install_dir}/juice
-        juice_exec=${service_parent_install_dir}/juice/juice
-        if ! [ -f ${juice_exec} ]; then
-            echo "::notice title=Info::Installing Juice"
-            mkdir -p ${juice_install_dir}
-            download_and_install_juice
-        fi
-        if ! [ -f ${juice_exec} ]; then
-            echo "::error title=Error::Juice installation failed"
-            exit 1
-        fi
-    fi
-    echo "::endgroup::"
 fi

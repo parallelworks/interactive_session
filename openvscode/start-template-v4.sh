@@ -59,7 +59,8 @@ export GOTELEMETRY=off
 echo "::group::Start Service"
 echo "::notice::Starting code-server: ${juice_cmd} ${service_exec} --bind-addr=0.0.0.0:${service_port} ${password_flag} ${service_directory}"
 
-pw endpoints run --link -- ${service_exec} \
+set -x
+pw endpoints run -- ${service_exec} \
     --bind-addr=0.0.0.0:${port} \
     ${gh_flag} \
     ${password_flag} \

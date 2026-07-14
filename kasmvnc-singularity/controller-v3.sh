@@ -81,9 +81,15 @@ else
         fi
         # 2. GPU (VirtualGL) sandbox -- hardware accel where the SIF can't be mounted
         #    but the sandbox reads cleanly. Best-effort.
-        download_sandbox ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-gpu:1.0 \
-            "${container_dir}" "${container_tgz}" \
-            || echo "::warning::GPU sandbox download failed; relying on the SIF"
+        # noaa ships the SIF only: apptainer mounts it rootless on /contrib, so the
+        # redundant, less-reliable sandbox copy is skipped there.
+        if [ "${PW_PLATFORM_HOST}" = "noaa.parallel.works" ]; then
+            echo "::notice::NOAA: Skipping the GPU sandbox download"
+        else
+            download_sandbox ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-gpu:1.0 \
+                "${container_dir}" "${container_tgz}" \
+                || echo "::warning::GPU sandbox download failed; relying on the SIF"
+        fi
         # Hardware rendering must use a GPU image -- it does NOT fall back to the
         # base (software) container. Require at least one of SIF / GPU sandbox.
         if [ ! -f "${container_sif}" ] && [ ! -d "${container_dir}" ]; then

@@ -222,13 +222,6 @@ if [ -n "${_sing_bin}" ] && ! test -u "${_sing_bin}"; then
     # No setuid bit: unprivileged installation requires --userns
     USERNS_FLAG="--userns"
     echo "::notice::${CONTAINER} has no setuid bit, enabling --userns"
-    # On noaa the container is a read-only, non-owned sandbox under /contrib, so
-    # apptainer can't inject missing bind targets (e.g. /var/lib/xkb) in place; a
-    # writable tmpfs overlay lets it create them without writing into the image.
-    if [ "${PW_PLATFORM_HOST}" = "noaa.parallel.works" ]; then
-        WRITABLE_TMPFS_FLAG="--writable-tmpfs"
-        echo "::notice::noaa with --userns; enabling --writable-tmpfs for bind-target creation"
-    fi
 elif df -T "${service_parent_install_dir}/containers" 2>/dev/null | awk 'NR==2{print $2}' | grep -qi lustre; then
     echo "::notice::Container is on a Lustre filesystem, skipping --writable-tmpfs (overlay not supported)"
 else

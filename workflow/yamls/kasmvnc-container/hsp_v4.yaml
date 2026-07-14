@@ -286,9 +286,8 @@ jobs:
           rendering:
             type: dropdown
             label: Rendering
-            default: software
-            hidden: ${{ inputs.container_runtime == 'kasmvnc-docker' }}
-            ignore: ${{ .hidden }}
+            default: hardware
+            hidden: true
             tooltip: |
               Software (CPU): llvmpipe rendering; runs on any node.
               Hardware (GPU): VirtualGL/EGL on an NVIDIA GPU when available

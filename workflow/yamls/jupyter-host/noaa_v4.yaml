@@ -61,6 +61,7 @@ jobs:
       - preprocessing
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
+      disconnect-timeout: 60
     steps:
       - name: Session Runner
         uses: github/parallelworks/interactive_session@main

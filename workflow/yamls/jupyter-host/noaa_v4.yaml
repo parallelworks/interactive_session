@@ -64,7 +64,7 @@ jobs:
       disconnect-timeout: 60
     steps:
       - name: Session Runner
-        uses: github/parallelworks/interactive_session@main
+        uses: github/parallelworks/interactive_session@disconnect-timeout
         early-cancel: any-job-failed
         with:
           $yaml: workflow/session_runner/v1.4/noaa.yaml

@@ -4,7 +4,7 @@ jobs:
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
-      disconnect-timeout: 60
+      disconnect-timeout: 0
     steps:
       - name: Stream Output
         early-cancel: any-job-failed
@@ -103,7 +103,7 @@ jobs:
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
-      disconnect-timeout: 60
+      disconnect-timeout: 0
     steps:
       - name: Create Script
         run: |

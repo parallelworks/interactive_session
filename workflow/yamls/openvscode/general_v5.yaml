@@ -87,6 +87,7 @@ jobs:
           cleanup_script_path: ./cancel.sh
           scheduler: ${{ inputs.cluster.scheduler }}
           use_scheduler_agent: false
+          submit_and_exit: true
           slurm:
             is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
             partition: ${{ inputs.cluster.slurm.partition }}

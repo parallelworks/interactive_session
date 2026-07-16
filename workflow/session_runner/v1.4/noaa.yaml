@@ -7,6 +7,15 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
+      - name: Set Up Install Parent Directory
+        run: |
+          source inputs.sh
+          set -x
+          # This script prepares the target host and always runs in the controller node
+          if [ -z "${service_parent_install_dir}" ] && [ -d /contrib/pw ]; then
+            echo "::notice title=Install Directory::Using Install Directory: /contrib/pw"
+            echo "service_parent_install_dir=/contrib/pw" >> inputs.sh
+          fi
       - name: Controller Preprocessing
         run: | 
           set -x

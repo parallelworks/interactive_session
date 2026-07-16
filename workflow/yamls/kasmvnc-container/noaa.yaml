@@ -40,7 +40,6 @@ jobs:
           startup_command="${{ inputs.desktop.startup_command }}"
           container_mount_paths="${{ inputs.desktop.container_mount_paths }}"
           rendering="${{ inputs.desktop.rendering }}"
-          service_parent_install_dir="${{ inputs.parent_install_dir }}"
           EOF
           echo basepath=${basepath} >> inputs.sh
           echo password=${password} >> inputs.sh
@@ -106,11 +105,6 @@ jobs:
         label: Service host
         include-workspace: false
         tooltip: Resource to host the service
-      parent_install_dir:
-        label: Install Directory
-        type: string
-        optional: true
-        tooltip: 'Parent directory for software installation. Default: ${HOME}/pw/software. Ensure you have ~3 GB of free quota available.'
       container_runtime:
         type: dropdown
         label: Run container using
@@ -129,7 +123,7 @@ jobs:
         items:
           scheduler:
             type: boolean
-            default: false
+            default: true
             label: Schedule Job?
             tooltip: |
               Yes → Job is submitted to the scheduler using sbatch, qsub, etc
@@ -217,9 +211,8 @@ jobs:
           rendering:
             type: dropdown
             label: Rendering
-            default: software
-            hidden: ${{ inputs.container_runtime == 'kasmvnc-docker' }}
-            ignore: ${{ .hidden }}
+            default: hardware
+            hidden: true
             tooltip: |
               Software (CPU): llvmpipe rendering; runs on any node.
               Hardware (GPU): VirtualGL/EGL on an NVIDIA GPU when available

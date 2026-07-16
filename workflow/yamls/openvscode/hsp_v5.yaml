@@ -5,7 +5,7 @@ permissions:
 jobs:
   preprocessing:
       ssh:
-        remoteHost: ${{ inputs.cluster.resource.ip }}
+        remoteHost: ${{ inputs.resource.ip }}
       steps:
         - name: Checkout
           uses: parallelworks/checkout
@@ -17,6 +17,9 @@ jobs:
         - name: Create Inputs
           run: |
             set -x
+            if [ -z "${PW_PLATFORM_HOST}" ]; then
+              PW_PLATFORM_HOST=activate.hpc.mil
+            fi
             # Write PW variables
             env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
             # Encase values between quotes
@@ -27,6 +30,7 @@ jobs:
             service_download_url="${{ inputs.service.download_url }}"
             service_password="${{ inputs.service.password }}"
             service_directory="${{ inputs.service.directory }}"
+            service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
             pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_JOB_ID} --slug ?folder=${{ inputs.service.directory }}"
             EOF
             # Remove empty variables
@@ -72,14 +76,14 @@ jobs:
     needs:
       - preprocessing
     ssh:
-      remoteHost: ${{ inputs.cluster.resource.ip }}
+      remoteHost: ${{ inputs.resource.ip }}
     steps:
       - name: Session Runner
         uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
-          $yaml: workflow/script_submitter/v3.6/general.yaml
-          resource: ${{ inputs.cluster.resource }}
+          $yaml: workflow/script_submitter/v3.6/hsp.yaml
+          resource: ${{ inputs.resource }}
           shebang: '#!/bin/bash'
           use_existing_script: true
           script_path: ${{ needs.preprocessing.outputs.SCRIPT_PATH }}
@@ -90,57 +94,131 @@ jobs:
           submit_and_exit: true
           slurm:
             is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
+            account: ${{ inputs.cluster.slurm.account }}
             partition: ${{ inputs.cluster.slurm.partition }}
+            qos: ${{ inputs.cluster.slurm.qos }}
+            cpus_per_task: ${{ inputs.cluster.slurm.cpus_per_task }}
+            nodes: ${{ inputs.cluster.slurm.nodes }}
+            node_type: ${{ inputs.cluster.slurm.node_type }}
             scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
             time: ${{ inputs.cluster.slurm.time }}
           pbs:
             is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
+            account: ${{ inputs.cluster.pbs.account }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
-
 
 'on':
   execute:
     inputs:
+      resource:
+        type: compute-clusters
+        label: Service host
+        include-workspace: false
+        tooltip: Resource to host the service
       cluster:
+        hidden: ${{ inputs.resource.schedulerType == '' }}
+        ignore: ${{ inputs.resource.schedulerType == '' }}
         type: group
         label: Compute Cluster Settings
         items:
-          resource:
-            type: compute-clusters
-            label: Service host
-            include-workspace: false
-            tooltip: Resource to host the service
           scheduler:
             type: boolean
             default: false
             label: Schedule Job?
-            hidden: ${{ inputs.cluster.resource.schedulerType == '' }}
-            ignore: ${{ .hidden }}
             tooltip: |
               Yes → Job is submitted to the scheduler using sbatch, qsub, etc
               No  → Job is executed in the controller or login node instead
           slurm:
             type: group
             label: SLURM Directives
-            hidden: ${{ inputs.cluster.resource.schedulerType != 'slurm'  || inputs.cluster.scheduler == false  }}
-            ignore: ${{ inputs.cluster.resource.schedulerType != 'slurm'  || inputs.cluster.scheduler == false  }}
+            hidden: ${{ inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
             items:
               is_enabled:
                 type: boolean
                 hidden: true
                 default: true
                 label: Is SLURM enabled? Yes, unless the slurm section is hidden and ignored
+              account:
+                label: SLURM account
+                type: slurm-accounts
+                resource: ${{ inputs.resource }}
+                tooltip: '--account=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
               partition:
                 type: slurm-partitions
                 label: SLURM partition
                 optional: true
-                resource: ${{ inputs.cluster.resource }}
-                tooltip: Select a partition from the drop down menu.
+                resource: ${{ inputs.resource }}
+                tooltip: '--qos=partition slurm directive'
+              qos:
+                label: Quality of Service [QoS]
+                type: slurm-qos
+                resource: ${{ inputs.resource }}
+                tooltip: '--qos=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              cpus_per_task:
+                label: CPUs per task
+                type: number
+                default: 1
+                tooltip: '--cpus-per-task= SLURM directive to set the number of CPUs per task'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              nodes:
+                label: Number of nodes
+                type: number
+                default: 1
+                tooltip: '--nodes=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              node_type:
+                label: Node Type
+                type: dropdown
+                optional: true
+                default: ""
+                option-key: ${{ inputs.resource.ip }}
+                tooltip: '--constraint=<value> slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider || (inputs.resource.ip != 'blueback.navydsrc.hpc.mil' && inputs.resource.ip != 'narwhal.navydsrc.hpc.mil' && inputs.resource.ip != 'nautilus.navydsrc.hpc.mil' && inputs.resource.ip != 'raider.afrl.hpc.mil' && inputs.resource.ip != 'crux.mhpcc.hpc.mil') }}
+                hidden: ${{ .ignore }}
+                options:
+                  blueback.navydsrc.hpc.mil:
+                    - standard
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  narwhal.navydsrc.hpc.mil:
+                    - standard
+                    - bigmem
+                    - mla
+                    - smla
+                    - dmla
+                    - viz
+                    - transfer
+                  nautilus.navydsrc.hpc.mil:
+                    - standard
+                    - highclock
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  raider.afrl.hpc.mil:
+                    - standard
+                    - highclock
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  crux.mhpcc.hpc.mil:
+                    - AMD
+                    - Intel
               time:
                 label: Walltime
                 type: string
-                default: '01:00:00'
-                tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
+                default: 00:30:00
+                tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job (format: D-HH:MM:SS or HH:MM:SS, e.g. 7-00:00:00 or 01:00:00)'
               scheduler_directives:
                 type: editor
                 optional: true
@@ -148,17 +226,24 @@ jobs:
                   Add extra SLURM directives, one per line, using the #SBATCH prefix. For example:
                   #SBATCH --exclusive
                   #SBATCH --nodelist=<node-name>
+                default: |
+                  ##SBATCH --gres=gpu:4 # uncomment for gpus on onprem systems
+                  ##SBATCH --constraint=mla # uncomment for Navy and AFRL DSRC systems
           pbs:
             type: group
             label: PBS Directives
-            hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
-            ignore: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             items:
               is_enabled:
                 type: boolean
                 hidden: true
                 default: true
                 label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
+              account:
+                label: Account
+                type: string
+                tooltip: PBS account for job submission (-A)
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
@@ -166,11 +251,22 @@ jobs:
                   Add extra PBS directives, one per line, using the #PBS prefix. For example:
                   #PBS -l mem=16gb
                   #PBS -l ngpus=1
+                default: |
+                  # Parameters that apply to all sites
+                  #PBS -l walltime=00:30:00
+                  #PBS -V
+                  #PBS -q standard
+                  # Remove first # to activate specific lines
+                  #=====Ruth (Lustre, only vis has NVIDIA)=====
+                  ##PBS -l select=1:ncpus=128:mpiprocs=128:ngpus=1
+                  #=====Warhawk (Lustre)====
+                  ##PBS -l select=1:ncpus=128:mpiprocs=128:ngpus=2
+                  #=====Wheat (WEKA, nmlas=4|6)====
+                  ##PBS -l select=1:ncpus=92:mpiprocs=92:nmlas=4
 
       service:
         type: group
         label: VS Code Settings
-        collapsed: true
         items:
           name:
             type: string
@@ -191,4 +287,11 @@ jobs:
             type: string
             default: ${HOME}
             tooltip: Directory to open in VS code
+          parent_install_dir:
+            label: Parent Install Directory
+            type: string
+            default: ${HOME}/pw/software
+            hidden: ${{ inputs.service.conda_install == false }}
+            ignore: ${{ .hidden }}
+            tooltip: Software dependencies are installed in this directory. Ensure the directory has sufficient space!
 

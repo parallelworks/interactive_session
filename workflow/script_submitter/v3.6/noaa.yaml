@@ -1,6 +1,7 @@
 # yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
 jobs:
   stream_output:
+    if: ${{ inputs.submit_and_exit != true }}
     working-directory: ${{ inputs.rundir }}
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
@@ -113,7 +114,8 @@ jobs:
           cat run-template.sh >> run.sh
           chmod +x run.sh
           cat run.sh
-      - name: Submit Script
+      - name: Run Script and Wait
+        if: ${{ inputs.submit_and_exit != true }}
         run: |
           set -x
           echo "::notice::Executing script"
@@ -135,7 +137,22 @@ jobs:
               chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
               timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
           fi
+      - name: Submit Script and Exit
+        if: ${{ inputs.submit_and_exit == true }}
+        run: |
+          set -x
+          echo "::notice::Submitting script and exiting; it will keep running on the resource."
+          # Detach so the script outlives this SSH session (it closes when the workflow exits):
+          # redirecting all std streams lets the step return, and setsid/nohup keep the SIGHUP
+          # sent on disconnect from killing it. Portable to any Linux with no extra packages.
+          if command -v setsid >/dev/null 2>&1; then
+            setsid ./run.sh > run.${PW_JOB_ID}.out 2>&1 < /dev/null &
+          else
+            nohup ./run.sh > run.${PW_JOB_ID}.out 2>&1 < /dev/null &
+          fi
+          echo "::notice::Script launched; it will keep running on the resource after the workflow exits."
       - name: Cancel Streaming
+        if: ${{ inputs.submit_and_exit != true }}
         uses: parallelworks/cancel-jobs
         with:
           jobs:
@@ -171,8 +188,14 @@ jobs:
             exit 1
           fi
           echo "jobid=${jobid}"  | tee -a $OUTPUTS
-        cleanup: qdel "${{ needs.pbs_job.outputs.jobid }}"
+        cleanup: |
+          if [[ "${{ inputs.submit_and_exit }}" == "true" ]]; then
+            echo "::notice::Submit and Exit mode: leaving PBS job ${{ needs.pbs_job.outputs.jobid }} running."
+            exit 0
+          fi
+          qdel "${{ needs.pbs_job.outputs.jobid }}"
       - name: Monitor PBS Job
+        if: ${{ inputs.submit_and_exit != true }}
         run: |
           jobid=${{ needs.pbs_job.outputs.jobid }}
           echo "::notice::Monitoring PBS job ${jobid}"
@@ -221,6 +244,7 @@ jobs:
               ${sshcmd} timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }} || true
           fi
       - name: Cancel Streaming
+        if: ${{ inputs.submit_and_exit != true }}
         uses: parallelworks/cancel-jobs
         with:
           jobs:
@@ -255,8 +279,14 @@ jobs:
             exit 1
           fi
           echo "jobid=${jobid}"  | tee -a $OUTPUTS
-        cleanup: scancel "${{ needs.slurm_job.outputs.jobid }}"
+        cleanup: |
+          if [[ "${{ inputs.submit_and_exit }}" == "true" ]]; then
+            echo "::notice::Submit and Exit mode: leaving SLURM job ${{ needs.slurm_job.outputs.jobid }} running."
+            exit 0
+          fi
+          scancel "${{ needs.slurm_job.outputs.jobid }}"
       - name: Monitor SLURM Job
+        if: ${{ inputs.submit_and_exit != true }}
         run: |
           jobid=${{ needs.slurm_job.outputs.jobid }}
           echo "::notice::Monitoring SLURM job ${jobid}"
@@ -333,6 +363,7 @@ jobs:
               ${sshcmd} timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }} || true
           fi
       - name: Cancel Streaming
+        if: ${{ inputs.submit_and_exit != true }}
         uses: parallelworks/cancel-jobs
         with:
           jobs:
@@ -365,7 +396,8 @@ jobs:
         id: waitstep
         with:
           agentId: ${{ needs.scheduler_agent_job.steps.slurmstep.outputs.agentId }}
-      - name: Run Script
+      - name: Run Script and Wait
+        if: ${{ inputs.submit_and_exit != true }}
         ssh:
           jumpNodeHost: ${{ inputs.resource.ip }}
           remoteHost: ${{ needs.scheduler_agent_job.steps.waitstep.outputs.remoteHost }}:${{ needs.scheduler_agent_job.steps.waitstep.outputs.sshPort }}
@@ -373,6 +405,23 @@ jobs:
           set -x
           echo "::notice::Executing script"
           ./run.sh > run.${PW_JOB_ID}.out 2>&1
+      - name: Submit Script and Exit
+        if: ${{ inputs.submit_and_exit == true }}
+        ssh:
+          jumpNodeHost: ${{ inputs.resource.ip }}
+          remoteHost: ${{ needs.scheduler_agent_job.steps.waitstep.outputs.remoteHost }}:${{ needs.scheduler_agent_job.steps.waitstep.outputs.sshPort }}
+        run: |
+          set -x
+          echo "::notice::Submitting script and exiting; it will keep running on the compute node."
+          # Detach so the script outlives this SSH session (it closes when the workflow exits):
+          # redirecting all std streams lets the step return, and setsid/nohup keep the SIGHUP
+          # sent on disconnect from killing it. Portable to any Linux with no extra packages.
+          if command -v setsid >/dev/null 2>&1; then
+            setsid ./run.sh > run.${PW_JOB_ID}.out 2>&1 < /dev/null &
+          else
+            nohup ./run.sh > run.${PW_JOB_ID}.out 2>&1 < /dev/null &
+          fi
+          echo "::notice::Script launched; it will keep running on the compute node after the workflow exits."
 
 'on':
   execute:
@@ -441,6 +490,13 @@ jobs:
         tooltip: |
           Yes → Provision the compute node using parallelworks/scheduler-agent
           No  → Directly use sbatch, qsub, etc to submit the job
+      submit_and_exit:
+        type: boolean
+        default: false
+        label: Submit and Exit?
+        tooltip: |
+          No  → Wait for the script to finish and stream its output to the logs (default).
+          Yes → Submit the script and exit immediately; it keeps running on the resource (output not streamed).
       slurm:
         type: group
         label: SLURM Directives

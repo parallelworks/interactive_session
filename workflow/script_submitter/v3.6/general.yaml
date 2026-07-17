@@ -121,10 +121,7 @@ jobs:
           echo ${pid} > run.${PW_JOB_ID}.pid
           if [[ "${{ inputs.submit_and_exit }}" == "true" ]]; then
             echo "::notice::Script launched; it will keep running on the resource after the workflow exits."
-            exit 0
           fi
-          echo "::notice::Waiting for process ${pid} to finish"
-          wait ${pid}
         cleanup: |
           set -x
 
@@ -159,6 +156,16 @@ jobs:
               chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
               timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
           fi
+      - name: Wait for Script
+        if: ${{ inputs.submit_and_exit != true }}
+        run: |
+          pid=$(cat run.${PW_JOB_ID}.pid)
+          echo "::notice::Waiting for process ${pid} to finish"
+          # The script is not a child of this step's shell, so poll instead of wait
+          while kill -0 ${pid} 2>/dev/null; do
+            sleep 15
+          done
+          echo "::notice::Process ${pid} finished"
       - name: Cancel Streaming
         if: ${{ inputs.submit_and_exit != true }}
         uses: parallelworks/cancel-jobs

@@ -244,8 +244,8 @@ jobs:
           startup_command:
             type: string
             label: Startup Application
-            placeholder: firefox, virtuoso, etc.
-            tooltip: Command to run after desktop starts (optional)
+            default: rstudio
+            tooltip: Command to load and run RStudio
             optional: true
           container_mount_paths:
             type: editor

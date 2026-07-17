@@ -6,12 +6,11 @@
 # Called by: Workflow after controller setup
 #
 # Required Environment Variables:
-#   - service_port: Allocated port (from session_runner)
+#   - pw_endpoints_args: Arguments for pw endpoints run (--name, --slug, ...)
 #   - service_parent_install_dir: Installation directory
 #   - service_download_url: Download URL for code-server
 #   - service_password: Access password (optional, auth=none if not set)
 #   - service_directory: Working directory to open (default: ~/)
-#   - juice_use_juice: Enable Juice for remote GPU access (optional)
 ################################################################################
 
 if [ -z ${service_parent_install_dir} ]; then
@@ -57,12 +56,12 @@ export GOTELEMETRY=off
 
 # START SERVICE
 echo "::group::Start Service"
-echo "::notice::Starting code-server: ${juice_cmd} ${service_exec} --bind-addr=0.0.0.0:${service_port} ${password_flag} ${service_directory}"
+echo "::notice::Starting code-server: pw endpoints run ${pw_endpoints_args} -- ${service_exec} --bind-addr=0.0.0.0:{port} ${password_flag} ${service_directory}"
 
 set -x
+# {port} is replaced by pw endpoints run with the local port it forwards to
 pw endpoints run ${pw_endpoints_args} -- ${service_exec} \
-    --bind-addr=0.0.0.0:${port} \
-    ${gh_flag} \
+    --bind-addr=0.0.0.0:{port} \
     ${password_flag} \
     ${service_directory}
 

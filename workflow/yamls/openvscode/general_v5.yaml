@@ -69,7 +69,7 @@ jobs:
             echo "SCRIPT_PATH=${PWD}/start-service-${PW_JOB_ID}.sh" | tee -a $OUTPUTS
             echo "SKIP_CLEANUP_PATH=${PWD}/SKIP_CLEANUP" | tee -a $OUTPUTS
 
-  script_submitter:
+  session_runner:
     needs:
       - preprocessing
     ssh:
@@ -117,11 +117,12 @@ jobs:
           done
           echo "::notice::Endpoint ${endpoint_name} is online"
           touch ${{ needs.preprocessing.outputs.SKIP_CLEANUP_PATH }}
+          sleep 2
       - name: Cancel Script Submitter
         uses: parallelworks/cancel-jobs
         with:
           jobs:
-            - script_submitter
+            - session_runner
 
 
 'on':

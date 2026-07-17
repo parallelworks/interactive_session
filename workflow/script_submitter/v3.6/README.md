@@ -12,13 +12,25 @@ The workflow auto-detects whether the selected resource is a SLURM or PBS cluste
 
 2. **Schedule the job directly**: Submit to the cluster's scheduler (SLURM via `sbatch` or PBS via `qsub`). The workflow monitors the job until completion. Use this option when you need multi-node support (e.g., distributed MPI jobs).
 
-3. **Run directly on the controller**: Execute the script immediately on the login/controller node via SSH.
+3. **Run directly on the controller**: Launch the script on the login/controller node via SSH. The script is submitted detached and monitored until it finishes.
 
 ## Monitoring & Cleanup
 
 For PBS and SLURM direct submissions, the workflow continuously monitors job status until completion or until the job is no longer found in the queue. If the workflow is canceled, the cleanup logic automatically terminates the remote job (`qdel` or `scancel`) to prevent orphaned workloads.
 
+Direct SSH runs follow the same submit-and-monitor pattern: the script is launched detached (via `setsid`/`nohup`) with its PID recorded in `run.${PW_JOB_ID}.pid`, and the workflow polls the process until it exits. If the workflow is canceled, the cleanup logic kills the process group.
+
 When using the scheduler agent, cleanup is handled by the agent itself.
+
+### Submit and Exit
+
+Set `submit_and_exit: true` to submit the script and end the workflow immediately without monitoring. The job or process keeps running on the resource, its output is not streamed, and no cleanup runs when the workflow exits.
+
+### Skipping Cleanups
+
+The optional `skip_cleanups_file` input allows you to skip the cleanups after the workflow is launched. If it is set and a file exists at that path when the workflow ends, all cleanup steps are skipped: the job or process is left running and the custom cleanup script is not executed. If the input is empty or the file does not exist, cleanups run normally.
+
+Because the check happens when the workflow ends—not when the job is submitted—the file can be created mid-run. For example, a parent workflow can `touch` the file once a long-running service is ready and then cancel this workflow, leaving the service alive; canceling before that point still cleans everything up. Relative paths are resolved against the run directory.
 
 ### Custom Cleanup Script
 
@@ -157,12 +169,14 @@ jobs:
 | `use_scheduler_agent` | Use the scheduler agent instead of direct submission (true/false, default: false) | No |
 | `define_cleanup_script` | Run a custom cleanup script when the workflow is canceled (true/false, default: false) | No |
 | `cleanup_script_path` | Path to the cleanup script on the remote resource (required when `define_cleanup_script: true`) | No |
+| `submit_and_exit` | Submit the script and exit immediately without monitoring; the job or process keeps running on the resource (true/false, default: false) | No |
+| `skip_cleanups_file` | Path to a file checked when the workflow ends: if it exists, all cleanup steps are skipped and the job or process is left running. Hidden input intended for subworkflow use | No |
 | `slurm` | SLURM scheduler options | No |
 | `pbs` | PBS scheduler options | No |
 
 ## Outputs
 
-The script output is written to `run.${PW_JOB_ID}.out` in the run directory.
+The script output is written to `run.${PW_JOB_ID}.out` in the run directory. Direct SSH runs also record the detached process ID in `run.${PW_JOB_ID}.pid`.
 
 ## Building Custom Workflows
 

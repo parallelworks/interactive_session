@@ -67,8 +67,9 @@ jobs:
             EOF
             cat ${{ inputs.service.name }}/start-template-v4.sh >> ./start-service-${PW_JOB_ID}.sh
             echo "SCRIPT_PATH=${PWD}/start-service-${PW_JOB_ID}.sh" | tee -a $OUTPUTS
+            echo "SKIP_CLEANUP_PATH=${PWD}/SKIP_CLEANUP" | tee -a $OUTPUTS
 
-  script_submitter:
+  session_runner:
     needs:
       - preprocessing
     ssh:
@@ -88,7 +89,7 @@ jobs:
           scheduler: ${{ inputs.cluster.scheduler }}
           use_scheduler_agent: false
           submit_and_exit: false
-          run_cleanups: false
+          skip_cleanups_file: ${{ needs.preprocessing.outputs.SKIP_CLEANUP_PATH }}
           slurm:
             is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
             partition: ${{ inputs.cluster.slurm.partition }}
@@ -102,6 +103,8 @@ jobs:
   wait_for_endpoint:
     needs:
       - preprocessing
+    ssh:
+      remoteHost: ${{ inputs.cluster.resource.ip }}
     steps:
       - name: Wait for endpoint
         early-cancel: any-job-failed
@@ -113,11 +116,13 @@ jobs:
             sleep 10
           done
           echo "::notice::Endpoint ${endpoint_name} is online"
+          touch ${{ needs.preprocessing.outputs.SKIP_CLEANUP_PATH }}
+          sleep 2
       - name: Cancel Script Submitter
         uses: parallelworks/cancel-jobs
         with:
           jobs:
-            - script_submitter
+            - session_runner
 
 
 'on':

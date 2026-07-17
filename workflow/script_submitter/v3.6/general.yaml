@@ -125,8 +125,8 @@ jobs:
         cleanup: |
           set -x
 
-          if [[ "${{ inputs.run_cleanups }}" == "false" ]]; then
-              echo "::notice::Cleanups are disabled: leaving the script running."
+          if [ -f "${{ inputs.skip_cleanups_file }}" ]; then
+              echo "::notice::Found skip-cleanups file ${{ inputs.skip_cleanups_file }}: leaving the script running."
               exit 0
           fi
 
@@ -161,7 +161,9 @@ jobs:
         run: |
           pid=$(cat run.${PW_JOB_ID}.pid)
           echo "::notice::Waiting for process ${pid} to finish"
-          # The script is not a child of this step's shell, so poll instead of wait
+          # Waiting in the submitting step would kill the script on workflow cancel
+          # (cancel kills that step's shell and its children), so the wait lives in its
+          # own step; the script is not a child of this shell, so poll instead of wait.
           while kill -0 ${pid} 2>/dev/null; do
             sleep 15
           done
@@ -206,8 +208,8 @@ jobs:
           fi
           echo "jobid=${jobid}"  | tee -a $OUTPUTS
         cleanup: |
-          if [[ "${{ inputs.run_cleanups }}" == "false" ]]; then
-            echo "::notice::Cleanups are disabled: leaving PBS job ${{ needs.pbs_job.outputs.jobid }} running."
+          if [ -f "${{ inputs.skip_cleanups_file }}" ]; then
+            echo "::notice::Found skip-cleanups file ${{ inputs.skip_cleanups_file }}: leaving PBS job ${{ needs.pbs_job.outputs.jobid }} running."
             exit 0
           fi
           if [[ "${{ inputs.submit_and_exit }}" == "true" ]]; then
@@ -242,8 +244,8 @@ jobs:
         cleanup: |
           set -x
 
-          if [[ "${{ inputs.run_cleanups }}" == "false" ]]; then
-            echo "::notice::Cleanups are disabled: skipping cleanup script."
+          if [ -f "${{ inputs.skip_cleanups_file }}" ]; then
+            echo "::notice::Found skip-cleanups file ${{ inputs.skip_cleanups_file }}: skipping cleanup script."
             exit 0
           fi
 
@@ -305,8 +307,8 @@ jobs:
           fi
           echo "jobid=${jobid}"  | tee -a $OUTPUTS
         cleanup: |
-          if [[ "${{ inputs.run_cleanups }}" == "false" ]]; then
-            echo "::notice::Cleanups are disabled: leaving SLURM job ${{ needs.slurm_job.outputs.jobid }} running."
+          if [ -f "${{ inputs.skip_cleanups_file }}" ]; then
+            echo "::notice::Found skip-cleanups file ${{ inputs.skip_cleanups_file }}: leaving SLURM job ${{ needs.slurm_job.outputs.jobid }} running."
             exit 0
           fi
           if [[ "${{ inputs.submit_and_exit }}" == "true" ]]; then
@@ -369,8 +371,8 @@ jobs:
         cleanup: |
           set -x
 
-          if [[ "${{ inputs.run_cleanups }}" == "false" ]]; then
-            echo "::notice::Cleanups are disabled: skipping cleanup script."
+          if [ -f "${{ inputs.skip_cleanups_file }}" ]; then
+            echo "::notice::Found skip-cleanups file ${{ inputs.skip_cleanups_file }}: skipping cleanup script."
             exit 0
           fi
 
@@ -441,8 +443,8 @@ jobs:
           set -x
           echo "::notice::Running cleanup"
 
-          if [[ "${{ inputs.run_cleanups }}" == "false" ]]; then
-              echo "::notice::Cleanups are disabled: skipping cleanup script."
+          if [ -f "${{ inputs.skip_cleanups_file }}" ]; then
+              echo "::notice::Found skip-cleanups file ${{ inputs.skip_cleanups_file }}: skipping cleanup script."
               exit 0
           fi
 
@@ -558,15 +560,15 @@ jobs:
         tooltip: |
           No  → Wait for the script to finish and stream its output to the logs (default).
           Yes → Submit the script and exit immediately; it keeps running on the resource (output not streamed).
-      run_cleanups:
-        type: boolean
-        default: true
-        label: Run Cleanups?
-        hidden: ${{ inputs.submit_and_exit == true }}
-        ignore: ${{ .hidden }}
+      skip_cleanups_file:
+        type: string
+        optional: true
+        hidden: true
+        label: Skip Cleanups File
         tooltip: |
-          Yes → When the workflow ends, cancel the job or process and run the cleanup script (default).
-          No  → Skip all cleanup steps; the job or process is left running if the workflow is canceled.
+          If set and the file exists when the workflow ends, all cleanup steps are skipped
+          and the job or process is left running. Relative paths are resolved against the
+          run directory. Leave empty to always run the cleanups.
       slurm:
         type: group
         label: SLURM Directives

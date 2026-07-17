@@ -71,8 +71,9 @@ jobs:
             EOF
             cat ${{ inputs.service.name }}/start-template-v4.sh >> ./start-service-${PW_JOB_ID}.sh
             echo "SCRIPT_PATH=${PWD}/start-service-${PW_JOB_ID}.sh" | tee -a $OUTPUTS
+            echo "SKIP_CLEANUP_PATH=${PWD}/SKIP_CLEANUP" | tee -a $OUTPUTS
 
-  script_submitter:
+  session_runner:
     needs:
       - preprocessing
     ssh:
@@ -91,7 +92,8 @@ jobs:
           cleanup_script_path: ./cancel.sh
           scheduler: ${{ inputs.cluster.scheduler }}
           use_scheduler_agent: false
-          submit_and_exit: true
+          submit_and_exit: false
+          skip_cleanups_file: ${{ needs.preprocessing.outputs.SKIP_CLEANUP_PATH }}
           slurm:
             is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
             account: ${{ inputs.cluster.slurm.account }}
@@ -106,6 +108,30 @@ jobs:
             is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
             account: ${{ inputs.cluster.pbs.account }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+
+  wait_for_endpoint:
+    needs:
+      - preprocessing
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Wait for endpoint
+        early-cancel: any-job-failed
+        run: |
+          endpoint_name="${{ inputs.service.name }}-${PW_JOB_ID}"
+          echo "::notice::Waiting for endpoint ${endpoint_name} to come online"
+          until pw endpoints list | grep -qw "${endpoint_name}"; do
+            echo "$(date) Endpoint ${endpoint_name} not found yet; retrying in 10 seconds"
+            sleep 10
+          done
+          echo "::notice::Endpoint ${endpoint_name} is online"
+          touch ${{ needs.preprocessing.outputs.SKIP_CLEANUP_PATH }}
+          sleep 2
+      - name: Cancel Script Submitter
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - session_runner
 
 'on':
   execute:

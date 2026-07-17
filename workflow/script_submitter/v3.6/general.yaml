@@ -105,14 +105,45 @@ jobs:
           cat run-template.sh >> run.sh
           chmod +x run.sh
           cat run.sh
-      - name: Run Script and Wait
-        if: ${{ inputs.submit_and_exit != true }}
+      - name: Submit Script
         run: |
           set -x
-          echo "::notice::Executing script"
-          ./run.sh > run.${PW_JOB_ID}.out 2>&1
+          echo "::notice::Submitting script"
+          # Detach so the script outlives this SSH session (it closes when the workflow exits):
+          # redirecting all std streams lets the step return, and setsid/nohup keep the SIGHUP
+          # sent on disconnect from killing it. Portable to any Linux with no extra packages.
+          if command -v setsid >/dev/null 2>&1; then
+            setsid ./run.sh > run.${PW_JOB_ID}.out 2>&1 < /dev/null &
+          else
+            nohup ./run.sh > run.${PW_JOB_ID}.out 2>&1 < /dev/null &
+          fi
+          pid=$!
+          echo ${pid} > run.${PW_JOB_ID}.pid
+          if [[ "${{ inputs.submit_and_exit }}" == "true" ]]; then
+            echo "::notice::Script launched; it will keep running on the resource after the workflow exits."
+            exit 0
+          fi
+          echo "::notice::Waiting for process ${pid} to finish"
+          wait ${pid}
         cleanup: |
           set -x
+
+          if [[ "${{ inputs.run_cleanups }}" == "false" ]]; then
+              echo "::notice::Cleanups are disabled: leaving the script running."
+              exit 0
+          fi
+
+          if [[ "${{ inputs.submit_and_exit }}" == "true" ]]; then
+              echo "::notice::Submit and Exit mode: leaving the script running."
+              exit 0
+          fi
+
+          pid=$(cat run.${PW_JOB_ID}.pid 2>/dev/null || true)
+          if [ -n "${pid}" ] && kill -0 ${pid} 2>/dev/null; then
+              echo "::notice::Killing process ${pid}"
+              # setsid made the script a process group leader; kill the group so its children die too
+              kill -- -${pid} 2>/dev/null || kill ${pid} 2>/dev/null || true
+          fi
 
           if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
               echo "::notice::No cleanup script provided."
@@ -128,20 +159,6 @@ jobs:
               chmod +x ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
               timeout 300 ${{ needs.preprocessing.outputs.CLEANUP_SCRIPT_PATH }}
           fi
-      - name: Submit Script and Exit
-        if: ${{ inputs.submit_and_exit == true }}
-        run: |
-          set -x
-          echo "::notice::Submitting script and exiting; it will keep running on the resource."
-          # Detach so the script outlives this SSH session (it closes when the workflow exits):
-          # redirecting all std streams lets the step return, and setsid/nohup keep the SIGHUP
-          # sent on disconnect from killing it. Portable to any Linux with no extra packages.
-          if command -v setsid >/dev/null 2>&1; then
-            setsid ./run.sh > run.${PW_JOB_ID}.out 2>&1 < /dev/null &
-          else
-            nohup ./run.sh > run.${PW_JOB_ID}.out 2>&1 < /dev/null &
-          fi
-          echo "::notice::Script launched; it will keep running on the resource after the workflow exits."
       - name: Cancel Streaming
         if: ${{ inputs.submit_and_exit != true }}
         uses: parallelworks/cancel-jobs
@@ -182,6 +199,10 @@ jobs:
           fi
           echo "jobid=${jobid}"  | tee -a $OUTPUTS
         cleanup: |
+          if [[ "${{ inputs.run_cleanups }}" == "false" ]]; then
+            echo "::notice::Cleanups are disabled: leaving PBS job ${{ needs.pbs_job.outputs.jobid }} running."
+            exit 0
+          fi
           if [[ "${{ inputs.submit_and_exit }}" == "true" ]]; then
             echo "::notice::Submit and Exit mode: leaving PBS job ${{ needs.pbs_job.outputs.jobid }} running."
             exit 0
@@ -213,6 +234,11 @@ jobs:
           done
         cleanup: |
           set -x
+
+          if [[ "${{ inputs.run_cleanups }}" == "false" ]]; then
+            echo "::notice::Cleanups are disabled: skipping cleanup script."
+            exit 0
+          fi
 
           if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
             echo "::notice::No cleanup script provided."
@@ -272,6 +298,10 @@ jobs:
           fi
           echo "jobid=${jobid}"  | tee -a $OUTPUTS
         cleanup: |
+          if [[ "${{ inputs.run_cleanups }}" == "false" ]]; then
+            echo "::notice::Cleanups are disabled: leaving SLURM job ${{ needs.slurm_job.outputs.jobid }} running."
+            exit 0
+          fi
           if [[ "${{ inputs.submit_and_exit }}" == "true" ]]; then
             echo "::notice::Submit and Exit mode: leaving SLURM job ${{ needs.slurm_job.outputs.jobid }} running."
             exit 0
@@ -331,6 +361,11 @@ jobs:
           done
         cleanup: |
           set -x
+
+          if [[ "${{ inputs.run_cleanups }}" == "false" ]]; then
+            echo "::notice::Cleanups are disabled: skipping cleanup script."
+            exit 0
+          fi
 
           if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
             echo "::notice::No cleanup script provided."
@@ -398,6 +433,11 @@ jobs:
         cleanup: |
           set -x
           echo "::notice::Running cleanup"
+
+          if [[ "${{ inputs.run_cleanups }}" == "false" ]]; then
+              echo "::notice::Cleanups are disabled: skipping cleanup script."
+              exit 0
+          fi
 
           if [[ "${{ inputs.define_cleanup_script }}" == "false" ]]; then
               echo "::notice::No cleanup script provided."
@@ -511,6 +551,15 @@ jobs:
         tooltip: |
           No  → Wait for the script to finish and stream its output to the logs (default).
           Yes → Submit the script and exit immediately; it keeps running on the resource (output not streamed).
+      run_cleanups:
+        type: boolean
+        default: true
+        label: Run Cleanups?
+        hidden: ${{ inputs.submit_and_exit == true }}
+        ignore: ${{ .hidden }}
+        tooltip: |
+          Yes → When the workflow ends, cancel the job or process and run the cleanup script (default).
+          No  → Skip all cleanup steps; the job or process is left running if the workflow is canceled.
       slurm:
         type: group
         label: SLURM Directives

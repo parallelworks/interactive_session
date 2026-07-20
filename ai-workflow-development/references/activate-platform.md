@@ -185,7 +185,8 @@ Common attributes: `label`, `default`, `tooltip`, `optional: true`, `hidden: <ex
   (inputs, `needs.*.outputs`, `sessions.*`, `org.*`, comparisons).
 - `${VAR}` / `$VAR` — ordinary shell, evaluated at runtime on the node.
 - Useful runtime env vars: `PW_PARENT_JOB_DIR` (parent run's job dir — use for all
-  shared paths), `PW_JOB_DIR`, `PW_JOB_ID`, `PW_USER`, plus all `PW_*`. The
+  shared paths), `PW_JOB_DIR`, `PW_JOB_ID`, `PW_RUN_SLUG` (the run's slug — the argument
+  `pw workflows runs cancel` takes), `PW_USER`, plus all `PW_*`. The
   `inputs.sh` convention captures these with `env | grep '^PW_'`.
 
 ### Multi-job orchestration (DAG, outputs, fan-out — all verified)
@@ -781,8 +782,14 @@ dials out, registers a reverse tunnel, and gets a subdomain URL
   lands in a file). Unlike v5 non-k8s, the k8s run must **stay alive** (log streaming)
   and clean up on cancel: a Deployment restarts an exited sidecar, so the endpoint
   cannot own the pod's lifecycle — cancel run → `kubectl delete` → endpoint deregisters.
-- `PW_JOB_ID` is **run-scoped** (the run slug, same in every job) — safe to build the
-  endpoint name as `<service>-${PW_JOB_ID}` in one job and wait for it in another.
+- `PW_RUN_SLUG` holds the **run slug** (same in every job) — build the endpoint name as
+  `<service>-${PW_RUN_SLUG}` in one job and wait for it in another. (`PW_JOB_ID` carries
+  the same value, but prefer `PW_RUN_SLUG` — the name says what it is.) It is also the
+  argument `pw workflows runs cancel` takes, enabling **fail-loud self-cancellation**:
+  the openvscode v4-suffixed start template runs `pw workflows runs cancel ${PW_RUN_SLUG}`
+  when `pw endpoints run` exits non-zero, so a failed service tears down the whole run
+  instead of leaving `wait_for_endpoint` polling forever. Both vars reach scheduled
+  compute nodes via the `inputs.sh` `env | grep '^PW_'` capture.
 
 ### More verified gotchas
 - **`pw workflows run <name>` uses the STORED definition.** After editing a YAML,

@@ -66,6 +66,21 @@ pw workflows run my-session -i '{"resource":"gcpsmall","scheduler":false}'
 `pw cluster ls -o json` field names differ from the resolved object (`ipAddress` vs
 `ip`); rely on name resolution, not the raw cluster JSON.
 
+> **⚠ `compute-resources` inputs do NOT hydrate from the CLI (verified).** Bare-name
+> resolution is a `compute-clusters` feature. A `compute-resources` input (the picker
+> that also lists kubernetes clusters, used by `*_k8s_*.yaml`) passed as `"gcpsmall"`
+> or `"pw://alvaro/gcpsmall"` reaches the workflow as a **raw string** — `.ip`/`.type`
+> resolve empty and `ssh.remoteHost` steps **silently run on the workspace exec node**.
+> From the UI the picker sends a full object, so this bites CLI testing only. Pass the
+> object yourself in `-i`:
+> - Cluster: `{"$type":"computeResource","id":"<id>","ip":"<ip>","name":"gcpsmall","namespace":"<user>","provider":"google-slurm","schedulerType":"slurm","type":"google-slurm","uri":"pw://<user>/gcpsmall","user":"<user>"}`
+>   (fresh `id`/`ip` from `pw cluster ls -o json`, mapping `ipAddress`→`ip`).
+> - With `$type: computeResource` the server validates `id` against **clusters** — a
+>   kubernetes cluster id fails with `Compute resource not found`. Omit `$type` and the
+>   object passes through **verbatim, unvalidated**: for a kubernetes cluster send
+>   `{"id":"<pw kube ls id>","name":"k3sgpu","type":"kubernetes","uri":"pw://k3sgpu"}`
+>   (set the fields the workflow reads: `name` for `pw kube auth`, `type` for the guards).
+
 **The workspace as a resource:** `include-workspace: true` on a `compute-clusters`
 input makes the user workspace selectable. Pass `"workspace"` (aliases:
 `user-workspace`). It resolves to `id=user-workspace`, `type=computeResource`,
@@ -737,6 +752,37 @@ inputs.sh line covers it). Clean, inbound-port-free cross-cluster transport (e.g
 orchestrator on the workspace → `pw ssh <cluster> curl localhost:<port>`). **stdin
 is NOT reliably forwarded** through `pw ssh <c> <cmd>` — base64 the payload INTO the
 command instead: `pw ssh c "echo <b64> | base64 -d | curl --data-binary @- http://localhost:P/x"`.
+
+### Endpoint sessions (`pw endpoints`) — the v5 workflow pattern (verified)
+The `*_v5.yaml` workflows replace platform sessions (`sessions:` + `session_runner`)
+with **endpoint sessions**: the service side runs `pw endpoints run`/`http`, which
+dials out, registers a reverse tunnel, and gets a subdomain URL
+(`https://<name>.activate.pw/<slug>`; `--slug` may be a query string like
+`?folder=/dir`). Key facts, all verified on live runs:
+- **`pw endpoints run` substitutes the `{port}` token** (also exports `PORT`) into the
+  wrapped command — shell `${port}` expands to empty *before* `pw` sees it, so the app
+  falls back to its default port (code-server → `:80` → `EACCES`, instant exit) while
+  the tunnel forwards to the assigned port. Always write `{port}`.
+- **Lifecycle = the tunnel client.** In v5 the workflow *run* completes once
+  `wait_for_endpoint` sees the name in `pw endpoints list` (it touches the
+  `skip_cleanups_file` and `parallelworks/cancel-jobs` the submitter); the service
+  outlives the run. `pw endpoints delete <name>` tears down the whole remote process
+  tree (verified: the `pw endpoints run` child dies with it).
+- **Env-var auth for containers/sidecars (v7.79.0):** the CLI authenticates from
+  `PW_API_KEY` + `PW_PLATFORM_HOST` env vars with no config file — this is how to run
+  it in a pod. `ghcr.io/parallelworks/pw-cli:<ver>` is distroless (entrypoint
+  `/usr/local/bin/pw`, nonroot 65532), so pass subcommands via container `args:`.
+- **Kubernetes: run the client as a sidecar** (see
+  `workflow/yamls/openvscode/general_k8s_v5.yaml`): the app container serves its port,
+  the `pw-cli` sidecar runs `pw endpoints http --name <n> -o text <port>` against pod-local
+  `localhost:<port>`; feed `PW_API_KEY` from a Secret created with
+  `kubectl create secret generic ... --from-literal=PW_API_KEY="${PW_API_KEY}" --dry-run=client -o yaml | kubectl apply -f -`
+  (top-level `env: {PW_API_KEY: ${PW_API_KEY}}` exposes it to the step; the key never
+  lands in a file). Unlike v5 non-k8s, the k8s run must **stay alive** (log streaming)
+  and clean up on cancel: a Deployment restarts an exited sidecar, so the endpoint
+  cannot own the pod's lifecycle — cancel run → `kubectl delete` → endpoint deregisters.
+- `PW_JOB_ID` is **run-scoped** (the run slug, same in every job) — safe to build the
+  endpoint name as `<service>-${PW_JOB_ID}` in one job and wait for it in another.
 
 ### More verified gotchas
 - **`pw workflows run <name>` uses the STORED definition.** After editing a YAML,

@@ -27,7 +27,7 @@ jobs:
             service_download_url="${{ inputs.service.download_url }}"
             service_password="${{ inputs.service.password }}"
             service_directory="${{ inputs.service.directory }}"
-            pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_JOB_ID} --slug ?folder=${{ inputs.service.directory }}"
+            pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG} --slug ?folder=${{ inputs.service.directory }}"
             EOF
             # Remove empty variables
             sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
@@ -114,7 +114,7 @@ jobs:
       - name: Wait for endpoint
         early-cancel: any-job-failed
         run: |
-          endpoint_name="${{ inputs.service.name }}-${PW_JOB_ID}"
+          endpoint_name="${{ inputs.service.name }}-${PW_RUN_SLUG}"
           echo "::notice::Waiting for endpoint ${endpoint_name} to come online"
           until pw endpoints list | grep -qw "${endpoint_name}"; do
             echo "$(date) Endpoint ${endpoint_name} not found yet; retrying in 10 seconds"

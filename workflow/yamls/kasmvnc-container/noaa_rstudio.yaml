@@ -104,13 +104,6 @@ jobs:
         label: Service host
         include-workspace: false
         tooltip: Resource to host the service
-        provider:
-          - gclusterv2
-          - pclusterv2
-          - azclusterv2
-          - aws-slurm
-          - google-slurm
-          - azure-slurm
       parent_install_dir:
         label: Install Directory
         type: string
@@ -222,9 +215,8 @@ jobs:
           rendering:
             type: dropdown
             label: Rendering
-            default: software
-            hidden: ${{ inputs.container_runtime == 'kasmvnc-docker' }}
-            ignore: ${{ .hidden }}
+            default: hardware
+            hidden: true
             tooltip: |
               Software (CPU): llvmpipe rendering; runs on any node.
               Hardware (GPU): VirtualGL/EGL on an NVIDIA GPU when available

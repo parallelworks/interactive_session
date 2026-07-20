@@ -755,7 +755,10 @@ is NOT reliably forwarded** through `pw ssh <c> <cmd>` — base64 the payload IN
 command instead: `pw ssh c "echo <b64> | base64 -d | curl --data-binary @- http://localhost:P/x"`.
 
 ### Endpoint sessions (`pw endpoints`) — the v5 workflow pattern (verified)
-The `*_v5.yaml` workflows (openvscode, jupyterlab-host) replace platform sessions
+**Upgrading a v4 workflow to this pattern? Follow the step-by-step playbook in
+[v4-to-v5-endpoints-upgrade.md](v4-to-v5-endpoints-upgrade.md)** (distilled from the
+openvscode and jupyterlab-host conversions). The `*_v5.yaml` workflows (openvscode,
+jupyterlab-host) replace platform sessions
 (`sessions:` + `session_runner`) with **endpoint sessions**: the service side runs
 `pw endpoints run`/`http`, which dials out, registers a reverse tunnel, and gets a
 subdomain URL (`https://<name>.activate.pw/<slug>`; `--slug` may be a query string like

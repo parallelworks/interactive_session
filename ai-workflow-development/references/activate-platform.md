@@ -755,11 +755,32 @@ is NOT reliably forwarded** through `pw ssh <c> <cmd>` — base64 the payload IN
 command instead: `pw ssh c "echo <b64> | base64 -d | curl --data-binary @- http://localhost:P/x"`.
 
 ### Endpoint sessions (`pw endpoints`) — the v5 workflow pattern (verified)
-The `*_v5.yaml` workflows replace platform sessions (`sessions:` + `session_runner`)
-with **endpoint sessions**: the service side runs `pw endpoints run`/`http`, which
-dials out, registers a reverse tunnel, and gets a subdomain URL
-(`https://<name>.activate.pw/<slug>`; `--slug` may be a query string like
-`?folder=/dir`). Key facts, all verified on live runs:
+**Upgrading a v4 workflow to this pattern? Follow the step-by-step playbook in
+[v4-to-v5-endpoints-upgrade.md](v4-to-v5-endpoints-upgrade.md)** (distilled from the
+openvscode and jupyterlab-host conversions). The `*_v5.yaml` workflows (openvscode,
+jupyterlab-host) replace platform sessions
+(`sessions:` + `session_runner`) with **endpoint sessions**: the service side runs
+`pw endpoints run`/`http`, which dials out, registers a reverse tunnel, and gets a
+subdomain URL (`https://<name>.activate.pw/<slug>`; `--slug` may be a query string like
+`?folder=/dir` or a path like `lab`). Key facts, all verified on live runs:
+- **Endpoints are platform-authenticated by default**: an anonymous request to
+  `https://<name>.activate.pw/...` gets `307 → https://<platform-host>/?sessionRedirect=…`.
+  A service that relied on the session tunnel's login (e.g. Jupyter with `token = ''`)
+  keeps the same trust model behind an endpoint; only serving it "publicly"
+  (`pw endpoints http --help`) changes that.
+- **The endpoint name is a registry key, not the subdomain**: a random subdomain is
+  assigned by default (`-s/--subdomain` pins one). Names are how you *find* endpoints —
+  `pw endpoints list | grep -w <name>` — so build them from `${PW_RUN_SLUG}` (plus the
+  resource name when several workers share a run). Killing the client process (cancel
+  the run/step) deregisters the endpoint within seconds; racing/fan-out over a shared
+  name prefix is shown in `workflow/tutorials/hsp_pw_endpoints/` (verified two-resource
+  first-start-wins race).
+- **Base-path apps need no base_url and no nginx on a subdomain endpoint**
+  (`jupyterlab-host/start-template-v4.sh`): subdomain endpoints serve at the root, so
+  `pw endpoints run ${pw_endpoints_args} -- jupyter-lab --port {port} --config …` is
+  enough — v3's nginx proxy + base-path config is obsolete in v5. For path-based
+  endpoints (`--no-subdomain`) set the app's base path to the `{path}` token
+  (exported as `PW_ENDPOINT_PATH`) instead.
 - **`pw endpoints run` substitutes the `{port}` token** (also exports `PORT`) into the
   wrapped command — shell `${port}` expands to empty *before* `pw` sees it, so the app
   falls back to its default port (code-server → `:80` → `EACCES`, instant exit) while
@@ -795,6 +816,11 @@ dials out, registers a reverse tunnel, and gets a subdomain URL
 - **`pw workflows run <name>` uses the STORED definition.** After editing a YAML,
   `pw workflows update <name> --yaml file.yaml` first, or the run uses the old form
   (e.g. `400 Missing required fields` for an input you removed).
+- **`pw workflows create --yaml <path>` with an unreadable path still creates the
+  workflow — empty** ("workflow created but failed to read YAML file"), and a
+  subsequent `run` executes that empty definition instead of erroring. The Bash shell
+  cwd is not guaranteed between tool calls — pass the YAML as an **absolute path**, and
+  recover with `pw workflows update <name> --yaml <abs-path>`.
 - **Pin a service port:** export `service_port` in `inputs.sh` and `session_runner`
   uses it (it only runs `pw agent open-port` when unset) — handy when another
   service must reach it at a known port.

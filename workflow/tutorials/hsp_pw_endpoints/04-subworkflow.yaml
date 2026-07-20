@@ -1,0 +1,312 @@
+permissions:
+  - '*'
+
+env:
+  RESOLUTION: ${{ inputs.resolution }}
+
+# Ready-made presets for common PBS systems. Selecting one in the run form fills
+# in that system's sample #PBS scheduler directives (and turns scheduling on), so
+# you don't have to remember each site's node layout. Adapted from the sample
+# directives in workflow/script_submitter/v3.6/hsp.yaml — pick your resource, then
+# the matching configuration, and tweak the directives if you need to.
+configurations:
+  Carpenter:
+    inputs:
+      scheduler: true
+      pbs:
+        is_enabled: true
+        scheduler_directives: |
+          # Parameters that apply to all sites
+          #PBS -l walltime=00:30:00
+          #PBS -V
+          #PBS -q standard
+          #PBS -l select=1:ncpus=192:mpiprocs=192
+  Ruth:
+    inputs:
+      scheduler: true
+      pbs:
+        is_enabled: true
+        scheduler_directives: |
+          # Parameters that apply to all sites
+          #PBS -l walltime=00:30:00
+          #PBS -V
+          #PBS -q standard
+          #PBS -l select=1:ncpus=128:mpiprocs=128
+  Warhawk:
+    inputs:
+      scheduler: true
+      pbs:
+        is_enabled: true
+        scheduler_directives: |
+          # Parameters that apply to all sites
+          #PBS -l walltime=00:30:00
+          #PBS -V
+          #PBS -q standard
+          #PBS -l select=1:ncpus=128:mpiprocs=128
+  Wheat:
+    inputs:
+      scheduler: true
+      pbs:
+        is_enabled: true
+        scheduler_directives: |
+          # Parameters that apply to all sites
+          #PBS -l walltime=00:30:00
+          #PBS -V
+          #PBS -q standard
+          #PBS -l select=1:ncpus=92:mpiprocs=92:nmlas=4
+
+jobs:
+  install:
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Checkout Fractal Demo
+        uses: parallelworks/checkout
+        with:
+          repo: https://github.com/parallelworks/interactive_session.git
+          branch: main
+          sparse_checkout:
+            - workflow/tutorials/hsp/fractal-demo
+      - name: Install Dependencies
+        run: |
+          # keep only the example directory from the sparse checkout
+          mv workflow/tutorials/hsp/fractal-demo .
+          rm -r workflow
+          ./fractal-demo/install.sh
+      - name: Create Run Script
+        run: |
+          cat <<EOF >> script.sh
+          # Everything the script needs is baked in NOW (expanded at write time):
+          # the workflow-level env: does NOT reach the script_submitter subworkflow
+          # that runs this script, and PW_RUN_SLUG may not be exported on a
+          # compute node. The endpoint name carries the resource name so several
+          # workers in one run (Stage 5) don't collide.
+          export RESOLUTION=${{ inputs.resolution }}
+          # The endpoint dials OUT from whichever node this script lands on —
+          # controller or compute node — so no hostname or port bookkeeping is
+          # needed: pw picks a free port and exports it as PORT for run.sh.
+          pw endpoints run --name fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }} -- ${PWD}/fractal-demo/run.sh
+          EOF
+          chmod +x script.sh
+          # We need to pass the PATH to the script submitter subworkflow
+          echo "SCRIPT_PATH=${PWD}/script.sh" | tee -a $OUTPUTS
+
+
+  script_submitter:
+    needs:
+      - install
+    steps:
+      - name: Script Submitter
+        uses: github/parallelworks/interactive_session@main
+        with:
+          $yaml: workflow/script_submitter/v3.6/hsp.yaml
+          resource: ${{ inputs.resource }}
+          shebang: '#!/bin/bash'
+          use_existing_script: true
+          script_path: ${{ needs.install.outputs.SCRIPT_PATH }}
+          scheduler: ${{ inputs.scheduler }}
+          use_scheduler_agent: false
+          slurm:
+            is_enabled: ${{ inputs.slurm.is_enabled }}
+            account: ${{ inputs.slurm.account }}
+            partition: ${{ inputs.slurm.partition }}
+            qos: ${{ inputs.slurm.qos }}
+            cpus_per_task: ${{ inputs.slurm.cpus_per_task }}
+            nodes: ${{ inputs.slurm.nodes }}
+            node_type: ${{ inputs.slurm.node_type }}
+            time: ${{ inputs.slurm.time }}
+            scheduler_directives: ${{ inputs.slurm.scheduler_directives }}
+          pbs:
+            is_enabled: ${{ inputs.pbs.is_enabled }}
+            account: ${{ inputs.pbs.account }}
+            scheduler_directives: ${{ inputs.pbs.scheduler_directives }}
+
+
+  wait_for_endpoint:
+    needs:
+      - install
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Wait for endpoint
+        early-cancel: any-job-failed
+        retry:
+          max-retries: 180
+          interval: 10s
+        run: |
+          # Exit non-zero until the endpoint registers, so the retry above keeps
+          # polling. For a queued SLURM/PBS job that may be minutes later — this
+          # replaces the v4 tutorial's HOSTNAME/PORT polling and update-session:
+          # the endpoint registers itself from wherever the script runs.
+          endpoint_name="fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }}"
+          row=$(pw endpoints list | grep -w "${endpoint_name}" || true)
+          if [ -z "${row}" ]; then
+            echo "::notice::Endpoint ${endpoint_name} not registered yet"
+            exit 1
+          fi
+          URL=$(echo "${row}" | awk '{print $3}')
+          echo "URL=${URL}" | tee -a $OUTPUTS
+          echo "::notice::Fractal is being served at ${URL}"
+
+'on':
+  execute:
+    inputs:
+      resource:
+        type: compute-clusters
+        label: Resource Target
+        tooltip: The compute cluster to run the fractal example on.
+        autoselect: true
+        optional: false
+      resolution:
+        type: number
+        label: Resolution
+        tooltip: Image size in pixels. Larger values look sharper but take longer to render.
+        default: 2500
+        min: 100
+        max: 10000
+      scheduler:
+        type: boolean
+        default: false
+        label: Schedule Job?
+        hidden: ${{ inputs.resource.schedulerType == '' }}
+        ignore: ${{ .hidden }}
+        tooltip: |
+          Yes → Job is submitted to the scheduler using sbatch, qsub, etc
+          No  → Job is executed in the controller or login node instead
+      slurm:
+        type: group
+        label: SLURM Directives
+        hidden: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        ignore: ${{ inputs.resource.schedulerType != 'slurm' || inputs.scheduler == false }}
+        items:
+          is_enabled:
+            type: boolean
+            hidden: true
+            default: true
+            label: Is SLURM Enabled? Yes, unless the slurm section is hidden and ignored
+          account:
+            label: SLURM account
+            type: slurm-accounts
+            resource: ${{ inputs.resource }}
+            tooltip: '--account=value slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
+          partition:
+            type: slurm-partitions
+            label: SLURM partition
+            optional: true
+            resource: ${{ inputs.resource }}
+            tooltip: '--qos=partition slurm directive'
+          qos:
+            label: Quality of Service [QoS]
+            type: slurm-qos
+            resource: ${{ inputs.resource }}
+            tooltip: '--qos=value slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
+          cpus_per_task:
+            label: CPUs per task
+            type: number
+            default: 1
+            tooltip: '--cpus-per-task= SLURM directive to set the number of CPUs per task'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
+          nodes:
+            label: Number of Nodes
+            type: number
+            default: 1
+            tooltip: '--nodes=value slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider }}
+            hidden: ${{ .ignore }}
+          node_type:
+            label: Node Type
+            type: dropdown
+            optional: true
+            default: ""
+            option-key: ${{ inputs.resource.ip }}
+            tooltip: '--constraint=<value> slurm directive'
+            ignore: ${{ 'existing' != inputs.resource.provider || (inputs.resource.ip != 'blueback.navydsrc.hpc.mil' && inputs.resource.ip != 'narwhal.navydsrc.hpc.mil' && inputs.resource.ip != 'nautilus.navydsrc.hpc.mil' && inputs.resource.ip != 'raider.afrl.hpc.mil' && inputs.resource.ip != 'crux.mhpcc.hpc.mil') }}
+            hidden: ${{ .ignore }}
+            options:
+              blueback.navydsrc.hpc.mil:
+                - standard
+                - bigmem
+                - mla
+                - viz
+                - transfer
+              narwhal.navydsrc.hpc.mil:
+                - standard
+                - bigmem
+                - mla
+                - smla
+                - dmla
+                - viz
+                - transfer
+              nautilus.navydsrc.hpc.mil:
+                - standard
+                - highclock
+                - bigmem
+                - mla
+                - viz
+                - transfer
+              raider.afrl.hpc.mil:
+                - standard
+                - highclock
+                - bigmem
+                - mla
+                - viz
+                - transfer
+              crux.mhpcc.hpc.mil:
+                - AMD
+                - Intel
+
+          time:
+            label: Walltime
+            type: string
+            default: '00:30:00'
+            tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job (format: D-HH:MM:SS or HH:MM:SS, e.g. 7-00:00:00 or 01:00:00)'
+          scheduler_directives:
+            type: editor
+            optional: true
+            tooltip: |
+              Add extra SLURM directives, one per line, using the #SBATCH prefix. For example:
+              #SBATCH --exclusive
+              #SBATCH --nodelist=<node-name>
+            default: |
+              ##SBATCH --constraint=mla # uncomment for Navy and AFRL DSRC systems
+      pbs:
+        type: group
+        label: PBS Directives
+        hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+        ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.scheduler == false }}
+        items:
+          is_enabled:
+            type: boolean
+            hidden: true
+            default: true
+            label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
+          account:
+            label: Account
+            type: string
+            tooltip: PBS account for job submission (-A)
+          scheduler_directives:
+            label: Scheduler Directives
+            type: editor
+            tooltip: |
+              Add extra PBS directives, one per line, using the #PBS prefix. For example:
+              #PBS -l mem=16gb
+              #PBS -l ngpus=1
+            default: |
+              # Parameters that apply to all sites
+              #PBS -l walltime=01:00:00
+              #PBS -V
+              #PBS -q standard
+              # Remove first # to activate specific lines
+              #=====Ruth (Lustre, only vis has NVIDIA)=====
+              ##PBS -l select=1:ncpus=128:mpiprocs=128
+              #=====Warhawk (Lustre)====
+              ##PBS -l select=1:ncpus=128:mpiprocs=128
+              #=====Wheat (WEKA, nmlas=4|6)====
+              ##PBS -l select=1:ncpus=92:mpiprocs=92:nmlas=4
+              #=====Carpenter===
+              ##PBS -l select=1:ncpus=192:mpiprocs=192

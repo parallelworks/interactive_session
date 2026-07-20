@@ -1,0 +1,51 @@
+jobs:
+  install:
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Checkout Fractal Demo
+        uses: parallelworks/checkout
+        with:
+          repo: https://github.com/parallelworks/interactive_session.git
+          branch: main
+          sparse_checkout:
+            - workflow/tutorials/hsp/fractal-demo
+      - name: Install Dependencies
+        run: |
+          # keep only the example directory from the sparse checkout
+          mv workflow/tutorials/hsp/fractal-demo .
+          rm -r workflow
+          ./fractal-demo/install.sh
+
+  run:
+    needs:
+      - install
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Render and Serve
+        run: RESOLUTION=${{ inputs.resolution }} PORT=${{ inputs.port }} ./fractal-demo/run.sh
+
+'on':
+  execute:
+    inputs:
+      resource:
+        type: compute-clusters
+        label: Resource Target
+        tooltip: The compute cluster to run the fractal example on.
+        autoselect: true
+        optional: false
+      resolution:
+        type: number
+        label: Resolution
+        tooltip: Image size in pixels. Larger values look sharper but take longer to render.
+        default: 2500
+        min: 100
+        max: 10000
+      port:
+        type: number
+        label: Port
+        tooltip: Port the progress web server listens on.
+        default: 8000
+        min: 1024
+        max: 65535

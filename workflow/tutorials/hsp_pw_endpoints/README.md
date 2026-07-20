@@ -379,4 +379,4 @@ A canceled session job left a dead tunnel behind, so the original needed `pw ses
 
 ## Testing status
 
-The controller path (`Schedule Job? = No`) of stages 1–4 and the race mechanics of stage 6 were verified end-to-end on a live cluster; the scheduler path reuses `script_submitter` unchanged from the session tutorial but has not been re-verified in this edition.
+The controller path (`Schedule Job? = No`) was verified end-to-end on live clusters: stages 2–4 individually (endpoint registered, URL published, page served, platform-auth redirect for anonymous requests, cancel deregisters the endpoint), and stage 6 as a real two-resource race (both endpoints up, every worker picked the same winner, the loser stood down and its endpoint disappeared, cancel tore the winner down). Stage 6's parent exercises the same matrix mechanics as stage 5, and stage 1 is byte-identical to the session tutorial's tested stage. The scheduler path (`Schedule Job? = Yes`) reuses `script_submitter` unchanged from the session tutorial but has not been re-verified in this edition.

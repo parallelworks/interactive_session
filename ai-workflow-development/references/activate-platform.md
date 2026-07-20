@@ -768,6 +768,13 @@ subdomain URL (`https://<name>.activate.pw/<slug>`; `--slug` may be a query stri
   A service that relied on the session tunnel's login (e.g. Jupyter with `token = ''`)
   keeps the same trust model behind an endpoint; only serving it "publicly"
   (`pw endpoints http --help`) changes that.
+- **The endpoint name is a registry key, not the subdomain**: a random subdomain is
+  assigned by default (`-s/--subdomain` pins one). Names are how you *find* endpoints —
+  `pw endpoints list | grep -w <name>` — so build them from `${PW_RUN_SLUG}` (plus the
+  resource name when several workers share a run). Killing the client process (cancel
+  the run/step) deregisters the endpoint within seconds; racing/fan-out over a shared
+  name prefix is shown in `workflow/tutorials/hsp_pw_endpoints/` (verified two-resource
+  first-start-wins race).
 - **Base-path apps need no base_url and no nginx on a subdomain endpoint**
   (`jupyterlab-host/start-template-v4.sh`): subdomain endpoints serve at the root, so
   `pw endpoints run ${pw_endpoints_args} -- jupyter-lab --port {port} --config …` is

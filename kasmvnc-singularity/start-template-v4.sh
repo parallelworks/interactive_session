@@ -431,10 +431,14 @@ endpoint_pid=$!
 echo "kill ${endpoint_pid} || true # pw endpoints http" >> cancel.sh
 
 # Job lifetime = container AND endpoint client: whichever exits first ends the
-# job, and the cleanup trap runs cancel.sh to tear the other one down. This is
-# what makes `pw endpoints delete` stop the whole desktop.
+# job. This is what makes `pw endpoints delete` stop the whole desktop.
 wait -n ${kasmvnc_container_pid} ${endpoint_pid}
 echo "::warning::Container or endpoint client exited; tearing down"
+# Run the cleanup here instead of relying on the workflow's exit trap, so the
+# containers die even if this template runs without the trap wrapper. Safe both
+# ways: cancel.sh moves itself to cancel.sh.executed on its first line, so the
+# trap finds nothing left to run.
+bash cancel.sh || true
 echo "::endgroup::"
 # No-op if the run already completed (endpoint was up); cancels it if the
 # endpoint client died before ever registering.

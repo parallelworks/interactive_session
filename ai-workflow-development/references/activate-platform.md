@@ -247,9 +247,10 @@ A step can declare a `retry` block; it re-runs the step while it exits **non-zer
   rebuild the resource **field by field** (`id`, `ip`, `name`, `namespace`, `provider`,
   `schedulerType`, `type`, `uri`, `user`); (2) a resource passed as a **URI string does
   not re-hydrate** through `with:`. A retried `uses:` step surfaces only the **last**
-  attempt's logs via `pw workflows runs logs`; evidence of earlier attempts is the
-  step_N index in the job-dir path (`subworkflows/<job>/step_1` = attempt 1) and the
-  wall clock. Per-attempt SSH failover on a plain `ssh:`/`run:` step is
+  attempt's logs via `pw workflows runs logs`; evidence of earlier attempts is the wall
+  clock and whatever per-attempt output you emit yourself. (`subworkflows/<job>/step_N`
+  in the job-dir path is the **step index within the job**, not the attempt number —
+  retried attempts reuse the same directory.) Per-attempt SSH failover on a plain `ssh:`/`run:` step is
   `round-robin-failover`; for a matrix-style per-item resource, `matrix.worker.resource`
   passes as a native object.
 - **`max-retries` can be computed:** `max-retries: ${{ needs.<job>.outputs.N - 1 }}` —

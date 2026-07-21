@@ -1,0 +1,78 @@
+# permissions authenticates the in-workflow pw CLI — pw endpoints registers the
+# endpoint through the platform API.
+permissions:
+  - '*'
+
+env:
+  RESOLUTION: ${{ inputs.resolution }}
+
+jobs:
+  install:
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Checkout Fractal Demo
+        uses: parallelworks/checkout
+        with:
+          repo: https://github.com/parallelworks/interactive_session.git
+          branch: main
+          sparse_checkout:
+            - workflow/tutorials/fractal-demo
+      - name: Install Dependencies
+        run: |
+          # keep only the example directory from the sparse checkout
+          mv workflow/tutorials/fractal-demo .
+          rm -r workflow
+          ./fractal-demo/install.sh
+
+  run:
+    needs:
+      - install
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Render and Serve Detached
+        # Start pw endpoints run in its own session (setsid; nohup as the
+        # fallback), with output to a log file and no stdin, so it survives
+        # this step — and the whole run — exiting. Same launch pattern the
+        # script_submitter subworkflow uses to submit jobs.
+        run: |
+          if command -v setsid >/dev/null 2>&1; then
+            setsid pw endpoints run --name fractal-${PW_RUN_SLUG} -- ./fractal-demo/run.sh > run.${PW_JOB_ID}.out 2>&1 < /dev/null &
+          else
+            nohup pw endpoints run --name fractal-${PW_RUN_SLUG} -- ./fractal-demo/run.sh > run.${PW_JOB_ID}.out 2>&1 < /dev/null &
+          fi
+      - name: Wait for Endpoint
+        retry:
+          max-retries: 60
+          interval: 5s
+        run: |
+          # Exit non-zero until the endpoint registers, so the retry above
+          # keeps polling: the run can only complete once the page is live.
+          endpoint_name="fractal-${PW_RUN_SLUG}"
+          row=$(pw endpoints list | grep -w "${endpoint_name}" || true)
+          if [ -z "${row}" ]; then
+            echo "::notice::Endpoint ${endpoint_name} not registered yet"
+            exit 1
+          fi
+          URL=$(echo "${row}" | awk '{print $3}')
+          echo "URL=${URL}" | tee -a $OUTPUTS
+          echo "::notice::Fractal is being served at ${URL}"
+          echo "::notice::The workflow run ends here; the server keeps going. Stop it with: pw endpoints delete ${endpoint_name}"
+
+'on':
+  execute:
+    inputs:
+      resource:
+        type: compute-clusters
+        label: Resource Target
+        tooltip: The compute cluster to run the fractal example on.
+        autoselect: true
+        optional: false
+      resolution:
+        type: number
+        label: Resolution
+        tooltip: Image size in pixels. Larger values look sharper but take longer to render.
+        default: 2500
+        min: 100
+        max: 10000

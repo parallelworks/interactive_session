@@ -11,6 +11,7 @@ By the end of the stages built so far you will understand how to:
 - Pull example code onto the cluster with the `checkout` action
 - Pass workflow inputs into your scripts as environment variables
 - Expose a web server through the platform with `pw endpoints run` — no tunnel wiring, no port bookkeeping: the endpoint picks a free port at runtime and hands it to your server through the `PORT` environment variable
+- Detach the server from the workflow with `setsid`/`nohup`, so the run completes while the page keeps serving — torn down later with `pw endpoints delete`
 - Wait for an endpoint to come online with a `retry` step, and surface its URL with `$OUTPUTS` and log annotations (`::notice::`, `::warning::`, `::error::`)
 - Hand a script to a reusable subworkflow that submits it to the cluster scheduler (SLURM or PBS) and streams, monitors, and cleans up the job for you — and see why endpoints make the "where did my job land?" question disappear
 - Build a form that adapts to the chosen resource with dynamic dropdowns and show/hide rules
@@ -287,7 +288,97 @@ Registering an endpoint is a platform API call, so the in-workflow `pw` CLI must
 The top-level `env:` block defines variables available to every step in the workflow. We set `RESOLUTION` there once, so `run.sh` reads it from the environment and the run command only carries what is specific to it. (Stage 1 set it inline on the command — this is the same idea, hoisted to one place.)
 
 **Where's my URL?**
-`pw endpoints run` prints the URL in the `run` step's log, and the endpoint shows up in the **Sessions** page of the UI and in `pw endpoints list`. Stage 4 adds a job that waits for the endpoint and publishes the URL as a proper output and notice.
+`pw endpoints run` prints the URL in the `run` step's log, and the endpoint shows up in the **Sessions** page of the UI and in `pw endpoints list`. Stage 3 adds a step that waits for the endpoint and publishes the URL as a proper output and notice.
+
+**The run stays alive as long as the page does.**
+`pw endpoints run` serves in the foreground, so the `run` step never finishes on its own — the workflow run sits in `running` for as long as the fractal is served. And that step is not running "on the cluster" by magic: the platform executes it **from your user workspace, over an SSH connection to the cluster**, held open the whole time. That connection is the server's lifeline — if the workspace restarts or the SSH connection fails, the step dies, and the server and endpoint die with it. Fine for a demo you cancel after a look; fragile for a page that should stay up. Stage 3 removes that dependency.
+
+---
+
+## Stage 3 — Let the workflow finish, keep the server running (`03-exit-workflow.yaml`)
+
+In Stage 2 the workflow run *is* the server's lifeline:
+
+```
+  Stage 2 — the step holds the server:
+
+  workspace ══ SSH, held open for hours ══▶ run step ──▶ pw endpoints run ──▶ run.sh
+                                                                │
+  (workspace restarts or SSH drops ⇒ everything dies)           └──▶ endpoint URL
+```
+
+Stage 3 cuts the server loose. The `run` step starts `pw endpoints run` **detached** — in its own session, unaffected by the step ending — and a second step waits until the endpoint is live and publishes the URL. Then the run **completes**; the server stays:
+
+```
+  Stage 3 — the step starts the server and leaves:
+
+  workspace ══ SSH, open for seconds ══▶ run step ──detach──▶ pw endpoints run ──▶ run.sh
+                                             │                       │
+                              run completes, SSH closes              └──▶ endpoint URL
+                                                          (keeps serving on the cluster)
+```
+
+This is [`03-exit-workflow.yaml`](03-exit-workflow.yaml). Only the `run` job changes from Stage 2:
+
+```yaml
+  run:
+    needs:
+      - install
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Render and Serve Detached
+        run: |
+          if command -v setsid >/dev/null 2>&1; then
+            setsid pw endpoints run --name fractal-${PW_RUN_SLUG} -- ./fractal-demo/run.sh > run.${PW_JOB_ID}.out 2>&1 < /dev/null &
+          else
+            nohup pw endpoints run --name fractal-${PW_RUN_SLUG} -- ./fractal-demo/run.sh > run.${PW_JOB_ID}.out 2>&1 < /dev/null &
+          fi
+      - name: Wait for Endpoint
+        retry:
+          max-retries: 60
+          interval: 5s                        # poll for up to ~5 minutes
+        run: |
+          endpoint_name="fractal-${PW_RUN_SLUG}"
+          row=$(pw endpoints list | grep -w "${endpoint_name}" || true)
+          if [ -z "${row}" ]; then
+            echo "::notice::Endpoint ${endpoint_name} not registered yet"
+            exit 1                            # non-zero → the retry fires again
+          fi
+          URL=$(echo "${row}" | awk '{print $3}')
+          echo "URL=${URL}" | tee -a $OUTPUTS
+          echo "::notice::Fractal is being served at ${URL}"
+```
+
+### Concepts introduced
+
+**Detaching, one piece at a time.**
+The launch line is the same one the `script_submitter` subworkflow uses to submit jobs. Each piece has one job:
+
+| Piece | What it does |
+|---|---|
+| `setsid` | starts the command in a **new session** — the hangup that ends the step's SSH connection can never reach it |
+| `nohup` (fallback) | same goal where `setsid` is not installed: the command ignores the hangup |
+| `> run.${PW_JOB_ID}.out 2>&1` | the process outlives the step's log, so its output goes to a file in the job directory |
+| `< /dev/null` | no terminal to read from — the command can never block waiting for input |
+| `&` | don't wait — the step finishes immediately |
+
+To read the server's output later, look in the job directory on the cluster: `~/pw/jobs/<workflow>/<run-number>/run.<job-id>.out`.
+
+**Wait before you exit — a completed run means a live page.**
+Detaching alone would let the run finish before the server even bound its port — and if the server crashed on startup, the run would still show green. The **Wait for Endpoint** step closes that gap. `retry` re-runs a step while it exits non-zero — 60 tries at 5s ≈ 5 minutes — so the step keeps failing until the endpoint shows up in `pw endpoints list`, then publishes the URL: writing `URL=…` to `$OUTPUTS` makes it a job output, and the `::notice::` line puts it, clickable, on the run page. A run that completes now *means* the page is up.
+
+**The off switch is now the endpoint.**
+Stage 2's cancel-either-side is gone: once the run completes there is nothing left to cancel. To stop the server, delete the endpoint:
+
+```bash
+pw endpoints delete fractal-<run-slug>
+```
+
+The platform kills the whole detached tree — `pw endpoints run` and `run.sh` with it. The endpoint is not just the URL; it is the handle on the process.
+
+**The trade.**
+Stage 2 is simpler and self-cleaning, but its server hangs off an open SSH connection from your workspace. Stage 3's server belongs to the cluster: workspace restarts and dropped connections don't touch it — at the price of one extra step, and remembering that teardown is `pw endpoints delete`, not cancel. This exit-and-keep-serving shape is the same one the repo's production `*_v5.yaml` workflows use.
 
 ---
 
@@ -474,4 +565,4 @@ The winner writes `CANCEL=false` and simply finishes; its endpoint stays up beca
 
 ## Testing status
 
-The controller path (`Schedule Job? = No`) was verified end-to-end on live clusters. Stage 2 (the merged dynamic-port version) was run live: the endpoint registered and came up `running`, an anonymous request to its URL got the platform-auth redirect, and canceling the run deregistered the endpoint. Stage 4 was verified in an earlier round (endpoint registered from the submitted script, URL published by `wait_for_endpoint`), and stage 6 as a real two-resource race (both endpoints up, every worker picked the same winner, the loser stood down and its endpoint disappeared, cancel tore the winner down); since then only their checkout path changed, which was re-validated by dry-run and live-tested through the identical steps in the session-tunnel edition. Stage 6's parent exercises the same matrix mechanics as stage 5, and stage 1 is byte-identical to the session tutorial's tested stage. The scheduler path (`Schedule Job? = Yes`) reuses `script_submitter` unchanged but has not been re-verified in this edition.
+The controller path (`Schedule Job? = No`) was verified end-to-end on live clusters. Stage 2 (the merged dynamic-port version) was run live: the endpoint registered and came up `running`, an anonymous request to its URL got the platform-auth redirect, and canceling the run deregistered the endpoint. Stage 3 was run live: the endpoint came up, the run completed on its own while the detached server kept serving, and `pw endpoints delete` killed the detached process tree and removed the endpoint from the list. Stage 4 was verified in an earlier round (endpoint registered from the submitted script, URL published by `wait_for_endpoint`), and stage 6 as a real two-resource race (both endpoints up, every worker picked the same winner, the loser stood down and its endpoint disappeared, cancel tore the winner down); since then only their checkout path changed, which was re-validated by dry-run and live-tested through the identical steps in the session-tunnel edition. Stage 6's parent exercises the same matrix mechanics as stage 5, and stage 1 is byte-identical to the session tutorial's tested stage. The scheduler path (`Schedule Job? = Yes`) reuses `script_submitter` unchanged but has not been re-verified in this edition.

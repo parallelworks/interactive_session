@@ -24,17 +24,25 @@ jobs:
           ./fractal-demo/install.sh
       - name: Create Run Script
         run: |
+          # The endpoint name must be unique per worker, and a run can target
+          # the same resource more than once (the Stage 5/6 matrix), so the
+          # resource name alone is not enough. The matrix worker id
+          # (fractal_demo-0, fractal_demo-1, ...) has no environment variable
+          # of its own, but it is a component of PW_JOB_DIR — pull the number
+          # out. Empty when this workflow runs on its own, outside the matrix.
+          worker=$(echo "${PW_JOB_DIR}" | grep -oE 'fractal_demo-[0-9]+' | head -1 | grep -oE '[0-9]+$' || true)
+          endpoint_name="fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }}${worker:+-w${worker}}"
+          echo "ENDPOINT_NAME=${endpoint_name}" | tee -a $OUTPUTS
           cat <<EOF >> script.sh
           # Everything the script needs is baked in NOW (expanded at write time):
           # the workflow-level env: does NOT reach the script_submitter subworkflow
           # that runs this script, and PW_RUN_SLUG may not be exported on a
-          # compute node. The endpoint name carries the resource name so several
-          # workers in one run (Stage 5) don't collide.
+          # compute node.
           export RESOLUTION=${{ inputs.resolution }}
           # The endpoint dials OUT from whichever node this script lands on —
           # controller or compute node — so no hostname or port bookkeeping is
           # needed: pw picks a free port and exports it as PORT for run.sh.
-          pw endpoints run --name fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }} -- ${PWD}/fractal-demo/run.sh
+          pw endpoints run --name ${endpoint_name} -- ${PWD}/fractal-demo/run.sh
           EOF
           chmod +x script.sh
           # We need to pass the PATH to the script submitter subworkflow
@@ -90,10 +98,9 @@ jobs:
           interval: 10s
         run: |
           # Exit non-zero until the endpoint registers, so the retry above keeps
-          # polling. For a queued SLURM/PBS job that may be minutes later — this
-          # replaces the v4 tutorial's HOSTNAME/PORT polling and update-session:
-          # the endpoint registers itself from wherever the script runs.
-          endpoint_name="fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }}"
+          # polling — for a queued SLURM/PBS job that may be minutes later. The
+          # endpoint registers itself from wherever the script runs.
+          endpoint_name="${{ needs.install.outputs.ENDPOINT_NAME }}"
           row=$(pw endpoints list | grep -w "${endpoint_name}" || true)
           if [ -z "${row}" ]; then
             echo "::notice::Endpoint ${endpoint_name} not registered yet"

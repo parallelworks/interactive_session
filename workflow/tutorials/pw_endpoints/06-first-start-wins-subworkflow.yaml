@@ -24,15 +24,22 @@ jobs:
           ./fractal-demo/install.sh
       - name: Create Run Script
         run: |
+          # The name prefix fractal-<run-slug>- is shared by every worker in
+          # this run — that is what the race keys on. The suffix must be unique
+          # per worker, and two workers can target the same resource, so the
+          # matrix worker id (fractal_demo-0, -1, ...) is appended too; it has
+          # no environment variable of its own, but it is a component of
+          # PW_JOB_DIR. Empty when this workflow runs outside the matrix.
+          worker=$(echo "${PW_JOB_DIR}" | grep -oE 'fractal_demo-[0-9]+' | head -1 | grep -oE '[0-9]+$' || true)
+          endpoint_name="fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }}${worker:+-w${worker}}"
+          echo "ENDPOINT_NAME=${endpoint_name}" | tee -a $OUTPUTS
           cat <<EOF >> script.sh
           # Everything the script needs is baked in NOW (expanded at write time):
           # the workflow-level env: does NOT reach the script_submitter subworkflow
           # that runs this script, and PW_RUN_SLUG may not be exported on a
-          # compute node. The name prefix fractal-<run-slug>- is shared by every
-          # worker in this run — that is what the race below keys on — and the
-          # resource name makes this worker's endpoint unique.
+          # compute node.
           export RESOLUTION=${{ inputs.resolution }}
-          pw endpoints run --name fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }} -- ${PWD}/fractal-demo/run.sh
+          pw endpoints run --name ${endpoint_name} -- ${PWD}/fractal-demo/run.sh
           EOF
           chmod +x script.sh
           # We need to pass the PATH to the script submitter subworkflow
@@ -92,7 +99,7 @@ jobs:
           # worker reads the same list, so they all pick the same one.
           # permissions: ['*'] authenticates pw.
           PREFIX="fractal-${PW_RUN_SLUG}-"
-          MY_NAME="fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }}"
+          MY_NAME="${{ needs.install.outputs.ENDPOINT_NAME }}"
 
           # Prints one word: WAIT | WIN | LOSE.
           decision=$(pw endpoints list | awk -v prefix="${PREFIX}" -v me="${MY_NAME}" '
@@ -141,7 +148,7 @@ jobs:
         with:
           jobs:
             - script_submitter
-        cleanup: test -f ${{ needs.install.outputs.SKIP_CLEANUP_PATH }} || pw endpoints delete "fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }}" || true
+        cleanup: test -f ${{ needs.install.outputs.SKIP_CLEANUP_PATH }} || pw endpoints delete "${{ needs.install.outputs.ENDPOINT_NAME }}" || true
 
 
 'on':

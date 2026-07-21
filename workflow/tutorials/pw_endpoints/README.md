@@ -401,13 +401,19 @@ Until now everything ran on the **controller** (login) node. Heavy work belongs 
 ```yaml
       - name: Create Run Script
         run: |
+          # A run can target the same resource twice (the Stage 5/6 matrix), so
+          # the endpoint name also carries the matrix worker id — there is no
+          # variable for it, but it is a component of PW_JOB_DIR.
+          worker=$(echo "${PW_JOB_DIR}" | grep -oE 'fractal_demo-[0-9]+' | head -1 | grep -oE '[0-9]+$' || true)
+          endpoint_name="fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }}${worker:+-w${worker}}"
+          echo "ENDPOINT_NAME=${endpoint_name}" | tee -a $OUTPUTS
           cat <<EOF >> script.sh
           # Everything the script needs is baked in NOW (expanded at write time):
           # the workflow-level env: does NOT reach the script_submitter subworkflow
           # that runs this script, and PW_RUN_SLUG may not be exported on a
           # compute node.
           export RESOLUTION=${{ inputs.resolution }}
-          pw endpoints run --name fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }} -- ${PWD}/fractal-demo/run.sh
+          pw endpoints run --name ${endpoint_name} -- ${PWD}/fractal-demo/run.sh
           EOF
           chmod +x script.sh
           echo "SCRIPT_PATH=${PWD}/script.sh" | tee -a $OUTPUTS
@@ -451,7 +457,7 @@ Until now everything ran on the **controller** (login) node. Heavy work belongs 
           max-retries: 180
           interval: 10s
         run: |
-          endpoint_name="fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }}"
+          endpoint_name="${{ needs.install.outputs.ENDPOINT_NAME }}"
           row=$(pw endpoints list | grep -w "${endpoint_name}" || true)
           if [ -z "${row}" ]; then
             echo "::notice::Endpoint ${endpoint_name} not registered yet"
@@ -497,7 +503,7 @@ The submitter has a shortcut input that ends the run even sooner: submit the scr
 The wait step's tools are Stage 3's — `retry` until the endpoint shows up, `$OUTPUTS` + `::notice::` to surface the URL — but the poll window grows to ~30 minutes (`max-retries: 180` × `10s`), because a scheduled job can sit in the queue, or wait for a cloud node to boot, long before the script runs. And a wait that long must not outlive a dead partner: `early-cancel: any-job-failed` on **both** the wait step and the submitter step means whichever side fails takes the other down instead of leaving it hanging.
 
 **Per-worker endpoint names.**
-The name grows a suffix: `fractal-<run-slug>-<resource-name>`. `PW_RUN_SLUG` is *run-scoped* — in Stage 5 every matrix worker shares it — so the resource name is what keeps concurrent workers from colliding, while the shared `fractal-<run-slug>-` prefix is what lets Stage 6 find *all* of this run's endpoints.
+The name becomes `fractal-<run-slug>-<resource-name>-wN`. `PW_RUN_SLUG` is *run-scoped* — in Stage 5 every matrix worker shares it — and a run can even target the *same resource* twice, so the resource name alone is not unique either. The worker's matrix index has no environment variable of its own, but it is a component of `PW_JOB_DIR` (`…/subworkflows/fractal_demo-0/…`), so `install` extracts it, appends `-w0`, `-w1`, …, and publishes the finished name as the `ENDPOINT_NAME` output — one place builds the name, every other job just reads it. The shared `fractal-<run-slug>-` prefix is what lets Stage 6 find *all* of this run's endpoints.
 
 **A form that adapts to the resource.**
 The "Schedule Job?" toggle and the `slurm`/`pbs` groups only appear when they apply: `hidden`/`ignore` key off `inputs.resource.schedulerType` (`slurm`, `pbs`, or empty) and `inputs.scheduler`. `slurm-partitions` is a **dynamic dropdown** that fetches its choices from the chosen cluster. The hidden `is_enabled` boolean (default `true`, sent only when the group is active) is what tells the subworkflow which path to take.
@@ -547,7 +553,7 @@ This is the subtle part, and the easiest thing to get wrong. Inside a *job*, the
 The `pw endpoints` calls run inside the subworkflow, but a subworkflow's `pw` CLI is only authenticated if the **parent** grants `permissions: ['*']` too.
 
 **One endpoint per worker, unique by construction.**
-Every worker registers `fractal-<run-slug>-<its-resource-name>` — the run-slug part identical across workers (it is the *parent* run's slug), the resource name distinct per row. (Two rows pointing at the *same* resource would collide on the name — the race in Stage 6 is also the cure for wanting the same thing twice.)
+Every worker registers `fractal-<run-slug>-<its-resource-name>-wN` — the run-slug part identical across workers (it is the *parent* run's slug), the resource name and worker index distinct per row. Two rows can even point at the *same* resource: the `-w0`/`-w1` suffix keeps their endpoints apart.
 
 **The run completes; the fleet keeps serving.**
 Each worker runs Stage 4, so each worker finishes once its endpoint is up — the parent run completes when the slowest worker's page is live, and every render keeps serving. `pw endpoints list` shows the whole fleet at a glance; delete each one with `pw endpoints delete fractal-<run-slug>-<resource-name>`.
@@ -573,7 +579,7 @@ The parent is Stage 5 with the `$yaml` swapped to the racing subworkflow. All th
           interval: 10s
         run: |
           PREFIX="fractal-${PW_RUN_SLUG}-"
-          MY_NAME="fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }}"
+          MY_NAME="${{ needs.install.outputs.ENDPOINT_NAME }}"   # built and published by install
 
           # Prints one word: WAIT | WIN | LOSE. First RUNNING endpoint whose
           # name carries this run's prefix wins; list order is the tie-break.

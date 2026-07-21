@@ -209,6 +209,13 @@ graph gives you sequencing, data flow, conditionals, and parallelism:
   them. (Verified: 3 workers logged the same finish second.) For N identical workers,
   use a **matrix strategy** (`strategy.matrix`) rather than hand-copying jobs — see
   `workflow/tutorials/matrix/workflow.yaml`.
+- **No env var carries a matrix worker's index** (verified) — but `PW_JOB_DIR` embeds
+  it: inside a subworkflow invoked from matrix job `foo`, it looks like
+  `…/subworkflows/foo-N/step_0/…`, so a step can recover its worker number by parsing
+  `PW_JOB_DIR` (e.g. `grep -oE 'foo-[0-9]+'`). Needed whenever per-worker names must be
+  unique and two workers may target the same resource — see the endpoint naming in
+  `workflow/tutorials/pw_endpoints/04-subworkflow.yaml`. (`PW_PARENT_JOB_DIR` stays the
+  top-level run dir at every nesting depth.)
 - See `workflow/tutorials/nginx/` (jobs, `needs`, `$OUTPUTS`, conditional `if:`,
   sessions) and `workflow/tutorials/matrix/workflow.yaml` (fan-out workers via a matrix
   strategy — the pattern to copy for a parameter sweep).

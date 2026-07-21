@@ -90,7 +90,8 @@ jobs:
           chmod +x script.sh
           # We need to pass the PATH to the script submitter subworkflow
           echo "SCRIPT_PATH=${PWD}/script.sh" | tee -a $OUTPUTS
-
+          # Do not run the cleanup when the workflow exits
+          echo "SKIP_CLEANUP_PATH=${PWD}/SKIP_CLEANUP" | tee -a $OUTPUTS
 
   script_submitter:
     needs:
@@ -98,6 +99,7 @@ jobs:
     steps:
       - name: Script Submitter
         uses: github/parallelworks/interactive_session@main
+        early-cancel: any-job-failed
         with:
           $yaml: workflow/script_submitter/v3.6/hsp.yaml
           resource: ${{ inputs.resource }}
@@ -106,6 +108,14 @@ jobs:
           script_path: ${{ needs.install.outputs.SCRIPT_PATH }}
           scheduler: ${{ inputs.scheduler }}
           use_scheduler_agent: false
+          # submit_and_exit: true would submit and return immediately, but then
+          # nothing monitors the queued job and its cleanups are skipped from
+          # the start. Keeping it false + the skip-file below means: cancel any
+          # time BEFORE the endpoint is up and the job is scancel/qdel/killed
+          # for you; once the endpoint is up, wait_for_endpoint creates the
+          # skip file and the cleanup leaves the job running.
+          submit_and_exit: false
+          skip_cleanups_file: ${{ needs.install.outputs.SKIP_CLEANUP_PATH }}
           slurm:
             is_enabled: ${{ inputs.slurm.is_enabled }}
             account: ${{ inputs.slurm.account }}
@@ -147,6 +157,17 @@ jobs:
           URL=$(echo "${row}" | awk '{print $3}')
           echo "URL=${URL}" | tee -a $OUTPUTS
           echo "::notice::Fractal is being served at ${URL}"
+          # The endpoint is live: create the skip file BEFORE canceling the
+          # submitter, so its cleanup finds the file and leaves the job (and
+          # the endpoint) running. From here on the off switch is
+          # pw endpoints delete, not cancel.
+          touch ${{ needs.install.outputs.SKIP_CLEANUP_PATH }}
+          sleep 2
+      - name: Cancel Script Submitter
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - script_submitter
 
 'on':
   execute:

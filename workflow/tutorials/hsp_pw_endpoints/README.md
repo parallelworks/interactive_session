@@ -14,6 +14,7 @@ By the end of the stages built so far you will understand how to:
 - Detach the server from the workflow with `setsid`/`nohup`, so the run completes while the page keeps serving — torn down later with `pw endpoints delete`
 - Wait for an endpoint to come online with a `retry` step, and surface its URL with `$OUTPUTS` and log annotations (`::notice::`, `::warning::`, `::error::`)
 - Hand a script to a reusable subworkflow that submits it to the cluster scheduler (SLURM or PBS) and streams, monitors, and cleans up the job for you — and see why endpoints make the "where did my job land?" question disappear
+- Keep a scheduled job cancelable while it is queued, then hand it off cleanly once the page is up, with the submitter's `skip_cleanups_file`
 - Build a form that adapts to the chosen resource with dynamic dropdowns and show/hide rules
 - Fan out the same workflow across a whole list of resources at once with a `matrix` strategy
 - Turn that fan-out into a race where the first endpoint to come up wins and the losing workers stop themselves
@@ -384,9 +385,9 @@ Stage 2 is simpler and self-cleaning, but its server hangs off an open SSH conne
 
 ## Stage 4 — Submit to a scheduler with a subworkflow (`04-subworkflow.yaml`)
 
-Until now everything ran on the **controller** (login) node. Heavy work belongs on a **compute node**, requested through the cluster's scheduler. The recommended move is to *not* hand-write the sbatch/qsub machinery: write your script and hand it to the **`script_submitter` subworkflow**, which submits, streams, monitors, and cleans up for you. This is [`04-subworkflow.yaml`](04-subworkflow.yaml).
+Until now everything ran on the **controller** (login) node. Heavy work belongs on a **compute node**, requested through the cluster's scheduler. The recommended move is to *not* hand-write the sbatch/qsub machinery: write your script and hand it to the **`script_submitter` subworkflow**, which submits, streams, monitors, and cleans up for you. This is [`04-subworkflow.yaml`](04-subworkflow.yaml) — and it keeps Stage 3's ending: once the page is up the run completes, and the server keeps serving.
 
-What endpoints change is the *script* — and everything downstream of it. `install` writes the script body and publishes its path:
+What endpoints change is the *script* — and everything downstream of it. `install` writes the script body, publishes its path, and names a **skip-cleanups file** whose role appears below:
 
 ```yaml
       - name: Create Run Script
@@ -401,9 +402,34 @@ What endpoints change is the *script* — and everything downstream of it. `inst
           EOF
           chmod +x script.sh
           echo "SCRIPT_PATH=${PWD}/script.sh" | tee -a $OUTPUTS
+          echo "SKIP_CLEANUP_PATH=${PWD}/SKIP_CLEANUP" | tee -a $OUTPUTS
 ```
 
-A session-tunnel version of this script would have to record `hostname > HOSTNAME`, pick a free port, and write a `PORT` file — bookkeeping whose only purpose is to tell the platform where the tunnel should point. None of that exists here. In its place, a `wait_for_endpoint` job polls the platform and publishes the URL:
+A session-tunnel version of this script would have to record `hostname > HOSTNAME`, pick a free port, and write a `PORT` file — bookkeeping whose only purpose is to tell the platform where the tunnel should point. None of that exists here.
+
+The whole submit/stream/monitor/cleanup dance is one job — note the two new inputs at the bottom:
+
+```yaml
+  script_submitter:
+    needs:
+      - install
+    steps:
+      - name: Script Submitter
+        uses: github/parallelworks/interactive_session@main    # run another workflow as a step
+        early-cancel: any-job-failed
+        with:
+          $yaml: workflow/script_submitter/v3.6/hsp.yaml        # which workflow inside that repo
+          resource: ${{ inputs.resource }}
+          use_existing_script: true                             # we built the script in install...
+          script_path: ${{ needs.install.outputs.SCRIPT_PATH }} # ...so pass its path
+          scheduler: ${{ inputs.scheduler }}
+          submit_and_exit: false
+          skip_cleanups_file: ${{ needs.install.outputs.SKIP_CLEANUP_PATH }}
+          slurm:   # ... the form's SLURM group, passed straight through ...
+          pbs:     # ... same idea ...
+```
+
+And `wait_for_endpoint` still polls until the endpoint registers and publishes its URL — but then it **arms the skip file and cancels the submitter**, which is what lets the run complete while the job keeps serving:
 
 ```yaml
   wait_for_endpoint:
@@ -427,6 +453,13 @@ A session-tunnel version of this script would have to record `hostname > HOSTNAM
           URL=$(echo "${row}" | awk '{print $3}')
           echo "URL=${URL}" | tee -a $OUTPUTS
           echo "::notice::Fractal is being served at ${URL}"
+          touch ${{ needs.install.outputs.SKIP_CLEANUP_PATH }}   # NEW: disarm the cleanups...
+          sleep 2
+      - name: Cancel Script Submitter                            # NEW: ...and release the submitter
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - script_submitter
 ```
 
 ### Concepts introduced
@@ -440,14 +473,21 @@ This is the punchline of the whole tutorial. A session tunnel points *at* a host
 **Bake values into the script at write time.**
 The heredoc is unquoted, so `${{ inputs.resolution }}`, `${PW_RUN_SLUG}`, and `${PWD}` all expand **now**, while the script is being written on the controller node. That matters for three reasons: the workflow-level `env:` does not cross into the `script_submitter` subworkflow; `PW_RUN_SLUG` may not be exported in a compute node's batch environment; and `${PWD}` pins the demo to an absolute path that resolves wherever the script runs.
 
-**`retry` — poll until something exists.**
-The endpoint only appears in `pw endpoints list` once `run.sh` is actually up — for a queued SLURM/PBS job that may be minutes later. `retry` re-runs the step while it exits non-zero — `max-retries: 180` at `interval: 10s` ≈ 30 minutes — so the step simply fails until the endpoint registers, then succeeds and publishes the URL.
+**One file arms and disarms the cleanups.**
+When the `script_submitter` job is canceled it tears down whatever it started — `scancel` the SLURM job, `qdel` the PBS job, kill the process — *unless* the file named in `skip_cleanups_file` exists. That file starts out **not existing**, and `wait_for_endpoint` only creates it once the endpoint is live. That one detail gives each phase of the run exactly the behavior you want:
 
-**`$OUTPUTS` and `::notice::` — surface the URL.**
-`$OUTPUTS` is a file the platform injects into each step; writing `KEY=VALUE` lines to it publishes those values as outputs of the job (readable downstream as `${{ needs.wait_for_endpoint.outputs.URL }}`). `tee -a` appends to the file *and* echoes the line to the log. A line printed in the form `::notice::message` is surfaced as a notice in the workflow UI (there are also `::warning::` and `::error::`) — here it puts the clickable URL right in the run page.
+| Before the endpoint is up | Once the endpoint is up |
+|---|---|
+| No skip file yet, so the cleanups are **armed**. Cancel the run while the job is queued, or while a cloud node is still booting, and the job is `scancel`/`qdel`/killed for you — no manual cleanup, no waiting for the endpoint. | `wait_for_endpoint` publishes the URL, **touches `SKIP_CLEANUP`**, and cancels the submitter. The cleanup finds the file and leaves the job serving. The run completes. |
 
-**`early-cancel: any-job-failed` — don't wait for a corpse.**
-If the render job dies (say the submission fails), the wait step would happily poll for the full 30 minutes for an endpoint that will never register. `early-cancel: any-job-failed` cancels it as soon as any job fails instead.
+**Why not `submit_and_exit: true`?**
+The submitter has a shortcut input that ends the run even sooner: submit the script, skip the monitoring and the cleanups, return. One flag instead of a skip file and a cancel step — but it gives up exactly the two things the table above buys:
+
+1. **Canceling a queued job from the platform.** With cleanups skipped from the start, a job stuck in the queue can only be removed by hand (`scancel`/`qdel` at a terminal). With the skip-file approach you just cancel the run — at any point before the page is up.
+2. **Monitoring until the page is up.** `submit_and_exit` returns before the job even leaves the queue. With `submit_and_exit: false` the submitter keeps monitoring the job's status and streaming its logs until the endpoint starts — if the job dies in the queue or the script crashes, the run fails loud instead of "completing" with no page.
+
+**`retry` and `early-cancel`, stretched for the queue.**
+The wait step's tools are Stage 3's — `retry` until the endpoint shows up, `$OUTPUTS` + `::notice::` to surface the URL — but the poll window grows to ~30 minutes (`max-retries: 180` × `10s`), because a scheduled job can sit in the queue, or wait for a cloud node to boot, long before the script runs. And a wait that long must not outlive a dead partner: `early-cancel: any-job-failed` on **both** the wait step and the submitter step means whichever side fails takes the other down instead of leaving it hanging.
 
 **Per-worker endpoint names.**
 The name grows a suffix: `fractal-<run-slug>-<resource-name>`. `PW_RUN_SLUG` is *run-scoped* — in Stage 5 every matrix worker shares it — so the resource name is what keeps concurrent workers from colliding, while the shared `fractal-<run-slug>-` prefix is what lets Stage 6 find *all* of this run's endpoints.
@@ -455,8 +495,8 @@ The name grows a suffix: `fractal-<run-slug>-<resource-name>`. `PW_RUN_SLUG` is 
 **A form that adapts to the resource.**
 The "Schedule Job?" toggle and the `slurm`/`pbs` groups only appear when they apply: `hidden`/`ignore` key off `inputs.resource.schedulerType` (`slurm`, `pbs`, or empty) and `inputs.scheduler`. `slurm-partitions`/`slurm-qos`/`slurm-accounts` are **dynamic dropdowns** that fetch their choices from the chosen cluster. The hidden `is_enabled` boolean (default `true`, sent only when the group is active) is what tells the subworkflow which path to take. The top-level `configurations:` block defines one-click presets that pre-fill the form with a known PBS system's directives (`Carpenter`, `Ruth`, `Warhawk`, `Wheat`).
 
-**Lifecycle: the run stays alive; cancel to stop.**
-`pw endpoints run` serves in the foreground, so the submitted job — and with it the workflow run — stays alive for as long as the page is up. Canceling the run makes `script_submitter` tear the job down (`scancel`/`qdel`/kill), the process tree dies, and the endpoint deregisters itself. (The repo's production `*_v5.yaml` session workflows flip this: they *complete* the run once the endpoint is live and let the service outlive it, torn down later with `pw endpoints delete` — see `workflow/yamls/openvscode/general_v5.yaml` if you want that pattern.)
+**The off switch is `pw endpoints delete` — same as Stage 3.**
+Once the run completes, the job and the `pw endpoints run` inside it belong to the cluster. `pw endpoints delete fractal-<run-slug>-<resource-name>` kills the detached tree wherever it landed — login node or compute node — the script exits, and a scheduled job releases its node back to the scheduler. This wait → skip → cancel shape is exactly the one the repo's production `*_v5.yaml` session workflows use (e.g. `workflow/yamls/jupyterlab-host/general_v5.yaml`).
 
 ---
 
@@ -565,4 +605,4 @@ The winner writes `CANCEL=false` and simply finishes; its endpoint stays up beca
 
 ## Testing status
 
-The controller path (`Schedule Job? = No`) was verified end-to-end on live clusters. Stage 2 (the merged dynamic-port version) was run live: the endpoint registered and came up `running`, an anonymous request to its URL got the platform-auth redirect, and canceling the run deregistered the endpoint. Stage 3 was run live: the endpoint came up, the run completed on its own while the detached server kept serving, and `pw endpoints delete` killed the detached process tree and removed the endpoint from the list. Stage 4 was verified in an earlier round (endpoint registered from the submitted script, URL published by `wait_for_endpoint`), and stage 6 as a real two-resource race (both endpoints up, every worker picked the same winner, the loser stood down and its endpoint disappeared, cancel tore the winner down); since then only their checkout path changed, which was re-validated by dry-run and live-tested through the identical steps in the session-tunnel edition. Stage 6's parent exercises the same matrix mechanics as stage 5, and stage 1 is byte-identical to the session tutorial's tested stage. The scheduler path (`Schedule Job? = Yes`) reuses `script_submitter` unchanged but has not been re-verified in this edition.
+The controller path (`Schedule Job? = No`) was verified end-to-end on live clusters. Stage 2 (the merged dynamic-port version) was run live: the endpoint registered and came up `running`, an anonymous request to its URL got the platform-auth redirect, and canceling the run deregistered the endpoint. Stage 3 was run live: the endpoint came up, the run completed on its own while the detached server kept serving, and `pw endpoints delete` killed the detached process tree and removed the endpoint from the list. Stage 4 was run live twice: once on the controller path (endpoint up, URL published, run completed while the job kept serving, `pw endpoints delete` tore the job down), and once on the scheduler path to verify the armed cleanups — a `Schedule Job? = Yes` run was canceled while its SLURM job was still provisioning a node, before the endpoint existed, and the submitter's cleanup `scancel`ed the job, leaving no queue entry and no endpoint. The full scheduler happy path (endpoint served from a compute node) has not been re-verified in this edition. Stage 6 was verified in an earlier round as a real two-resource race (both endpoints up, every worker picked the same winner, the loser stood down and its endpoint disappeared, cancel tore the winner down); since then only its checkout path changed, re-validated by dry-run. Stage 6's parent exercises the same matrix mechanics as stage 5, and stage 1 is byte-identical to the session tutorial's tested stage.

@@ -847,6 +847,7 @@ subdomain URL (`https://<name>.activate.pw/<slug>`; `--slug` may be a query stri
   stays `""` and flows through `with:` chains untouched. Consequence: an empty
   `slurm.time` reaches `script_submitter`, and the `general`/`emed`/`noaa` variants
   emit `#SBATCH --time=` → `sbatch: error: Invalid --time specification` (only `hsp`
-  guards it). Do NOT patch the submitters — **type the walltime explicitly** in list
-  rows, and guard tutorial-level scalar inputs with a ternary
+  guards it). Do NOT patch the submitters and do NOT add warnings to the tutorials —
+  Alvaro is reporting the `default:` behavior to the platform devs (July 2026); expect
+  it to be fixed platform-side. If a scalar input must be guarded, a ternary works
   (`"${{ x == '' ? '1h' : x }}"` — quote it: the ternary's `: ` breaks plain YAML scalars).

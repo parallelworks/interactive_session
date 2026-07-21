@@ -679,6 +679,3 @@ Each attempt exports its number (0 on the first try). `inputs.workers get env.PW
 
 **Hand the resource over field by field.**
 A list item picked with `get` does not pass through `with:` as one object, so the resource is rebuilt one field at a time (`id`, `ip`, `name`, …). Verbose, but each attempt's subworkflow receives exactly the fields Stage 4 reads.
-
-**Type the walltime explicitly.**
-A worker row whose Walltime is left empty fails submission (`sbatch: error: Invalid --time specification`): an empty string in a *list row* is not replaced by the template's `default:`, and it travels through the `with:` chain as-is. With failover this only costs you an attempt — the loop moves on — but fill it in.

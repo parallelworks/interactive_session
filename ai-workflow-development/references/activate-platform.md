@@ -381,8 +381,10 @@ run_my_job:
 > form hides/ignores conditionally*. The defaults-filler does **not** evaluate the
 > subworkflow's own `hidden`/`ignore` expressions. Omitting `script_submitter`'s
 > `cleanup_script_path` fails with `Missing required fields: Cleanup Script Path`
-> (caught by `--dry-run`). Fix: pass `define_cleanup_script: false` +
-> `cleanup_script_path: ""`.
+> **or the far less obvious `Could not parse subworkflow`** (observed with the
+> `general` variant, whose `cleanup_script_path` has no default — the `hsp` variant
+> tolerates the omission, so this bites when switching variants). Both are caught by
+> `--dry-run`. Fix: pass `define_cleanup_script: false` + `cleanup_script_path: ""`.
 
 > **Best practice — paths inside the submitted script:** `script_submitter` `cd`s
 > into `rundir` before running your script, so reference files **relative to rundir**
@@ -773,7 +775,7 @@ subdomain URL (`https://<name>.activate.pw/<slug>`; `--slug` may be a query stri
   `pw endpoints list | grep -w <name>` — so build them from `${PW_RUN_SLUG}` (plus the
   resource name when several workers share a run). Killing the client process (cancel
   the run/step) deregisters the endpoint within seconds; racing/fan-out over a shared
-  name prefix is shown in `workflow/tutorials/hsp_pw_endpoints/` (verified two-resource
+  name prefix is shown in `workflow/tutorials/pw_endpoints/` (verified two-resource
   first-start-wins race).
 - **Base-path apps need no base_url and no nginx on a subdomain endpoint**
   (`jupyterlab-host/start-template-v4.sh`): subdomain endpoints serve at the root, so

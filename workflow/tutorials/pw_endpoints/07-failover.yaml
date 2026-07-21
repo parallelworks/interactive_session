@@ -26,7 +26,7 @@ jobs:
           max-retries: ${{ needs.fractal_demo.outputs.NUM_WORKERS - 1 }}
           # The ternary falls back to 1h if the input arrives empty (an inputs
           # JSON copied from an old run can carry "")
-          timeout: ${{ inputs.attempt_timeout == '' ? '1h' : inputs.attempt_timeout }}
+          timeout: "${{ inputs.attempt_timeout == '' ? '1h' : inputs.attempt_timeout }}"
         uses: github/parallelworks/interactive_session@main
         with:
           $yaml: workflow/tutorials/pw_endpoints/04-subworkflow.yaml

@@ -44,7 +44,7 @@ jobs:
       workers:
         type: list
         label: Compute Resources
-        tooltip: Ordered list of compute resources to probe for an available GPU. They are tried one at a time, in list order, until one responds to nvidia-smi. Put your preferred resource first; add more as fallbacks.
+        tooltip: The resources that race. Every worker starts a render; the first endpoint up wins and the rest stand down.
         template:
           resource:
             type: compute-clusters

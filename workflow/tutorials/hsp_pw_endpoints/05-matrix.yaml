@@ -44,7 +44,7 @@ jobs:
       workers:
         type: list
         label: Compute Resources
-        tooltip: Ordered list of compute resources to probe for an available GPU. They are tried one at a time, in list order, until one responds to nvidia-smi. Put your preferred resource first; add more as fallbacks.
+        tooltip: One entry per resource. Every worker renders its own fractal and registers its own endpoint.
         template:
           resource:
             type: compute-clusters

@@ -540,18 +540,23 @@ This is the subtle part, and the easiest thing to get wrong. Inside a *job*, the
 The `pw endpoints` calls run inside the subworkflow, but a subworkflow's `pw` CLI is only authenticated if the **parent** grants `permissions: ['*']` too.
 
 **One endpoint per worker, unique by construction.**
-Every worker registers `fractal-<run-slug>-<its-resource-name>` — the run-slug part identical across workers (it is the *parent* run's slug), the resource name distinct per row. After the run, `pw endpoints list` shows the whole fleet at a glance. (Two rows pointing at the *same* resource would collide on the name — the race in Stage 6 is also the cure for wanting the same thing twice.)
+Every worker registers `fractal-<run-slug>-<its-resource-name>` — the run-slug part identical across workers (it is the *parent* run's slug), the resource name distinct per row. (Two rows pointing at the *same* resource would collide on the name — the race in Stage 6 is also the cure for wanting the same thing twice.)
+
+**The run completes; the fleet keeps serving.**
+Each worker runs Stage 4, so each worker finishes once its endpoint is up — the parent run completes when the slowest worker's page is live, and every render keeps serving. `pw endpoints list` shows the whole fleet at a glance; stop each one with `pw endpoints delete fractal-<run-slug>-<resource-name>`.
 
 ---
 
 ## Stage 6 — First start wins: race a list of resources (`06-first-start-wins.yaml`)
 
-Stage 5 fanned the render out to **every** resource and left you with one endpoint per worker. Stage 6 keeps the same fan-out but treats the list as a **race**: every worker starts, the first one whose endpoint is **running** wins, and the rest stop themselves — their render is torn down and their endpoint disappears with it. This is [`06-first-start-wins.yaml`](06-first-start-wins.yaml) and its subworkflow [`06-first-start-wins-subworkflow.yaml`](06-first-start-wins-subworkflow.yaml).
+Stage 5 fanned the render out to **every** resource and left you with one endpoint per worker. Stage 6 keeps the same fan-out but treats the list as a **race**: every worker starts, the first one whose endpoint is **running** wins, and the rest stop themselves — their render is torn down and their endpoint disappears with it. The run then completes with exactly one page serving: Stage 4's ending, decided by a race. This is [`06-first-start-wins.yaml`](06-first-start-wins.yaml) and its subworkflow [`06-first-start-wins-subworkflow.yaml`](06-first-start-wins-subworkflow.yaml).
 
-The parent is Stage 5 with the `$yaml` swapped to the racing subworkflow. All the racing lives in the subworkflow: it is Stage 4's `install` → `script_submitter` pipeline plus one new job, `first_start_wins`:
+The parent is Stage 5 with the `$yaml` swapped to the racing subworkflow. All the racing lives in the subworkflow: it is Stage 4's `install` → `script_submitter` pipeline (skip file included) with `wait_for_endpoint` replaced by a job that waits for the *race*, `first_start_wins`:
 
 ```yaml
   first_start_wins:
+    needs:
+      - install
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
@@ -577,17 +582,19 @@ The parent is Stage 5 with the `$yaml` swapped to the racing subworkflow. All th
           if [ "${decision}" = "WIN" ]; then
             # stay first for a few polls (the list is eventually consistent), then win
             [ "${PW_WORKFLOW_STEP_CURRENT_RETRY:-0}" -lt 3 ] && exit 1
-            echo "CANCEL=false" | tee -a $OUTPUTS   # winner: leave the endpoint up
+            URL=$(pw endpoints list | grep -w "${MY_NAME}" | awk '{print $3}')
+            echo "URL=${URL}" | tee -a $OUTPUTS
+            touch ${{ needs.install.outputs.SKIP_CLEANUP_PATH }}   # winner: disarm the cleanups
+            sleep 2
             exit 0
           fi
-          echo "CANCEL=true" | tee -a $OUTPUTS      # loser
-      - name: Cancel Jobs
-        if: ${{ needs.first_start_wins.outputs.CANCEL == 'true' }}   # only losers reach here
+          echo "::notice::losing — standing down"   # loser: leave the cleanups armed
+      - name: Cancel Script Submitter               # winner AND loser reach here
         uses: parallelworks/cancel-jobs
         with:
           jobs:
-            - script_submitter                  # stop the losing render
-        cleanup: pw endpoints delete "fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }}" || true
+            - script_submitter
+        cleanup: test -f ${{ needs.install.outputs.SKIP_CLEANUP_PATH }} || pw endpoints delete "fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }}" || true
 ```
 
 ### Concepts introduced
@@ -598,11 +605,18 @@ Every worker's endpoint starts with `fractal-<run-slug>-` (built in Stage 4), so
 **Confirm before committing — the endpoint list is eventually consistent.**
 Just after two endpoints register, each worker can briefly see only *its own* running and think it won. So a worker that is currently in front re-checks for a few polls (guarded by `PW_WORKFLOW_STEP_CURRENT_RETRY`) before it commits; a worker that was actually beaten sees the winning endpoint on a later poll and steps aside. Without this settle, two workers can both "win."
 
-**One output flag drives the cleanup.**
-The winner writes `CANCEL=false` and simply finishes; its endpoint stays up because its `script_submitter` job is still serving the page — the WIN branch also prints the winning URL as a notice. A loser writes `CANCEL=true`, and the **Cancel Jobs** step keys its `if:` off `${{ needs.first_start_wins.outputs.CANCEL }}` to run `cancel-jobs`, stopping that worker's render. Killing the process tree deregisters the endpoint on its own — an endpoint *is* its client process — so the `pw endpoints delete` in the `cleanup` is a defensive no-op for the edge where the process lingers.
+**One cancel, two meanings — the skip file decides.**
+Winner and losers end exactly the same way: cancel your own `script_submitter`. What that cancel *does* is decided entirely by Stage 4's skip file:
+
+| | The winner | A loser |
+|---|---|---|
+| Before canceling | publishes the winning URL and **touches `SKIP_CLEANUP`** | leaves the file untouched |
+| The submitter's cleanup | finds the file — the render keeps serving | runs — the render is killed, and its endpoint deregisters on its own (an endpoint *is* its client process) |
+
+The guarded `pw endpoints delete` in the `cleanup:` is a defensive no-op for a loser process that lingers — the file test keeps it away from the winner's endpoint. When the dust settles, the whole fan-out has **completed** and exactly one page is serving; stop it later with `pw endpoints delete`, like every stage since 3.
 
 ---
 
 ## Testing status
 
-The controller path (`Schedule Job? = No`) was verified end-to-end on live clusters. Stage 2 (the merged dynamic-port version) was run live: the endpoint registered and came up `running`, an anonymous request to its URL got the platform-auth redirect, and canceling the run deregistered the endpoint. Stage 3 was run live: the endpoint came up, the run completed on its own while the detached server kept serving, and `pw endpoints delete` killed the detached process tree and removed the endpoint from the list. Stage 4 was run live twice: once on the controller path (endpoint up, URL published, run completed while the job kept serving, `pw endpoints delete` tore the job down), and once on the scheduler path to verify the armed cleanups — a `Schedule Job? = Yes` run was canceled while its SLURM job was still provisioning a node, before the endpoint existed, and the submitter's cleanup `scancel`ed the job, leaving no queue entry and no endpoint. The full scheduler happy path (endpoint served from a compute node) has not been re-verified in this edition. Stage 6 was verified in an earlier round as a real two-resource race (both endpoints up, every worker picked the same winner, the loser stood down and its endpoint disappeared, cancel tore the winner down); since then only its checkout path changed, re-validated by dry-run. Stage 6's parent exercises the same matrix mechanics as stage 5, and stage 1 is byte-identical to the session tutorial's tested stage.
+The controller path (`Schedule Job? = No`) was verified end-to-end on live clusters. Stage 2 (the merged dynamic-port version) was run live: the endpoint registered and came up `running`, an anonymous request to its URL got the platform-auth redirect, and canceling the run deregistered the endpoint. Stage 3 was run live: the endpoint came up, the run completed on its own while the detached server kept serving, and `pw endpoints delete` killed the detached process tree and removed the endpoint from the list. Stage 4 was run live twice: once on the controller path (endpoint up, URL published, run completed while the job kept serving, `pw endpoints delete` tore the job down), and once on the scheduler path to verify the armed cleanups — a `Schedule Job? = Yes` run was canceled while its SLURM job was still provisioning a node, before the endpoint existed, and the submitter's cleanup `scancel`ed the job, leaving no queue entry and no endpoint. The full scheduler happy path (endpoint served from a compute node) has not been re-verified in this edition. Stage 5 was run live through the parent matrix: the worker's endpoint came up, the parent run completed while the page kept serving, and `pw endpoints delete` tore it down. Stage 6's race was run live both ways: a clean run whose worker **won** (confirmed first place across the settle polls, published its URL, disarmed its cleanups, and its page outlived the completed run), and a run raced against an endpoint registered ahead of it, whose worker **lost** (decided LOSE, stood down, its render and endpoint vanished, the leading endpoint kept serving, and the run still completed). Both race runs used a single worker; the same decision logic was verified earlier with two real resources racing. Stage 1 is byte-identical to the session tutorial's tested stage.

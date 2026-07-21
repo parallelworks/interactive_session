@@ -15,11 +15,11 @@ jobs:
           repo: https://github.com/parallelworks/interactive_session.git
           branch: main
           sparse_checkout:
-            - workflow/tutorials/hsp/fractal-demo
+            - workflow/tutorials/fractal-demo
       - name: Install Dependencies
         run: |
           # keep only the example directory from the sparse checkout
-          mv workflow/tutorials/hsp/fractal-demo .
+          mv workflow/tutorials/fractal-demo .
           rm -r workflow
           ./fractal-demo/install.sh
       - name: Create Run Script
@@ -37,6 +37,7 @@ jobs:
           chmod +x script.sh
           # We need to pass the PATH to the script submitter subworkflow
           echo "SCRIPT_PATH=${PWD}/script.sh" | tee -a $OUTPUTS
+          echo "SKIP_CLEANUP_PATH=${PWD}/SKIP_CLEANUP" | tee -a $OUTPUTS
 
 
   script_submitter:
@@ -45,6 +46,7 @@ jobs:
     steps:
       - name: Script Submitter
         uses: github/parallelworks/interactive_session@main
+        early-cancel: any-job-failed
         with:
           $yaml: workflow/script_submitter/v3.6/hsp.yaml
           resource: ${{ inputs.resource }}
@@ -53,6 +55,12 @@ jobs:
           script_path: ${{ needs.install.outputs.SCRIPT_PATH }}
           scheduler: ${{ inputs.scheduler }}
           use_scheduler_agent: false
+          # Cleanups stay armed until the skip file exists (see Stage 4): a
+          # LOSING worker cancels the submitter with no skip file, so its job
+          # is scancel/qdel/killed; the WINNER creates the file first, so its
+          # job keeps serving and the run completes.
+          submit_and_exit: false
+          skip_cleanups_file: ${{ needs.install.outputs.SKIP_CLEANUP_PATH }}
           slurm:
             is_enabled: ${{ inputs.slurm.is_enabled }}
             account: ${{ inputs.slurm.account }}
@@ -69,6 +77,8 @@ jobs:
             scheduler_directives: ${{ inputs.pbs.scheduler_directives }}
 
   first_start_wins:
+    needs:
+      - install
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
@@ -113,23 +123,29 @@ jobs:
               exit 1
             fi
             URL=$(pw endpoints list | grep -w "${MY_NAME}" | awk '{print $3}')
+            echo "URL=${URL}" | tee -a $OUTPUTS
             echo "::notice::${MY_NAME} is the first running endpoint — winner; serving at ${URL}"
-            echo "CANCEL=false" | tee -a $OUTPUTS
+            # Winner: create the skip file so the cancel below leaves the job
+            # serving (Stage 4's trick). The run completes; the page stays up.
+            touch ${{ needs.install.outputs.SKIP_CLEANUP_PATH }}
+            sleep 2
             exit 0
           fi
 
           # decision == LOSE: another worker's endpoint is running ahead of us.
+          # No skip file for us — the cancel below kills our render and our
+          # endpoint deregisters with it.
           echo "::notice::another endpoint is running ahead of ${MY_NAME} — standing down"
-          echo "CANCEL=true" | tee -a $OUTPUTS
-      - name: Cancel Jobs
-        if: ${{ needs.first_start_wins.outputs.CANCEL == 'true' }}
+      - name: Cancel Script Submitter
+        # Winner and loser both cancel the submitter; the skip file decides what
+        # that means. Winner: cleanup skipped, job keeps serving. Loser:
+        # cleanups run, the job dies, and the endpoint deregisters on its own —
+        # the guarded delete is a defensive no-op for a lingering process.
         uses: parallelworks/cancel-jobs
         with:
           jobs:
             - script_submitter
-        # Canceling the submitter kills the process tree, which deregisters the
-        # endpoint on its own; the delete is a defensive no-op if it already did.
-        cleanup: pw endpoints delete "fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }}" || true
+        cleanup: test -f ${{ needs.install.outputs.SKIP_CLEANUP_PATH }} || pw endpoints delete "fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }}" || true
 
 
 'on':

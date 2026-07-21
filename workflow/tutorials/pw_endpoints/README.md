@@ -639,7 +639,7 @@ Stage 5 ran the whole list at once; Stage 6 ran the whole list and kept one. Sta
   workers: [ A, B, C ]
 
   attempt 0 ── Stage 4 on A ──▶ endpoint up? ── yes ──▶ done: run completes, page serves
-                                    │ no (error, or 1h timeout)
+                                    │ no (error, or Attempt Timeout)
   attempt 1 ── Stage 4 on B ──▶ endpoint up? ── yes ──▶ done
                                     │ no
   attempt 2 ── Stage 4 on C ──▶ …      (list exhausted ⇒ the run fails)
@@ -659,7 +659,7 @@ This is [`07-failover.yaml`](07-failover.yaml). The failover loop is a `retry` b
         retry:
           interval: 10s
           max-retries: ${{ needs.fractal_demo.outputs.NUM_WORKERS - 1 }}   # one attempt per worker
-          timeout: 1h                                                      # a hanging attempt also fails over
+          timeout: ${{ inputs.attempt_timeout }}                           # a hanging attempt also fails over
         uses: github/parallelworks/interactive_session@main
         with:
           $yaml: workflow/tutorials/pw_endpoints/04-subworkflow.yaml
@@ -678,7 +678,7 @@ The form is Stage 5's `workers` list unchanged — only the tooltip differs: the
 ### Concepts introduced
 
 **`retry` as a failover loop.**
-A step's `retry` re-runs it while it exits non-zero — and a `uses:` step exits non-zero when its subworkflow fails. So "retry the Stage 4 call, one attempt per worker" *is* the failover: the first attempt whose endpoint comes up returns success and the loop stops; an attempt that errors — or hangs past `timeout: 1h` — is cut short, and the next one starts after `interval`.
+A step's `retry` re-runs it while it exits non-zero — and a `uses:` step exits non-zero when its subworkflow fails. So "retry the Stage 4 call, one attempt per worker" *is* the failover: the first attempt whose endpoint comes up returns success and the loop stops; an attempt that errors — or hangs past the **Attempt Timeout** input (default `1h`) — is cut short, and the next one starts after `interval`. The timeout covers the whole attempt, queue wait included: a job that sits queued past it is `scancel`/`qdel`ed by the submitter's still-armed cleanups (Stage 4's skip file has not been touched yet) before the next resource is tried.
 
 **Sizing the loop from the list.**
 `Count Workers` publishes `NUM_WORKERS`, and the very next step's `max-retries` reads it as `${{ needs.fractal_demo.outputs.NUM_WORKERS - 1 }}`: outputs written earlier in a job are readable later in the same job, and expressions can do arithmetic. First try + N−1 retries = exactly one attempt per worker.

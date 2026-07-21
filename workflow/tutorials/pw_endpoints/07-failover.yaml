@@ -19,11 +19,12 @@ jobs:
         # indexing it with the attempt counter PW_WORKFLOW_STEP_CURRENT_RETRY
         # (0 on the first try). The first worker whose endpoint comes up ends
         # the step with success - no further attempts. timeout caps a single
-        # attempt, so a worker that hangs also falls over to the next.
+        # attempt, so a worker that hangs - or a job stuck in a queue - also
+        # falls over to the next.
         retry:
           interval: 10s
           max-retries: ${{ needs.fractal_demo.outputs.NUM_WORKERS - 1 }}
-          timeout: 1h
+          timeout: ${{ inputs.attempt_timeout }}
         uses: github/parallelworks/interactive_session@main
         with:
           $yaml: workflow/tutorials/pw_endpoints/04-subworkflow.yaml
@@ -60,6 +61,14 @@ jobs:
         default: 2500
         min: 100
         max: 10000
+      attempt_timeout:
+        type: string
+        label: Attempt Timeout
+        default: 1h
+        tooltip: |
+          Maximum time for one worker's attempt (units n|s|m|h|d, e.g. 20m or 1h).
+          An attempt whose endpoint is not up within this time is cut short — its
+          queued or running job is cleaned up — and the next resource is tried.
       workers:
         type: list
         label: Compute Resources

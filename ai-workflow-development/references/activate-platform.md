@@ -838,3 +838,10 @@ subdomain URL (`https://<name>.activate.pw/<slug>`; `--slug` may be a query stri
   (~a minute+ exceeds the proxy timeout). Stream to keep bytes flowing, or use an
   async job+poll pattern for long work.
 - Transient `pw workflows run/cancel` API timeouts happen — just retry.
+- **An explicitly-passed empty string beats a form default.** Defaults fill only
+  *missing* keys: `-i '{"slurm":{"time":""}}'` reaches the workflow as `""` even though
+  the form says `default: '00:30:00'`. Copying a past run's INPUTS JSON is the usual
+  source of such empties. Downstream this used to produce `#SBATCH --time=` →
+  `sbatch: error: Invalid --time specification` in the `general`/`emed`/`noaa`
+  `script_submitter` variants (fixed July 2026 with an emptiness guard, matching `hsp`).
+  Guard tutorial-facing inputs the same way (`${{ x == '' ? 'default' : x }}`).

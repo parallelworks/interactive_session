@@ -50,11 +50,15 @@ jobs:
           # Need to evaluate the env variables here
           cat <<EOF > headers.sh
           #SBATCH --job-name=${PW_JOB_ID}
-          #SBATCH --time=${{ inputs.slurm.time }}
           #SBATCH --chdir=${PWD}
           #SBATCH -o ${PWD}/run.${PW_JOB_ID}.out
           #SBATCH -e ${PWD}/run.${PW_JOB_ID}.out
           EOF
+
+          # An empty walltime must not emit "#SBATCH --time=" - sbatch rejects it
+          if ! [ -z "${{ inputs.slurm.time }}" ]; then
+            echo "#SBATCH --time=${{ inputs.slurm.time }}" >> headers.sh
+          fi
 
           # Partition
           if ! [ -z "${{ inputs.slurm.partition_default }}" ]; then

@@ -13,7 +13,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: main
+          branch: is-tutorial
           sparse_checkout:
             - workflow/tutorials/fractal-demo
       - name: Install Dependencies

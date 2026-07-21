@@ -256,7 +256,23 @@ jobs:
 ### Concepts introduced
 
 **`pw endpoints run -- COMMAND` — serve and expose in one step.**
-`pw endpoints run` spawns the command after `--`, registers the endpoint, and forwards the endpoint's URL to the command's port until the command exits. The server and its exposure share one lifetime: cancel the step and both are gone. There is no session declaration, no tunnel wiring, no plumbing between jobs — the whole Stage 2 delta is one wrapper around the command you already had, and one input *removed*.
+`pw endpoints run` spawns the command after `--`, registers the endpoint, and forwards the endpoint's URL to the command's port until the command exits. There is no session declaration, no tunnel wiring, no plumbing between jobs — the whole Stage 2 delta is one wrapper around the command you already had, and one input *removed*.
+
+**Cancel either side — both go away.**
+Because `pw endpoints run` runs directly inside the workflow step, the run, the server, and the endpoint form one chain, with the `pw endpoints run` process in the middle:
+
+```
+  workflow run ──runs──▶ pw endpoints run ──spawns──▶ run.sh (the server)
+                                │
+                                └──registers──▶ the endpoint (its URL)
+```
+
+Cut the chain anywhere and all of it stops:
+
+- **Cancel the workflow run** (from the UI, or `pw workflows runs cancel`) → the step is killed, `pw endpoints run` dies and takes `run.sh` down with it, and the endpoint deregisters.
+- **Delete the endpoint** (from the Sessions page, or `pw endpoints delete fractal-<run-slug>`) → the platform shuts down `pw endpoints run`, which kills `run.sh` and exits — and with the step's command gone, the workflow run ends too.
+
+Either way there is nothing left to clean up: no orphaned server still rendering, no dead URL still listed.
 
 **The port travels through the environment.**
 With no `--port` flag, `pw endpoints run` picks a free local port itself and **exports it as `PORT`** to the wrapped command — which is exactly how `run.sh` already reads it. Nothing else in the workflow ever needs to know the number. (If you need to pin a specific port, pass `--port <N>`; and if your command takes the port as an argument instead of the environment, write the literal token `{port}` in the command and `pw` substitutes the number — `{port}`, **not** `${port}`, which the shell would expand to an empty string before `pw` ever sees it.)

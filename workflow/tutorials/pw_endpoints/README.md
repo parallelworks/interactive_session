@@ -18,6 +18,7 @@ By the end of this tutorial you will understand how to:
 - Build a form that adapts to the chosen resource with dynamic dropdowns and show/hide rules
 - Fan out the same workflow across a whole list of resources at once with a `matrix` strategy
 - Turn that fan-out into a race where the first endpoint to come up wins and the losing workers stop themselves
+- Fail over across an ordered list of resources — one attempt at a time, driven by a `retry` block and the attempt counter — instead of fanning out
 
 ---
 
@@ -627,3 +628,71 @@ Winner and losers end exactly the same way: cancel your own `script_submitter`. 
 | The submitter's cleanup | finds the file — the render keeps serving | runs — the render is killed, and its endpoint deregisters on its own (an endpoint *is* its client process) |
 
 The guarded `pw endpoints delete` in the `cleanup:` is a defensive no-op for a loser process that lingers — the file test keeps it away from the winner's endpoint. When the dust settles, the whole fan-out has **completed** and exactly one page is serving; delete its endpoint later, like every stage since 3.
+
+---
+
+## Stage 7 — Failover: try resources one at a time (`07-failover.yaml`)
+
+Stage 5 ran the whole list at once; Stage 6 ran the whole list and kept one. Stage 7 wants one fractal and is not willing to start N renders to get it: it runs Stage 4 on the **first** resource in the list, and only if that attempt **fails or times out** moves on to the second, and so on. The first success stops the loop.
+
+```
+  workers: [ A, B, C ]
+
+  attempt 0 ── Stage 4 on A ──▶ endpoint up? ── yes ──▶ done: run completes, page serves
+                                    │ no (error, or 1h timeout)
+  attempt 1 ── Stage 4 on B ──▶ endpoint up? ── yes ──▶ done
+                                    │ no
+  attempt 2 ── Stage 4 on C ──▶ …      (list exhausted ⇒ the run fails)
+```
+
+This is [`07-failover.yaml`](07-failover.yaml). The failover loop is a `retry` block on the step that calls Stage 4 — the same `retry` that polls for endpoints elsewhere, now driving whole attempts:
+
+```yaml
+  fractal_demo:
+    steps:
+      - name: Count Workers
+        run: |
+          NUM_WORKERS=$(echo '${{ inputs.workers }}' | \
+            python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
+          echo "NUM_WORKERS=${NUM_WORKERS}" | tee -a $OUTPUTS
+      - name: Fractal Demo
+        retry:
+          interval: 10s
+          max-retries: ${{ needs.fractal_demo.outputs.NUM_WORKERS - 1 }}   # one attempt per worker
+          timeout: 1h                                                      # a hanging attempt also fails over
+        uses: github/parallelworks/interactive_session@main
+        with:
+          $yaml: workflow/tutorials/pw_endpoints/04-subworkflow.yaml
+          resolution: ${{ inputs.resolution }}
+          resource:
+            ip: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get ip }}
+            name: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get name }}
+            # ... id, namespace, provider, schedulerType, type, uri, user — same shape ...
+          scheduler: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get scheduler }}
+          slurm:   # ... the worker's SLURM group, indexed the same way ...
+          pbs:     # ... same idea ...
+```
+
+The form is Stage 5's `workers` list unchanged — only the tooltip differs: the order now matters, because it is the order in which resources are tried.
+
+### Concepts introduced
+
+**`retry` as a failover loop.**
+A step's `retry` re-runs it while it exits non-zero — and a `uses:` step exits non-zero when its subworkflow fails. So "retry the Stage 4 call, one attempt per worker" *is* the failover: the first attempt whose endpoint comes up returns success and the loop stops; an attempt that errors — or hangs past `timeout: 1h` — is cut short, and the next one starts after `interval`.
+
+**Sizing the loop from the list.**
+`Count Workers` publishes `NUM_WORKERS`, and the very next step's `max-retries` reads it as `${{ needs.fractal_demo.outputs.NUM_WORKERS - 1 }}`: outputs written earlier in a job are readable later in the same job, and expressions can do arithmetic. First try + N−1 retries = exactly one attempt per worker.
+
+**`PW_WORKFLOW_STEP_CURRENT_RETRY` indexes the list.**
+Each attempt exports its number (0 on the first try). `inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get ip` reads *workers[attempt].resource.ip* — attempt 0 runs the first row of the form, attempt 1 the second, in order.
+
+**Hand the resource over field by field.**
+A list item picked with `get` does not pass through `with:` as one object, so the resource is rebuilt one field at a time (`id`, `ip`, `name`, …). Verbose, but each attempt's subworkflow receives exactly the fields Stage 4 reads.
+
+**Three ways to use a resource list.**
+
+| | Stage 5 — matrix | Stage 6 — race | Stage 7 — failover |
+|---|---|---|---|
+| Starts | N renders at once | N renders at once | 1 render at a time |
+| Keeps | all N | the first one up | the first that succeeds |
+| Use when | you want every resource rendering | you want the fastest resource | you want to spare the fallbacks |

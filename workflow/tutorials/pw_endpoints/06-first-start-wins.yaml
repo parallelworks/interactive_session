@@ -1,0 +1,104 @@
+# permissions authenticates the in-workflow pw CLI — the subworkflow's autocancel
+# job calls `pw endpoints list/delete`, which only works if the parent grants this too.
+permissions:
+  - '*'
+
+jobs:
+  fractal_demo:
+    strategy:
+      fail-fast: true
+      matrix:
+        worker: ${{ inputs.workers }}
+    steps:
+      - name: Fractal Demo
+        uses: github/parallelworks/interactive_session@main
+        with:
+          $yaml: workflow/tutorials/pw_endpoints/06-first-start-wins-subworkflow.yaml
+          resource: ${{ matrix.worker.resource }}
+          resolution: ${{ inputs.resolution }}
+          scheduler: ${{ matrix.worker.scheduler }}
+          slurm:
+            is_enabled: ${{ matrix.worker.slurm.is_enabled }}
+            partition: ${{ matrix.worker.slurm.partition }}
+            time: ${{ matrix.worker.slurm.time }}
+            scheduler_directives: ${{ matrix.worker.slurm.scheduler_directives }}
+          pbs:
+            is_enabled: ${{ matrix.worker.pbs.is_enabled }}
+            scheduler_directives: ${{ matrix.worker.pbs.scheduler_directives }}
+'on':
+  execute:
+    inputs:
+      resolution:
+        type: number
+        label: Resolution
+        tooltip: Image size in pixels. Larger values look sharper but take longer to render.
+        default: 2500
+        min: 100
+        max: 10000
+      workers:
+        type: list
+        label: Compute Resources
+        tooltip: The resources that race. Every worker starts a render; the first endpoint up wins and the rest stand down.
+        template:
+          resource:
+            type: compute-clusters
+            label: Resource Target
+            tooltip: The compute cluster to run the fractal example on.
+            autoselect: true
+            optional: false
+          scheduler:
+            type: boolean
+            default: false
+            label: Schedule Job?
+            hidden: ${{ inputs.workers.[index].resource.schedulerType == '' }}
+            ignore: ${{ .hidden }}
+            tooltip: |
+              Yes → Job is submitted to the scheduler using sbatch, qsub, etc
+              No  → Job is executed in the controller or login node instead
+          slurm:
+            type: group
+            label: SLURM Directives
+            hidden: ${{ inputs.workers.[index].resource.schedulerType != 'slurm' || inputs.workers.[index].scheduler == false }}
+            ignore: ${{ inputs.workers.[index].resource.schedulerType != 'slurm' || inputs.workers.[index].scheduler == false }}
+            items:
+              is_enabled:
+                type: boolean
+                hidden: true
+                default: true
+                label: Is SLURM Enabled? Yes, unless the slurm section is hidden and ignored
+              partition:
+                type: slurm-partitions
+                label: SLURM partition
+                optional: true
+                resource: ${{ inputs.workers.[index].resource }}
+                tooltip: Select a partition from the drop down menu.
+              time:
+                label: Walltime
+                type: string
+                default: '00:30:00'
+                tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
+              scheduler_directives:
+                type: editor
+                optional: true
+                tooltip: |
+                  Add extra SLURM directives, one per line, using the #SBATCH prefix. For example:
+                  #SBATCH --exclusive
+                  #SBATCH --nodelist=<node-name>
+          pbs:
+            type: group
+            label: PBS Directives
+            hidden: ${{ inputs.workers.[index].resource.schedulerType != 'pbs' || inputs.workers.[index].scheduler == false }}
+            ignore: ${{ inputs.workers.[index].resource.schedulerType != 'pbs' || inputs.workers.[index].scheduler == false }}
+            items:
+              is_enabled:
+                type: boolean
+                hidden: true
+                default: true
+                label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
+              scheduler_directives:
+                label: Scheduler Directives
+                type: editor
+                tooltip: |
+                  Add extra PBS directives, one per line, using the #PBS prefix. For example:
+                  #PBS -l walltime=01:00:00
+                  #PBS -l mem=16gb

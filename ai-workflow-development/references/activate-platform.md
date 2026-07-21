@@ -839,10 +839,14 @@ subdomain URL (`https://<name>.activate.pw/<slug>`; `--slug` may be a query stri
   (~a minute+ exceeds the proxy timeout). Stream to keep bytes flowing, or use an
   async job+poll pattern for long work.
 - Transient `pw workflows run/cancel` API timeouts happen — just retry.
-- **An explicitly-passed empty string beats a form default.** Defaults fill only
-  *missing* keys: `-i '{"slurm":{"time":""}}'` reaches the workflow as `""` even though
-  the form says `default: '00:30:00'`. Copying a past run's INPUTS JSON is the usual
-  source of such empties. Downstream this used to produce `#SBATCH --time=` →
-  `sbatch: error: Invalid --time specification` in the `general`/`emed`/`noaa`
-  `script_submitter` variants (fixed July 2026 with an emptiness guard, matching `hsp`).
-  Guard tutorial-facing inputs the same way (`${{ x == '' ? 'default' : x }}`).
+- **List-template `default:`s do not fill explicit empty strings (probable platform
+  bug — verified July 2026).** Three paths behave differently for a field passed as
+  `""`: a **top-level input** is default-filled; a value passed **directly to a
+  subworkflow input** is filled by that subworkflow's own default; but a **list-template
+  field** (e.g. `workers[0].slurm.time` from an inputs JSON copied off a past run)
+  stays `""` and flows through `with:` chains untouched. Consequence: an empty
+  `slurm.time` reaches `script_submitter`, and the `general`/`emed`/`noaa` variants
+  emit `#SBATCH --time=` → `sbatch: error: Invalid --time specification` (only `hsp`
+  guards it). Do NOT patch the submitters — **type the walltime explicitly** in list
+  rows, and guard tutorial-level scalar inputs with a ternary
+  (`"${{ x == '' ? '1h' : x }}"` — quote it: the ternary's `: ` breaks plain YAML scalars).

@@ -619,3 +619,66 @@ Just after two sessions register, each worker can briefly see only *its own* run
 
 **One output flag drives the cleanup — no `sleep inf`.**
 The winner writes `CANCEL=false` and simply finishes; its session stays up because its `script_submitter` job is still serving the page. A loser writes `CANCEL=true`, and the **Cancel Jobs** step keys its `if:` off `${{ needs.first_start_wins.outputs.CANCEL }}` to run `cancel-jobs`, tearing down that worker's render and its `session` job. Canceling the `session` job stops `update-session` but leaves the registered session behind as a dead tunnel, so the step also carries a `cleanup: pw sessions stop ...` that deletes the session object itself. Leaning on `cleanup` (the teardown hook from Stage 3) gets the ordering right for free: a step's `cleanup` fires when the step *exits* — after `cancel-jobs` has already stopped `update-session` — so deleting the session can't `404` an in-flight creation and fault the run. Publishing a value with `tee -a $OUTPUTS` and gating the step on it (the `$OUTPUTS` trick from Stage 3) is what lets the winner exit cleanly instead of parking a job on `sleep inf`.
+
+---
+
+## Stage 7 — Failover: try resources one at a time (`07-failover.yaml`)
+
+Stage 5 ran the whole list at once; Stage 6 ran the whole list and kept one. Stage 7 wants one fractal and is not willing to start N renders to get it: it runs Stage 4 on the **first** resource in the list, and only if that attempt **fails or times out** moves on to the second, and so on. The first success stops the loop.
+
+```
+  workers: [ A, B, C ]
+
+  attempt 0 ── Stage 4 on A ──▶ session up? ── yes ──▶ done: the run keeps serving the page
+                                    │ no (error, or Attempt Timeout)
+  attempt 1 ── Stage 4 on B ──▶ session up? ── yes ──▶ done
+                                    │ no
+  attempt 2 ── Stage 4 on C ──▶ …      (list exhausted ⇒ the run fails)
+```
+
+This is [`07-failover.yaml`](07-failover.yaml). The failover loop is a `retry` block on the step that calls Stage 4:
+
+```yaml
+  fractal_demo:
+    steps:
+      - name: Count Workers
+        run: |
+          NUM_WORKERS=$(echo '${{ inputs.workers }}' | \
+            python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
+          echo "NUM_WORKERS=${NUM_WORKERS}" | tee -a $OUTPUTS
+      - name: Fractal Demo
+        retry:
+          interval: 10s
+          max-retries: ${{ needs.fractal_demo.outputs.NUM_WORKERS - 1 }}   # one attempt per worker
+          timeout: "${{ inputs.attempt_timeout == '' ? '1h' : inputs.attempt_timeout }}"
+        uses: github/parallelworks/interactive_session@main
+        with:
+          $yaml: workflow/tutorials/hsp/04-subworkflow.yaml
+          resolution: ${{ inputs.resolution }}
+          resource:
+            ip: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get ip }}
+            name: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get name }}
+            # ... id, namespace, provider, schedulerType, type, uri, user — same shape ...
+          scheduler: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get scheduler }}
+          slurm:   # ... the worker's SLURM group, indexed the same way ...
+          pbs:     # ... same idea ...
+```
+
+The form is Stage 5's `workers` list with a failover tooltip (the order now matters — it is the order in which resources are tried) plus one new scalar input, **Attempt Timeout**.
+
+### Concepts introduced
+
+**`retry` as a failover loop.**
+A step's `retry` re-runs it while it exits non-zero — and a `uses:` step exits non-zero when its subworkflow fails. So "retry the Stage 4 call, one attempt per worker" *is* the failover: the first attempt whose session comes up returns success and the loop stops; an attempt that errors — or hangs past the **Attempt Timeout** input (default `1h`) — is cut short, and the next one starts after `interval`. The timeout covers the whole attempt, queue wait included: a job that sits queued past it is `scancel`/`qdel`ed by the submitter before the next resource is tried. Once a session is up, the run keeps serving exactly like Stage 4 — cancel it to stop.
+
+**Sizing the loop from the list.**
+`Count Workers` publishes `NUM_WORKERS`, and the very next step's `max-retries` reads it as `${{ needs.fractal_demo.outputs.NUM_WORKERS - 1 }}`: outputs written earlier in a job are readable later in the same job, and expressions can do arithmetic. First try + N−1 retries = exactly one attempt per worker.
+
+**`PW_WORKFLOW_STEP_CURRENT_RETRY` indexes the list.**
+Each attempt exports its number (0 on the first try). `inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get ip` reads *workers[attempt].resource.ip* — attempt 0 runs the first row of the form, attempt 1 the second, in order.
+
+**Hand the resource over field by field.**
+A list item picked with `get` does not pass through `with:` as one object, so the resource is rebuilt one field at a time (`id`, `ip`, `name`, …). Verbose, but each attempt's subworkflow receives exactly the fields Stage 4 reads.
+
+**Type the walltime explicitly.**
+A worker row whose Walltime is left empty fails submission (`sbatch: error: Invalid --time specification`): an empty string in a *list row* is not replaced by the template's `default:`, and it travels through the `with:` chain as-is. With failover this only costs you an attempt — the loop moves on — but fill it in.

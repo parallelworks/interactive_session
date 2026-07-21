@@ -112,7 +112,7 @@ jobs:
                 label: Walltime
                 type: string
                 default: '00:30:00'
-                tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
+                tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job. Type it explicitly — an empty walltime fails sbatch.'
               scheduler_directives:
                 type: editor
                 optional: true

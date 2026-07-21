@@ -57,6 +57,8 @@ jobs:
           script_path: ${{ needs.install.outputs.SCRIPT_PATH }}
           scheduler: ${{ inputs.scheduler }}
           use_scheduler_agent: false
+          define_cleanup_script: false
+          cleanup_script_path: ''
           # submit_and_exit: true would submit and return immediately, but then
           # nothing monitors the queued job and its cleanups are skipped from
           # the start. Keeping it false + the skip-file below means: cancel any

@@ -55,6 +55,8 @@ jobs:
           script_path: ${{ needs.install.outputs.SCRIPT_PATH }}
           scheduler: ${{ inputs.scheduler }}
           use_scheduler_agent: false
+          define_cleanup_script: false
+          cleanup_script_path: ''
           # Cleanups stay armed until the skip file exists (see Stage 4): a
           # LOSING worker cancels the submitter with no skip file, so its job
           # is scancel/qdel/killed; the WINNER creates the file first, so its

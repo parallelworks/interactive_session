@@ -11,7 +11,7 @@ By the end of the stages built so far you will understand how to:
 - Pull example code onto the cluster with the `checkout` action
 - Pass workflow inputs into your scripts as environment variables
 - Expose a web server through the platform with `pw endpoints run` — no tunnel wiring, no port bookkeeping: the endpoint picks a free port at runtime and hands it to your server through the `PORT` environment variable
-- Detach the server from the workflow with `setsid`/`nohup`, so the run completes while the page keeps serving — torn down later with `pw endpoints delete`
+- Detach the whole render-and-serve command from the workflow with `setsid`/`nohup`, so the run completes while the page keeps serving — deleted later with `pw endpoints delete`
 - Wait for an endpoint to come online with a `retry` step, and surface its URL with `$OUTPUTS` and log annotations (`::notice::`, `::warning::`, `::error::`)
 - Hand a script to a reusable subworkflow that submits it to the cluster scheduler (SLURM or PBS) and streams, monitors, and cleans up the job for you — and see why endpoints make the "where did my job land?" question disappear
 - Keep a scheduled job cancelable while it is queued, then hand it off cleanly once the page is up, with the submitter's `skip_cleanups_file`
@@ -23,7 +23,7 @@ By the end of the stages built so far you will understand how to:
 
 ## Background — sessions vs endpoints
 
-Activate has two ways to put a web page running on a cluster into your browser. A **session tunnel** is opened by the platform, which tunnels *in* to a host and port your workflow must know and register. An **endpoint** dials *out* from wherever the server runs and registers itself. If you have seen session-based workflows before, this table maps one onto the other; if not, skip it — the stages explain everything they use.
+Activate has two ways to put a web page running on a cluster into your browser: a **session tunnel** is opened by the platform, which tunnels *in* to a host and port your workflow must register; an **endpoint** dials *out* from wherever the server runs and registers itself. If sessions are new to you, skip the table — the stages explain everything they use.
 
 | | Session tunnel | `pw endpoints` (this tutorial) |
 |---|---|---|
@@ -33,7 +33,7 @@ Activate has two ways to put a web page running on a cluster into your browser. 
 | URL | `…/me/session/<user>/<session-name>` | `https://<subdomain>.activate.pw/` (subdomain endpoints serve at the root) |
 | Auth | platform login | same — endpoints require platform login unless explicitly made public |
 | Declared in YAML | `sessions:` block + `update-session` action | nothing — just the `pw endpoints run` command |
-| Needs `permissions: ['*']` | only for `pw sessions ls/stop` | from the first `pw endpoints` call (Stage 2 onward) |
+| Needs `permissions: ['*']` | only for `pw sessions` calls | from the first `pw endpoints` call (Stage 2 onward) |
 
 ---
 
@@ -78,7 +78,7 @@ Install the environment, then render and serve a fractal:
 RESOLUTION=1000 PORT=8000 ./run.sh  # render a 1000x1000 fractal and serve it on port 8000
 ```
 
-`run.sh` starts the web server on port 8000, then renders the image one row at a time, so the page fills in top to bottom as it goes. When the render finishes it keeps serving, so the result stays up until you stop it.
+When the render finishes, `run.sh` keeps serving, so the result stays up until you stop it.
 
 ### View it with an endpoint
 
@@ -260,8 +260,8 @@ jobs:
 **`pw endpoints run -- COMMAND` — serve and expose in one step.**
 `pw endpoints run` spawns the command after `--`, registers the endpoint, and forwards the endpoint's URL to the command's port until the command exits. There is no session declaration, no tunnel wiring, no plumbing between jobs — the whole Stage 2 delta is one wrapper around the command you already had, and one input *removed*.
 
-**Cancel either side — both go away.**
-Because `pw endpoints run` runs directly inside the workflow step, the run, the server, and the endpoint form one chain, with the `pw endpoints run` process in the middle:
+**Cancel the run or delete the endpoint — either takes everything down.**
+`pw endpoints run` runs directly inside the workflow step, so the run, the server, and the endpoint form one chain:
 
 ```
   workflow run ──runs──▶ pw endpoints run ──spawns──▶ run.sh (the server)
@@ -277,7 +277,7 @@ Cut the chain anywhere and all of it stops:
 Either way there is nothing left to clean up: no orphaned server still rendering, no dead URL still listed.
 
 **The port travels through the environment.**
-With no `--port` flag, `pw endpoints run` picks a free local port itself and **exports it as `PORT`** to the wrapped command — which is exactly how `run.sh` already reads it. Nothing else in the workflow ever needs to know the number. (If you need to pin a specific port, pass `--port <N>`; and if your command takes the port as an argument instead of the environment, write the literal token `{port}` in the command and `pw` substitutes the number — `{port}`, **not** `${port}`, which the shell would expand to an empty string before `pw` ever sees it.)
+With no `--port` flag, `pw endpoints run` picks a free local port itself and **exports it as `PORT`** to the wrapped command — which is exactly how `run.sh` already reads it. Nothing else in the workflow ever needs to know the number. (To pin a port, pass `--port <N>`. If your command takes the port as an argument, write the literal token `{port}` and `pw` substitutes it — not `${port}`, which the shell expands to an empty string first.)
 
 **Naming with `${PW_RUN_SLUG}`.**
 `PW_RUN_SLUG` is a platform-injected environment variable holding the run's slug — the same value in every job of the run. Baking it into the endpoint name (`fractal-<run-slug>`) makes the name unique per run *and* predictable, so any other job (or you, at a terminal) can find this run's endpoint with `pw endpoints list`. Stage 4 leans on exactly that.
@@ -286,37 +286,37 @@ With no `--port` flag, `pw endpoints run` picks a free local port itself and **e
 Registering an endpoint is a platform API call, so the in-workflow `pw` CLI must be authenticated — which is what `permissions: ['*']` grants. (Stage 1 needed no grant because it never called the platform API from inside the workflow.)
 
 **Workflow-level `env`.**
-The top-level `env:` block defines variables available to every step in the workflow. We set `RESOLUTION` there once, so `run.sh` reads it from the environment and the run command only carries what is specific to it. (Stage 1 set it inline on the command — this is the same idea, hoisted to one place.)
+The top-level `env:` block defines variables available to every step. `RESOLUTION` is set there once and `run.sh` reads it from the environment — Stage 1's inline `RESOLUTION=…`, hoisted to one place.
 
 **Where's my URL?**
 `pw endpoints run` prints the URL in the `run` step's log, and the endpoint shows up in the **Sessions** page of the UI and in `pw endpoints list`. Stage 3 adds a step that waits for the endpoint and publishes the URL as a proper output and notice.
 
 **The run stays alive as long as the page does.**
-`pw endpoints run` serves in the foreground, so the `run` step never finishes on its own — the workflow run sits in `running` for as long as the fractal is served. And that step is not running "on the cluster" by magic: the platform executes it **from your user workspace, over an SSH connection to the cluster**, held open the whole time. That connection is the server's lifeline — if the workspace restarts or the SSH connection fails, the step dies, and the server and endpoint die with it. Fine for a demo you cancel after a look; fragile for a page that should stay up. Stage 3 removes that dependency.
+`pw endpoints run` serves in the foreground, so the `run` step never finishes on its own — and the platform executes that step **from your user workspace, over an SSH connection to the cluster**, held open the whole time. That connection is the server's lifeline: if the workspace restarts or the SSH connection fails, the step dies, taking the server and endpoint with it. Fine for a demo; fragile for a page that should stay up. Stage 3 removes that dependency.
 
 ---
 
 ## Stage 3 — Let the workflow finish, keep the server running (`03-exit-workflow.yaml`)
 
-In Stage 2 the workflow run *is* the server's lifeline:
+In Stage 2 the workflow run is the lifeline of everything `run.sh` does — the computation *and* the server:
 
 ```
-  Stage 2 — the step holds the server:
+  Stage 2 — the step holds the work:
 
-  workspace ══ SSH, held open for hours ══▶ run step ──▶ pw endpoints run ──▶ run.sh
+  workspace ══ SSH, held open for hours ══▶ run step ──▶ pw endpoints run ──▶ run.sh (render + serve)
                                                                 │
   (workspace restarts or SSH drops ⇒ everything dies)           └──▶ endpoint URL
 ```
 
-Stage 3 cuts the server loose. The `run` step starts `pw endpoints run` **detached** — in its own session, unaffected by the step ending — and a second step waits until the endpoint is live and publishes the URL. Then the run **completes**; the server stays:
+Stage 3 cuts the whole thing loose. The `run` step starts `pw endpoints run` **detached** — in its own session, unaffected by the step ending — a second step waits until the endpoint is live and publishes the URL, and the run **completes** while the computation and its server keep going on the cluster:
 
 ```
-  Stage 3 — the step starts the server and leaves:
+  Stage 3 — the step starts the work and leaves:
 
-  workspace ══ SSH, open for seconds ══▶ run step ──detach──▶ pw endpoints run ──▶ run.sh
+  workspace ══ SSH, open for seconds ══▶ run step ──detach──▶ pw endpoints run ──▶ run.sh (render + serve)
                                              │                       │
                               run completes, SSH closes              └──▶ endpoint URL
-                                                          (keeps serving on the cluster)
+                                                (keeps rendering and serving on the cluster)
 ```
 
 This is [`03-exit-workflow.yaml`](03-exit-workflow.yaml). Only the `run` job changes from Stage 2:
@@ -367,19 +367,13 @@ The launch line is the same one the `script_submitter` subworkflow uses to submi
 To read the server's output later, look in the job directory on the cluster: `~/pw/jobs/<workflow>/<run-number>/run.<job-id>.out`.
 
 **Wait before you exit — a completed run means a live page.**
-Detaching alone would let the run finish before the server even bound its port — and if the server crashed on startup, the run would still show green. The **Wait for Endpoint** step closes that gap. `retry` re-runs a step while it exits non-zero — 60 tries at 5s ≈ 5 minutes — so the step keeps failing until the endpoint shows up in `pw endpoints list`, then publishes the URL: writing `URL=…` to `$OUTPUTS` makes it a job output, and the `::notice::` line puts it, clickable, on the run page. A run that completes now *means* the page is up.
+Detaching alone would let the run finish before the server even bound its port — a crashed server would still show a green run. The **Wait for Endpoint** step closes that gap: `retry` re-runs it while it exits non-zero (60 tries × 5s ≈ 5 minutes) until the endpoint shows up in `pw endpoints list`; then `URL=…` into `$OUTPUTS` publishes the URL as a job output and the `::notice::` line puts it, clickable, on the run page. A completed run now *means* the page is up.
 
-**The off switch is now the endpoint.**
-Stage 2's cancel-either-side is gone: once the run completes there is nothing left to cancel. To stop the server, delete the endpoint:
-
-```bash
-pw endpoints delete fractal-<run-slug>
-```
-
-The platform kills the whole detached tree — `pw endpoints run` and `run.sh` with it. The endpoint is not just the URL; it is the handle on the process.
+**Deleting the endpoint now cancels `run.sh`.**
+Once the run completes there is nothing left to cancel on the Runs page — the endpoint *is* the handle on the detached work. `pw endpoints delete fractal-<run-slug>` (or deleting it from the Sessions page) kills `pw endpoints run` and the whole `run.sh` tree under it.
 
 **The trade.**
-Stage 2 is simpler and self-cleaning, but its server hangs off an open SSH connection from your workspace. Stage 3's server belongs to the cluster: workspace restarts and dropped connections don't touch it — at the price of one extra step, and remembering that teardown is `pw endpoints delete`, not cancel. This exit-and-keep-serving shape is the same one the repo's production `*_v5.yaml` workflows use.
+Stage 2 is simpler and self-cleaning, but everything hangs off an open SSH connection from your workspace. Stage 3's work belongs to the cluster — workspace restarts and dropped connections don't touch it — at the price of one extra step, and remembering that teardown is `pw endpoints delete`. The repo's production `*_v5.yaml` workflows use this same exit-and-keep-serving shape.
 
 ---
 
@@ -465,7 +459,7 @@ And `wait_for_endpoint` still polls until the endpoint registers and publishes i
 ### Concepts introduced
 
 **Subworkflows (`uses:` + `$yaml`).**
-`uses: github/parallelworks/interactive_session@main` runs *another workflow* as a step. `$yaml` selects which workflow file inside that repo to run (here `workflow/script_submitter/v3.6/hsp.yaml`), and the remaining `with:` keys are that subworkflow's inputs. You hand it your script's path (`use_existing_script: true` + `script_path`, published by `install` through `$OUTPUTS`) and the form's scheduler settings, and it does the whole submit/stream/monitor/cleanup dance.
+`uses: github/parallelworks/interactive_session@main` runs *another workflow* as a step. `$yaml` selects which workflow file inside that repo to run (here `workflow/script_submitter/v3.6/hsp.yaml`), and the remaining `with:` keys are that subworkflow's inputs — the script's path (published by `install` through `$OUTPUTS`) and the form's scheduler settings.
 
 **The endpoint doesn't care where the job landed.**
 This is the punchline of the whole tutorial. A session tunnel points *at* a host and port, so a session-based workflow has to capture the compute node's hostname and chosen port and feed both into the platform. An endpoint dials **out** from whichever node executes the script — controller or compute node, SLURM or PBS — so none of that machinery exists here. The waiting job polls the *platform* (`pw endpoints list`), not the cluster filesystem.
@@ -474,7 +468,7 @@ This is the punchline of the whole tutorial. A session tunnel points *at* a host
 The heredoc is unquoted, so `${{ inputs.resolution }}`, `${PW_RUN_SLUG}`, and `${PWD}` all expand **now**, while the script is being written on the controller node. That matters for three reasons: the workflow-level `env:` does not cross into the `script_submitter` subworkflow; `PW_RUN_SLUG` may not be exported in a compute node's batch environment; and `${PWD}` pins the demo to an absolute path that resolves wherever the script runs.
 
 **One file arms and disarms the cleanups.**
-When the `script_submitter` job is canceled it tears down whatever it started — `scancel` the SLURM job, `qdel` the PBS job, kill the process — *unless* the file named in `skip_cleanups_file` exists. That file starts out **not existing**, and `wait_for_endpoint` only creates it once the endpoint is live. That one detail gives each phase of the run exactly the behavior you want:
+When the `script_submitter` job is canceled it tears down whatever it started — `scancel` the SLURM job, `qdel` the PBS job, kill the process — *unless* the file named in `skip_cleanups_file` exists. The file does not exist until `wait_for_endpoint` creates it, and that one detail gives each phase the right behavior:
 
 | Before the endpoint is up | Once the endpoint is up |
 |---|---|
@@ -495,8 +489,8 @@ The name grows a suffix: `fractal-<run-slug>-<resource-name>`. `PW_RUN_SLUG` is 
 **A form that adapts to the resource.**
 The "Schedule Job?" toggle and the `slurm`/`pbs` groups only appear when they apply: `hidden`/`ignore` key off `inputs.resource.schedulerType` (`slurm`, `pbs`, or empty) and `inputs.scheduler`. `slurm-partitions`/`slurm-qos`/`slurm-accounts` are **dynamic dropdowns** that fetch their choices from the chosen cluster. The hidden `is_enabled` boolean (default `true`, sent only when the group is active) is what tells the subworkflow which path to take. The top-level `configurations:` block defines one-click presets that pre-fill the form with a known PBS system's directives (`Carpenter`, `Ruth`, `Warhawk`, `Wheat`).
 
-**The off switch is `pw endpoints delete` — same as Stage 3.**
-Once the run completes, the job and the `pw endpoints run` inside it belong to the cluster. `pw endpoints delete fractal-<run-slug>-<resource-name>` kills the detached tree wherever it landed — login node or compute node — the script exits, and a scheduled job releases its node back to the scheduler. This wait → skip → cancel shape is exactly the one the repo's production `*_v5.yaml` session workflows use (e.g. `workflow/yamls/jupyterlab-host/general_v5.yaml`).
+**Deleting the endpoint cancels the job — same as Stage 3.**
+`pw endpoints delete fractal-<run-slug>-<resource-name>` kills the tree wherever it landed — login node or compute node — the script exits, and a scheduled job releases its node back to the scheduler. This wait → skip → cancel shape is exactly the one the repo's production `*_v5.yaml` session workflows use (e.g. `workflow/yamls/jupyterlab-host/general_v5.yaml`).
 
 ---
 
@@ -543,7 +537,7 @@ The `pw endpoints` calls run inside the subworkflow, but a subworkflow's `pw` CL
 Every worker registers `fractal-<run-slug>-<its-resource-name>` — the run-slug part identical across workers (it is the *parent* run's slug), the resource name distinct per row. (Two rows pointing at the *same* resource would collide on the name — the race in Stage 6 is also the cure for wanting the same thing twice.)
 
 **The run completes; the fleet keeps serving.**
-Each worker runs Stage 4, so each worker finishes once its endpoint is up — the parent run completes when the slowest worker's page is live, and every render keeps serving. `pw endpoints list` shows the whole fleet at a glance; stop each one with `pw endpoints delete fractal-<run-slug>-<resource-name>`.
+Each worker runs Stage 4, so each worker finishes once its endpoint is up — the parent run completes when the slowest worker's page is live, and every render keeps serving. `pw endpoints list` shows the whole fleet at a glance; delete each one with `pw endpoints delete fractal-<run-slug>-<resource-name>`.
 
 ---
 
@@ -613,7 +607,7 @@ Winner and losers end exactly the same way: cancel your own `script_submitter`. 
 | Before canceling | publishes the winning URL and **touches `SKIP_CLEANUP`** | leaves the file untouched |
 | The submitter's cleanup | finds the file — the render keeps serving | runs — the render is killed, and its endpoint deregisters on its own (an endpoint *is* its client process) |
 
-The guarded `pw endpoints delete` in the `cleanup:` is a defensive no-op for a loser process that lingers — the file test keeps it away from the winner's endpoint. When the dust settles, the whole fan-out has **completed** and exactly one page is serving; stop it later with `pw endpoints delete`, like every stage since 3.
+The guarded `pw endpoints delete` in the `cleanup:` is a defensive no-op for a loser process that lingers — the file test keeps it away from the winner's endpoint. When the dust settles, the whole fan-out has **completed** and exactly one page is serving; delete its endpoint later, like every stage since 3.
 
 ---
 

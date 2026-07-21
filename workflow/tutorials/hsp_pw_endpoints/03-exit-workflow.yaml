@@ -58,7 +58,7 @@ jobs:
           URL=$(echo "${row}" | awk '{print $3}')
           echo "URL=${URL}" | tee -a $OUTPUTS
           echo "::notice::Fractal is being served at ${URL}"
-          echo "::notice::The workflow run ends here; the server keeps going. Stop it with: pw endpoints delete ${endpoint_name}"
+          echo "::notice::The workflow run ends here; run.sh keeps rendering and serving. Deleting the endpoint stops it: pw endpoints delete ${endpoint_name}"
 
 'on':
   execute:

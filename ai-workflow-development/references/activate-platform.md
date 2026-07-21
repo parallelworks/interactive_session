@@ -773,7 +773,7 @@ subdomain URL (`https://<name>.activate.pw/<slug>`; `--slug` may be a query stri
   `pw endpoints list | grep -w <name>` — so build them from `${PW_RUN_SLUG}` (plus the
   resource name when several workers share a run). Killing the client process (cancel
   the run/step) deregisters the endpoint within seconds; racing/fan-out over a shared
-  name prefix is shown in `workflow/tutorials/hsp_pw_endpoints/` (verified two-resource
+  name prefix is shown in `workflow/tutorials/pw_endpoints/` (verified two-resource
   first-start-wins race).
 - **Base-path apps need no base_url and no nginx on a subdomain endpoint**
   (`jupyterlab-host/start-template-v4.sh`): subdomain endpoints serve at the root, so

@@ -412,7 +412,7 @@ The whole submit/stream/monitor/cleanup dance is one job — note the two new in
         uses: github/parallelworks/interactive_session@main    # run another workflow as a step
         early-cancel: any-job-failed
         with:
-          $yaml: workflow/script_submitter/v3.6/hsp.yaml        # which workflow inside that repo
+          $yaml: workflow/script_submitter/v3.6/general.yaml        # which workflow inside that repo
           resource: ${{ inputs.resource }}
           use_existing_script: true                             # we built the script in install...
           script_path: ${{ needs.install.outputs.SCRIPT_PATH }} # ...so pass its path
@@ -459,7 +459,7 @@ And `wait_for_endpoint` still polls until the endpoint registers and publishes i
 ### Concepts introduced
 
 **Subworkflows (`uses:` + `$yaml`).**
-`uses: github/parallelworks/interactive_session@main` runs *another workflow* as a step. `$yaml` selects which workflow file inside that repo to run (here `workflow/script_submitter/v3.6/hsp.yaml`), and the remaining `with:` keys are that subworkflow's inputs — the script's path (published by `install` through `$OUTPUTS`) and the form's scheduler settings.
+`uses: github/parallelworks/interactive_session@main` runs *another workflow* as a step. `$yaml` selects which workflow file inside that repo to run (here `workflow/script_submitter/v3.6/general.yaml`), and the remaining `with:` keys are that subworkflow's inputs — the script's path (published by `install` through `$OUTPUTS`) and the form's scheduler settings.
 
 **The endpoint doesn't care where the job landed.**
 This is the punchline of the whole tutorial. A session tunnel points *at* a host and port, so a session-based workflow has to capture the compute node's hostname and chosen port and feed both into the platform. An endpoint dials **out** from whichever node executes the script — controller or compute node, SLURM or PBS — so none of that machinery exists here. The waiting job polls the *platform* (`pw endpoints list`), not the cluster filesystem.
@@ -487,7 +487,7 @@ The wait step's tools are Stage 3's — `retry` until the endpoint shows up, `$O
 The name grows a suffix: `fractal-<run-slug>-<resource-name>`. `PW_RUN_SLUG` is *run-scoped* — in Stage 5 every matrix worker shares it — so the resource name is what keeps concurrent workers from colliding, while the shared `fractal-<run-slug>-` prefix is what lets Stage 6 find *all* of this run's endpoints.
 
 **A form that adapts to the resource.**
-The "Schedule Job?" toggle and the `slurm`/`pbs` groups only appear when they apply: `hidden`/`ignore` key off `inputs.resource.schedulerType` (`slurm`, `pbs`, or empty) and `inputs.scheduler`. `slurm-partitions`/`slurm-qos`/`slurm-accounts` are **dynamic dropdowns** that fetch their choices from the chosen cluster. The hidden `is_enabled` boolean (default `true`, sent only when the group is active) is what tells the subworkflow which path to take. The top-level `configurations:` block defines one-click presets that pre-fill the form with a known PBS system's directives (`Carpenter`, `Ruth`, `Warhawk`, `Wheat`).
+The "Schedule Job?" toggle and the `slurm`/`pbs` groups only appear when they apply: `hidden`/`ignore` key off `inputs.resource.schedulerType` (`slurm`, `pbs`, or empty) and `inputs.scheduler`. `slurm-partitions` is a **dynamic dropdown** that fetches its choices from the chosen cluster. The hidden `is_enabled` boolean (default `true`, sent only when the group is active) is what tells the subworkflow which path to take.
 
 **Deleting the endpoint cancels the job — same as Stage 3.**
 `pw endpoints delete fractal-<run-slug>-<resource-name>` kills the tree wherever it landed — login node or compute node — the script exits, and a scheduled job releases its node back to the scheduler. This wait → skip → cancel shape is exactly the one the repo's production `*_v5.yaml` session workflows use (e.g. `workflow/yamls/jupyterlab-host/general_v5.yaml`).
@@ -512,7 +512,7 @@ jobs:
       - name: Fractal Demo
         uses: github/parallelworks/interactive_session@main
         with:
-          $yaml: workflow/tutorials/hsp_pw_endpoints/04-subworkflow.yaml
+          $yaml: workflow/tutorials/pw_endpoints/04-subworkflow.yaml
           resource: ${{ matrix.worker.resource }}
           resolution: ${{ inputs.resolution }}
           scheduler: ${{ matrix.worker.scheduler }}

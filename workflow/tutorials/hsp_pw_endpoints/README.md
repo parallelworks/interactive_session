@@ -1,8 +1,8 @@
-# Rendering a Fractal on Activate — A Workflow Tutorial (pw endpoints edition)
+# Rendering a Fractal on Activate — A Workflow Tutorial (pw endpoints)
 
 This tutorial turns a small, self-contained fractal renderer into an Activate workflow. You start by running the script by hand on a cluster so you can see exactly what it does, then automate it one piece at a time. Each stage has a matching workflow file you can run as-is from the Activate UI.
 
-It is the **endpoint edition** of the [session-tunnel tutorial](../hsp/README.md): the stages, the fractal demo, and almost all of the workflow machinery are the same — what changes is how the web page reaches your browser. Where the original declares a `sessions:` block and wires up a tunnel with `parallelworks/update-session`, this edition wraps the server in **`pw endpoints run`**, which dials out from wherever the server runs, registers a reverse tunnel, and gets its own URL (`https://<subdomain>.activate.pw/`). If you have not seen the platform concepts before (jobs, `needs`, checkout, subworkflows, matrix), the explanations in the original README apply here unchanged; this one focuses on what endpoints change.
+The web page the demo serves reaches your browser through **`pw endpoints`**: the service side dials out from wherever it runs, registers a reverse tunnel, and gets its own URL (`https://<subdomain>.activate.pw/`). There is also a [session-tunnel edition](../hsp/README.md) of this tutorial that exposes the same demo the older way, with a `sessions:` block and tunnel wiring — you do not need it to follow this one.
 
 By the end of the stages built so far you will understand how to:
 
@@ -10,8 +10,7 @@ By the end of the stages built so far you will understand how to:
 - Use `needs` to sequence jobs and to run independent jobs in parallel
 - Pull example code onto the cluster with the `checkout` action
 - Pass workflow inputs into your scripts as environment variables
-- Expose a web server through the platform with `pw endpoints run` — no session block, no tunnel wiring, no port bookkeeping
-- Let the endpoint pick a free port at runtime and hand it to your server through the `PORT` environment variable
+- Expose a web server through the platform with `pw endpoints run` — no tunnel wiring, no port bookkeeping: the endpoint picks a free port at runtime and hands it to your server through the `PORT` environment variable
 - Wait for an endpoint to come online with a `retry` step, and surface its URL with `$OUTPUTS` and log annotations (`::notice::`, `::warning::`, `::error::`)
 - Hand a script to a reusable subworkflow that submits it to the cluster scheduler (SLURM or PBS) and streams, monitors, and cleans up the job for you — and see why endpoints make the "where did my job land?" question disappear
 - Build a form that adapts to the chosen resource with dynamic dropdowns and show/hide rules
@@ -20,17 +19,19 @@ By the end of the stages built so far you will understand how to:
 
 ---
 
-## Sessions vs endpoints, in one table
+## Background — sessions vs endpoints
 
-| | Session tunnel (original tutorial) | `pw endpoints` (this tutorial) |
+Activate has two ways to put a web page running on a cluster into your browser. A **session tunnel** is opened by the platform, which tunnels *in* to a host and port your workflow must know and register. An **endpoint** dials *out* from wherever the server runs and registers itself. If you have seen session-based workflows before, this table maps one onto the other; if not, skip it — the stages explain everything they use.
+
+| | Session tunnel | `pw endpoints` (this tutorial) |
 |---|---|---|
 | Who opens the connection | the platform tunnels **in** to `host:port` on the cluster | the service side dials **out** and registers itself |
-| What the workflow must know | the node the server landed on and its port (`HOSTNAME`/`PORT` files, `update-session`) | nothing — the endpoint registers from wherever the script runs |
-| Port | you pick one (`pw agent open-port`) and thread it through | `pw endpoints run` assigns one and exports it as `PORT` |
+| What the workflow must know | the node the server landed on and its port | nothing — the endpoint registers from wherever the script runs |
+| Port | you pick one and thread it through the jobs | `pw endpoints run` assigns one and exports it as `PORT` |
 | URL | `…/me/session/<user>/<session-name>` | `https://<subdomain>.activate.pw/` (subdomain endpoints serve at the root) |
 | Auth | platform login | same — endpoints require platform login unless explicitly made public |
 | Declared in YAML | `sessions:` block + `update-session` action | nothing — just the `pw endpoints run` command |
-| Needs `permissions: ['*']` | only for `pw sessions ls/stop` (Stage 6) | from the first `pw endpoints` call (Stage 2 onward) |
+| Needs `permissions: ['*']` | only for `pw sessions ls/stop` | from the first `pw endpoints` call (Stage 2 onward) |
 
 ---
 
@@ -44,7 +45,7 @@ By the end of the stages built so far you will understand how to:
 
 ## The example
 
-The thing we are automating is the same [`fractal-demo/`](../hsp/fractal-demo/README.md) as the original tutorial — this edition checks it out from the same place (`workflow/tutorials/hsp/fractal-demo`), so there is exactly one copy of the demo in the repo:
+The thing we are automating lives in [`workflow/tutorials/fractal-demo/`](../fractal-demo/README.md): a small script that renders a Mandelbrot fractal *and* serves a web page showing the progress live.
 
 ```
   run.sh ──renders──▶ fractal.png + status.json ──serves──▶ live web page
@@ -65,7 +66,7 @@ Before automating anything, run the demo manually so the moving parts are famili
 
 ```bash
 git clone https://github.com/parallelworks/interactive_session.git
-cd interactive_session/workflow/tutorials/hsp/fractal-demo
+cd interactive_session/workflow/tutorials/fractal-demo
 ```
 
 Install the environment, then render and serve a fractal:
@@ -74,6 +75,8 @@ Install the environment, then render and serve a fractal:
 ./install.sh                        # builds the venv at ~/pw/software/fractal-demo
 RESOLUTION=1000 PORT=8000 ./run.sh  # render a 1000x1000 fractal and serve it on port 8000
 ```
+
+`run.sh` starts the web server on port 8000, then renders the image one row at a time, so the page fills in top to bottom as it goes. When the render finishes it keeps serving, so the result stays up until you stop it.
 
 ### View it with an endpoint
 
@@ -97,19 +100,133 @@ Press Ctrl+C in the `pw endpoints http` terminal — the endpoint deregisters th
 
 ## Stage 1 — Run it as a workflow (`01-controller.yaml`)
 
-This stage is **identical to the original tutorial's Stage 1** — no session and no endpoint yet, just the workflow fetching, installing, and running the demo. The file is [`01-controller.yaml`](01-controller.yaml); the original README's [Stage 1 explanations](../hsp/README.md#stage-1--run-it-as-a-workflow-01-controlleryaml) (jobs, `needs`, `ssh`, `PW_JOB_DIR`, expressions, `checkout`, the inputs form, running it with the `pw` CLI) all apply verbatim.
+Instead of SSHing in and typing commands, a workflow can fetch the code, install it, then render the fractal and serve the page for you. This is the file [`01-controller.yaml`](01-controller.yaml):
 
-To *view* the page this stage serves, use the manual endpoint from Stage 0 (`pw endpoints http --name fractal 8000` on the controller node). The next stage makes the workflow do that itself.
+```yaml
+jobs:
+  install:                                    # First job: put the example on the cluster
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}   # Run this job's steps on the chosen cluster over SSH
+    steps:
+      - name: Checkout Fractal Demo
+        uses: parallelworks/checkout          # Built-in action: clone code onto the cluster
+        with:
+          repo: https://github.com/parallelworks/interactive_session.git
+          branch: main
+          sparse_checkout:                     # Fetch only the example directory, not the whole repo
+            - workflow/tutorials/fractal-demo
+      - name: Install Dependencies
+        run: |
+          # keep only the example directory from the sparse checkout
+          mv workflow/tutorials/fractal-demo .
+          rm -r workflow
+          ./fractal-demo/install.sh
+
+  run:
+    needs:
+      - install                               # Wait until the code is installed
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Render and Serve                # run.sh both renders the fractal and serves the page
+        run: RESOLUTION=${{ inputs.resolution }} PORT=${{ inputs.port }} ./fractal-demo/run.sh
+
+'on':
+  execute:
+    inputs:                                   # The form users fill in before running the workflow
+      resource:
+        type: compute-clusters                # Renders a cluster picker
+        label: Resource Target
+        tooltip: The compute cluster to run the fractal example on.
+        autoselect: true
+        optional: false
+      resolution:
+        type: number                          # Renders a validated number field
+        label: Resolution
+        tooltip: Image size in pixels. Larger values look sharper but take longer to render.
+        default: 2500
+        min: 100
+        max: 10000
+      port:
+        type: number
+        label: Port
+        tooltip: Port the progress web server listens on.
+        default: 8000
+        min: 1024
+        max: 65535
+```
+
+### Concepts introduced
+
+**`needs` — ordering and parallelism.**
+By default every job in a workflow starts at the same time. `needs` makes a job wait for another to finish first. Here `run` lists `install` under `needs`, so the example is checked out and installed before `run` renders and serves it. (You will see jobs actually run *in parallel* in Stage 4.)
+
+**`ssh` at the job level.**
+Setting `ssh.remoteHost` on a job runs every step in that job on the remote cluster over SSH. Each job sets it to `${{ inputs.resource.ip }}` — the IP of whichever cluster you pick in the form.
+
+**Where jobs run — `PW_JOB_DIR`.**
+By default every job runs from a per-run working directory on the node it lands on: `${HOME}/pw/jobs/<workflow-name>/<job-number>`, exported to your steps as `PW_JOB_DIR` (and as `PW_PARENT_JOB_DIR`, which a subworkflow reads to find the top-level run's directory). Both jobs here share that directory — which is why `run` can call `./fractal-demo/run.sh`: `install` checked the code out into the very same place. To run a job somewhere else, set `working-directory` at the job level. The run directory is **not** removed when the workflow finishes — whatever a job writes there persists until you delete it yourself.
+
+**Expressions `${{ }}`.**
+Expressions are evaluated at runtime and replaced with their values. `${{ inputs.resource.ip }}` becomes the chosen cluster's IP; `${{ inputs.resolution }}` becomes the number entered in the form.
+
+**`uses: parallelworks/checkout` and `sparse_checkout`.**
+`uses` runs a built-in action instead of a shell command. The `checkout` action clones a repository onto the cluster; `sparse_checkout` limits it to just the directories you list, so you do not download the whole repo to run one example.
+
+**Inputs become environment variables.**
+`run.sh` reads `RESOLUTION` and `PORT` from the environment, so the workflow passes the form values straight through: `RESOLUTION=${{ inputs.resolution }} PORT=${{ inputs.port }} ./fractal-demo/run.sh`. No argument parsing, no editing the script.
+
+**`run.sh` renders, then keeps serving.**
+The `run` job's one step renders the fractal and then keeps the web server up, so the job stays alive for as long as the page should be available.
+
+**`on.execute.inputs`.**
+This section defines the run form. Each input has a `type` (`compute-clusters` renders a cluster picker, `number` a validated numeric field), a `label` shown above it, and a `tooltip` shown on hover. `number` inputs add `default`, `min`, and `max`; the resource input adds `autoselect` (pre-select a cluster) and `optional: false` (required).
+
+To run it, open **Workflows** in the Activate UI, select this workflow, pick your cluster, adjust the resolution if you like, and click **Execute**. To *view* the page this stage serves, use the manual endpoint from Stage 0 (`pw endpoints http --name fractal 8000` on the controller node) — the next stage makes the workflow do that itself.
+
+### Run it from the command line (`pw`)
+
+You can also run the workflow with the `pw` CLI. First create an inputs file — say `01-controller.json`:
+
+```json
+{
+  "port": 8000,
+  "resolution": 2500,
+  "resource": "<Resource URI>"
+}
+```
+
+Set `resource` to one of your active clusters, which you can list with `pw cluster list --status=active`. You can also copy the inputs JSON from any past run — click the run and open its **INPUTS** tab — where `resource` appears as a full object; you can replace that whole object with just its URI string, as above.
+
+Run the YAML directly. This does **not** create a workflow on the platform; it just runs the file:
+
+```bash
+pw workflows run -i 01-controller.json ./01-controller.yaml
+```
+
+Or create the workflow on the platform, then run it by name:
+
+```bash
+pw workflows create --yaml 01-controller.yaml --display-name "Fractal Demo" fractal_demo
+pw workflows run -i 01-controller.json fractal_demo
+```
+
+> At this stage the endpoint is still created by hand. The next stage lets the workflow create it for you.
 
 ---
 
-## Stage 2 — Create the endpoint automatically (`02-automated-endpoint-creation.yaml`)
+## Stage 2 — Create the endpoint automatically (`02-automated-session-creation.yaml`)
 
-Stage 1 still relies on the endpoint you opened by hand in Stage 0. The workflow can create it itself — by wrapping the server command in `pw endpoints run`. Compare with the original Stage 2, which needed a `sessions:` block *and* a third job calling `update-session`; here nothing else is added. This is [`02-automated-endpoint-creation.yaml`](02-automated-endpoint-creation.yaml):
+Stage 1 still relies on the endpoint you opened by hand in Stage 0. The workflow can create it itself — by wrapping the server command in `pw endpoints run`. That one wrapper also retires the `port` input: the endpoint picks a free port at runtime and hands it to `run.sh`, so two runs on the same cluster never collide. This is [`02-automated-session-creation.yaml`](02-automated-session-creation.yaml):
 
 ```yaml
+# permissions authenticates the in-workflow pw CLI — pw endpoints registers the
+# endpoint through the platform API.
 permissions:
-  - '*'                                       # NEW: authenticates the in-workflow pw CLI
+  - '*'
+
+env:                                          # NEW: a workflow-level variable, visible to every step
+  RESOLUTION: ${{ inputs.resolution }}
 
 jobs:
   install:
@@ -121,117 +238,46 @@ jobs:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - name: Render and Serve                # CHANGED: pw endpoints run wraps run.sh
-        run: |
-          RESOLUTION=${{ inputs.resolution }} pw endpoints run \
-            --name fractal-${PW_RUN_SLUG} \
-            --port ${{ inputs.port }} \
-            -- ./fractal-demo/run.sh
-
-'on':
-  execute:
-    inputs:
-      # ... unchanged from Stage 1 (resource, resolution, port) ...
-```
-
-### Concepts introduced
-
-**`pw endpoints run -- COMMAND` — serve and expose in one step.**
-`pw endpoints run` spawns the command after `--`, registers the endpoint, and forwards the endpoint's URL to the command's port until the command exits. The server and its exposure now share one lifetime: cancel the step and both are gone. There is no `sessions:` block, no `update-session` job, and no `resource.id` plumbing — the whole Stage 2 delta is one wrapper around the command you already had.
-
-**The port travels through the environment.**
-`--port ${{ inputs.port }}` pins the local port, and `pw endpoints run` **exports `PORT`** to the wrapped command — which is exactly how `run.sh` already reads it. (You could also write the literal token `{port}` in the command and `pw` substitutes the number; the env var is the cleaner fit here. If you ever interpolate it, mind the spelling: `{port}`, **not** `${port}` — the shell expands `${port}` to an empty string before `pw` ever sees it.)
-
-**Naming with `${PW_RUN_SLUG}`.**
-`PW_RUN_SLUG` is a platform-injected environment variable holding the run's slug — the same value in every job of the run. Baking it into the endpoint name (`fractal-<run-slug>`) makes the name unique per run *and* predictable, so any other job (or you, at a terminal) can find this run's endpoint with `pw endpoints list`. Stage 3 leans on exactly that.
-
-**`permissions: ['*']` arrives earlier than in the session tutorial.**
-Registering an endpoint is a platform API call, so the in-workflow `pw` CLI must be authenticated — which is what `permissions: ['*']` grants. (In the original tutorial nothing before Stage 6 needed it, because `pw agent open-port` works unauthenticated.)
-
-**Where's my URL?**
-The platform does not redirect you automatically (that was the session block's `redirect: true`). Find the URL in the **Sessions** page of the UI, or with `pw endpoints list`, or in the `run` step's log. Stage 3 adds a job that surfaces it properly.
-
----
-
-## Stage 3 — Let the endpoint pick the port (`03-dynamic-port.yaml`)
-
-So far the port is hardcoded through the `port` input. If two people run the workflow on the same cluster, they collide on port 8000. In the session tutorial this took a new `pw agent open-port` step, an `$OUTPUTS` hand-off, and rewiring two jobs. With endpoints it is the *removal* of a flag: drop `--port` and `pw endpoints run` picks a free port itself, handing it to `run.sh` through `PORT` as always. We use the freed-up space to solve Stage 2's "where's my URL?" properly, with a job that waits for the endpoint and publishes its URL. This is [`03-dynamic-port.yaml`](03-dynamic-port.yaml):
-
-```yaml
-permissions:
-  - '*'
-
-env:                                          # NEW: a workflow-level variable, visible to every step
-  RESOLUTION: ${{ inputs.resolution }}
-
-jobs:
-  install:
-    # ... unchanged from Stage 2 ...
-
-  run:
-    needs:
-      - install
-    ssh:
-      remoteHost: ${{ inputs.resource.ip }}
-    steps:
-      - name: Render and Serve                # CHANGED: no --port; pw picks one
+      - name: Render and Serve
+        # No --port: pw picks a free local port and exports it as PORT, which
+        # run.sh reads. RESOLUTION comes from the workflow-level env block.
         run: pw endpoints run --name fractal-${PW_RUN_SLUG} -- ./fractal-demo/run.sh
-        cleanup: rm -r ${PW_JOB_DIR}          # NEW: delete the run directory when the step exits
-
-  wait_for_endpoint:                          # NEW: wait for the endpoint, publish its URL
-    needs:
-      - install
-    ssh:
-      remoteHost: ${{ inputs.resource.ip }}
-    steps:
-      - name: Wait for endpoint
-        early-cancel: any-job-failed
-        retry:
-          max-retries: 180
-          interval: 10s                       # poll for up to ~30 minutes
-        run: |
-          endpoint_name="fractal-${PW_RUN_SLUG}"
-          row=$(pw endpoints list | grep -w "${endpoint_name}" || true)
-          if [ -z "${row}" ]; then
-            echo "::notice::Endpoint ${endpoint_name} not registered yet"
-            exit 1                            # non-zero → the retry fires again
-          fi
-          URL=$(echo "${row}" | awk '{print $3}')
-          echo "URL=${URL}" | tee -a $OUTPUTS
-          echo "::notice::Fractal is being served at ${URL}"
 
 'on':
   execute:
     inputs:
       # the `port` input is gone — the endpoint picks the port itself now
       resource:
-        # ... unchanged ...
+        # ... unchanged from Stage 1 ...
       resolution:
-        # ... unchanged ...
+        # ... unchanged from Stage 1 ...
 ```
 
 ### Concepts introduced
 
-**Dynamic ports come for free.**
-No `pw agent open-port`, no threading a port between jobs: dropping `--port` is the entire change to the `run` job. Two runs on the same cluster no longer collide.
+**`pw endpoints run -- COMMAND` — serve and expose in one step.**
+`pw endpoints run` spawns the command after `--`, registers the endpoint, and forwards the endpoint's URL to the command's port until the command exits. The server and its exposure share one lifetime: cancel the step and both are gone. There is no session declaration, no tunnel wiring, no plumbing between jobs — the whole Stage 2 delta is one wrapper around the command you already had, and one input *removed*.
 
-**`retry` — poll until something exists.**
-The endpoint only appears in `pw endpoints list` once `run.sh` is actually up. `retry` re-runs the step while it exits non-zero — `max-retries: 180` at `interval: 10s` ≈ 30 minutes — so the step simply fails until the endpoint registers, then succeeds and publishes the URL. (The session tutorial introduces `retry` one stage later, to wait for a queued job's `HOSTNAME`/`PORT` files; same tool, same shape.)
+**The port travels through the environment.**
+With no `--port` flag, `pw endpoints run` picks a free local port itself and **exports it as `PORT`** to the wrapped command — which is exactly how `run.sh` already reads it. Nothing else in the workflow ever needs to know the number. (If you need to pin a specific port, pass `--port <N>`; and if your command takes the port as an argument instead of the environment, write the literal token `{port}` in the command and `pw` substitutes the number — `{port}`, **not** `${port}`, which the shell would expand to an empty string before `pw` ever sees it.)
 
-**`$OUTPUTS` and `::notice::` — surface the URL.**
-Writing `URL=…` to `$OUTPUTS` publishes it as a job output (readable downstream as `${{ needs.wait_for_endpoint.outputs.URL }}`), and the `::notice::` line puts the clickable URL right in the workflow UI.
+**Naming with `${PW_RUN_SLUG}`.**
+`PW_RUN_SLUG` is a platform-injected environment variable holding the run's slug — the same value in every job of the run. Baking it into the endpoint name (`fractal-<run-slug>`) makes the name unique per run *and* predictable, so any other job (or you, at a terminal) can find this run's endpoint with `pw endpoints list`. Stage 4 leans on exactly that.
 
-**`early-cancel: any-job-failed` — don't wait for a corpse.**
-If the `run` job dies (say `pw endpoints run` fails to start), the wait step would happily poll for the full 30 minutes for an endpoint that will never register. `early-cancel: any-job-failed` cancels it as soon as any job fails instead.
+**`permissions: ['*']`.**
+Registering an endpoint is a platform API call, so the in-workflow `pw` CLI must be authenticated — which is what `permissions: ['*']` grants. (Stage 1 needed no grant because it never called the platform API from inside the workflow.)
 
-**Workflow-level `env`, step `cleanup`.**
-Same lessons as the original Stage 3: the top-level `env:` block hoists `RESOLUTION` so the run command only carries what changes, and the `cleanup:` on the run step (here deleting the run directory) fires when the step exits — including on cancel.
+**Workflow-level `env`.**
+The top-level `env:` block defines variables available to every step in the workflow. We set `RESOLUTION` there once, so `run.sh` reads it from the environment and the run command only carries what is specific to it. (Stage 1 set it inline on the command — this is the same idea, hoisted to one place.)
+
+**Where's my URL?**
+`pw endpoints run` prints the URL in the `run` step's log, and the endpoint shows up in the **Sessions** page of the UI and in `pw endpoints list`. Stage 4 adds a job that waits for the endpoint and publishes the URL as a proper output and notice.
 
 ---
 
 ## Stage 4 — Submit to a scheduler with a subworkflow (`04-subworkflow.yaml`)
 
-Until now everything ran on the **controller** (login) node. Heavy work belongs on a **compute node**, requested through the cluster's scheduler. As in the original tutorial, the recommended move is to *not* hand-write the sbatch/qsub machinery: write your script and hand it to the **`script_submitter` subworkflow**, which submits, streams, monitors, and cleans up for you. This is [`04-subworkflow.yaml`](04-subworkflow.yaml); the [original Stage 4 notes](../hsp/README.md#stage-4--submit-to-a-scheduler-with-a-subworkflow-04-subworkflowyaml) on subworkflows, the adaptive SLURM/PBS form, `configurations` presets, and what the submitter does internally all apply unchanged.
+Until now everything ran on the **controller** (login) node. Heavy work belongs on a **compute node**, requested through the cluster's scheduler. The recommended move is to *not* hand-write the sbatch/qsub machinery: write your script and hand it to the **`script_submitter` subworkflow**, which submits, streams, monitors, and cleans up for you. This is [`04-subworkflow.yaml`](04-subworkflow.yaml).
 
 What endpoints change is the *script* — and everything downstream of it. `install` writes the script body and publishes its path:
 
@@ -250,7 +296,7 @@ What endpoints change is the *script* — and everything downstream of it. `inst
           echo "SCRIPT_PATH=${PWD}/script.sh" | tee -a $OUTPUTS
 ```
 
-Compare with the original's script, which had to record `hostname > HOSTNAME`, run `pw agent open-port`, and write a `PORT` file — three lines of bookkeeping whose only purpose was to tell `update-session` where the tunnel should point. All three are gone, along with the entire "read hostname and port, then create the session" job. In their place, the same `wait_for_endpoint` job from Stage 3 (with the Stage-4 endpoint name):
+A session-tunnel version of this script would have to record `hostname > HOSTNAME`, pick a free port, and write a `PORT` file — bookkeeping whose only purpose is to tell the platform where the tunnel should point. None of that exists here. In its place, a `wait_for_endpoint` job polls the platform and publishes the URL:
 
 ```yaml
   wait_for_endpoint:
@@ -266,28 +312,50 @@ Compare with the original's script, which had to record `hostname > HOSTNAME`, r
           interval: 10s
         run: |
           endpoint_name="fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }}"
-          # ... same poll-and-publish as Stage 3 ...
+          row=$(pw endpoints list | grep -w "${endpoint_name}" || true)
+          if [ -z "${row}" ]; then
+            echo "::notice::Endpoint ${endpoint_name} not registered yet"
+            exit 1                            # non-zero → the retry fires again
+          fi
+          URL=$(echo "${row}" | awk '{print $3}')
+          echo "URL=${URL}" | tee -a $OUTPUTS
+          echo "::notice::Fractal is being served at ${URL}"
 ```
 
 ### Concepts introduced
 
+**Subworkflows (`uses:` + `$yaml`).**
+`uses: github/parallelworks/interactive_session@main` runs *another workflow* as a step. `$yaml` selects which workflow file inside that repo to run (here `workflow/script_submitter/v3.6/hsp.yaml`), and the remaining `with:` keys are that subworkflow's inputs. You hand it your script's path (`use_existing_script: true` + `script_path`, published by `install` through `$OUTPUTS`) and the form's scheduler settings, and it does the whole submit/stream/monitor/cleanup dance.
+
 **The endpoint doesn't care where the job landed.**
-This is the punchline of the whole edition. A session tunnel points *at* a host and port, so the original tutorial had to capture the compute node's hostname, pick between `localhost` and the `HOSTNAME` file depending on the scheduler flag, and feed both into `update-session`. An endpoint dials **out** from whichever node executes the script — controller or compute node, SLURM or PBS — so none of that machinery exists here. The waiting job polls the *platform* (`pw endpoints list`), not the cluster filesystem.
+This is the punchline of the whole tutorial. A session tunnel points *at* a host and port, so a session-based workflow has to capture the compute node's hostname and chosen port and feed both into the platform. An endpoint dials **out** from whichever node executes the script — controller or compute node, SLURM or PBS — so none of that machinery exists here. The waiting job polls the *platform* (`pw endpoints list`), not the cluster filesystem.
 
 **Bake values into the script at write time.**
 The heredoc is unquoted, so `${{ inputs.resolution }}`, `${PW_RUN_SLUG}`, and `${PWD}` all expand **now**, while the script is being written on the controller node. That matters for three reasons: the workflow-level `env:` does not cross into the `script_submitter` subworkflow; `PW_RUN_SLUG` may not be exported in a compute node's batch environment; and `${PWD}` pins the demo to an absolute path that resolves wherever the script runs.
 
+**`retry` — poll until something exists.**
+The endpoint only appears in `pw endpoints list` once `run.sh` is actually up — for a queued SLURM/PBS job that may be minutes later. `retry` re-runs the step while it exits non-zero — `max-retries: 180` at `interval: 10s` ≈ 30 minutes — so the step simply fails until the endpoint registers, then succeeds and publishes the URL.
+
+**`$OUTPUTS` and `::notice::` — surface the URL.**
+`$OUTPUTS` is a file the platform injects into each step; writing `KEY=VALUE` lines to it publishes those values as outputs of the job (readable downstream as `${{ needs.wait_for_endpoint.outputs.URL }}`). `tee -a` appends to the file *and* echoes the line to the log. A line printed in the form `::notice::message` is surfaced as a notice in the workflow UI (there are also `::warning::` and `::error::`) — here it puts the clickable URL right in the run page.
+
+**`early-cancel: any-job-failed` — don't wait for a corpse.**
+If the render job dies (say the submission fails), the wait step would happily poll for the full 30 minutes for an endpoint that will never register. `early-cancel: any-job-failed` cancels it as soon as any job fails instead.
+
 **Per-worker endpoint names.**
 The name grows a suffix: `fractal-<run-slug>-<resource-name>`. `PW_RUN_SLUG` is *run-scoped* — in Stage 5 every matrix worker shares it — so the resource name is what keeps concurrent workers from colliding, while the shared `fractal-<run-slug>-` prefix is what lets Stage 6 find *all* of this run's endpoints.
 
+**A form that adapts to the resource.**
+The "Schedule Job?" toggle and the `slurm`/`pbs` groups only appear when they apply: `hidden`/`ignore` key off `inputs.resource.schedulerType` (`slurm`, `pbs`, or empty) and `inputs.scheduler`. `slurm-partitions`/`slurm-qos`/`slurm-accounts` are **dynamic dropdowns** that fetch their choices from the chosen cluster. The hidden `is_enabled` boolean (default `true`, sent only when the group is active) is what tells the subworkflow which path to take. The top-level `configurations:` block defines one-click presets that pre-fill the form with a known PBS system's directives (`Carpenter`, `Ruth`, `Warhawk`, `Wheat`).
+
 **Lifecycle: the run stays alive; cancel to stop.**
-`pw endpoints run` serves in the foreground, so the submitted job — and with it the workflow run — stays alive for as long as the page is up, exactly like the session tutorial. Canceling the run makes `script_submitter` tear the job down (`scancel`/`qdel`/kill), the process tree dies, and the endpoint deregisters itself. (The repo's production `*_v5.yaml` session workflows flip this: they *complete* the run once the endpoint is live and let the service outlive it, torn down later with `pw endpoints delete` — see `workflow/yamls/openvscode/general_v5.yaml` and `ai-workflow-development/references/v4-to-v5-endpoints-upgrade.md` if you want that pattern.)
+`pw endpoints run` serves in the foreground, so the submitted job — and with it the workflow run — stays alive for as long as the page is up. Canceling the run makes `script_submitter` tear the job down (`scancel`/`qdel`/kill), the process tree dies, and the endpoint deregisters itself. (The repo's production `*_v5.yaml` session workflows flip this: they *complete* the run once the endpoint is live and let the service outlive it, torn down later with `pw endpoints delete` — see `workflow/yamls/openvscode/general_v5.yaml` if you want that pattern.)
 
 ---
 
 ## Stage 5 — Fan out across resources with a matrix (`05-matrix.yaml`)
 
-Stage 5 runs the **same** Stage 4 workflow across a whole *list* of resources at once — each entry on its own cluster, each choosing its own controller-vs-scheduler path, each rendering its own fractal and registering its own endpoint. The mechanics are identical to the [original Stage 5](../hsp/README.md#stage-5--fan-out-across-resources-with-a-matrix-05-matrixyaml) — a `list` input with a `template`, a `strategy.matrix` that expands one job per entry, `matrix.worker` vs the template's `[index]` — so read those notes there. This is [`05-matrix.yaml`](05-matrix.yaml):
+Stage 5 runs the **same** Stage 4 workflow across a whole *list* of resources at once — each entry on its own cluster, each choosing its own controller-vs-scheduler path, each rendering its own fractal and registering its own endpoint. This is [`05-matrix.yaml`](05-matrix.yaml):
 
 ```yaml
 permissions:
@@ -311,10 +379,18 @@ jobs:
           pbs:    # ... same idea ...
 ```
 
-Two endpoint-specific notes on top of the original's lessons:
+The form replaces the single resource block with a **`list`** input the user can grow: each entry has the shape defined under `template:` — a resource picker plus the same "Schedule Job?"/SLURM/PBS controls as Stage 4, nested one level deeper.
+
+### Concepts introduced
+
+**`strategy.matrix` — fan-out.**
+A `strategy.matrix` runs the job once for every value of a matrix variable. Setting `worker: ${{ inputs.workers }}` makes the variable the `workers` list itself, so the `fractal_demo` job expands into one copy per element — `fractal_demo-0`, `fractal_demo-1`, … — all running concurrently. Add a third worker in the form and a third job appears automatically; nothing in the YAML hardcodes the count. `fail-fast: true` cancels the remaining matrix jobs as soon as one fails; `max-parallel: N` (omitted here) would cap how many run at once.
+
+**`matrix.<name>` vs the template's `[index]` — two different "current item"s.**
+This is the subtle part, and the easiest thing to get wrong. Inside a *job*, the current matrix value is `${{ matrix.worker }}`, so each job reads *its own* worker with `matrix.worker.resource`, `matrix.worker.scheduler`, and so on. Inside the *form template*, `[index]` is a **separate** token meaning "the item being rendered" — which is why every `hidden`/`ignore`/`resource` expression in the `workers` template is written `inputs.workers.[index]...`. They are not interchangeable: `[index]` only resolves inside the list template, and in a job it silently falls back to the first element. Writing `inputs.workers.[index]` in the job (instead of `matrix.worker`) is exactly the trap that makes *every* matrix job inherit `workers[0]`'s settings.
 
 **`permissions` must be granted by the parent.**
-The `pw endpoints` calls run inside the subworkflow, but a subworkflow's `pw` CLI is only authenticated if the **parent** grants `permissions: ['*']` too — the same rule the original tutorial hits in Stage 6.
+The `pw endpoints` calls run inside the subworkflow, but a subworkflow's `pw` CLI is only authenticated if the **parent** grants `permissions: ['*']` too.
 
 **One endpoint per worker, unique by construction.**
 Every worker registers `fractal-<run-slug>-<its-resource-name>` — the run-slug part identical across workers (it is the *parent* run's slug), the resource name distinct per row. After the run, `pw endpoints list` shows the whole fleet at a glance. (Two rows pointing at the *same* resource would collide on the name — the race in Stage 6 is also the cure for wanting the same thing twice.)
@@ -367,13 +443,16 @@ The parent is Stage 5 with the `$yaml` swapped to the racing subworkflow. All th
         cleanup: pw endpoints delete "fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }}" || true
 ```
 
-### What changed from the session race
+### Concepts introduced
 
 **The scoreboard is `pw endpoints list`, keyed by name prefix.**
-The original filtered `pw sessions ls -o json` on `workflowRun.slug == PW_RUN_SLUG` — sessions carry their run's identity as metadata. Endpoints carry it in the **name** instead: every worker's endpoint starts with `fractal-<run-slug>-` (built in Stage 4), so a prefix match on the first column plus `status == running` reproduces exactly the same filter with a few lines of `awk`. The decision logic on top — WAIT/WIN/LOSE, list order as the shared tie-break, and the "confirm you stay first for a few polls before committing" guard against the eventually-consistent list — is unchanged from the original, and the original README's explanations of those apply as-is.
+Every worker's endpoint starts with `fractal-<run-slug>-` (built in Stage 4), so a prefix match on the first column plus `status == running` isolates *this run's* endpoints with a few lines of `awk`. Among those, the **first one the list returns** is the winner and every other worker stands down. List order is the universal tie-breaker: every worker reads the same list, so they all pick the same winner. Only running endpoints count, so a worker whose own endpoint isn't up yet while another's is simply loses.
 
-**Losing is simpler: kill the process, the endpoint follows.**
-A canceled session job left a dead tunnel behind, so the original needed `pw sessions stop` to delete the session object. An endpoint *is* its client process: when `cancel-jobs` stops the losing `script_submitter`, the process tree dies and the endpoint deregisters itself. The `pw endpoints delete` in the `cleanup` is a defensive no-op for the edge where the process lingers — and note there is one less job to cancel, because Stage 4 lost the `session` job to begin with. The winner's `wait`/surface duty is folded into the WIN branch, which prints the winning URL.
+**Confirm before committing — the endpoint list is eventually consistent.**
+Just after two endpoints register, each worker can briefly see only *its own* running and think it won. So a worker that is currently in front re-checks for a few polls (guarded by `PW_WORKFLOW_STEP_CURRENT_RETRY`) before it commits; a worker that was actually beaten sees the winning endpoint on a later poll and steps aside. Without this settle, two workers can both "win."
+
+**One output flag drives the cleanup.**
+The winner writes `CANCEL=false` and simply finishes; its endpoint stays up because its `script_submitter` job is still serving the page — the WIN branch also prints the winning URL as a notice. A loser writes `CANCEL=true`, and the **Cancel Jobs** step keys its `if:` off `${{ needs.first_start_wins.outputs.CANCEL }}` to run `cancel-jobs`, stopping that worker's render. Killing the process tree deregisters the endpoint on its own — an endpoint *is* its client process — so the `pw endpoints delete` in the `cleanup` is a defensive no-op for the edge where the process lingers.
 
 ---
 

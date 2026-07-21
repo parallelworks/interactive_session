@@ -28,7 +28,7 @@ By the end of the stages built so far you will understand how to:
 
 ## The example
 
-The thing we are automating lives in [`fractal-demo/`](fractal-demo/README.md): a small script that renders a Mandelbrot fractal *and* serves a web page showing the progress live.
+The thing we are automating lives in [`fractal-demo/`](../fractal-demo/README.md): a small script that renders a Mandelbrot fractal *and* serves a web page showing the progress live.
 
 ```
   run.sh ──renders──▶ fractal.png + status.json ──serves──▶ live web page
@@ -49,7 +49,7 @@ Before automating anything, run the demo manually so the moving parts are famili
 
 ```bash
 git clone https://github.com/parallelworks/interactive_session.git
-cd interactive_session/workflow/tutorials/hsp/fractal-demo
+cd interactive_session/workflow/tutorials/fractal-demo
 ```
 
 Install the environment, then render and serve a fractal:
@@ -96,11 +96,11 @@ jobs:
           repo: https://github.com/parallelworks/interactive_session.git
           branch: main
           sparse_checkout:                     # Fetch only the example directory, not the whole repo
-            - workflow/tutorials/hsp/fractal-demo
+            - workflow/tutorials/fractal-demo
       - name: Install Dependencies
         run: |
           # keep only the example directory from the sparse checkout
-          mv workflow/tutorials/hsp/fractal-demo .
+          mv workflow/tutorials/fractal-demo .
           rm -r workflow
           ./fractal-demo/install.sh
 

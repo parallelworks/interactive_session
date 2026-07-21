@@ -3,6 +3,9 @@
 permissions:
   - '*'
 
+env:
+  RESOLUTION: ${{ inputs.resolution }}
+
 jobs:
   install:
     ssh:
@@ -14,11 +17,11 @@ jobs:
           repo: https://github.com/parallelworks/interactive_session.git
           branch: main
           sparse_checkout:
-            - workflow/tutorials/hsp/fractal-demo
+            - workflow/tutorials/fractal-demo
       - name: Install Dependencies
         run: |
           # keep only the example directory from the sparse checkout
-          mv workflow/tutorials/hsp/fractal-demo .
+          mv workflow/tutorials/fractal-demo .
           rm -r workflow
           ./fractal-demo/install.sh
 
@@ -29,13 +32,9 @@ jobs:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
       - name: Render and Serve
-        # pw endpoints run exposes the server AND hands it its port: it exports
-        # PORT to the wrapped command, which is exactly how run.sh reads it.
-        run: |
-          RESOLUTION=${{ inputs.resolution }} pw endpoints run \
-            --name fractal-${PW_RUN_SLUG} \
-            --port ${{ inputs.port }} \
-            -- ./fractal-demo/run.sh
+        # No --port: pw picks a free local port and exports it as PORT, which
+        # run.sh reads. RESOLUTION comes from the workflow-level env block.
+        run: pw endpoints run --name fractal-${PW_RUN_SLUG} -- ./fractal-demo/run.sh
 
 'on':
   execute:
@@ -53,10 +52,3 @@ jobs:
         default: 2500
         min: 100
         max: 10000
-      port:
-        type: number
-        label: Port
-        tooltip: Port the progress web server listens on.
-        default: 8000
-        min: 1024
-        max: 65535

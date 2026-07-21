@@ -15,11 +15,11 @@ jobs:
           repo: https://github.com/parallelworks/interactive_session.git
           branch: main
           sparse_checkout:
-            - workflow/tutorials/hsp/fractal-demo
+            - workflow/tutorials/fractal-demo
       - name: Install Dependencies
         run: |
           # keep only the example directory from the sparse checkout
-          mv workflow/tutorials/hsp/fractal-demo .
+          mv workflow/tutorials/fractal-demo .
           rm -r workflow
           ./fractal-demo/install.sh
       - name: Create Run Script

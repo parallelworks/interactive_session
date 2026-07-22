@@ -152,6 +152,13 @@ Then verify, in order:
 
 ## Gotchas checklist (each one bit a real run)
 
+- **The endpoint proxy preserves the public Host header** (`<name>.activate.pw`).
+  An app with a DNS-rebinding/host guard (hermes dashboard v0.17+) passes every
+  local curl and then 400s "Invalid Host header" for real users — and the
+  anonymous-curl 307 check does NOT catch it (auth redirects before the app).
+  Fix: `pw endpoints run --rewrite-host=localhost`. Catch it pre-launch with
+  `curl -H "Host: <public-domain>" localhost:<port>` (verified: hermes-agent).
+
 - `{port}` **token, not `${port}`** — shell expands `${port}` to empty before `pw`
   sees it and the app falls back to its default port.
 - `pw workflows create/update --yaml <path>`: an unreadable path still creates the

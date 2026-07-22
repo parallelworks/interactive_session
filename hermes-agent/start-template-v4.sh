@@ -87,9 +87,13 @@ if [ "${service_interface}" = "dashboard" ]; then
     # so the loopback bind (where the auth gate does NOT engage) is exactly what
     # we need -- no relay, no prefix handling. The controller pre-builds the SPA;
     # --skip-build skips rebuild.
+    # --rewrite-host: the endpoint proxy preserves the public Host header
+    # (<name>.activate.pw), which the dashboard's host guard 400s; rewriting it
+    # to localhost satisfies the guard (the same hardening that forces the
+    # loopback bind).
     echo "::notice::Starting hermes dashboard behind pw endpoint"
     # {port} is replaced by pw endpoints run with the local port it forwards to
-    pw endpoints run ${pw_endpoints_args} -- hermes dashboard \
+    pw endpoints run ${pw_endpoints_args} --rewrite-host=localhost -- hermes dashboard \
         --port {port} \
         --host 127.0.0.1 \
         --no-open \

@@ -8,7 +8,7 @@ set -o pipefail
 #          curl + python3. Idempotent: the installer preserves an existing
 #          install, and we skip it entirely if `hermes` is already on PATH.
 # Runs on: cluster login node (scheduler:false)
-# Called by: session_runner, after inputs.sh is sourced
+# Called by: Workflow preprocessing step, after inputs.sh is sourced
 #
 # Variables from inputs.sh:
 #   service_interface     dashboard | chat (dashboard needs the web UI pre-built)
@@ -19,10 +19,9 @@ set -o pipefail
 
 # Pin Hermes to a tested release. A plain install pulls the latest main, whose
 # behavior has broken this workflow before (the v0.17 auth hardening stopped the
-# dashboard binding 0.0.0.0; a 64-char X-Forwarded-Prefix cap blanked long
-# session URLs). NousResearch/hermes-agent publishes date-based tags, so we pin
-# one for reproducibility; the form can override it (a tag, branch, or commit
-# SHA). Update this default only after verifying a newer release.
+# dashboard binding 0.0.0.0). NousResearch/hermes-agent publishes date-based
+# tags, so we pin one for reproducibility; the form can override it (a tag,
+# branch, or commit SHA). Update this default only after verifying a newer release.
 HERMES_VERSION_DEFAULT="v2026.6.19"
 
 echo "::group::Prerequisites"
@@ -76,24 +75,9 @@ fi
 
 # Dashboard interface needs the web UI built once (login node has node/npm via
 # the installer). The build lands in hermes_cli/web_dist; start uses --skip-build.
+# Subdomain endpoints serve the SPA at the root URL, so v3's X-Forwarded-Prefix
+# cap patch is no longer needed.
 if [ "${service_interface}" = "dashboard" ]; then
-    # Raise Hermes' 64-char X-Forwarded-Prefix cap (normalise_prefix() in
-    # hermes_cli/dashboard_auth/prefix.py). ACTIVATE session base paths
-    # (/me/session/<user>/<workflow>_<run>_<key>) routinely exceed 64 chars; the
-    # dashboard then rejects the prefix, leaves __HERMES_BASE_PATH__ empty, and
-    # serves absolute /assets URLs that 404 under the session path -> blank page.
-    # Raising the cap lets Hermes' own prefix-rewriting (assets, fonts, base
-    # path, websockets) work for our long paths. Idempotent; verified per launch.
-    prefix_py="$(find "${HOME}/.hermes" -path '*/hermes_cli/dashboard_auth/prefix.py' 2>/dev/null | head -1)"
-    if [ -n "${prefix_py}" ] && grep -q 'len(p) > 64' "${prefix_py}"; then
-        sed -i 's/len(p) > 64/len(p) > 1024/' "${prefix_py}"
-        echo "::notice::Raised Hermes X-Forwarded-Prefix cap 64->1024 (${prefix_py})"
-    elif [ -n "${prefix_py}" ] && grep -q 'len(p) > 1024' "${prefix_py}"; then
-        echo "::notice::Hermes X-Forwarded-Prefix cap already raised"
-    else
-        echo "::warning::Could not find Hermes' X-Forwarded-Prefix cap to raise; long session URLs may blank-screen (see ${prefix_py:-prefix.py not found})"
-    fi
-
     web_dist_index="${HOME}/.hermes/hermes-agent/hermes_cli/web_dist/index.html"
     if [ -f "${web_dist_index}" ]; then
         echo "::notice::Dashboard web UI already built"

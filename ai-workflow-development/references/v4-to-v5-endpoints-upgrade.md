@@ -1,8 +1,9 @@
 # Upgrading a v4 session workflow to v5 (pw endpoints)
 
-> **Temporary working notes** distilled from the two completed conversions —
-> **openvscode** (PRs #982–#986) and **jupyterlab-host** (`jupyterlab-endpoints`
-> branch) — both verified end-to-end on live runs (2026-07). Use the openvscode and
+> **Temporary working notes** distilled from the completed conversions —
+> **openvscode** (PRs #982–#986), **jupyterlab-host** (`jupyterlab-endpoints`
+> branch), and **webshell** (`webshell-endpoint` branch) — all verified end-to-end on
+> live runs (2026-07). Use the openvscode and
 > jupyterlab `*_v5.yaml` files as the ground truth; this doc explains the deltas and
 > the order to apply them. Platform facts live in
 > [activate-platform.md](activate-platform.md) (§12 "Endpoint sessions").
@@ -36,6 +37,14 @@ Contract differences vs v3:
 - **No `cancel.sh`, no `sleep inf`, no port allocation.** The YAML prepends a generic
   cleanup trap; `pw endpoints run` runs the server in the **foreground** and is itself
   the thing that keeps the job alive.
+  - **Exception:** if the service spawns a daemon that escapes the endpoint's process
+    tree (webshell's shared `screen` session), DO write a `cancel.sh` that kills it —
+    the generic trap runs `./cancel.sh` on teardown, and `script_submitter`'s
+    `define_cleanup_script: true` + `cleanup_script_path: ./cancel.sh` runs it on
+    cancel-before-ready. Write it to the script's CWD (relative `> cancel.sh`): the
+    script runs from `subworkflows/session_runner/step_0/`, which is also where the
+    trap and the cleanup step look. Verified: `pw endpoints delete` → tree killed →
+    trap fires → screen quit (webshell live run).
 - Launch shape (see `jupyterlab-host/start-template-v4.sh`, `openvscode/start-template-v4.sh`):
   ```bash
   pw endpoints run ${pw_endpoints_args} -- <server-cmd> --port {port} ...
@@ -153,3 +162,8 @@ Then verify, in order:
 - Deleting the endpoint on k8s does NOT tear anything down — the Deployment restarts
   the sidecar and it re-registers. Cancel the run instead.
 - Don't hand-verify with `--dry-run` alone; the four checks in Step 5 are the test.
+- The ttyd bundled in `downloads/vnc/noVNC-1.3.0.tgz` is a 1.7.1 fork with a
+  `-R/--readonly` flag — **writable by default**, unlike upstream ttyd ≥1.7 which is
+  read-only without `-W`. No writable flag needed (verified over the ws protocol).
+- A root-slug service (webshell) just omits `--slug` from `pw_endpoints_args` —
+  `--slug ""` risks the empty token being eaten by the arg parser.

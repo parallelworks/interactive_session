@@ -68,7 +68,8 @@ Contract differences vs v3:
   login vs compute support can differ); on failure build a sandbox once:
   `singularity build --fakeroot --force --sandbox <dir> <sif>` with
   `SINGULARITY_TMPDIR`/`SINGULARITY_CACHEDIR` under `${HOME}` (both paths verified on
-  gcpsmall, n8n conversion).
+  gcpsmall, n8n conversion). Full build/push/convert recipe:
+  [singularity-sif-containers.md](singularity-sif-containers.md).
 - Password/token: optional password → hash it (`jupyter_server.auth.passwd` via a
   python heredoc — avoids shell-quoting the `$`-laden hash); none → `token = ''` is
   fine because the endpoint already requires platform login.

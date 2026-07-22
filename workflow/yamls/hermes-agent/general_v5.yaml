@@ -20,7 +20,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: hermes-endpoint
+          branch: main
           sparse_checkout:
             - ${{ inputs.service.name }}
             - tools/utils

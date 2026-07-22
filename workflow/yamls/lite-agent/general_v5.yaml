@@ -1,0 +1,249 @@
+# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
+#
+# Lite Agent -- a small agent on a cluster's login node that runs shell commands
+# there and reasons over the output. Run it once per cluster. `pw endpoints run
+# --openai` registers it as a chat model; an agent-orchestrator launched with the
+# same fleet "marker" discovers it and asks it questions.
+permissions:
+  - '*'
+
+env:
+  PW_API_KEY: ${PW_API_KEY}   # runtime brain credential, injected into every step
+
+jobs:
+  preprocessing:
+    ssh:
+      remoteHost: ${{ inputs.cluster.resource.ip }}
+    steps:
+      - name: Checkout
+        uses: parallelworks/checkout
+        with:
+          repo: https://github.com/parallelworks/interactive_session.git
+          branch: agents-endpoint
+          sparse_checkout:
+            - ${{ inputs.service.name }}
+            - tools/utils
+      - name: Create Inputs
+        run: |
+          set -x
+          env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+          sed -i 's/=\(.*\)/="\1"/' inputs.sh
+          cat <<'EOF' >> inputs.sh
+          PATH=$HOME/pw:$PATH
+          service_name="${{ inputs.service.name }}"
+          service_cluster="${{ inputs.cluster.resource.name }}"
+          service_marker="${{ inputs.service.marker }}"
+          service_model="${{ inputs.service.model }}"
+          service_allocation="${{ inputs.service.allocation }}"
+          service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
+          pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG}"
+          EOF
+          # Brain key is the runtime PW_API_KEY -- intentionally NOT written to inputs.sh.
+          sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+          sed -i '/=""/d' inputs.sh
+          sed -i 's/^/export /' inputs.sh
+          # System prompt -> a file (kept out of inputs.sh so multi-line text can't
+          # break the sourced shell). The start script points AGENT_SYSTEM_PROMPT_FILE
+          # at it; "{cluster}" in it is replaced with the cluster name at runtime.
+          cat > system_prompt.txt <<'__SYSTEM_PROMPT_EOF__'
+          ${{ inputs.service.system_prompt }}
+          __SYSTEM_PROMPT_EOF__
+      - name: Controller Preprocessing
+        run: |
+          set -x
+          # This script prepares the target host and always runs in the controller node
+          cp inputs.sh controller-${PW_JOB_ID}.sh
+          cat ${{ inputs.service.name }}/controller-v4.sh >> controller-${PW_JOB_ID}.sh
+          bash controller-${PW_JOB_ID}.sh
+      - name: Create Service Script
+        run: |
+          rm -f HOSTNAME SESSION_PORT job.ended job.started
+          # This script starts the service
+          cp inputs.sh start-service-${PW_JOB_ID}.sh
+
+          # Write code common to all services
+          cat <<'EOF' >> start-service-${PW_JOB_ID}.sh
+
+          cleanup() {
+              trap - EXIT INT TERM HUP QUIT USR1 USR2 PIPE
+              echo "::notice::Cleaning up..."
+              if [ -f cancel.sh ]; then
+                  mv cancel.sh cancel.sh.submitted
+                  echo "echo Cleanup script was already executed" > cancel.sh
+                  bash cancel.sh.submitted
+              fi
+              kill -- -$$
+          }
+
+          trap cleanup EXIT INT TERM HUP QUIT USR1 USR2 PIPE
+
+          echo "::notice::Starting service"
+          EOF
+          cat ${{ inputs.service.name }}/start-template-v4.sh >> ./start-service-${PW_JOB_ID}.sh
+          echo "SCRIPT_PATH=${PWD}/start-service-${PW_JOB_ID}.sh" | tee -a $OUTPUTS
+          echo "SKIP_CLEANUP_PATH=${PWD}/SKIP_CLEANUP" | tee -a $OUTPUTS
+
+  session_runner:
+    needs:
+      - preprocessing
+    ssh:
+      remoteHost: ${{ inputs.cluster.resource.ip }}
+    steps:
+      - name: Session Runner
+        uses: github/parallelworks/interactive_session@main
+        early-cancel: any-job-failed
+        with:
+          $yaml: workflow/script_submitter/v3.6/general.yaml
+          resource: ${{ inputs.cluster.resource }}
+          shebang: '#!/bin/bash'
+          use_existing_script: true
+          script_path: ${{ needs.preprocessing.outputs.SCRIPT_PATH }}
+          define_cleanup_script: true
+          cleanup_script_path: ./cancel.sh
+          scheduler: ${{ inputs.cluster.scheduler }}
+          use_scheduler_agent: false
+          submit_and_exit: false
+          skip_cleanups_file: ${{ needs.preprocessing.outputs.SKIP_CLEANUP_PATH }}
+          slurm:
+            is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
+            partition: ${{ inputs.cluster.slurm.partition }}
+            scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+            time: ${{ inputs.cluster.slurm.time }}
+          pbs:
+            is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
+            scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+
+  wait_for_endpoint:
+    needs:
+      - preprocessing
+    ssh:
+      remoteHost: ${{ inputs.cluster.resource.ip }}
+    steps:
+      - name: Wait for endpoint
+        early-cancel: any-job-failed
+        run: |
+          endpoint_name="${{ inputs.service.name }}-${PW_RUN_SLUG}"
+          echo "::notice::Waiting for endpoint ${endpoint_name} to come online"
+          until pw endpoints list | grep -qw "${endpoint_name}"; do
+            echo "$(date) Endpoint ${endpoint_name} not found yet; retrying in 10 seconds"
+            sleep 10
+          done
+          echo "::notice::Endpoint ${endpoint_name} is online"
+          touch ${{ needs.preprocessing.outputs.SKIP_CLEANUP_PATH }}
+          sleep 2
+      - name: Cancel Script Submitter
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - session_runner
+
+'on':
+  execute:
+    inputs:
+      cluster:
+        type: group
+        label: Cluster
+        items:
+          resource:
+            type: compute-clusters
+            label: Cluster
+            include-workspace: false
+            tooltip: The cluster to run this agent on. Keep "Schedule Job" off so it stays on the login node.
+          scheduler:
+            type: boolean
+            default: false
+            label: Schedule Job?
+            hidden: ${{ inputs.cluster.resource.schedulerType == '' }}
+            ignore: ${{ .hidden }}
+            tooltip: |
+              Keep this off. The agent must stay on the login node so the
+              orchestrator can reach it and so it has the internet access its
+              brain needs.
+          slurm:
+            type: group
+            label: SLURM Directives
+            hidden: ${{ inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            items:
+              is_enabled:
+                type: boolean
+                hidden: true
+                default: true
+                label: Is SLURM enabled?
+              partition:
+                type: slurm-partitions
+                label: SLURM partition
+                optional: true
+                resource: ${{ inputs.cluster.resource }}
+              time:
+                label: Walltime
+                type: string
+                default: '01:00:00'
+              scheduler_directives:
+                type: editor
+                optional: true
+                tooltip: Extra #SBATCH directives, one per line.
+          pbs:
+            type: group
+            label: PBS Directives
+            hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            items:
+              is_enabled:
+                type: boolean
+                hidden: true
+                default: true
+                label: Is PBS enabled?
+              scheduler_directives:
+                label: Scheduler Directives
+                type: editor
+                tooltip: Extra #PBS directives, one per line.
+      service:
+        type: group
+        label: Settings
+        items:
+          name:
+            type: string
+            hidden: true
+            default: lite-agent
+          marker:
+            label: Fleet marker
+            type: string
+            default: worker
+            tooltip: >-
+              Group label. An agent-orchestrator launched with the SAME marker
+              discovers and coordinates this agent. Use a custom value (e.g.
+              "gpuworker") to keep separate fleets apart.
+          system_prompt:
+            label: System prompt
+            type: editor
+            default: >-
+              You are an agent running on the compute cluster '{cluster}'. Use the
+              run_shell tool to inspect or act on THIS machine and answer from real
+              command output — never guess. For long-running work (simulations,
+              training, big downloads), submit it to the scheduler or start it in the
+              background and report how to check on it; do not block waiting for it to
+              finish. Keep answers concise and specific to this cluster.
+            tooltip: >-
+              Instructions that define the agent's behavior. "{cluster}" is replaced
+              with the cluster name at runtime.
+          model:
+            label: Model
+            type: string
+            default: org:glm/glm-5.1
+            tooltip: >-
+              The LLM that powers this agent (must support tool calling). Any id
+              from `pw ai models ls`, or the short name shown in the Chat model
+              picker (e.g. glm-5.1, or /gpt-oss-20b for a session-served model) --
+              it is resolved to the full provider id automatically.
+          allocation:
+            label: AI allocation
+            type: organization-groups
+            tooltip: Which allocation to bill model usage against (for org:* models).
+          parent_install_dir:
+            label: Parent install directory
+            type: string
+            default: ${HOME}/pw/software
+            tooltip: >-
+              Where the agent creates its small private Python virtualenv
+              (isolated from the system Python). Needs a little free space.

@@ -73,9 +73,15 @@ def probe_marker(cluster, port):
 
 def discover_workers(ttl=5):
     """Running worker sessions whose advertised marker matches MARKER.
-    Candidates are openAI-enabled cluster sessions (from `pw sessions ls`); we
-    probe each one's `/_agent` for its marker and keep the matches.
-    -> [{cluster, port}]."""
+    Candidates are openAI-enabled sessions (from `pw sessions ls`); we probe
+    each one's `/_agent` for its marker and keep the matches.
+    -> [{cluster, port}].
+
+    Two candidate shapes coexist:
+      * v5 endpoint sessions (`type: endpoint`): no target fields, so the
+        worker workflow tags its cluster in the session description
+        ("agent-worker:<cluster>") and the local port is `software.port`.
+      * v4 tunnel sessions: cluster in `targetName`, port in `remotePort`."""
     now = time.time()
     if _cache["workers"] and now - _cache["at"] < ttl:
         return _cache["workers"]
@@ -89,8 +95,18 @@ def discover_workers(ttl=5):
     rows = rows if isinstance(rows, list) else rows.get("sessions", rows.get("data", []))
     cands = []
     for s in rows:
+        if s.get("status") != "running" or not s.get("openAI"):
+            continue
+        if s.get("type") == "endpoint":
+            # untagged endpoints (including this orchestrator's own) are skipped
+            desc = s.get("description") or ""
+            port = (s.get("software") or {}).get("port")
+            if "agent-worker:" in desc and port:
+                cluster = desc.split("agent-worker:", 1)[1].split()[0]
+                cands.append((cluster, port))
+            continue
         # any non-workspace agent session (cluster, existing, ...) is a candidate
-        if s.get("status") != "running" or not s.get("openAI") or s.get("targetType") == "workspace":
+        if s.get("targetType") == "workspace":
             continue
         cluster = (s.get("targetName") or "").split("/")[-1]
         port = s.get("remotePort")

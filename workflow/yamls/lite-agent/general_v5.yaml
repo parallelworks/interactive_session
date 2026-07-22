@@ -1,15 +1,11 @@
 # yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
 #
 # Lite Agent -- a small agent on a cluster's login node that runs shell commands
-# there and reasons over the output. Run it once per cluster. An agent-orchestrator
-# launched with the same fleet "marker" discovers it and asks it questions.
+# there and reasons over the output. Run it once per cluster. `pw endpoints run
+# --openai` registers it as a chat model; an agent-orchestrator launched with the
+# same fleet "marker" discovers it and asks it questions.
 permissions:
   - '*'
-
-sessions:
-  lite_agent:               # openAI -> registers as a chat provider AND is discoverable
-    openAI: true
-    redirect: false
 
 env:
   PW_API_KEY: ${PW_API_KEY}   # runtime brain credential, injected into every step
@@ -40,6 +36,7 @@ jobs:
           service_model="${{ inputs.service.model }}"
           service_allocation="${{ inputs.service.allocation }}"
           service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
+          pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG} --description agent-worker:${{ inputs.cluster.resource.name }}"
           EOF
           # Brain key is the runtime PW_API_KEY -- intentionally NOT written to inputs.sh.
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
@@ -51,6 +48,40 @@ jobs:
           cat > system_prompt.txt <<'__SYSTEM_PROMPT_EOF__'
           ${{ inputs.service.system_prompt }}
           __SYSTEM_PROMPT_EOF__
+      - name: Controller Preprocessing
+        run: |
+          set -x
+          # This script prepares the target host and always runs in the controller node
+          cp inputs.sh controller-${PW_JOB_ID}.sh
+          cat ${{ inputs.service.name }}/controller-v4.sh >> controller-${PW_JOB_ID}.sh
+          bash controller-${PW_JOB_ID}.sh
+      - name: Create Service Script
+        run: |
+          rm -f HOSTNAME SESSION_PORT job.ended job.started
+          # This script starts the service
+          cp inputs.sh start-service-${PW_JOB_ID}.sh
+
+          # Write code common to all services
+          cat <<'EOF' >> start-service-${PW_JOB_ID}.sh
+
+          cleanup() {
+              trap - EXIT INT TERM HUP QUIT USR1 USR2 PIPE
+              echo "::notice::Cleaning up..."
+              if [ -f cancel.sh ]; then
+                  mv cancel.sh cancel.sh.submitted
+                  echo "echo Cleanup script was already executed" > cancel.sh
+                  bash cancel.sh.submitted
+              fi
+              kill -- -$$
+          }
+
+          trap cleanup EXIT INT TERM HUP QUIT USR1 USR2 PIPE
+
+          echo "::notice::Starting service"
+          EOF
+          cat ${{ inputs.service.name }}/start-template-v4.sh >> ./start-service-${PW_JOB_ID}.sh
+          echo "SCRIPT_PATH=${PWD}/start-service-${PW_JOB_ID}.sh" | tee -a $OUTPUTS
+          echo "SKIP_CLEANUP_PATH=${PWD}/SKIP_CLEANUP" | tee -a $OUTPUTS
 
   session_runner:
     needs:
@@ -62,24 +93,49 @@ jobs:
         uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
-          $yaml: workflow/session_runner/v1.4/general.yaml
-          session: ${{ sessions.lite_agent }}
+          $yaml: workflow/script_submitter/v3.6/general.yaml
           resource: ${{ inputs.cluster.resource }}
-          cluster:
-            scheduler: ${{ inputs.cluster.scheduler }}
-            slurm:
-              is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
-              partition: ${{ inputs.cluster.slurm.partition }}
-              scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
-              time: ${{ inputs.cluster.slurm.time }}
-            pbs:
-              is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
-              scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
-          service:
-            start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/start-template-v3.sh
-            controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.service.name }}/controller-v3.sh
-            inputs_sh: ${PW_PARENT_JOB_DIR}/inputs.sh
-            rundir: ${PW_PARENT_JOB_DIR}
+          shebang: '#!/bin/bash'
+          use_existing_script: true
+          script_path: ${{ needs.preprocessing.outputs.SCRIPT_PATH }}
+          define_cleanup_script: true
+          cleanup_script_path: ./cancel.sh
+          scheduler: ${{ inputs.cluster.scheduler }}
+          use_scheduler_agent: false
+          submit_and_exit: false
+          skip_cleanups_file: ${{ needs.preprocessing.outputs.SKIP_CLEANUP_PATH }}
+          slurm:
+            is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
+            partition: ${{ inputs.cluster.slurm.partition }}
+            scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+            time: ${{ inputs.cluster.slurm.time }}
+          pbs:
+            is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
+            scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+
+  wait_for_endpoint:
+    needs:
+      - preprocessing
+    ssh:
+      remoteHost: ${{ inputs.cluster.resource.ip }}
+    steps:
+      - name: Wait for endpoint
+        early-cancel: any-job-failed
+        run: |
+          endpoint_name="${{ inputs.service.name }}-${PW_RUN_SLUG}"
+          echo "::notice::Waiting for endpoint ${endpoint_name} to come online"
+          until pw endpoints list | grep -qw "${endpoint_name}"; do
+            echo "$(date) Endpoint ${endpoint_name} not found yet; retrying in 10 seconds"
+            sleep 10
+          done
+          echo "::notice::Endpoint ${endpoint_name} is online"
+          touch ${{ needs.preprocessing.outputs.SKIP_CLEANUP_PATH }}
+          sleep 2
+      - name: Cancel Script Submitter
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - session_runner
 
 'on':
   execute:

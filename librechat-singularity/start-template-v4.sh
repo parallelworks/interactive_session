@@ -176,10 +176,16 @@ set -ex
 source "$SCRIPTS_DIR/utils.sh"
 export service_port="${PORT}"
 
-# The public endpoint URL replaces v3's https://<platform-host><basepath>
-if [[ "${domain_client}" == "ACTIVATE" ]] && [ -n "${PW_ENDPOINT_URL}" ]; then
-    sed -i "s|^DOMAIN_CLIENT=.*|DOMAIN_CLIENT=${PW_ENDPOINT_URL%/}|" "$BASE/.env"
-    echo "::notice::DOMAIN_CLIENT set to ${PW_ENDPOINT_URL%/}"
+# The endpoint origin replaces v3's https://<platform-host><basepath>. Upsert:
+# a fresh LibreChat .env.example may not carry a DOMAIN_CLIENT line, and a
+# replace-only sed would silently do nothing.
+if [[ "${domain_client}" == "ACTIVATE" ]] && [ -n "${PW_ENDPOINT_HOST}" ]; then
+    if grep -q '^DOMAIN_CLIENT=' "$BASE/.env"; then
+        sed -i "s|^DOMAIN_CLIENT=.*|DOMAIN_CLIENT=https://${PW_ENDPOINT_HOST}|" "$BASE/.env"
+    else
+        echo "DOMAIN_CLIENT=https://${PW_ENDPOINT_HOST}" >> "$BASE/.env"
+    fi
+    echo "::notice::DOMAIN_CLIENT set to https://${PW_ENDPOINT_HOST}"
 fi
 
 # ── Save runtime state for restart scripts ────────────────────────────────────

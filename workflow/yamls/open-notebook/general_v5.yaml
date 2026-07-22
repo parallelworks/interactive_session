@@ -11,7 +11,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: open-notebook-endpoint
+          branch: main
           sparse_checkout:
             - open-notebook-docker
       - name: Create Inputs

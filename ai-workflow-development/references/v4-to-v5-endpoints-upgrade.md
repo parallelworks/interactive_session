@@ -58,6 +58,27 @@ Contract differences vs v3:
 - **Delete base-path handling.** Jupyter's config shrinks to root_dir +
   `allow_remote_access` + auth; no `basepath`, no nginx. (Path-based endpoints via
   `--no-subdomain` would use the `{path}` token instead — not used by the repo's v5s.)
+- **Apps that build absolute URLs** (n8n's `N8N_EDITOR_BASE_URL`/`WEBHOOK_URL`) read
+  the public URL from **`PW_ENDPOINT_URL`**, exported by `pw endpoints run` to the
+  wrapped command (also exported: `PORT`, `PW_ENDPOINT_HOST`, `PW_ENDPOINT_PATH`).
+  Since these are unknown before launch, generate a **launcher script** that
+  references `${PORT}`/`${PW_ENDPOINT_URL}` and run
+  `pw endpoints run ${pw_endpoints_args} -- ./launch-<svc>.sh` — this also sidesteps
+  nested-quoting pain for container commands (verified: n8n logs "Editor is now
+  accessible via <endpoint URL>").
+- **Daemon-owned services need `cancel.sh`** (exception to "no cancel.sh"): anything
+  that escapes the endpoint's process tree — webshell's `screen`, docker containers
+  (owned by dockerd) — gets a `cancel.sh` that kills it; the generic trap runs it on
+  teardown. For docker, keep a foreground `docker logs -f <name>` as the endpoint's
+  liveness process and name the container by `${PW_RUN_SLUG}` (the port is unknown
+  when `cancel.sh` is written). Write `cancel.sh` to the script's CWD.
+- **Singularity SIF vs sandbox:** ship a SIF (ORAS artifact on ghcr) and test
+  `singularity exec <sif> /bin/true` **in the start template** (the execution node —
+  login vs compute support can differ); on failure build a sandbox once:
+  `singularity build --fakeroot --force --sandbox <dir> <sif>` with
+  `SINGULARITY_TMPDIR`/`SINGULARITY_CACHEDIR` under `${HOME}` (both paths verified on
+  gcpsmall, n8n conversion). Full build/push/convert recipe:
+  [singularity-sif-containers.md](singularity-sif-containers.md).
 - Password/token: optional password → hash it (`jupyter_server.auth.passwd` via a
   python heredoc — avoids shell-quoting the `$`-laden hash); none → `token = ''` is
   fine because the endpoint already requires platform login.

@@ -40,23 +40,22 @@ fi
 echo "::notice::Using container runtime: ${CONTAINER} ($(${CONTAINER} --version 2>/dev/null))"
 
 if [ -n "${service_parent_install_dir}" ]; then
-    container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}-gpu
-    if ! [ -d "${container_dir}" ] && ! [ -w "${service_parent_install_dir}" ]; then
-        echo "::warning::container_dir ${container_dir} does not exist and no write permission to ${service_parent_install_dir}. Resetting to ${HOME}/pw/software."
+    container_sif=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}-gpu.sif
+    if ! [ -f "${container_sif}" ] && ! [ -w "${service_parent_install_dir}" ]; then
+        echo "::warning::container_sif ${container_sif} does not exist and no write permission to ${service_parent_install_dir}. Resetting to ${HOME}/pw/software."
         service_parent_install_dir=${HOME}/pw/software
     fi
 else
     service_parent_install_dir=${HOME}/pw/software
 fi
 
-# Container image candidates, in order of preference. The actual choice is made
-# below, once we know whether this Singularity can mount a SIF unprivileged:
-#   1. SIF                (GPU; reads reliably on parallel filesystems) if mountable
-#   2. GPU sandbox dir    (VirtualGL) in place
-#   3. base sandbox dir   (software, no GPU) -- runs everywhere, the guaranteed floor
-container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}-gpu
-container_sif=${container_dir}.sif
-base_container_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}
+# One container image: the GPU (VirtualGL) build. It renders on an NVIDIA GPU
+# when one is present and falls back to software (llvmpipe) rendering on its
+# own, so there is no separate software image. The SIF is preferred (a single
+# file reads reliably on parallel filesystems); a sandbox directory is built
+# from it below only when this node's runtime cannot mount a SIF.
+container_sif=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}-gpu.sif
+sandbox_dir=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}-sandbox
 
 # Initialize cancel script
 echo '#!/bin/bash' > cancel.sh
@@ -123,9 +122,8 @@ fi
 # EGL userspace so that Singularity --nv can inject it into the container for
 # VirtualGL (many cloud GPU images ship compute-only drivers). Best-effort and
 # idempotent; the container falls back to software if it can't be provisioned.
-# Skipped entirely for software rendering.
 NV_GL_BIND_FLAGS=""
-if [ "${rendering}" = "hardware" ] && [ -n "${GPU_FLAG}" ]; then
+if [ -n "${GPU_FLAG}" ]; then
     # Locate this runtime's helper scripts. The platform concatenates this template
     # into a run-dir script, so ${BASH_SOURCE} is unreliable -- probe known paths.
     kasm_src_dir=""
@@ -236,98 +234,80 @@ else
     WRITABLE_TMPFS_FLAG="--writable-tmpfs"
 fi
 
-# Build the ordered list of container-image candidates (most preferred first). The
-# run loop tries each and falls through to the next if the container won't stay up.
-# Software rendering (the default) uses only the base container, the old way.
-# Hardware rendering uses ONLY the GPU images and fails if none run (no base fallback):
-#   1. SIF             (GPU; reliable reads on parallel FS) -- only if this
-#                       Singularity can actually mount a SIF unprivileged (some site
-#                       builds are setuid-mode w/o the suid bit and no FUSE fallback,
-#                       failing with "No setuid installation found")
-#   2. GPU sandbox dir (VirtualGL) -- GPU where sandbox reads are clean
-# Container paths contain no spaces, so a space-separated list is safe.
-container_candidates=""
-if [ "${rendering}" = "hardware" ]; then
-    if [ -f "${container_sif}" ]; then
-        if ${CONTAINER} exec ${USERNS_FLAG} "${container_sif}" true >/dev/null 2>&1; then
-            container_candidates="${container_candidates} ${container_sif}"
-        else
-            echo "::warning::SIF present but ${CONTAINER} cannot mount it unprivileged; skipping SIF"
-        fi
-    fi
-    [ -d "${container_dir}" ]      && container_candidates="${container_candidates} ${container_dir}"
-    # Hardware rendering does NOT fall back to the base (software) container -- if
-    # neither the SIF nor the GPU sandbox is usable, the empty-candidates check
-    # below fails the job.
-else
-    # Software rendering (default): base container only.
-    container_candidates="${base_container_dir}"
-fi
-container_candidates=$(echo ${container_candidates})   # trim leading/trailing space
-if [ -z "${container_candidates}" ]; then
-    echo "::error::No usable container image found (looked for ${container_sif}, ${container_dir}, ${base_container_dir})"
+# Prefer running the SIF directly; some nodes cannot mount it (no squashfs
+# kernel/FUSE support), in which case unpack it once into a sandbox directory.
+if ! [ -f "${container_sif}" ]; then
+    echo "::error title=Error::Missing container image ${container_sif}"
     exit 1
 fi
-echo "::notice::Rendering mode: ${rendering:-software}; container image candidates (in order): ${container_candidates}"
+if ${CONTAINER} exec ${USERNS_FLAG} "${container_sif}" true >/dev/null 2>&1; then
+    echo "::notice::SIF image is runnable on this node"
+    container_image="${container_sif}"
+else
+    echo "::notice::Cannot mount SIF on this node; using sandbox directory"
+    export SINGULARITY_TMPDIR=${HOME}/.singularity_tmp
+    export SINGULARITY_CACHEDIR=${HOME}/.singularity_cache
+    mkdir -p $SINGULARITY_TMPDIR $SINGULARITY_CACHEDIR
+    if ! [ -d "${sandbox_dir}" ]; then
+        echo "Building KasmVNC sandbox from ${container_sif}..."
+        if ! ${CONTAINER} build --fakeroot --force --sandbox "${sandbox_dir}" "${container_sif}"; then
+            echo "::error title=Error::Failed to build sandbox from ${container_sif}"
+            exit 1
+        fi
+        chmod -R a+rX "${sandbox_dir}" || true
+    fi
+    container_image="${sandbox_dir}"
+fi
 
 env
 
-# Try each candidate; per candidate retry a couple of times on a fresh display in
-# case of a display collision. Fall through to the next candidate if the container
-# does not stay up (a SIF that can't be mounted, or a sandbox with truncated reads).
-display_tries_per_image=2
+# Retry a couple of times on a fresh display in case of a display collision.
+display_tries=3
 kasmvnc_container_pid=""
-container_image=""
 started=""
 _launched=""
-for _cand in ${container_candidates}; do
-    echo "::notice::Trying container image: ${_cand}"
-    _try=0
-    while [ ${_try} -lt ${display_tries_per_image} ]; do
-        _try=$((_try + 1))
-        if [ -n "${_launched}" ]; then
-            rm -rf $PWD/container_tmp $PWD/xkb
-            find_available_display || { echo "::error::No available display found"; exit 1; }
-        fi
-        _launched=1
-        mkdir -p $PWD/container_tmp/.X11-unix
-        mkdir -p $PWD/xkb
+_try=0
+while [ ${_try} -lt ${display_tries} ]; do
+    _try=$((_try + 1))
+    if [ -n "${_launched}" ]; then
+        rm -rf $PWD/container_tmp $PWD/xkb
+        find_available_display || { echo "::error::No available display found"; exit 1; }
+    fi
+    _launched=1
+    mkdir -p $PWD/container_tmp/.X11-unix
+    mkdir -p $PWD/xkb
 
-        echo "::notice::Starting KasmVNC container on display :${XdisplayNumber} (image: ${_cand}, try ${_try}/${display_tries_per_image})..."
-        set -x
-        ${CONTAINER} run \
-            ${WRITABLE_TMPFS_FLAG} ${USERNS_FLAG} ${ETC_ENV_FLAG} \
-            ${GPU_FLAG} \
-            ${NV_GL_BIND_FLAGS} \
-            ${MOUNT_FLAGS} \
-            --env XAUTHORITY=/tmp/.Xauthority \
-            --env DISPLAY=":${XdisplayNumber}" \
-            --env BASE_PATH="${basepath}" \
-            --env NGINX_PORT="${service_port}" \
-            --env KASM_PORT=$(pw agent open-port) \
-            --env VNC_DISPLAY="${XdisplayNumber}" \
-            --bind /etc/passwd:/etc/passwd:ro \
-            --bind /etc/group:/etc/group:ro \
-            --bind /etc/ssl/certs:/etc/ssl/certs:ro \
-            --bind $PWD/empty:/etc/nginx/conf.d/default.conf \
-            --bind $PWD/error.log:/var/log/nginx/error.log \
-            --bind $PWD/container_tmp:/tmp \
-            --bind $PWD/xkb:/var/lib/xkb \
-            "${_cand}" &
-        set +x
-        kasmvnc_container_pid=$!
-        echo "::notice::KasmVNC container started with PID ${kasmvnc_container_pid} (image: ${_cand})"
+    echo "::notice::Starting KasmVNC container on display :${XdisplayNumber} (image: ${container_image}, try ${_try}/${display_tries})..."
+    set -x
+    ${CONTAINER} run \
+        ${WRITABLE_TMPFS_FLAG} ${USERNS_FLAG} ${ETC_ENV_FLAG} \
+        ${GPU_FLAG} \
+        ${NV_GL_BIND_FLAGS} \
+        ${MOUNT_FLAGS} \
+        --env XAUTHORITY=/tmp/.Xauthority \
+        --env DISPLAY=":${XdisplayNumber}" \
+        --env BASE_PATH="${basepath}" \
+        --env NGINX_PORT="${service_port}" \
+        --env KASM_PORT=$(pw agent open-port) \
+        --env VNC_DISPLAY="${XdisplayNumber}" \
+        --bind /etc/passwd:/etc/passwd:ro \
+        --bind /etc/group:/etc/group:ro \
+        --bind /etc/ssl/certs:/etc/ssl/certs:ro \
+        --bind $PWD/empty:/etc/nginx/conf.d/default.conf \
+        --bind $PWD/error.log:/var/log/nginx/error.log \
+        --bind $PWD/container_tmp:/tmp \
+        --bind $PWD/xkb:/var/lib/xkb \
+        "${container_image}" &
+    set +x
+    kasmvnc_container_pid=$!
+    echo "::notice::KasmVNC container started with PID ${kasmvnc_container_pid} (image: ${container_image})"
 
-        sleep 20
-        if kill -0 "${kasmvnc_container_pid}" 2>/dev/null; then
-            started=1
-            container_image="${_cand}"
-            break
-        fi
-        echo "::warning::Container (${_cand}) exited within 20s on display :${XdisplayNumber}"
-    done
-    [ -n "${started}" ] && break
-    echo "::warning::Image ${_cand} did not stay up; falling back to the next image"
+    sleep 20
+    if kill -0 "${kasmvnc_container_pid}" 2>/dev/null; then
+        started=1
+        break
+    fi
+    echo "::warning::Container exited within 20s on display :${XdisplayNumber}"
 done
 
 if [ -z "${started}" ]; then

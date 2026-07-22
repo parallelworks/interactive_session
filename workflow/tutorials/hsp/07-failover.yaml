@@ -1,53 +1,56 @@
-# Failover: try an ordered list of resources ONE AT A TIME until one comes up.
-#
-# Stage 5 fans out to EVERY worker; Stage 6 races them all and keeps the first.
-# Stage 7 runs the SAME matrix but with `max-parallel: 1`, so the workers run
-# sequentially in list order:
-#   - worker 0 runs first. If its subworkflow comes up, run.sh serves forever, so
-#     that matrix job holds the single parallel slot and the later workers never
-#     start — the backups are used only as fallbacks.
-#   - if worker 0 FAILS, the slot frees and worker 1 runs, and so on.
-# `fail-fast: false` is essential: a failed worker must NOT cancel the rest, or
-# there would be nothing to fail over to.
-#
-# NOTE (why this is a matrix, not a `retry` on the subworkflow step): the retry
-# counter PW_WORKFLOW_STEP_CURRENT_RETRY is NOT available inside a `uses:` step's
-# `with:` block, and a resource can only be handed to the subworkflow as the native
-# object `matrix.worker.resource` (a URI string does not re-hydrate through `with:`,
-# and a `get`-indexed object loses its `.ip`). A matrix passes the object correctly.
-permissions:
-  - '*'
-
 jobs:
   fractal_demo:
-    strategy:
-      fail-fast: false          # a failed worker must not cancel the others
-      max-parallel: 1           # run workers one at a time, in list order → failover
-      matrix:
-        worker: ${{ inputs.workers }}
     steps:
+      - name: Count Workers
+        run: |
+          # inputs.workers is a JSON array - count it so max-retries below can
+          # be N-1: one attempt per worker, in list order.
+          NUM_WORKERS=$(echo '${{ inputs.workers }}' | \
+            python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
+          echo "NUM_WORKERS=${NUM_WORKERS}" | tee -a $OUTPUTS
       - name: Fractal Demo
+        # The retry block is the failover loop: the step re-runs while it exits
+        # non-zero, and each attempt reads a different worker from the list by
+        # indexing it with the attempt counter PW_WORKFLOW_STEP_CURRENT_RETRY
+        # (0 on the first try). The first worker whose session comes up ends
+        # the step with success - no further attempts. timeout caps a single
+        # attempt, so a worker that hangs - or a job stuck in a queue - also
+        # falls over to the next.
+        retry:
+          interval: 10s
+          max-retries: ${{ needs.fractal_demo.outputs.NUM_WORKERS - 1 }}
+          timeout: "${{ inputs.attempt_timeout }}"
         uses: github/parallelworks/interactive_session@main
         with:
           $yaml: workflow/tutorials/hsp/04-subworkflow.yaml
-          resource: ${{ matrix.worker.resource }}
           resolution: ${{ inputs.resolution }}
-          scheduler: ${{ matrix.worker.scheduler }}
+          # A list item picked with `get` does not pass through `with:` whole -
+          # hand the resource over field by field.
+          resource:
+            id: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get id }}
+            ip: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get ip }}
+            name: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get name }}
+            namespace: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get namespace }}
+            provider: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get provider }}
+            schedulerType: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get schedulerType }}
+            type: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get type }}
+            uri: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get uri }}
+            user: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get user }}
+          scheduler: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get scheduler }}
           slurm:
-            is_enabled: ${{ matrix.worker.slurm.is_enabled }}
-            account: ${{ matrix.worker.slurm.account }}
-            partition: ${{ matrix.worker.slurm.partition }}
-            qos: ${{ matrix.worker.slurm.qos }}
-            cpus_per_task: ${{ matrix.worker.slurm.cpus_per_task }}
-            nodes: ${{ matrix.worker.slurm.nodes }}
-            node_type: ${{ matrix.worker.slurm.node_type }}
-            time: ${{ matrix.worker.slurm.time }}
-            scheduler_directives: ${{ matrix.worker.slurm.scheduler_directives }}
+            is_enabled: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get slurm get is_enabled }}
+            account: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get slurm get account }}
+            partition: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get slurm get partition }}
+            qos: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get slurm get qos }}
+            cpus_per_task: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get slurm get cpus_per_task }}
+            nodes: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get slurm get nodes }}
+            node_type: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get slurm get node_type }}
+            time: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get slurm get time }}
+            scheduler_directives: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get slurm get scheduler_directives }}
           pbs:
-            is_enabled: ${{ matrix.worker.pbs.is_enabled }}
-            account: ${{ matrix.worker.pbs.account }}
-            scheduler_directives: ${{ matrix.worker.pbs.scheduler_directives }}
-
+            is_enabled: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get pbs get is_enabled }}
+            account: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get pbs get account }}
+            scheduler_directives: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get pbs get scheduler_directives }}
 
 'on':
   execute:
@@ -56,9 +59,17 @@ jobs:
         type: number
         label: Resolution
         tooltip: Image size in pixels. Larger values look sharper but take longer to render.
-        default: 1000
+        default: 2500
         min: 100
         max: 10000
+      attempt_timeout:
+        type: string
+        label: Attempt Timeout
+        default: 1h
+        tooltip: |
+          Maximum time for one worker's attempt (units n|s|m|h|d, e.g. 20m or 1h).
+          An attempt whose session is not up within this time is cut short — its
+          queued or running job is cleaned up — and the next resource is tried.
       workers:
         type: list
         label: Compute Resources
@@ -169,6 +180,7 @@ jobs:
                 label: Walltime
                 type: string
                 default: '00:30:00'
+                prefillDefault: 'true'
                 tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job (format: D-HH:MM:SS or HH:MM:SS, e.g. 7-00:00:00 or 01:00:00)'
               scheduler_directives:
                 type: editor

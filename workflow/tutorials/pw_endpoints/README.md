@@ -4,6 +4,19 @@ This tutorial turns a small, self-contained fractal renderer into an Activate wo
 
 The web page the demo serves reaches your browser through **`pw endpoints`**: the service side dials out from wherever it runs, registers a reverse tunnel, and gets its own URL (`https://<subdomain>.activate.pw/`). There is also a [session-tunnel edition](../hsp/README.md) of this tutorial that exposes the same demo the older way, with a `sessions:` block and tunnel wiring — you do not need it to follow this one.
 
+Seven stages build it up, one concept at a time — stages 5–7 are three different ways to point the same workflow at a *list* of resources:
+
+| Stage | File | What it shows |
+|---|---|---|
+| 0 | — | Run the demo by hand and expose it with `pw endpoints http` |
+| 1 | [`01-controller.yaml`](01-controller.yaml) | The demo as a workflow: jobs, `needs`, SSH, `checkout`, the input form |
+| 2 | [`02-automated-session-creation.yaml`](02-automated-session-creation.yaml) | `pw endpoints run` creates the endpoint; the port arrives through `PORT` |
+| 3 | [`03-exit-workflow.yaml`](03-exit-workflow.yaml) | Detach with `setsid`: the run completes while the page keeps serving |
+| 4 | [`04-subworkflow.yaml`](04-subworkflow.yaml) | Submit through SLURM/PBS with `script_submitter` — same ending as Stage 3 |
+| 5 | [`05-matrix.yaml`](05-matrix.yaml) | The list all at once: one render per worker (matrix) — keep all N |
+| 6 | [`06-first-start-wins.yaml`](06-first-start-wins.yaml) | The list as a race: N start, the first endpoint up wins, the rest stand down |
+| 7 | [`07-failover.yaml`](07-failover.yaml) | The list one at a time: fail over on error or timeout, first success wins |
+
 By the end of this tutorial you will understand how to:
 
 - Define workflow inputs — with labels, tooltips, defaults, and validation — and run steps on a remote cluster over SSH
@@ -18,6 +31,7 @@ By the end of this tutorial you will understand how to:
 - Build a form that adapts to the chosen resource with dynamic dropdowns and show/hide rules
 - Fan out the same workflow across a whole list of resources at once with a `matrix` strategy
 - Turn that fan-out into a race where the first endpoint to come up wins and the losing workers stop themselves
+- Fail over across an ordered list of resources — one attempt at a time, driven by a `retry` block and the attempt counter — instead of fanning out
 
 ---
 
@@ -162,10 +176,10 @@ jobs:
 
 ### Concepts introduced
 
-**`needs` — ordering and parallelism.**
+**[`needs`](https://parallelworks.com/docs/run/workflows/building-workflows/yaml-fields#jobsjobneeds) — ordering and parallelism.**
 By default every job in a workflow starts at the same time. `needs` makes a job wait for another to finish first. Here `run` lists `install` under `needs`, so the example is checked out and installed before `run` renders and serves it. (You will see jobs actually run *in parallel* in Stage 4.) Every job- and step-level key this tutorial uses — `needs`, `ssh`, `retry`, `cleanup`, and the rest — is documented in [YAML Fields](https://parallelworks.com/docs/run/workflows/building-workflows/yaml-fields).
 
-**`ssh` at the job level.**
+**[`ssh`](https://parallelworks.com/docs/run/workflows/building-workflows/yaml-fields#jobsjobssh) at the job level.**
 Setting `ssh.remoteHost` on a job runs every step in that job on the remote cluster over SSH. Each job sets it to `${{ inputs.resource.ip }}` — the IP of whichever cluster you pick in the form.
 
 **Where jobs run — `PW_JOB_DIR`.**
@@ -175,7 +189,7 @@ By default every job runs from a per-run working directory on the node it lands 
 Expressions are evaluated at runtime and replaced with their values. `${{ inputs.resource.ip }}` becomes the chosen cluster's IP; `${{ inputs.resolution }}` becomes the number entered in the form. The full expression syntax — operators, and contexts like `inputs` and `needs` — is in [Inputs & Expressions](https://parallelworks.com/docs/run/workflows/building-workflows/inputs-and-expressions).
 
 **`uses: parallelworks/checkout` and `sparse_checkout`.**
-`uses` runs a built-in action instead of a shell command. The `checkout` action clones a repository onto the cluster; `sparse_checkout` limits it to just the directories you list, so you do not download the whole repo to run one example. The built-in actions are documented in [Actions](https://parallelworks.com/docs/run/workflows/building-workflows/actions).
+`uses` runs a built-in action instead of a shell command. The [`checkout`](https://parallelworks.com/docs/run/workflows/building-workflows/actions#checkout) action clones a repository onto the cluster; `sparse_checkout` limits it to just the directories you list, so you do not download the whole repo to run one example. The built-in actions are documented in [Actions](https://parallelworks.com/docs/run/workflows/building-workflows/actions).
 
 **Inputs become environment variables.**
 `run.sh` reads `RESOLUTION` and `PORT` from the environment, so the workflow passes the form values straight through: `RESOLUTION=${{ inputs.resolution }} PORT=${{ inputs.port }} ./fractal-demo/run.sh`. No argument parsing, no editing the script.
@@ -183,8 +197,8 @@ Expressions are evaluated at runtime and replaced with their values. `${{ inputs
 **`run.sh` renders, then keeps serving.**
 The `run` job's one step renders the fractal and then keeps the web server up, so the job stays alive for as long as the page should be available.
 
-**`on.execute.inputs`.**
-This section defines the run form. Each input has a `type` (`compute-clusters` renders a cluster picker, `number` a validated numeric field), a `label` shown above it, and a `tooltip` shown on hover. `number` inputs add `default`, `min`, and `max`; the resource input adds `autoselect` (pre-select a cluster) and `optional: false` (required). The full catalog of input types and their attributes is in [Inputs & Expressions](https://parallelworks.com/docs/run/workflows/building-workflows/inputs-and-expressions).
+**[`on.execute.inputs`](https://parallelworks.com/docs/run/workflows/building-workflows/yaml-fields#onexecuteinputs).**
+This section defines the run form. Each input has a `type` ([`compute-clusters`](https://parallelworks.com/docs/run/workflows/building-workflows/inputs-and-expressions#compute-clusters) renders a cluster picker, `number` a validated numeric field), a `label` shown above it, and a `tooltip` shown on hover. `number` inputs add `default`, `min`, and `max`; the resource input adds `autoselect` (pre-select a cluster) and `optional: false` (required). The full catalog of input types and their attributes is in [Inputs & Expressions](https://parallelworks.com/docs/run/workflows/building-workflows/inputs-and-expressions).
 
 To run it, open **Workflows** in the Activate UI, select this workflow, pick your cluster, adjust the resolution if you like, and click **Execute**. To *view* the page this stage serves, use the manual endpoint from Stage 0 (`pw endpoints http --name fractal 8000` on the controller node) — the next stage makes the workflow do that itself.
 
@@ -284,10 +298,10 @@ With no `--port` flag, `pw endpoints run` picks a free local port itself and **e
 **Naming with `${PW_RUN_SLUG}`.**
 `PW_RUN_SLUG` is a platform-injected environment variable holding the run's slug — the same value in every job of the run. Baking it into the endpoint name (`fractal-<run-slug>`) makes the name unique per run *and* predictable, so any other job (or you, at a terminal) can find this run's endpoint with `pw endpoints list`. Stage 4 leans on exactly that.
 
-**`permissions: ['*']`.**
+**[`permissions: ['*']`](https://parallelworks.com/docs/run/workflows/building-workflows/yaml-fields#permissions).**
 Registering an endpoint is a platform API call, so the in-workflow `pw` CLI must be authenticated — which is what `permissions: ['*']` grants. (Stage 1 needed no grant because it never called the platform API from inside the workflow.)
 
-**Workflow-level `env`.**
+**Workflow-level [`env`](https://parallelworks.com/docs/run/workflows/building-workflows/yaml-fields#env).**
 The top-level `env:` block defines variables available to every step. `RESOLUTION` is set there once and `run.sh` reads it from the environment — Stage 1's inline `RESOLUTION=…`, hoisted to one place.
 
 **Where's my URL?**
@@ -369,7 +383,7 @@ The launch line is the same one the `script_submitter` subworkflow uses to submi
 To read the server's output later, look in the job directory on the cluster: `~/pw/jobs/<workflow>/<run-number>/run.<job-id>.out`.
 
 **Wait before you exit — a completed run means a live page.**
-Detaching alone would let the run finish before the server even bound its port — a crashed server would still show a green run. The **Wait for Endpoint** step closes that gap: `retry` re-runs it while it exits non-zero (60 tries × 5s ≈ 5 minutes) until the endpoint shows up in `pw endpoints list`; then `URL=…` into `$OUTPUTS` publishes the URL as a job output and the `::notice::` line puts it, clickable, on the run page. A completed run now *means* the page is up.
+Detaching alone would let the run finish before the server even bound its port — a crashed server would still show a green run. The **Wait for Endpoint** step closes that gap: [`retry`](https://parallelworks.com/docs/run/workflows/building-workflows/yaml-fields#jobsjobstepsretry) re-runs it while it exits non-zero (60 tries × 5s ≈ 5 minutes) until the endpoint shows up in `pw endpoints list`; then `URL=…` into [`$OUTPUTS`](https://parallelworks.com/docs/run/workflows/building-workflows/inputs-and-expressions#writing-outputs) publishes the URL as a job output and the `::notice::` line puts it, clickable, on the run page. A completed run now *means* the page is up.
 
 **Deleting the endpoint now cancels `run.sh`.**
 Once the run completes there is nothing left to cancel on the Runs page — the endpoint *is* the handle on the detached work. `pw endpoints delete fractal-<run-slug>` (or deleting it from the Sessions page) kills `pw endpoints run` and the whole `run.sh` tree under it.
@@ -442,7 +456,7 @@ Until now everything ran on the **controller** (login) node. Heavy work belongs 
           pbs:     # ... same idea ...
 ```
 
-**`wait_for_endpoint`** polls until the endpoint registers and publishes its URL — then it **creates the skip file and cancels the submitter**, which is what lets the run complete while the job keeps serving:
+**`wait_for_endpoint`** polls until the endpoint registers and publishes its URL — then it **creates the skip file and cancels the submitter** (the [`cancel-jobs`](https://parallelworks.com/docs/run/workflows/building-workflows/actions#cancel-jobs) action), which is what lets the run complete while the job keeps serving:
 
 ```yaml
   wait_for_endpoint:
@@ -477,7 +491,7 @@ Until now everything ran on the **controller** (login) node. Heavy work belongs 
 
 ### Concepts introduced
 
-**Subworkflows (`uses:` + `$yaml`).**
+**Subworkflows ([`uses:`](https://parallelworks.com/docs/run/workflows/building-workflows/yaml-fields#jobsjobstepsuses) + `$yaml`).**
 `uses: github/parallelworks/interactive_session@main` runs *another workflow* as a step. `$yaml` selects which workflow file inside that repo to run (here `workflow/script_submitter/v3.6/general.yaml`), and the remaining `with:` keys are that subworkflow's inputs — the script's path (published by `install` through `$OUTPUTS`) and the form's scheduler settings.
 
 **The endpoint doesn't care where the job landed.**
@@ -500,13 +514,13 @@ The submitter has a shortcut input that ends the run even sooner: submit the scr
 2. **Monitoring until the page is up.** `submit_and_exit` returns before the job even leaves the queue. With `submit_and_exit: false` the submitter keeps monitoring the job's status and streaming its logs until the endpoint starts — if the job dies in the queue or the script crashes, the run fails loud instead of "completing" with no page.
 
 **`retry` and `early-cancel`, stretched for the queue.**
-The wait step's tools are Stage 3's — `retry` until the endpoint shows up, `$OUTPUTS` + `::notice::` to surface the URL — but the poll window grows to ~30 minutes (`max-retries: 180` × `10s`), because a scheduled job can sit in the queue, or wait for a cloud node to boot, long before the script runs. And a wait that long must not outlive a dead partner: `early-cancel: any-job-failed` on **both** the wait step and the submitter step means whichever side fails takes the other down instead of leaving it hanging.
+The wait step's tools are Stage 3's — `retry` until the endpoint shows up, `$OUTPUTS` + `::notice::` to surface the URL — but the poll window grows to ~30 minutes (`max-retries: 180` × `10s`), because a scheduled job can sit in the queue, or wait for a cloud node to boot, long before the script runs. And a wait that long must not outlive a dead partner: [`early-cancel: any-job-failed`](https://parallelworks.com/docs/run/workflows/building-workflows/yaml-fields#jobsjobstepsearly-cancel) on **both** the wait step and the submitter step means whichever side fails takes the other down instead of leaving it hanging.
 
 **Per-worker endpoint names.**
 The name becomes `fractal-<run-slug>-<resource-name>-wN`. `PW_RUN_SLUG` is *run-scoped* — in Stage 5 every matrix worker shares it — and a run can even target the *same resource* twice, so the resource name alone is not unique either. The worker's matrix index has no environment variable of its own, but it is a component of `PW_JOB_DIR` (`…/subworkflows/fractal_demo-0/…`), so `install` extracts it, appends `-w0`, `-w1`, …, and publishes the finished name as the `ENDPOINT_NAME` output — one place builds the name, every other job just reads it. The shared `fractal-<run-slug>-` prefix is what lets Stage 6 find *all* of this run's endpoints.
 
 **A form that adapts to the resource.**
-The "Schedule Job?" toggle and the `slurm`/`pbs` groups only appear when they apply: `hidden`/`ignore` key off `inputs.resource.schedulerType` (`slurm`, `pbs`, or empty) and `inputs.scheduler`. `slurm-partitions` is a **dynamic dropdown** that fetches its choices from the chosen cluster. The hidden `is_enabled` boolean (default `true`, sent only when the group is active) is what tells the subworkflow which path to take.
+The "Schedule Job?" toggle and the `slurm`/`pbs` groups only appear when they apply: `hidden`/`ignore` key off `inputs.resource.schedulerType` (`slurm`, `pbs`, or empty) and `inputs.scheduler`. [`slurm-partitions`](https://parallelworks.com/docs/run/workflows/building-workflows/inputs-and-expressions#slurm-partitions) is a **dynamic dropdown** that fetches its choices from the chosen cluster. The hidden `is_enabled` boolean (default `true`, sent only when the group is active) is what tells the subworkflow which path to take.
 
 **Deleting the endpoint cancels the job — same as Stage 3.**
 `pw endpoints delete fractal-<run-slug>-<resource-name>` kills the tree wherever it landed — login node or compute node — the script exits, and a scheduled job releases its node back to the scheduler. This wait → skip → cancel shape is exactly the one the repo's production `*_v5.yaml` session workflows use (e.g. `workflow/yamls/jupyterlab-host/general_v5.yaml`).
@@ -539,11 +553,11 @@ jobs:
           pbs:    # ... same idea ...
 ```
 
-The form replaces the single resource block with a **`list`** input the user can grow: each entry has the shape defined under `template:` — a resource picker plus the same "Schedule Job?"/SLURM/PBS controls as Stage 4, nested one level deeper.
+The form replaces the single resource block with a **[`list`](https://parallelworks.com/docs/run/workflows/building-workflows/inputs-and-expressions#list)** input the user can grow: each entry has the shape defined under `template:` — a resource picker plus the same "Schedule Job?"/SLURM/PBS controls as Stage 4, nested one level deeper.
 
 ### Concepts introduced
 
-**`strategy.matrix` — fan-out.**
+**[`strategy.matrix`](https://parallelworks.com/docs/run/workflows/building-workflows/yaml-fields#jobsjobstrategy) — fan-out.**
 A `strategy.matrix` runs the job once for every value of a matrix variable. Setting `worker: ${{ inputs.workers }}` makes the variable the `workers` list itself, so the `fractal_demo` job expands into one copy per element — `fractal_demo-0`, `fractal_demo-1`, … — all running concurrently. Add a third worker in the form and a third job appears automatically; nothing in the YAML hardcodes the count. `fail-fast: true` cancels the remaining matrix jobs as soon as one fails; `max-parallel: N` (omitted here) would cap how many run at once.
 
 **`matrix.<name>` vs the template's `[index]` — two different "current item"s.**
@@ -626,4 +640,64 @@ Winner and losers end exactly the same way: cancel your own `script_submitter`. 
 | Before canceling | publishes the winning URL and **touches `SKIP_CLEANUP`** | leaves the file untouched |
 | The submitter's cleanup | finds the file — the render keeps serving | runs — the render is killed, and its endpoint deregisters on its own (an endpoint *is* its client process) |
 
-The guarded `pw endpoints delete` in the `cleanup:` is a defensive no-op for a loser process that lingers — the file test keeps it away from the winner's endpoint. When the dust settles, the whole fan-out has **completed** and exactly one page is serving; delete its endpoint later, like every stage since 3.
+The guarded `pw endpoints delete` in the [`cleanup:`](https://parallelworks.com/docs/run/workflows/building-workflows/yaml-fields#jobsjobstepscleanup) is a defensive no-op for a loser process that lingers — the file test keeps it away from the winner's endpoint. When the dust settles, the whole fan-out has **completed** and exactly one page is serving; delete its endpoint later, like every stage since 3.
+
+---
+
+## Stage 7 — Failover: try resources one at a time (`07-failover.yaml`)
+
+Stage 5 ran the whole list at once; Stage 6 ran the whole list and kept one. Stage 7 wants one fractal and is not willing to start N renders to get it: it runs Stage 4 on the **first** resource in the list, and only if that attempt **fails or times out** moves on to the second, and so on. The first success stops the loop.
+
+```
+  workers: [ A, B, C ]
+
+  attempt 0 ── Stage 4 on A ──▶ endpoint up? ── yes ──▶ done: run completes, page serves
+                                    │ no (error, or Attempt Timeout)
+  attempt 1 ── Stage 4 on B ──▶ endpoint up? ── yes ──▶ done
+                                    │ no
+  attempt 2 ── Stage 4 on C ──▶ …      (list exhausted ⇒ the run fails)
+```
+
+This is [`07-failover.yaml`](07-failover.yaml). The failover loop is a `retry` block on the step that calls Stage 4 — the same `retry` that polls for endpoints elsewhere, now driving whole attempts:
+
+```yaml
+  fractal_demo:
+    steps:
+      - name: Count Workers
+        run: |
+          NUM_WORKERS=$(echo '${{ inputs.workers }}' | \
+            python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
+          echo "NUM_WORKERS=${NUM_WORKERS}" | tee -a $OUTPUTS
+      - name: Fractal Demo
+        retry:
+          interval: 10s
+          max-retries: ${{ needs.fractal_demo.outputs.NUM_WORKERS - 1 }}   # one attempt per worker
+          timeout: "${{ inputs.attempt_timeout }}"                        # a hanging attempt also fails over
+        uses: github/parallelworks/interactive_session@main
+        with:
+          $yaml: workflow/tutorials/pw_endpoints/04-subworkflow.yaml
+          resolution: ${{ inputs.resolution }}
+          resource:
+            ip: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get ip }}
+            name: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get name }}
+            # ... id, namespace, provider, schedulerType, type, uri, user — same shape ...
+          scheduler: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get scheduler }}
+          slurm:   # ... the worker's SLURM group, indexed the same way ...
+          pbs:     # ... same idea ...
+```
+
+The form is Stage 5's `workers` list unchanged — only the tooltip differs: the order now matters, because it is the order in which resources are tried.
+
+### Concepts introduced
+
+**`retry` as a failover loop.**
+A step's `retry` re-runs it while it exits non-zero — and a `uses:` step exits non-zero when its subworkflow fails. So "retry the Stage 4 call, one attempt per worker" *is* the failover: the first attempt whose endpoint comes up returns success and the loop stops; an attempt that errors — or hangs past the **Attempt Timeout** input (default `1h`) — is cut short, and the next one starts after `interval`. The timeout covers the whole attempt, queue wait included: a job that sits queued past it is `scancel`/`qdel`ed by the submitter's still-armed cleanups (Stage 4's skip file has not been touched yet) before the next resource is tried.
+
+**Sizing the loop from the list.**
+`Count Workers` publishes `NUM_WORKERS`, and the very next step's `max-retries` reads it as `${{ needs.fractal_demo.outputs.NUM_WORKERS - 1 }}`: outputs written earlier in a job are readable later in the same job, and expressions can do arithmetic. First try + N−1 retries = exactly one attempt per worker.
+
+**`PW_WORKFLOW_STEP_CURRENT_RETRY` indexes the list.**
+Each attempt exports its number (0 on the first try). `inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get ip` reads *workers[attempt].resource.ip* — attempt 0 runs the first row of the form, attempt 1 the second, in order.
+
+**Hand the resource over field by field.**
+A list item picked with `get` does not pass through `with:` as one object, so the resource is rebuilt one field at a time (`id`, `ip`, `name`, …). Verbose, but each attempt's subworkflow receives exactly the fields Stage 4 reads.

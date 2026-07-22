@@ -237,20 +237,22 @@ A step can declare a `retry` block; it re-runs the step while it exits **non-zer
 - **Per-attempt env vars:** `PW_WORKFLOW_STEP_CURRENT_RETRY` (0 on the first try) and
   `PW_WORKFLOW_STEP_MAX_RETRIES` are exported each attempt. `index % N` over a list turns
   the retry counter into a **round-robin selector** (fail over to the next resource).
-- **You CANNOT drive per-attempt failover into a subworkflow `with:` block with the
-  retry counter (verified the hard way).** Three separate limits combine:
-  (1) `env.PW_WORKFLOW_STEP_CURRENT_RETRY` is **not available inside a `uses:` step's
-  `with:`** — in the same block `resolution: ${{ inputs.resolution }}` resolved but any
-  `env.PW_WORKFLOW_STEP_CURRENT_RETRY` expression came out empty; (2) indexing a `list`
-  with `get` works in `run:`/`ssh:` but is **index-type sensitive** — `get 0` (number)
-  returns a hydrated resource with `.ip`, while `get env.PW_WORKFLOW_STEP_CURRENT_RETRY`
-  (string `"0"`) returns the raw object carrying `publicIp`/`privateIp` and **no `.ip`**;
-  (3) a resource passed to a subworkflow as a **URI string does not re-hydrate** through
-  `with:` (you get `inputs.resource.ip == ""`). To hand a per-item resource to a
-  subworkflow, pass the native object `matrix.worker.resource` (a `matrix` strategy — it
-  carries `.ip`). Per-attempt SSH failover on a **plain** `ssh:`/`run:` step is fine
-  (that's `round-robin-failover`); failing over a *subworkflow* needs a different shape
-  (e.g. a sequential `max-parallel: 1` matrix — not yet verified end-to-end).
+- **Per-attempt failover into a subworkflow `with:` block now works (re-verified July
+  2026 — an earlier platform version rejected it).** The shape:
+  `${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get ip }}`
+  resolves inside a `uses:` step's `with:`, advancing with the retry counter — verified
+  live with a dead first resource failing over to a healthy second
+  (`workflow/tutorials/pw_endpoints/07-failover.yaml`). Two caveats still apply:
+  (1) a list item picked with `get` does **not** pass through `with:` as one object —
+  rebuild the resource **field by field** (`id`, `ip`, `name`, `namespace`, `provider`,
+  `schedulerType`, `type`, `uri`, `user`); (2) a resource passed as a **URI string does
+  not re-hydrate** through `with:`. A retried `uses:` step surfaces only the **last**
+  attempt's logs via `pw workflows runs logs`; evidence of earlier attempts is the wall
+  clock and whatever per-attempt output you emit yourself. (`subworkflows/<job>/step_N`
+  in the job-dir path is the **step index within the job**, not the attempt number —
+  retried attempts reuse the same directory.) Per-attempt SSH failover on a plain `ssh:`/`run:` step is
+  `round-robin-failover`; for a matrix-style per-item resource, `matrix.worker.resource`
+  passes as a native object.
 - **`max-retries` can be computed:** `max-retries: ${{ needs.<job>.outputs.N - 1 }}` —
   arithmetic is evaluated in the expression layer. An upstream step writing `N` to
   `$OUTPUTS` lets a later step in the **same job** size its own retries
@@ -837,3 +839,15 @@ subdomain URL (`https://<name>.activate.pw/<slug>`; `--slug` may be a query stri
   (~a minute+ exceeds the proxy timeout). Stream to keep bytes flowing, or use an
   async job+poll pattern for long work.
 - Transient `pw workflows run/cancel` API timeouts happen — just retry.
+- **List-template `default:`s do not fill explicit empty strings (probable platform
+  bug — verified July 2026).** Three paths behave differently for a field passed as
+  `""`: a **top-level input** is default-filled; a value passed **directly to a
+  subworkflow input** is filled by that subworkflow's own default; but a **list-template
+  field** (e.g. `workers[0].slurm.time` from an inputs JSON copied off a past run)
+  stays `""` and flows through `with:` chains untouched. Consequence: an empty
+  `slurm.time` reaches `script_submitter`, and the `general`/`emed`/`noaa` variants
+  emit `#SBATCH --time=` → `sbatch: error: Invalid --time specification` (only `hsp`
+  guards it). Do NOT patch the submitters and do NOT add warnings to the tutorials —
+  Alvaro is reporting the `default:` behavior to the platform devs (July 2026); expect
+  it to be fixed platform-side. If a scalar input must be guarded, a ternary works
+  (`"${{ x == '' ? '1h' : x }}"` — quote it: the ternary's `: ` breaks plain YAML scalars).

@@ -1,0 +1,139 @@
+# permissions authenticates the in-workflow pw CLI in the subworkflow, which
+# registers and lists pw endpoints. The grant must be on the parent too.
+permissions:
+  - '*'
+
+jobs:
+  fractal_demo:
+    steps:
+      - name: Count Workers
+        run: |
+          # inputs.workers is a JSON array - count it so max-retries below can
+          # be N-1: one attempt per worker, in list order.
+          NUM_WORKERS=$(echo '${{ inputs.workers }}' | \
+            python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
+          echo "NUM_WORKERS=${NUM_WORKERS}" | tee -a $OUTPUTS
+      - name: Fractal Demo
+        # The retry block is the failover loop: the step re-runs while it exits
+        # non-zero, and each attempt reads a different worker from the list by
+        # indexing it with the attempt counter PW_WORKFLOW_STEP_CURRENT_RETRY
+        # (0 on the first try). The first worker whose endpoint comes up ends
+        # the step with success - no further attempts. timeout caps a single
+        # attempt, so a worker that hangs - or a job stuck in a queue - also
+        # falls over to the next.
+        retry:
+          interval: 10s
+          max-retries: ${{ needs.fractal_demo.outputs.NUM_WORKERS - 1 }}
+          timeout: "${{ inputs.attempt_timeout }}"
+        uses: github/parallelworks/interactive_session@main
+        with:
+          $yaml: workflow/tutorials/pw_endpoints/04-subworkflow.yaml
+          resolution: ${{ inputs.resolution }}
+          # A list item picked with `get` does not pass through `with:` whole -
+          # hand the resource over field by field.
+          resource:
+            id: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get id }}
+            ip: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get ip }}
+            name: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get name }}
+            namespace: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get namespace }}
+            provider: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get provider }}
+            schedulerType: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get schedulerType }}
+            type: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get type }}
+            uri: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get uri }}
+            user: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get resource get user }}
+          scheduler: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get scheduler }}
+          slurm:
+            is_enabled: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get slurm get is_enabled }}
+            partition: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get slurm get partition }}
+            time: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get slurm get time }}
+            scheduler_directives: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get slurm get scheduler_directives }}
+          pbs:
+            is_enabled: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get pbs get is_enabled }}
+            scheduler_directives: ${{ inputs.workers get env.PW_WORKFLOW_STEP_CURRENT_RETRY get pbs get scheduler_directives }}
+
+'on':
+  execute:
+    inputs:
+      resolution:
+        type: number
+        label: Resolution
+        tooltip: Image size in pixels. Larger values look sharper but take longer to render.
+        default: 2500
+        min: 100
+        max: 10000
+      attempt_timeout:
+        type: string
+        label: Attempt Timeout
+        default: 1h
+        tooltip: |
+          Maximum time for one worker's attempt (units n|s|m|h|d, e.g. 20m or 1h).
+          An attempt whose endpoint is not up within this time is cut short — its
+          queued or running job is cleaned up — and the next resource is tried.
+      workers:
+        type: list
+        label: Compute Resources
+        tooltip: Ordered list of compute resources to try. They are attempted one at a time, in list order, and the first that comes up wins; a failing resource falls over to the next. Put your preferred resource first; add more as fallbacks.
+        template:
+          resource:
+            type: compute-clusters
+            label: Resource Target
+            tooltip: The compute cluster to run the fractal example on.
+            autoselect: true
+            optional: false
+          scheduler:
+            type: boolean
+            default: false
+            label: Schedule Job?
+            hidden: ${{ inputs.workers.[index].resource.schedulerType == '' }}
+            ignore: ${{ .hidden }}
+            tooltip: |
+              Yes → Job is submitted to the scheduler using sbatch, qsub, etc
+              No  → Job is executed in the controller or login node instead
+          slurm:
+            type: group
+            label: SLURM Directives
+            hidden: ${{ inputs.workers.[index].resource.schedulerType != 'slurm' || inputs.workers.[index].scheduler == false }}
+            ignore: ${{ inputs.workers.[index].resource.schedulerType != 'slurm' || inputs.workers.[index].scheduler == false }}
+            items:
+              is_enabled:
+                type: boolean
+                hidden: true
+                default: true
+                label: Is SLURM Enabled? Yes, unless the slurm section is hidden and ignored
+              partition:
+                type: slurm-partitions
+                label: SLURM partition
+                optional: true
+                resource: ${{ inputs.workers.[index].resource }}
+                tooltip: Select a partition from the drop down menu.
+              time:
+                label: Walltime
+                type: string
+                default: '00:30:00'
+                prefillDefault: 'true'
+                tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
+              scheduler_directives:
+                type: editor
+                optional: true
+                tooltip: |
+                  Add extra SLURM directives, one per line, using the #SBATCH prefix. For example:
+                  #SBATCH --exclusive
+                  #SBATCH --nodelist=<node-name>
+          pbs:
+            type: group
+            label: PBS Directives
+            hidden: ${{ inputs.workers.[index].resource.schedulerType != 'pbs' || inputs.workers.[index].scheduler == false }}
+            ignore: ${{ inputs.workers.[index].resource.schedulerType != 'pbs' || inputs.workers.[index].scheduler == false }}
+            items:
+              is_enabled:
+                type: boolean
+                hidden: true
+                default: true
+                label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
+              scheduler_directives:
+                label: Scheduler Directives
+                type: editor
+                tooltip: |
+                  Add extra PBS directives, one per line, using the #PBS prefix. For example:
+                  #PBS -l walltime=01:00:00
+                  #PBS -l mem=16gb

@@ -40,7 +40,7 @@ jobs:
           service_allocation="${{ inputs.service.allocation }}"
           service_hermes_version="${{ inputs.service.hermes_version }}"
           service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
-          pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG}"
+          pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG} --description agent-worker:${{ inputs.cluster.resource.name }}"
           EOF
           # Brain key is the runtime PW_API_KEY -- intentionally NOT written to inputs.sh
           # (the start script writes it into the per-session Hermes config instead).

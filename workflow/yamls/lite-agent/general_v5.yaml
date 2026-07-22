@@ -36,7 +36,7 @@ jobs:
           service_model="${{ inputs.service.model }}"
           service_allocation="${{ inputs.service.allocation }}"
           service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
-          pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG}"
+          pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG} --description agent-worker:${{ inputs.cluster.resource.name }}"
           EOF
           # Brain key is the runtime PW_API_KEY -- intentionally NOT written to inputs.sh.
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh

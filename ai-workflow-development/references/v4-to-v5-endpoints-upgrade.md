@@ -150,6 +150,18 @@ Then verify, in order:
 5. k8s CLI runs need the resource **object** (compute-resources doesn't hydrate bare
    names): `{"id":"<pw kube ls id>","name":"<k8s-cluster>","type":"kubernetes","uri":"pw://<name>"}`.
 
+## Discovering v5 endpoint sessions programmatically (verified)
+
+In `pw sessions ls -o json`, an endpoint session has `type: "endpoint"`,
+`openAI` set by `--openai`, its **local port in `software.port`** (top-level
+`remotePort` is 0), and **no `targetName`/`targetType`** — the hosting resource
+is not recorded. A workflow that must be found by another agent therefore tags
+itself via `--description` (returned verbatim in the session row): the agent
+fleet uses `--description agent-worker:<cluster>`, and `agent-orchestrator`'s
+`discover_workers()` accepts both this and the v4 tunnel-session shape
+(verified live: workspace orchestrator → lite-agent endpoint worker on gcpsmall,
+full ask_cluster round trip).
+
 ## Gotchas checklist (each one bit a real run)
 
 - **The endpoint proxy preserves the public Host header** (`<name>.activate.pw`).

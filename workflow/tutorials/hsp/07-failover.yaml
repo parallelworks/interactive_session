@@ -19,9 +19,7 @@ jobs:
         retry:
           interval: 10s
           max-retries: ${{ needs.fractal_demo.outputs.NUM_WORKERS - 1 }}
-          # The ternary falls back to 1h if the input arrives empty (an inputs
-          # JSON copied from an old run can carry "")
-          timeout: "${{ inputs.attempt_timeout == '' ? '1h' : inputs.attempt_timeout }}"
+          timeout: "${{ inputs.attempt_timeout }}"
         uses: github/parallelworks/interactive_session@main
         with:
           $yaml: workflow/tutorials/hsp/04-subworkflow.yaml
@@ -182,6 +180,7 @@ jobs:
                 label: Walltime
                 type: string
                 default: '00:30:00'
+                prefillDefault: 'true'
                 tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job (format: D-HH:MM:SS or HH:MM:SS, e.g. 7-00:00:00 or 01:00:00)'
               scheduler_directives:
                 type: editor

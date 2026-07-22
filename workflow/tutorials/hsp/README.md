@@ -650,7 +650,7 @@ This is [`07-failover.yaml`](07-failover.yaml). The failover loop is a `retry` b
         retry:
           interval: 10s
           max-retries: ${{ needs.fractal_demo.outputs.NUM_WORKERS - 1 }}   # one attempt per worker
-          timeout: "${{ inputs.attempt_timeout == '' ? '1h' : inputs.attempt_timeout }}"
+          timeout: "${{ inputs.attempt_timeout }}"
         uses: github/parallelworks/interactive_session@main
         with:
           $yaml: workflow/tutorials/hsp/04-subworkflow.yaml

@@ -79,6 +79,16 @@ Contract differences vs v3:
   `SINGULARITY_TMPDIR`/`SINGULARITY_CACHEDIR` under `${HOME}` (both paths verified on
   gcpsmall, n8n conversion). Full build/push/convert recipe:
   [singularity-sif-containers.md](singularity-sif-containers.md).
+- **Slow-starting services (model servers): register the endpoint only when ready.**
+  `pw endpoints run` registers the session at launch, so the platform chat shows
+  "Session is not reachable" until the app actually serves (minutes for an LLM
+  loading weights). Instead: start the server in the background with output to a log
+  file, poll its health URL — if the process dies, print the log tail and
+  `pw workflows runs cancel ${PW_RUN_SLUG}` — then foreground
+  `pw endpoints http --link <port>`. `--link` stops the server when the endpoint
+  client exits, so `pw endpoints delete` also kills the app; still write a
+  `cancel.sh` that kills the background pid to cover cancel-before-ready.
+  (Verified: activate-rag-vllm `yamls/general_v5.yaml` on awsgpu, login + SLURM.)
 - Password/token: optional password → hash it (`jupyter_server.auth.passwd` via a
   python heredoc — avoids shell-quoting the `$`-laden hash); none → `token = ''` is
   fine because the endpoint already requires platform login.
@@ -186,3 +196,6 @@ full ask_cluster round trip).
   read-only without `-W`. No writable flag needed (verified over the ws protocol).
 - A root-slug service (webshell) just omits `--slug` from `pw_endpoints_args` —
   `--slug ""` risks the empty token being eaten by the arg parser.
+- Renaming a job breaks silent references: `wait_for_endpoint`'s
+  `parallelworks/cancel-jobs` lists the submitter job by name and `--dry-run` does
+  not catch a stale entry — the run then never completes.

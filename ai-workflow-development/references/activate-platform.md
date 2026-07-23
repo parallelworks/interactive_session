@@ -801,6 +801,12 @@ subdomain URL (`https://<name>.activate.pw/<slug>`; `--slug` may be a query stri
   `skip_cleanups_file` and `parallelworks/cancel-jobs` the submitter); the service
   outlives the run. `pw endpoints delete <name>` tears down the whole remote process
   tree (verified: the `pw endpoints run` child dies with it).
+- **`pw endpoints http [--link] <port>` serves an already-running local server**,
+  decoupling registration from process start: a slow-starting service (LLM loading
+  weights) can come up first, pass a health check, and register only when it can
+  answer — an endpoint registered before the app serves shows "Session is not
+  reachable" in the platform chat. `--link` stops the local server when the client
+  exits, so `pw endpoints delete` also kills the app (verified: vllm on awsgpu).
 - **Env-var auth for containers/sidecars (v7.79.0):** the CLI authenticates from
   `PW_API_KEY` + `PW_PLATFORM_HOST` env vars with no config file — this is how to run
   it in a pod. `ghcr.io/parallelworks/pw-cli:<ver>` is distroless (entrypoint

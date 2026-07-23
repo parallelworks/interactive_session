@@ -196,7 +196,9 @@ non-repetitive; point at an existing tutorial instead.
   over a `list` input fails over across resources (see
   `workflow/tutorials/round-robin-failover/`; reference §3 "Step retries").
 - **Make scripts idempotent and traceable:** `set -o pipefail`, `set -x`; check
-  before installing; safe to re-run.
+  before installing; safe to re-run. Guard every download with an existence check,
+  and prefer resumable fetches (`hf download` re-fetches only missing files) over
+  delete-and-redownload.
 - **Stream progress and emit structured results.** Print incremental progress (it
   streams to `run.<JOBID>.out` / the page) and write a machine-readable result
   (JSON) — don't make the user guess whether it's alive or done.

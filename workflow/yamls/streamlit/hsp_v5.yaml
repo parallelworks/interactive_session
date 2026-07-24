@@ -114,7 +114,11 @@ jobs:
             is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
             account: ${{ inputs.cluster.pbs.account }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
-
+      - name: Cancel Wait for Endpoint
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - wait_for_endpoint
 
   wait_for_endpoint:
     needs:

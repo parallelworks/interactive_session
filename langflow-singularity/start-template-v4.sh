@@ -330,7 +330,6 @@ if [ "${langflow_enable_proxy}" = "true" ] && { [ -z "${langflow_proxy_dir}" ] |
 fi
 if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ] && [ -d "${langflow_proxy_dir}/langflow_proxy" ]; then
     echo "::group::Starting Langflow proxy"
-    proxy_venv="${service_parent_install_dir}/tools/langflow_proxy_venv"
     # Allocate a port dynamically and publish it to the shared job dir so the
     # (parallel) LibreChat job can read it and register the proxy endpoint.
     proxy_port=$(pw agent open-port)
@@ -390,46 +389,48 @@ PROXYCFG
         sed -i "s/\${HFTEI_PORT}/${hftei_port}/g" "${proxy_config}"
     fi
 
-    if [ -x "${proxy_venv}/bin/python" ]; then
-        # Launch uvicorn directly (not bin/langflow_proxy) so a not-yet-created
-        # Langflow DB doesn't trip the strict pre-flight validator; the proxy
-        # discovers flows lazily and re-reads its config on every request.
-        APP_CONFIG_PATH="${proxy_config}" \
-        PYTHONPATH="${langflow_proxy_dir}:${PYTHONPATH:-}" \
-        "${proxy_venv}/bin/python" -m uvicorn langflow_proxy.main:app \
+    # Run the proxy with the Langflow container's Python: it ships every proxy
+    # dependency, so no host venv (or host Python version) is involved. Launch
+    # uvicorn directly (not bin/langflow_proxy) so a not-yet-created Langflow DB
+    # doesn't trip the strict pre-flight validator; the proxy discovers flows
+    # lazily and re-reads its config on every request.
+    singularity exec \
+        --bind "${langflow_proxy_dir}:${langflow_proxy_dir}" \
+        --bind "${PW_PARENT_JOB_DIR}:${PW_PARENT_JOB_DIR}" \
+        --bind "$(dirname "${proxy_db_path}"):$(dirname "${proxy_db_path}")" \
+        --env APP_CONFIG_PATH="${proxy_config}" \
+        --env PYTHONPATH="${langflow_proxy_dir}" \
+        "${container_ref}" \
+        /app/.venv/bin/python -m uvicorn langflow_proxy.main:app \
             --host 0.0.0.0 --port "${proxy_port}" \
-            > langflow-proxy.log 2>&1 &
-        proxy_pid=$!
-        echo "kill ${proxy_pid} #langflow-proxy" >> cancel.sh
-        echo "::notice::Langflow proxy → http://localhost:${proxy_port}/v1 (pid ${proxy_pid})"
-        tail -f langflow-proxy.log &
-        echo "kill $! #langflow-proxy-logs" >> cancel.sh
+        > langflow-proxy.log 2>&1 &
+    proxy_pid=$!
+    echo "kill ${proxy_pid} #langflow-proxy" >> cancel.sh
+    echo "::notice::Langflow proxy → http://localhost:${proxy_port}/v1 (pid ${proxy_pid})"
+    tail -f langflow-proxy.log &
+    echo "kill $! #langflow-proxy-logs" >> cancel.sh
 
-        # Warm up each flow once in the background: the first request after a
-        # cold start can hit a Python import deadlock inside Langflow
-        # (concurrent langchain imports), so absorb it here instead of on a
-        # user-facing request.
-        (
-            auth_args=()
-            [ -n "${LANGFLOW_API_KEY}" ] && auth_args=(-H "Authorization: Bearer ${LANGFLOW_API_KEY}")
-            models=""
-            for _ in $(seq 1 60); do
-                models=$(curl -s -m 5 "${auth_args[@]}" "localhost:${proxy_port}/v1/models" \
-                    | python3 -c 'import sys,json; print(" ".join(m["id"] for m in json.load(sys.stdin).get("data",[])))' 2>/dev/null)
-                [ -n "${models}" ] && break
-                sleep 10
-            done
-            for model in ${models}; do
-                curl -s -m 300 "${auth_args[@]}" -H 'Content-Type: application/json' \
-                    -d "{\"model\": \"${model}\", \"stream\": false, \"max_tokens\": 1, \"messages\": [{\"role\": \"user\", \"content\": \"ping\"}]}" \
-                    "localhost:${proxy_port}/v1/chat/completions" > /dev/null
-                echo "warmed up ${model}"
-            done
-        ) > warmup.log 2>&1 &
-    else
-        echo "::error title=Langflow proxy venv missing::Proxy venv not found at ${proxy_venv} (controller did not build it). Cannot start the proxy that 'Start Langflow Proxy?' requires."
-        exit 1
-    fi
+    # Warm up each flow once in the background: the first request after a
+    # cold start can hit a Python import deadlock inside Langflow
+    # (concurrent langchain imports), so absorb it here instead of on a
+    # user-facing request.
+    (
+        auth_args=()
+        [ -n "${LANGFLOW_API_KEY}" ] && auth_args=(-H "Authorization: Bearer ${LANGFLOW_API_KEY}")
+        models=""
+        for _ in $(seq 1 60); do
+            models=$(curl -s -m 5 "${auth_args[@]}" "localhost:${proxy_port}/v1/models" \
+                | python3 -c 'import sys,json; print(" ".join(m["id"] for m in json.load(sys.stdin).get("data",[])))' 2>/dev/null)
+            [ -n "${models}" ] && break
+            sleep 10
+        done
+        for model in ${models}; do
+            curl -s -m 300 "${auth_args[@]}" -H 'Content-Type: application/json' \
+                -d "{\"model\": \"${model}\", \"stream\": false, \"max_tokens\": 1, \"messages\": [{\"role\": \"user\", \"content\": \"ping\"}]}" \
+                "localhost:${proxy_port}/v1/chat/completions" > /dev/null
+            echo "warmed up ${model}"
+        done
+    ) > warmup.log 2>&1 &
     echo "::endgroup::"
 fi
 

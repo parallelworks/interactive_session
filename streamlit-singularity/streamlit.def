@@ -1,0 +1,9 @@
+Bootstrap: docker
+From: python:3.12-slim
+
+%post
+    pip install --no-cache-dir streamlit==1.60.0
+    # Add your app's Python dependencies here and rebuild with build-container.sh
+
+%runscript
+    exec streamlit "$@"

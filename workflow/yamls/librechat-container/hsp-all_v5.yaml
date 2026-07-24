@@ -488,10 +488,14 @@ jobs:
             echo "export langflow_proxy_dir=\"${_default_proxy_dir}\"" >> inputs.sh
             echo "::notice::Defaulted langflow_proxy_dir to ${_default_proxy_dir}"
           fi
-          # HSP default: the controller downloads the model here when missing.
+          # Form defaults may reference ${PROJECTS_HOME}; export it (resolved by the
+          # install-dir step above) at the top of inputs.sh so they expand on source.
+          sed -i "1i export PROJECTS_HOME=\"${PROJECTS_HOME:-${HOME}}\"" inputs.sh
+          # Backstop for CLI runs that omit the field; the controller downloads
+          # the model here when missing.
           if [ "${{ inputs.langflow.enable_hftei }}" = "true" ] && [ -z "${{ inputs.langflow.hftei_model_dir }}" ]; then
-            echo "export langflow_hftei_model_dir=\"${hsp_install_dir}/models/MPNet-V2\"" >> inputs.sh
-            echo "::notice::Defaulted langflow_hftei_model_dir to ${hsp_install_dir}/models/MPNet-V2"
+            echo 'export langflow_hftei_model_dir="${PROJECTS_HOME}/hsp/models/MPNet-V2"' >> inputs.sh
+            echo "::notice::Defaulted langflow_hftei_model_dir"
           fi
       - name: Controller Preprocessing
         early-cancel: any-job-failed
@@ -999,7 +1003,7 @@ jobs:
           hftei_model_dir:
             label: HFTEI Model Directory
             type: string
-            optional: true
+            default: ${PROJECTS_HOME}/hsp/models/MPNet-V2
             hidden: ${{ inputs.langflow.enable_hftei == false }}
             ignore: ${{ inputs.langflow.enable_hftei == false }}
             tooltip: |

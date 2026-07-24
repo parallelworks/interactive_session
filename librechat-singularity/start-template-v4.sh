@@ -9,6 +9,10 @@ set -ex
 
 SCRIPTS_DIR=${PW_PARENT_JOB_DIR}/librechat-singularity
 
+# The Manager job waits for this file to locate the LibreChat node; scheduled
+# runs get it from the sbatch/qsub headers, unscheduled runs need it here.
+hostname > HOSTNAME
+
 if [ -n "${service_parent_install_dir}" ]; then
     container_dir=${service_parent_install_dir}/containers/librechat
     if ! [ -d "${container_dir}" ] && ! [ -w "${service_parent_install_dir}" ]; then

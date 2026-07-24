@@ -52,8 +52,13 @@ Two flows ship ready to import:
 
 | Flow | Model brain | Use it for |
 |---|---|---|
-| **chatbot** | GenAI.mil | The original flow (needs a reachable GenAI.mil endpoint). |
-| **pw-test-one** | ACTIVATE platform | Self-contained: targets `…/api/openai/v1` with your `PW_API_KEY` (auto-adds the `X-Allocation` header platform `org:*` models need). Verifies the whole chain with no external provider. |
+| **chatbot** | Configurable (GenAI.mil, vLLM, or the ACTIVATE platform's `…/api/openai/v1`) | Plain chat through a single model. |
+| **rag_chatbot** | Same, plus an **HFTEI** embeddings server and a **LanceDB** vector database | Retrieval-augmented chat: enhances the query, retrieves from the corpus in **RAG Database Directory** (mounted at `/data`), and answers from the retrieved context. |
+
+Route each flow's models (and the RAG corpus) with a **Proxy Flow Configs File**; a
+`base_url` may reference the HFTEI server started by this workflow as
+`http://localhost:${HFTEI_PORT}`. Platform `org:*` models get their `X-Allocation`
+header from the discovered allocation, or set `allocation:` per model config.
 
 Add your own: drop flow JSONs in `<Langflow Proxy Path>/flows/` — they're auto-imported
 and appear as models automatically.
@@ -65,8 +70,8 @@ and appear as models automatically.
    the cluster.
 3. Launch. First run downloads the container images (a few minutes).
 4. Open **librechat**, register a local account, pick the **Langflow** endpoint, choose a
-   flow (e.g. `pw_test_one`), and chat. Use **manager** to watch/restart services and
-   **langflow** to edit flows.
+   flow (e.g. `chatbot` or `rag_chatbot`), and chat. Use **manager** to watch/restart
+   services and **langflow** to edit flows.
 
 ## Good to know
 

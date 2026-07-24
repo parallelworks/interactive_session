@@ -54,6 +54,10 @@ service_port=$(pw agent open-port) || { echo "::error title=Error::Failed to all
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
+# The LibreChat job waits for this file to locate the Langflow node; scheduled
+# runs get it from the sbatch/qsub headers, unscheduled runs need it here.
+hostname > HOSTNAME
+
 if ! [ -f "${container_sif}" ]; then
     echo "::error title=Error::Langflow container not found at ${container_sif}. Run controller first."
     exit 1

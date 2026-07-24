@@ -1,0 +1,322 @@
+# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
+permissions:
+  - '*'
+
+jobs:
+  preprocessing:
+      ssh:
+        remoteHost: ${{ inputs.resource.ip }}
+      steps:
+        - name: Checkout streamlit-singularity
+          uses: parallelworks/checkout
+          with:
+            repo: https://github.com/parallelworks/interactive_session.git
+            branch: streamlit
+            sparse_checkout:
+              - streamlit-singularity
+              - tools/oras
+          cleanup: |
+            set -x
+            if [ -d tools/oras ]; then
+              echo "Removing tools/oras"
+              rm -rf tools/oras
+            fi
+        - name: Create Inputs
+          run: |
+            set -x
+            if [ -z "${PW_PLATFORM_HOST}" ]; then
+              PW_PLATFORM_HOST=activate.hpc.mil
+            fi
+            # Write PW variables
+            env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
+            # Encase values between quotes
+            sed -i 's/=\(.*\)/="\1"/' inputs.sh
+            # Write input form variables and ensure the pw agent is in the PATH
+            cat <<'EOF' >> inputs.sh
+            PATH=$HOME/pw:$PATH
+            service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
+            app_script="${{ inputs.service.app_script }}"
+            pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG}"
+            EOF
+            # Remove empty variables
+            sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
+            sed -i '/=""/d' inputs.sh # remove var=""
+            # Add export= to all lines
+            sed -i 's/^/export /' inputs.sh
+        - name: Controller Preprocessing
+          run: |
+            set -x
+            # This script prepares the target host and always runs in the controller node
+            cp inputs.sh controller-${PW_JOB_ID}.sh
+            cat streamlit-singularity/controller-v4.sh >> controller-${PW_JOB_ID}.sh
+            bash controller-${PW_JOB_ID}.sh
+        - name: Create Service Script
+          run: |
+            rm -f HOSTNAME SESSION_PORT job.ended job.started
+            # This script starts the service
+            cp inputs.sh start-service-${PW_JOB_ID}.sh
+
+            # Write code common to all services
+            cat <<'EOF' >> start-service-${PW_JOB_ID}.sh
+
+            cleanup() {
+                trap - EXIT INT TERM HUP QUIT USR1 USR2 PIPE
+                echo "::notice::Cleaning up..."
+                if [ -f cancel.sh ]; then
+                    mv cancel.sh cancel.sh.submitted
+                    echo "echo Cleanup script was already executed" > cancel.sh
+                    bash cancel.sh.submitted
+                fi
+                kill -- -$$
+            }
+
+            trap cleanup EXIT INT TERM HUP QUIT USR1 USR2 PIPE
+
+            echo "::notice::Starting service"
+            EOF
+            cat streamlit-singularity/start-template-v4.sh >> ./start-service-${PW_JOB_ID}.sh
+            echo "SCRIPT_PATH=${PWD}/start-service-${PW_JOB_ID}.sh" | tee -a $OUTPUTS
+            echo "SKIP_CLEANUP_PATH=${PWD}/SKIP_CLEANUP" | tee -a $OUTPUTS
+
+  session_runner:
+    needs:
+      - preprocessing
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Session Runner
+        uses: github/parallelworks/interactive_session@main
+        early-cancel: any-job-failed
+        with:
+          $yaml: workflow/script_submitter/v3.6/hsp.yaml
+          resource: ${{ inputs.resource }}
+          shebang: '#!/bin/bash'
+          use_existing_script: true
+          script_path: ${{ needs.preprocessing.outputs.SCRIPT_PATH }}
+          define_cleanup_script: true
+          cleanup_script_path: ./cancel.sh
+          scheduler: ${{ inputs.cluster.scheduler }}
+          use_scheduler_agent: false
+          submit_and_exit: false
+          skip_cleanups_file: ${{ needs.preprocessing.outputs.SKIP_CLEANUP_PATH }}
+          slurm:
+            is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
+            account: ${{ inputs.cluster.slurm.account }}
+            partition: ${{ inputs.cluster.slurm.partition }}
+            qos: ${{ inputs.cluster.slurm.qos }}
+            cpus_per_task: ${{ inputs.cluster.slurm.cpus_per_task }}
+            nodes: ${{ inputs.cluster.slurm.nodes }}
+            node_type: ${{ inputs.cluster.slurm.node_type }}
+            scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
+            time: ${{ inputs.cluster.slurm.time }}
+          pbs:
+            is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
+            account: ${{ inputs.cluster.pbs.account }}
+            scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+
+
+  wait_for_endpoint:
+    needs:
+      - preprocessing
+    ssh:
+      remoteHost: ${{ inputs.resource.ip }}
+    steps:
+      - name: Wait for endpoint
+        early-cancel: any-job-failed
+        run: |
+          endpoint_name="${{ inputs.service.name }}-${PW_RUN_SLUG}"
+          echo "::notice::Waiting for endpoint ${endpoint_name} to come online"
+          until pw endpoints list | grep -qw "${endpoint_name}"; do
+            echo "$(date) Endpoint ${endpoint_name} not found yet; retrying in 10 seconds"
+            sleep 10
+          done
+          echo "::notice::Endpoint ${endpoint_name} is online"
+          touch ${{ needs.preprocessing.outputs.SKIP_CLEANUP_PATH }}
+          sleep 2
+      - name: Cancel Script Submitter
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - session_runner
+
+
+'on':
+  execute:
+    inputs:
+      resource:
+        type: compute-clusters
+        label: Service host
+        include-workspace: false
+        tooltip: Resource to host the service
+      cluster:
+        type: group
+        label: Compute Cluster Settings
+        hidden: ${{ inputs.resource.schedulerType == '' }}
+        ignore: ${{ inputs.resource.schedulerType == '' }}
+        items:
+          scheduler:
+            type: boolean
+            default: false
+            label: Schedule Job?
+            tooltip: |
+              Yes → Job is submitted to the scheduler using sbatch, qsub, etc
+              No  → Job is executed in the controller or login node instead
+          slurm:
+            type: group
+            label: SLURM Directives
+            hidden: ${{ inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            items:
+              is_enabled:
+                type: boolean
+                hidden: true
+                default: true
+                label: Is SLURM Enabled? Yes, unless the slurm section is hidden and ignored
+              account:
+                label: SLURM account
+                type: slurm-accounts
+                resource: ${{ inputs.resource }}
+                tooltip: '--account=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              partition:
+                type: slurm-partitions
+                label: SLURM partition
+                optional: true
+                resource: ${{ inputs.resource }}
+                tooltip: Select a partition from the drop down menu.
+              qos:
+                label: Quality of Service [QoS]
+                type: slurm-qos
+                resource: ${{ inputs.resource }}
+                tooltip: '--qos=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              cpus_per_task:
+                label: CPUs per task
+                type: number
+                default: 1
+                tooltip: '--cpus-per-task= SLURM directive to set the number of CPUs per task'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              nodes:
+                label: Number of nodes
+                type: number
+                default: 1
+                tooltip: '--nodes=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              node_type:
+                label: Node Type
+                type: dropdown
+                optional: true
+                default: ""
+                option-key: ${{ inputs.resource.ip }}
+                tooltip: '--constraint=<value> slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider || (inputs.resource.ip != 'blueback.navydsrc.hpc.mil' && inputs.resource.ip != 'narwhal.navydsrc.hpc.mil' && inputs.resource.ip != 'nautilus.navydsrc.hpc.mil' && inputs.resource.ip != 'raider.afrl.hpc.mil' && inputs.resource.ip != 'crux.mhpcc.hpc.mil') }}
+                hidden: ${{ .ignore }}
+                options:
+                  blueback.navydsrc.hpc.mil:
+                    - standard
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  narwhal.navydsrc.hpc.mil:
+                    - standard
+                    - bigmem
+                    - mla
+                    - smla
+                    - dmla
+                    - viz
+                    - transfer
+                  nautilus.navydsrc.hpc.mil:
+                    - standard
+                    - highclock
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  raider.afrl.hpc.mil:
+                    - standard
+                    - highclock
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  crux.mhpcc.hpc.mil:
+                    - AMD
+                    - Intel
+              time:
+                label: Walltime
+                type: string
+                default: 00:30:00
+                tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job (format: D-HH:MM:SS or HH:MM:SS, e.g. 7-00:00:00 or 01:00:00)'
+              scheduler_directives:
+                type: editor
+                optional: true
+                tooltip: |
+                  Add extra SLURM directives, one per line, using the #SBATCH prefix. For example:
+                  #SBATCH --exclusive
+                  #SBATCH --nodelist=<node-name>
+                default: |
+                  ##SBATCH --gres=gpu:4 # uncomment for gpus on onprem systems
+                  ##SBATCH --constraint=mla # uncomment for Navy and AFRL DSRC systems
+          pbs:
+            type: group
+            label: PBS Directives
+            hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            items:
+              is_enabled:
+                type: boolean
+                hidden: true
+                default: true
+                label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
+              account:
+                label: Account
+                type: string
+                tooltip: PBS account for job submission (-A)
+              scheduler_directives:
+                label: Scheduler Directives
+                type: editor
+                tooltip: |
+                  Add extra PBS directives, one per line, using the #PBS prefix. For example:
+                  #PBS -l mem=16gb
+                  #PBS -l ngpus=1
+                default: |
+                  # Parameters that apply to all sites
+                  #PBS -l walltime=00:30:00
+                  #PBS -V
+                  #PBS -q standard
+                  # Remove first # to activate specific lines
+                  #=====Ruth (Lustre, only vis has NVIDIA)=====
+                  ##PBS -l select=1:ncpus=128:mpiprocs=128:ngpus=1
+                  #=====Warhawk (Lustre)====
+                  ##PBS -l select=1:ncpus=128:mpiprocs=128:ngpus=2
+                  #=====Wheat (WEKA, nmlas=4|6)====
+                  ##PBS -l select=1:ncpus=92:mpiprocs=92:nmlas=4
+
+      service:
+        type: group
+        label: Streamlit Settings
+        items:
+          name:
+            type: string
+            hidden: true
+            default: streamlit
+          app_script:
+            label: App Script
+            type: string
+            optional: true
+            tooltip: |
+              Absolute path to your Streamlit app script (.py) on the cluster.
+              Leave empty to run the bundled demo app. The script's directory is
+              mounted into the container, so files next to the script are
+              available to the app.
+          parent_install_dir:
+            label: Parent Install Directory
+            type: string
+            hidden: true
+            default: ${HOME}/pw/software
+            tooltip: The Streamlit container image is stored in this directory. Ensure the directory has sufficient space!

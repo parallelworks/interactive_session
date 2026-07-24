@@ -6,34 +6,6 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "ModelConfig",
-            "id": "CustomComponent-GJysN",
-            "name": "role_config_out",
-            "output_types": [
-              "dict"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "config",
-            "id": "CustomComponent-WPmPD",
-            "inputTypes": [
-              "dict"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__CustomComponent-GJysN{\u0153dataType\u0153:\u0153ModelConfig\u0153,\u0153id\u0153:\u0153CustomComponent-GJysN\u0153,\u0153name\u0153:\u0153role_config_out\u0153,\u0153output_types\u0153:[\u0153dict\u0153]}-CustomComponent-WPmPD{\u0153fieldName\u0153:\u0153config\u0153,\u0153id\u0153:\u0153CustomComponent-WPmPD\u0153,\u0153inputTypes\u0153:[\u0153dict\u0153],\u0153type\u0153:\u0153other\u0153}",
-        "selected": false,
-        "source": "CustomComponent-GJysN",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153ModelConfig\u0153,\u0153id\u0153:\u0153CustomComponent-GJysN\u0153,\u0153name\u0153:\u0153role_config_out\u0153,\u0153output_types\u0153:[\u0153dict\u0153]}",
-        "target": "CustomComponent-WPmPD",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153config\u0153,\u0153id\u0153:\u0153CustomComponent-WPmPD\u0153,\u0153inputTypes\u0153:[\u0153dict\u0153],\u0153type\u0153:\u0153other\u0153}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "LanguageModelComponent",
             "id": "CustomComponent-WPmPD",
             "name": "language_model",
@@ -57,34 +29,6 @@
         "sourceHandle": "{\u0153dataType\u0153:\u0153LanguageModelComponent\u0153,\u0153id\u0153:\u0153CustomComponent-WPmPD\u0153,\u0153name\u0153:\u0153language_model\u0153,\u0153output_types\u0153:[\u0153BaseChatModel\u0153]}",
         "target": "CustomComponent-cLXQL",
         "targetHandle": "{\u0153fieldName\u0153:\u0153llm\u0153,\u0153id\u0153:\u0153CustomComponent-cLXQL\u0153,\u0153inputTypes\u0153:[\u0153LanguageModel\u0153,\u0153BaseChatModel\u0153],\u0153type\u0153:\u0153other\u0153}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt Template",
-            "id": "CustomComponent-D304n",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "CustomComponent-cLXQL",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__CustomComponent-D304n{\u0153dataType\u0153:\u0153Prompt Template\u0153,\u0153id\u0153:\u0153CustomComponent-D304n\u0153,\u0153name\u0153:\u0153prompt\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-CustomComponent-cLXQL{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153CustomComponent-cLXQL\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
-        "selected": false,
-        "source": "CustomComponent-D304n",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153Prompt Template\u0153,\u0153id\u0153:\u0153CustomComponent-D304n\u0153,\u0153name\u0153:\u0153prompt\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
-        "target": "CustomComponent-cLXQL",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153CustomComponent-cLXQL\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
       },
       {
         "animated": false,
@@ -210,90 +154,6 @@
           "sourceHandle": {
             "dataType": "ChatInput",
             "id": "CustomComponent-UDNIY",
-            "name": "user_message_out",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "user_prompt",
-            "id": "CustomComponent-D304n",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__CustomComponent-UDNIY{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153user_message_out\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-CustomComponent-D304n{\u0153fieldName\u0153:\u0153user_prompt\u0153,\u0153id\u0153:\u0153CustomComponent-D304n\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
-        "selected": false,
-        "source": "CustomComponent-UDNIY",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153user_message_out\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
-        "target": "CustomComponent-D304n",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153user_prompt\u0153,\u0153id\u0153:\u0153CustomComponent-D304n\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "CustomComponent-UDNIY",
-            "name": "user_context_out",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "user_context",
-            "id": "CustomComponent-D304n",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__CustomComponent-UDNIY{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153user_context_out\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-CustomComponent-D304n{\u0153fieldName\u0153:\u0153user_context\u0153,\u0153id\u0153:\u0153CustomComponent-D304n\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
-        "selected": false,
-        "source": "CustomComponent-UDNIY",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153user_context_out\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
-        "target": "CustomComponent-D304n",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153user_context\u0153,\u0153id\u0153:\u0153CustomComponent-D304n\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "CustomComponent-UDNIY",
-            "name": "system_prompt_out",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "system_message",
-            "id": "CustomComponent-cLXQL",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__CustomComponent-UDNIY{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153system_prompt_out\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-CustomComponent-cLXQL{\u0153fieldName\u0153:\u0153system_message\u0153,\u0153id\u0153:\u0153CustomComponent-cLXQL\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
-        "selected": false,
-        "source": "CustomComponent-UDNIY",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153system_prompt_out\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
-        "target": "CustomComponent-cLXQL",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153system_message\u0153,\u0153id\u0153:\u0153CustomComponent-cLXQL\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "CustomComponent-UDNIY",
             "name": "chat_history_out",
             "output_types": [
               "Message"
@@ -315,62 +175,6 @@
         "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153chat_history_out\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
         "target": "CustomComponent-cLXQL",
         "targetHandle": "{\u0153fieldName\u0153:\u0153chat_history\u0153,\u0153id\u0153:\u0153CustomComponent-cLXQL\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153,\u0153list\u0153],\u0153type\u0153:\u0153other\u0153}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "CustomComponent-UDNIY",
-            "name": "params_out",
-            "output_types": [
-              "dict"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "params_dict",
-            "id": "CustomComponent-goCF5",
-            "inputTypes": [
-              "dict"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__CustomComponent-UDNIY{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153params_out\u0153,\u0153output_types\u0153:[\u0153dict\u0153]}-CustomComponent-goCF5{\u0153fieldName\u0153:\u0153params_dict\u0153,\u0153id\u0153:\u0153CustomComponent-goCF5\u0153,\u0153inputTypes\u0153:[\u0153dict\u0153],\u0153type\u0153:\u0153other\u0153}",
-        "selected": false,
-        "source": "CustomComponent-UDNIY",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153params_out\u0153,\u0153output_types\u0153:[\u0153dict\u0153]}",
-        "target": "CustomComponent-goCF5",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153params_dict\u0153,\u0153id\u0153:\u0153CustomComponent-goCF5\u0153,\u0153inputTypes\u0153:[\u0153dict\u0153],\u0153type\u0153:\u0153other\u0153}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "CustomComponent-UDNIY",
-            "name": "model_configs_out",
-            "output_types": [
-              "dict"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "model_configs_dict",
-            "id": "CustomComponent-GJysN",
-            "inputTypes": [
-              "dict"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__CustomComponent-UDNIY{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153model_configs_out\u0153,\u0153output_types\u0153:[\u0153dict\u0153]}-CustomComponent-GJysN{\u0153fieldName\u0153:\u0153model_configs_dict\u0153,\u0153id\u0153:\u0153CustomComponent-GJysN\u0153,\u0153inputTypes\u0153:[\u0153dict\u0153],\u0153type\u0153:\u0153other\u0153}",
-        "selected": false,
-        "source": "CustomComponent-UDNIY",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153model_configs_out\u0153,\u0153output_types\u0153:[\u0153dict\u0153]}",
-        "target": "CustomComponent-GJysN",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153model_configs_dict\u0153,\u0153id\u0153:\u0153CustomComponent-GJysN\u0153,\u0153inputTypes\u0153:[\u0153dict\u0153],\u0153type\u0153:\u0153other\u0153}"
       },
       {
         "animated": false,
@@ -430,31 +234,273 @@
       },
       {
         "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "Params",
-            "id": "CustomComponent-goCF5",
-            "name": "stream",
+            "dataType": "ChatInput",
+            "id": "CustomComponent-UDNIY",
+            "name": "model_configs_out",
             "output_types": [
-              "bool"
+              "dict"
             ]
           },
           "targetHandle": {
-            "fieldName": "stream",
-            "id": "CustomComponent-cLXQL",
+            "fieldName": "model_configs_dict",
+            "id": "CustomComponent-sD70e",
             "inputTypes": [
-              "bool"
+              "dict"
             ],
-            "type": "bool"
+            "type": "other"
           }
         },
-        "id": "xy-edge__CustomComponent-goCF5{\u0153dataType\u0153:\u0153Params\u0153,\u0153id\u0153:\u0153CustomComponent-goCF5\u0153,\u0153name\u0153:\u0153stream\u0153,\u0153output_types\u0153:[\u0153bool\u0153]}-CustomComponent-cLXQL{\u0153fieldName\u0153:\u0153stream\u0153,\u0153id\u0153:\u0153CustomComponent-cLXQL\u0153,\u0153inputTypes\u0153:[\u0153bool\u0153],\u0153type\u0153:\u0153bool\u0153}",
+        "id": "xy-edge__CustomComponent-UDNIY{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153model_configs_out\u0153,\u0153output_types\u0153:[\u0153dict\u0153]}-CustomComponent-sD70e{\u0153fieldName\u0153:\u0153model_configs_dict\u0153,\u0153id\u0153:\u0153CustomComponent-sD70e\u0153,\u0153inputTypes\u0153:[\u0153dict\u0153],\u0153type\u0153:\u0153other\u0153}",
         "selected": false,
-        "source": "CustomComponent-goCF5",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153Params\u0153,\u0153id\u0153:\u0153CustomComponent-goCF5\u0153,\u0153name\u0153:\u0153stream\u0153,\u0153output_types\u0153:[\u0153bool\u0153]}",
+        "source": "CustomComponent-UDNIY",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153model_configs_out\u0153,\u0153output_types\u0153:[\u0153dict\u0153]}",
+        "target": "CustomComponent-sD70e",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153model_configs_dict\u0153,\u0153id\u0153:\u0153CustomComponent-sD70e\u0153,\u0153inputTypes\u0153:[\u0153dict\u0153],\u0153type\u0153:\u0153other\u0153}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "CustomComponent-UDNIY",
+            "name": "params_out",
+            "output_types": [
+              "dict"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "params_dict",
+            "id": "CustomComponent-goCF5",
+            "inputTypes": [
+              "dict"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__CustomComponent-UDNIY{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153params_out\u0153,\u0153output_types\u0153:[\u0153dict\u0153]}-CustomComponent-goCF5{\u0153fieldName\u0153:\u0153params_dict\u0153,\u0153id\u0153:\u0153CustomComponent-goCF5\u0153,\u0153inputTypes\u0153:[\u0153dict\u0153],\u0153type\u0153:\u0153other\u0153}",
+        "selected": false,
+        "source": "CustomComponent-UDNIY",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153params_out\u0153,\u0153output_types\u0153:[\u0153dict\u0153]}",
+        "target": "CustomComponent-goCF5",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153params_dict\u0153,\u0153id\u0153:\u0153CustomComponent-goCF5\u0153,\u0153inputTypes\u0153:[\u0153dict\u0153],\u0153type\u0153:\u0153other\u0153}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "ModelConfigs",
+            "id": "CustomComponent-sD70e",
+            "name": "respond_config_out",
+            "output_types": [
+              "dict"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "config",
+            "id": "CustomComponent-WPmPD",
+            "inputTypes": [
+              "dict"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__CustomComponent-sD70e{\u0153dataType\u0153:\u0153ModelConfigs\u0153,\u0153id\u0153:\u0153CustomComponent-sD70e\u0153,\u0153name\u0153:\u0153respond_config_out\u0153,\u0153output_types\u0153:[\u0153dict\u0153]}-CustomComponent-WPmPD{\u0153fieldName\u0153:\u0153config\u0153,\u0153id\u0153:\u0153CustomComponent-WPmPD\u0153,\u0153inputTypes\u0153:[\u0153dict\u0153],\u0153type\u0153:\u0153other\u0153}",
+        "selected": false,
+        "source": "CustomComponent-sD70e",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153ModelConfigs\u0153,\u0153id\u0153:\u0153CustomComponent-sD70e\u0153,\u0153name\u0153:\u0153respond_config_out\u0153,\u0153output_types\u0153:[\u0153dict\u0153]}",
+        "target": "CustomComponent-WPmPD",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153config\u0153,\u0153id\u0153:\u0153CustomComponent-WPmPD\u0153,\u0153inputTypes\u0153:[\u0153dict\u0153],\u0153type\u0153:\u0153other\u0153}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "ModelConfigs",
+            "id": "CustomComponent-sD70e",
+            "name": "respond_config_out",
+            "output_types": [
+              "dict"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "config",
+            "id": "CustomComponent-EUlNd",
+            "inputTypes": [
+              "dict"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__CustomComponent-sD70e{\u0153dataType\u0153:\u0153ModelConfigs\u0153,\u0153id\u0153:\u0153CustomComponent-sD70e\u0153,\u0153name\u0153:\u0153respond_config_out\u0153,\u0153output_types\u0153:[\u0153dict\u0153]}-CustomComponent-EUlNd{\u0153fieldName\u0153:\u0153config\u0153,\u0153id\u0153:\u0153CustomComponent-EUlNd\u0153,\u0153inputTypes\u0153:[\u0153dict\u0153],\u0153type\u0153:\u0153other\u0153}",
+        "selected": false,
+        "source": "CustomComponent-sD70e",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153ModelConfigs\u0153,\u0153id\u0153:\u0153CustomComponent-sD70e\u0153,\u0153name\u0153:\u0153respond_config_out\u0153,\u0153output_types\u0153:[\u0153dict\u0153]}",
+        "target": "CustomComponent-EUlNd",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153config\u0153,\u0153id\u0153:\u0153CustomComponent-EUlNd\u0153,\u0153inputTypes\u0153:[\u0153dict\u0153],\u0153type\u0153:\u0153other\u0153}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "CustomComponent-UDNIY",
+            "name": "system_prompt_out",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "system_prompt",
+            "id": "CustomComponent-EUlNd",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__CustomComponent-UDNIY{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153system_prompt_out\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-CustomComponent-EUlNd{\u0153fieldName\u0153:\u0153system_prompt\u0153,\u0153id\u0153:\u0153CustomComponent-EUlNd\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "selected": false,
+        "source": "CustomComponent-UDNIY",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153system_prompt_out\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "target": "CustomComponent-EUlNd",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153system_prompt\u0153,\u0153id\u0153:\u0153CustomComponent-EUlNd\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "CustomComponent-UDNIY",
+            "name": "user_context_out",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "user_context",
+            "id": "CustomComponent-D304n",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__CustomComponent-UDNIY{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153user_context_out\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-CustomComponent-D304n{\u0153fieldName\u0153:\u0153user_context\u0153,\u0153id\u0153:\u0153CustomComponent-D304n\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "selected": false,
+        "source": "CustomComponent-UDNIY",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153user_context_out\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "target": "CustomComponent-D304n",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153user_context\u0153,\u0153id\u0153:\u0153CustomComponent-D304n\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "GenAIProviderFix",
+            "id": "CustomComponent-EUlNd",
+            "name": "out_system_prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "system_message",
+            "id": "CustomComponent-cLXQL",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__CustomComponent-EUlNd{\u0153dataType\u0153:\u0153GenAIProviderFix\u0153,\u0153id\u0153:\u0153CustomComponent-EUlNd\u0153,\u0153name\u0153:\u0153out_system_prompt\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-CustomComponent-cLXQL{\u0153fieldName\u0153:\u0153system_message\u0153,\u0153id\u0153:\u0153CustomComponent-cLXQL\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "selected": false,
+        "source": "CustomComponent-EUlNd",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153GenAIProviderFix\u0153,\u0153id\u0153:\u0153CustomComponent-EUlNd\u0153,\u0153name\u0153:\u0153out_system_prompt\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
         "target": "CustomComponent-cLXQL",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153stream\u0153,\u0153id\u0153:\u0153CustomComponent-cLXQL\u0153,\u0153inputTypes\u0153:[\u0153bool\u0153],\u0153type\u0153:\u0153bool\u0153}"
+        "targetHandle": "{\u0153fieldName\u0153:\u0153system_message\u0153,\u0153id\u0153:\u0153CustomComponent-cLXQL\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "CustomComponent-UDNIY",
+            "name": "user_message_out",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "user_prompt",
+            "id": "CustomComponent-D304n",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__CustomComponent-UDNIY{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153user_message_out\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-CustomComponent-D304n{\u0153fieldName\u0153:\u0153user_prompt\u0153,\u0153id\u0153:\u0153CustomComponent-D304n\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "selected": false,
+        "source": "CustomComponent-UDNIY",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153CustomComponent-UDNIY\u0153,\u0153name\u0153:\u0153user_message_out\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "target": "CustomComponent-D304n",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153user_prompt\u0153,\u0153id\u0153:\u0153CustomComponent-D304n\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt Template",
+            "id": "CustomComponent-D304n",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "user_prompt",
+            "id": "CustomComponent-EUlNd",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__CustomComponent-D304n{\u0153dataType\u0153:\u0153Prompt Template\u0153,\u0153id\u0153:\u0153CustomComponent-D304n\u0153,\u0153name\u0153:\u0153prompt\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-CustomComponent-EUlNd{\u0153fieldName\u0153:\u0153user_prompt\u0153,\u0153id\u0153:\u0153CustomComponent-EUlNd\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "selected": false,
+        "source": "CustomComponent-D304n",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153Prompt Template\u0153,\u0153id\u0153:\u0153CustomComponent-D304n\u0153,\u0153name\u0153:\u0153prompt\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "target": "CustomComponent-EUlNd",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153user_prompt\u0153,\u0153id\u0153:\u0153CustomComponent-EUlNd\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "GenAIProviderFix",
+            "id": "CustomComponent-EUlNd",
+            "name": "out_user_prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "CustomComponent-cLXQL",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__CustomComponent-EUlNd{\u0153dataType\u0153:\u0153GenAIProviderFix\u0153,\u0153id\u0153:\u0153CustomComponent-EUlNd\u0153,\u0153name\u0153:\u0153out_user_prompt\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-CustomComponent-cLXQL{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153CustomComponent-cLXQL\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "selected": false,
+        "source": "CustomComponent-EUlNd",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153GenAIProviderFix\u0153,\u0153id\u0153:\u0153CustomComponent-EUlNd\u0153,\u0153name\u0153:\u0153out_user_prompt\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "target": "CustomComponent-cLXQL",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153CustomComponent-cLXQL\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
       }
     ],
     "nodes": [
@@ -482,13 +528,14 @@
               "user_context",
               "chat_history",
               "model_configs",
+              "rag_configs",
               "params"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
             "metadata": {
-              "code_hash": "a54510e7f3f1",
+              "code_hash": "5aabc9e9f80f",
               "dependencies": {
                 "dependencies": [
                   {
@@ -598,6 +645,24 @@
               {
                 "allows_loop": false,
                 "cache": true,
+                "display_name": "Rag Configs",
+                "group_outputs": true,
+                "hidden": null,
+                "loop_types": null,
+                "method": "get_rag_configs",
+                "name": "rag_configs_out",
+                "options": null,
+                "required_inputs": null,
+                "selected": "dict",
+                "tool_mode": true,
+                "types": [
+                  "dict"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
                 "display_name": "Params",
                 "group_outputs": true,
                 "hidden": null,
@@ -660,7 +725,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import json\r\nimport ast\r\nfrom langflow.custom import Component\r\nfrom langflow.io import MultilineInput, Output\r\nfrom langflow.schema.message import Message\r\n\r\nclass ChatInput(Component):\r\n    display_name = \"Chat Input\"\r\n    description = \"A stateless entry point that receives core prompts and bundles all other OpenAI parameters into a dictionary.\"\r\n    icon = \"MessagesSquare\"\r\n    name = \"ChatInput\"\r\n    \r\n    inputs = [\r\n        MultilineInput(name=\"input_value\",    display_name=\"User Prompt\",    value=\"\",   input_types=[]),\r\n        MultilineInput(name=\"system_prompt\",  display_name=\"System Prompt\",  value=\"\",   input_types=[]),\r\n        MultilineInput(name=\"user_context\",   display_name=\"User Context\",   value=\"\",   input_types=[]),\r\n        MultilineInput(name=\"chat_history\",   display_name=\"Chat History\",   value=\"[]\", input_types=[]),\r\n        DictInput(name=\"model_configs\",       display_name=\"Model Configs\",  value={}, is_list=False, advanced=True),\r\n        DictInput(name=\"params\",              display_name=\"Params\",         value={}, is_list=False, advanced=True),\r\n    ]\r\n    \r\n    outputs = [\r\n        Output(display_name=\"User Prompt\",    name=\"user_message_out\",   method=\"get_user_message\",   types=[\"Message\"], group_outputs=True),\r\n        Output(display_name=\"User Context\",   name=\"user_context_out\",   method=\"get_user_context\",   types=[\"Message\"], group_outputs=True),\r\n        Output(display_name=\"System Prompt\",  name=\"system_prompt_out\",  method=\"get_system_prompt\",  types=[\"Message\"], group_outputs=True),\r\n        Output(display_name=\"Chat History\",   name=\"chat_history_out\",   method=\"get_chat_history\",   types=[\"Message\"], is_list=True, group_outputs=True),\r\n        Output(display_name=\"Model Configs\",  name=\"model_configs_out\",  method=\"get_model_configs\",  types=[\"dict\"], group_outputs=True),\r\n        Output(display_name=\"Params\",         name=\"params_out\",         method=\"get_params\",         types=[\"dict\"], group_outputs=True),\r\n    ]\r\n\r\n    def get_user_message(self) -> Message:\r\n        return Message(text=self.input_value, sender=\"User\", sender_name=\"User\")\r\n        \r\n    def get_chat_history(self) -> list[Message]:\r\n        messages = []\r\n        if not self.chat_history:\r\n            return messages\r\n            \r\n        try:\r\n            history_list = json.loads(self.chat_history)\r\n            for msg in history_list:\r\n                role = msg.get(\"role\", \"User\")\r\n                sender_type = \"AI\" if role.lower() == \"assistant\" else \"User\"\r\n                messages.append(Message(text=msg.get(\"content\", \"\"), sender=sender_type, sender_name=role))\r\n        except Exception as e:\r\n            print(f\"Error parsing chat history JSON: {e}\")\r\n            \r\n        return messages\r\n        \r\n    def get_system_prompt(self) -> str:\r\n        return Message(text=self.system_prompt, sender=\"AI\", sender_name=\"Assistant\")\r\n        \r\n    def get_user_context(self) -> str:\r\n        return Message(text=self.user_context, sender=\"User\", sender_name=\"User\")\r\n\r\n    def get_model_configs(self) -> dict:\r\n        default_configs = {\r\n            \"general\": {\r\n                \"provider\": \"GenAI.mil\",\r\n                \"base_url\": \"\",\r\n                \"model\": \"gemini-3.1-pro-preview\",\r\n            },\r\n            \"fast\": {\r\n                \"provider\": \"GenAI.mil\",\r\n                \"base_url\": \"\",\r\n                \"model\": \"gemini-3-flash-preview\",\r\n            }\r\n        }\r\n        self.model_configs = {k:v for k,v in self.model_configs.items() if k.strip()}\r\n        raw_input = self.model_configs if self.model_configs else {}\r\n        if not raw_input or not isinstance(raw_input, dict):\r\n            return default_configs\r\n        return raw_input\r\n\r\n    def get_params(self) -> dict:\r\n        base_params = {\r\n            \"temperature\": 1.0,\r\n            \"top_p\":       1.0,\r\n            \"top_k\":       None,\r\n            \"seed\":        None,\r\n            \"max_tokens\":  8192,\r\n            \"stream\":      True,\r\n        }\r\n        raw_params = self.params if self.params else {}\r\n        if isinstance(raw_params, dict):\r\n            for k, v in raw_params.items():\r\n                if not k.strip():\r\n                    continue \r\n                if v is not None:\r\n                    base_params[k] = v\r\n        return base_params"
+                "value": "import json\r\nimport ast\r\nfrom langflow.custom import Component\r\nfrom langflow.io import MultilineInput, Output\r\nfrom langflow.schema.message import Message\r\n\r\nclass ChatInput(Component):\r\n    display_name = \"Chat Input\"\r\n    description = \"A stateless entry point that receives core prompts and bundles all other OpenAI parameters into a dictionary.\"\r\n    icon = \"MessagesSquare\"\r\n    name = \"ChatInput\"\r\n    \r\n    inputs = [\r\n        MultilineInput(name=\"input_value\",    display_name=\"User Prompt\",    value=\"\",   input_types=[]),\r\n        MultilineInput(name=\"system_prompt\",  display_name=\"System Prompt\",  value=\"\",   input_types=[]),\r\n        MultilineInput(name=\"user_context\",   display_name=\"User Context\",   value=\"\",   input_types=[]),\r\n        MultilineInput(name=\"chat_history\",   display_name=\"Chat History\",   value=\"[]\", input_types=[]),\r\n        DictInput(name=\"model_configs\",       display_name=\"Model Configs\",  value={}, is_list=False, advanced=True),\r\n        DictInput(name=\"rag_configs\",         display_name=\"Rag Configs\",    value={}, is_list=False, advanced=True),\r\n        DictInput(name=\"params\",              display_name=\"Params\",         value={}, is_list=False, advanced=True),\r\n    ]\r\n    \r\n    outputs = [\r\n        Output(display_name=\"User Prompt\",    name=\"user_message_out\",   method=\"get_user_message\",   types=[\"Message\"], group_outputs=True),\r\n        Output(display_name=\"User Context\",   name=\"user_context_out\",   method=\"get_user_context\",   types=[\"Message\"], group_outputs=True),\r\n        Output(display_name=\"System Prompt\",  name=\"system_prompt_out\",  method=\"get_system_prompt\",  types=[\"Message\"], group_outputs=True),\r\n        Output(display_name=\"Chat History\",   name=\"chat_history_out\",   method=\"get_chat_history\",   types=[\"Message\"], is_list=True, group_outputs=True),\r\n        Output(display_name=\"Model Configs\",  name=\"model_configs_out\",  method=\"get_model_configs\",  types=[\"dict\"], group_outputs=True),\r\n        Output(display_name=\"Rag Configs\",    name=\"rag_configs_out\",    method=\"get_rag_configs\",    types=[\"dict\"], group_outputs=True),\r\n        Output(display_name=\"Params\",         name=\"params_out\",         method=\"get_params\",         types=[\"dict\"], group_outputs=True),\r\n    ]\r\n\r\n    def get_user_message(self) -> Message:\r\n        return Message(text=self.input_value, sender=\"User\", sender_name=\"User\")\r\n        \r\n    def get_chat_history(self) -> list[Message]:\r\n        messages = []\r\n        if not self.chat_history:\r\n            return messages\r\n            \r\n        try:\r\n            history_list = json.loads(self.chat_history)\r\n            for msg in history_list:\r\n                role = msg.get(\"role\", \"User\")\r\n                sender_type = \"AI\" if role.lower() == \"assistant\" else \"User\"\r\n                messages.append(Message(text=msg.get(\"content\", \"\"), sender=sender_type, sender_name=role))\r\n        except Exception as e:\r\n            print(f\"Error parsing chat history JSON: {e}\")\r\n            \r\n        return messages\r\n        \r\n    def get_system_prompt(self) -> str:\r\n        return Message(text=self.system_prompt, sender=\"AI\", sender_name=\"Assistant\")\r\n        \r\n    def get_user_context(self) -> str:\r\n        return Message(text=self.user_context, sender=\"User\", sender_name=\"User\")\r\n\r\n    def get_model_configs(self) -> dict:\r\n        raw_input = self.model_configs if self.model_configs else {}\r\n        if not isinstance(raw_input, dict):\r\n            return {}\r\n        return {k: v for k, v in raw_input.items() if k.strip()}\r\n\r\n    def get_rag_configs(self) -> dict:\r\n        raw_input = self.rag_configs if self.rag_configs else {}\r\n        if not isinstance(raw_input, dict):\r\n            return {}\r\n        return raw_input\r\n\r\n    def get_params(self) -> dict:\r\n        base_params = {\r\n            \"temperature\": 1.0,\r\n            \"top_p\":       1.0,\r\n            \"top_k\":       None,\r\n            \"seed\":        None,\r\n            \"max_tokens\":  8192,\r\n            \"stream\":      True,\r\n        }\r\n        raw_params = self.params if self.params else {}\r\n        if isinstance(raw_params, dict):\r\n            for k, v in raw_params.items():\r\n                if not k.strip():\r\n                    continue \r\n                if v is not None:\r\n                    base_params[k] = v\r\n        return base_params"
               },
               "input_value": {
                 "_input_type": "MultilineInput",
@@ -735,6 +800,26 @@
                   "": ""
                 }
               },
+              "rag_configs": {
+                "_input_type": "DictInput",
+                "advanced": true,
+                "display_name": "Rag Configs",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "rag_configs",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "track_in_telemetry": false,
+                "type": "dict",
+                "value": {}
+              },
               "system_prompt": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
@@ -798,12 +883,12 @@
         "dragging": false,
         "id": "CustomComponent-UDNIY",
         "measured": {
-          "height": 702,
+          "height": 744,
           "width": 320
         },
         "position": {
-          "x": -719.4500177559745,
-          "y": -212.53394410760876
+          "x": -819.1751621691895,
+          "y": -419.1519897859994
         },
         "selected": false,
         "type": "genericNode"
@@ -1056,8 +1141,8 @@
           "width": 320
         },
         "position": {
-          "x": 1436.952650871319,
-          "y": 48.12767838148899
+          "x": 1378.218289431502,
+          "y": 68.79347222142468
         },
         "selected": false,
         "type": "genericNode"
@@ -1074,7 +1159,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Unpacks parameters into outputs.",
+            "description": "Unpacks model parameters into outputs.",
             "display_name": "Params",
             "documentation": "",
             "edited": true,
@@ -1084,9 +1169,8 @@
             "frozen": false,
             "icon": "Settings",
             "legacy": false,
-            "lf_version": "1.8.4",
             "metadata": {
-              "code_hash": "0491e30ad99d",
+              "code_hash": "b1647e46b762",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1175,7 +1259,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.io import HandleInput, Output\n\nclass Params(Component):\n    display_name = \"Params\"\n    description = \"Unpacks parameters into outputs.\"\n    icon = \"Settings\"\n    name = \"Params\"\n\n    inputs = [\n        HandleInput(\n            name=\"params_dict\", \n            display_name=\"Params\",\n            input_types=[\"dict\"],\n            info=\"Connect the wire from ChatInput's 'Params' output here.\"\n        )\n    ]\n\n    outputs = [\n\n        # sampling\n        Output(display_name=\"Temperature (float)\", name=\"temperature_out\", method=\"get_temperature\", types=[\"float\"], group_outputs=True),\n        #Output(display_name=\"Top P (float)\", name=\"top_p_out\", method=\"get_top_p\", group_outputs=True),\n        #Output(display_name=\"Top K (int)\", name=\"top_k_out\", method=\"get_top_k\", group_outputs=True),\n        #Output(display_name=\"Min P (float)\", name=\"min_p_out\", method=\"get_min_p\", group_outputs=True),\n        #Output(display_name=\"Seed (int)\", name=\"seed_out\", method=\"get_seed\", group_outputs=True),\n        #Output(display_name=\"Presence Penalty (float)\", name=\"presence_penalty_out\", method=\"get_presence\", group_outputs=True),\n        #Output(display_name=\"Frequency Penalty (float)\", name=\"frequency_penalty_out\", method=\"get_frequency\", group_outputs=True),\n        #Output(display_name=\"Repetition Penalty (float)\", name=\"repetition_penalty_out\", method=\"get_repetition\", group_outputs=True),\n        #Output(display_name=\"Length Penalty (float)\", name=\"length_penalty_out\", method=\"get_length\", group_outputs=True),\n        #Output(display_name=\"Use Beam Search (bool)\", name=\"use_beam_search_out\", method=\"get_use_beam_search\", group_outputs=True),\n        #Output(display_name=\"Best Of (int)\", name=\"best_of_out\", method=\"get_best_of\", group_outputs=True),\n        #Output(display_name=\"Early Stopping (bool/str)\", name=\"early_stopping_out\", method=\"get_early_stopping\", group_outputs=True),\n        #Output(display_name=\"Reasoning Effort (str)\", name=\"reasoning_effort_out\", method=\"get_reasoning\", group_outputs=True),\n\n        # tokens\n        Output(display_name=\"Max Tokens (int)\", name=\"max_tokens_out\", method=\"get_max_tokens\", types=[\"int\"], group_outputs=True),\n        #Output(display_name=\"Min Tokens (int)\", name=\"min_tokens_out\", method=\"get_min_tokens\", group_outputs=True),\n        #Output(display_name=\"Stop Sequences (list)\", name=\"stop_out\", method=\"get_stop\", group_outputs=True),\n        #Output(display_name=\"Stop Token IDs (list)\", name=\"stop_token_ids_out\", method=\"get_stop_token_ids\", group_outputs=True),\n        #Output(display_name=\"Ignore EOS (bool)\", name=\"ignore_eos_out\", method=\"get_ignore_eos\", group_outputs=True),\n        #Output(display_name=\"Logprobs (bool)\", name=\"logprobs_out\", method=\"get_logprobs\", group_outputs=True),\n        #Output(display_name=\"Top Logprobs (int)\", name=\"top_logprobs_out\", method=\"get_top_logprobs\", group_outputs=True),\n        #Output(display_name=\"Logit Bias (dict)\", name=\"logit_bias_out\", method=\"get_logit_bias\", group_outputs=True),\n\n        # tools\n        #Output(display_name=\"Tools (list)\", name=\"tools_out\", method=\"get_tools\", group_outputs=True),\n        #Output(display_name=\"Tool Choice (str/dict)\", name=\"tool_choice_out\", method=\"get_tool_choice\", group_outputs=True),\n        #Output(display_name=\"Parallel Tool Calls (bool)\", name=\"parallel_tool_calls_out\", method=\"get_parallel\", group_outputs=True),\n\n        # formatting\n        #Output(display_name=\"Response Format (dict)\", name=\"response_format_out\", method=\"get_response_format\", group_outputs=True),\n        #Output(display_name=\"Guided JSON (dict/str)\", name=\"guided_json_out\", method=\"get_guided_json\", group_outputs=True),\n        #Output(display_name=\"Guided Regex (str)\", name=\"guided_regex_out\", method=\"get_guided_regex\", group_outputs=True),\n\n        # execution\n        Output(display_name=\"Stream (bool)\", name=\"stream\", method=\"get_stream\", types=[\"bool\"], group_outputs=True),\n        #Output(display_name=\"N Completions (int)\", name=\"n_out\", method=\"get_n\", group_outputs=True),\n        #Output(display_name=\"Stream Options (dict)\", name=\"stream_options_out\", method=\"get_stream_options\", group_outputs=True),\n        #Output(display_name=\"User (str)\", name=\"user_out\", method=\"get_user\", group_outputs=True),\n        #Output(display_name=\"Metadata (dict)\", name=\"metadata_out\", method=\"get_metadata\", group_outputs=True),\n\n    ]\n\n    # Helper method to safely guarantee we are working with a dict\n    @property\n    def params(self) -> dict:\n        return self.params_dict if isinstance(self.params_dict, dict) else {}\n    \n    def get_temperature(self) -> float:\n        val = self.params.get(\"temperature\")\n        print(val)\n        return float(val) if val is not None else 1.0\n    \n    def get_top_p(self) -> float:\n        val = self.params.get(\"top_p\")\n        return float(val) if val is not None else 1.0\n    \n    def get_top_k(self):\n        val = self.params.get(\"top_k\")\n        return int(val) if val is not None else None\n    \n    def get_min_p(self):\n        val = self.params.get(\"min_p\")\n        return float(val) if val is not None else None\n    \n    def get_seed(self):\n        val = self.params.get(\"seed\")\n        return int(val) if val is not None else None\n\n    def get_presence(self):\n        val = self.params.get(\"presence_penalty\")\n        return float(val) if val is not None else 0.0\n\n    def get_frequency(self):\n        val = self.params.get(\"frequency_penalty\")\n        return float(val) if val is not None else 0.0\n\n    def get_repetition(self):\n        val = self.params.get(\"repetition_penalty\")\n        return float(val) if val is not None else 1.0\n\n    def get_length(self):\n        val = self.params.get(\"length_penalty\")\n        return float(val) if val is not None else 1.0\n\n    def get_use_beam_search(self):\n        val = self.params.get(\"use_beam_search\")\n        return bool(val) if val is not None else False\n\n    def get_best_of(self):\n        val = self.params.get(\"best_of\")\n        return int(val) if val is not None else None\n\n    def get_early_stopping(self):\n        return self.params.get(\"early_stopping\", False)\n\n    def get_reasoning(self):\n        return self.params.get(\"reasoning_effort\")\n    \n    def get_max_tokens(self) -> int:\n        val = self.params.get(\"max_tokens\") or self.params.get(\"max_completion_tokens\")\n        return int(val) if val is not None else 8192\n    \n    def get_min_tokens(self) -> int:\n        val = self.params.get(\"min_tokens\")\n        return int(val) if val is not None else 0\n    \n    def get_stop(self) -> list:\n        val = self.params.get(\"stop\")\n        if isinstance(val, str): return [val]\n        if isinstance(val, list): return val\n        return []\n\n    def get_stop_token_ids(self):\n        val = self.params.get(\"stop_token_ids\")\n        return val if isinstance(val, list) else []\n\n    def get_ignore_eos(self):\n        val = self.params.get(\"ignore_eos\")\n        return bool(val) if val is not None else False\n\n    def get_logprobs(self):\n        val = self.params.get(\"logprobs\")\n        return bool(val) if val is not None else False\n\n    def get_top_logprobs(self):\n        val = self.params.get(\"top_logprobs\")\n        return int(val) if val is not None else None\n\n    def get_logit_bias(self):\n        val = self.params.get(\"logit_bias\")\n        return val if isinstance(val, dict) else {}\n\n    def get_tools(self):\n        val = self.params.get(\"tools\")\n        return val if isinstance(val, list) else []\n\n    def get_tool_choice(self):\n        return self.params.get(\"tool_choice\")\n\n    def get_parallel(self):\n        val = self.params.get(\"parallel_tool_calls\")\n        return bool(val) if val is not None else True\n    \n    def get_response_format(self):\n        val = self.params.get(\"response_format\")\n        return val if isinstance(val, dict) else {}\n    \n    def get_guided_json(self):\n        return self.params.get(\"guided_json\")\n    \n    def get_guided_regex(self):\n        val = self.params.get(\"guided_regex\")\n        return str(val) if val is not None else None\n    \n    def get_stream(self):\n        val = self.params.get(\"stream\")\n        return bool(val) if val is not None else True\n    \n    def get_n(self):\n        val = self.params.get(\"n\")\n        return int(val) if val is not None else 1\n    \n    def get_stream_options(self):\n        val = self.params.get(\"stream_options\")\n        return val if isinstance(val, dict) else {}\n    \n    def get_user(self):\n        val = self.params.get(\"user\")\n        return str(val) if val is not None else None\n    \n    def get_metadata(self):\n        val = self.params.get(\"metadata\")\n        return val if isinstance(val, dict) else {}"
+                "value": "from langflow.custom import Component\nfrom langflow.io import HandleInput, Output\n\nclass Params(Component):\n    display_name = \"Params\"\n    description = \"Unpacks model parameters into outputs.\"\n    icon = \"Settings\"\n    name = \"Params\"\n\n    inputs = [\n        HandleInput(\n            name=\"params_dict\", \n            display_name=\"Params\",\n            input_types=[\"dict\"],\n            info=\"Connect the wire from ChatInput's 'Params' output here.\"\n        )\n    ]\n\n    outputs = [\n\n        # sampling\n        Output(display_name=\"Temperature (float)\", name=\"temperature_out\", method=\"get_temperature\", types=[\"float\"], group_outputs=True),\n        #Output(display_name=\"Top P (float)\", name=\"top_p_out\", method=\"get_top_p\", group_outputs=True),\n        #Output(display_name=\"Top K (int)\", name=\"top_k_out\", method=\"get_top_k\", group_outputs=True),\n        #Output(display_name=\"Min P (float)\", name=\"min_p_out\", method=\"get_min_p\", group_outputs=True),\n        #Output(display_name=\"Seed (int)\", name=\"seed_out\", method=\"get_seed\", group_outputs=True),\n        #Output(display_name=\"Presence Penalty (float)\", name=\"presence_penalty_out\", method=\"get_presence\", group_outputs=True),\n        #Output(display_name=\"Frequency Penalty (float)\", name=\"frequency_penalty_out\", method=\"get_frequency\", group_outputs=True),\n        #Output(display_name=\"Repetition Penalty (float)\", name=\"repetition_penalty_out\", method=\"get_repetition\", group_outputs=True),\n        #Output(display_name=\"Length Penalty (float)\", name=\"length_penalty_out\", method=\"get_length\", group_outputs=True),\n        #Output(display_name=\"Use Beam Search (bool)\", name=\"use_beam_search_out\", method=\"get_use_beam_search\", group_outputs=True),\n        #Output(display_name=\"Best Of (int)\", name=\"best_of_out\", method=\"get_best_of\", group_outputs=True),\n        #Output(display_name=\"Early Stopping (bool/str)\", name=\"early_stopping_out\", method=\"get_early_stopping\", group_outputs=True),\n        #Output(display_name=\"Reasoning Effort (str)\", name=\"reasoning_effort_out\", method=\"get_reasoning\", group_outputs=True),\n\n        # tokens\n        Output(display_name=\"Max Tokens (int)\", name=\"max_tokens_out\", method=\"get_max_tokens\", types=[\"int\"], group_outputs=True),\n        #Output(display_name=\"Min Tokens (int)\", name=\"min_tokens_out\", method=\"get_min_tokens\", group_outputs=True),\n        #Output(display_name=\"Stop Sequences (list)\", name=\"stop_out\", method=\"get_stop\", group_outputs=True),\n        #Output(display_name=\"Stop Token IDs (list)\", name=\"stop_token_ids_out\", method=\"get_stop_token_ids\", group_outputs=True),\n        #Output(display_name=\"Ignore EOS (bool)\", name=\"ignore_eos_out\", method=\"get_ignore_eos\", group_outputs=True),\n        #Output(display_name=\"Logprobs (bool)\", name=\"logprobs_out\", method=\"get_logprobs\", group_outputs=True),\n        #Output(display_name=\"Top Logprobs (int)\", name=\"top_logprobs_out\", method=\"get_top_logprobs\", group_outputs=True),\n        #Output(display_name=\"Logit Bias (dict)\", name=\"logit_bias_out\", method=\"get_logit_bias\", group_outputs=True),\n\n        # tools\n        #Output(display_name=\"Tools (list)\", name=\"tools_out\", method=\"get_tools\", group_outputs=True),\n        #Output(display_name=\"Tool Choice (str/dict)\", name=\"tool_choice_out\", method=\"get_tool_choice\", group_outputs=True),\n        #Output(display_name=\"Parallel Tool Calls (bool)\", name=\"parallel_tool_calls_out\", method=\"get_parallel\", group_outputs=True),\n\n        # formatting\n        #Output(display_name=\"Response Format (dict)\", name=\"response_format_out\", method=\"get_response_format\", group_outputs=True),\n        #Output(display_name=\"Guided JSON (dict/str)\", name=\"guided_json_out\", method=\"get_guided_json\", group_outputs=True),\n        #Output(display_name=\"Guided Regex (str)\", name=\"guided_regex_out\", method=\"get_guided_regex\", group_outputs=True),\n\n        # execution\n        Output(display_name=\"Stream (bool)\", name=\"stream\", method=\"get_stream\", types=[\"bool\"], group_outputs=True),\n        #Output(display_name=\"N Completions (int)\", name=\"n_out\", method=\"get_n\", group_outputs=True),\n        #Output(display_name=\"Stream Options (dict)\", name=\"stream_options_out\", method=\"get_stream_options\", group_outputs=True),\n        #Output(display_name=\"User (str)\", name=\"user_out\", method=\"get_user\", group_outputs=True),\n        #Output(display_name=\"Metadata (dict)\", name=\"metadata_out\", method=\"get_metadata\", group_outputs=True),\n\n    ]\n\n    # Helper method to safely guarantee we are working with a dict\n    @property\n    def params(self) -> dict:\n        return self.params_dict if isinstance(self.params_dict, dict) else {}\n    \n    def get_temperature(self) -> float:\n        val = self.params.get(\"temperature\")\n        return float(val) if val is not None else 1.0\n    \n    def get_top_p(self) -> float:\n        val = self.params.get(\"top_p\")\n        return float(val) if val is not None else 1.0\n    \n    def get_top_k(self):\n        val = self.params.get(\"top_k\")\n        return int(val) if val is not None else None\n    \n    def get_min_p(self):\n        val = self.params.get(\"min_p\")\n        return float(val) if val is not None else None\n    \n    def get_seed(self):\n        val = self.params.get(\"seed\")\n        return int(val) if val is not None else None\n\n    def get_presence(self):\n        val = self.params.get(\"presence_penalty\")\n        return float(val) if val is not None else 0.0\n\n    def get_frequency(self):\n        val = self.params.get(\"frequency_penalty\")\n        return float(val) if val is not None else 0.0\n\n    def get_repetition(self):\n        val = self.params.get(\"repetition_penalty\")\n        return float(val) if val is not None else 1.0\n\n    def get_length(self):\n        val = self.params.get(\"length_penalty\")\n        return float(val) if val is not None else 1.0\n\n    def get_use_beam_search(self):\n        val = self.params.get(\"use_beam_search\")\n        return bool(val) if val is not None else False\n\n    def get_best_of(self):\n        val = self.params.get(\"best_of\")\n        return int(val) if val is not None else None\n\n    def get_early_stopping(self):\n        return self.params.get(\"early_stopping\", False)\n\n    def get_reasoning(self):\n        return self.params.get(\"reasoning_effort\")\n    \n    def get_max_tokens(self) -> int:\n        val = self.params.get(\"max_tokens\") or self.params.get(\"max_completion_tokens\")\n        return int(val) if val is not None else 8192\n    \n    def get_min_tokens(self) -> int:\n        val = self.params.get(\"min_tokens\")\n        return int(val) if val is not None else 0\n    \n    def get_stop(self) -> list:\n        val = self.params.get(\"stop\")\n        if isinstance(val, str): return [val]\n        if isinstance(val, list): return val\n        return []\n\n    def get_stop_token_ids(self):\n        val = self.params.get(\"stop_token_ids\")\n        return val if isinstance(val, list) else []\n\n    def get_ignore_eos(self):\n        val = self.params.get(\"ignore_eos\")\n        return bool(val) if val is not None else False\n\n    def get_logprobs(self):\n        val = self.params.get(\"logprobs\")\n        return bool(val) if val is not None else False\n\n    def get_top_logprobs(self):\n        val = self.params.get(\"top_logprobs\")\n        return int(val) if val is not None else None\n\n    def get_logit_bias(self):\n        val = self.params.get(\"logit_bias\")\n        return val if isinstance(val, dict) else {}\n\n    def get_tools(self):\n        val = self.params.get(\"tools\")\n        return val if isinstance(val, list) else []\n\n    def get_tool_choice(self):\n        return self.params.get(\"tool_choice\")\n\n    def get_parallel(self):\n        val = self.params.get(\"parallel_tool_calls\")\n        return bool(val) if val is not None else True\n    \n    def get_response_format(self):\n        val = self.params.get(\"response_format\")\n        return val if isinstance(val, dict) else {}\n    \n    def get_guided_json(self):\n        return self.params.get(\"guided_json\")\n    \n    def get_guided_regex(self):\n        val = self.params.get(\"guided_regex\")\n        return str(val) if val is not None else None\n    \n    def get_stream(self):\n        val = self.params.get(\"stream\")\n        return bool(val) if val is not None else True\n    \n    def get_n(self):\n        val = self.params.get(\"n\")\n        return int(val) if val is not None else 1\n    \n    def get_stream_options(self):\n        val = self.params.get(\"stream_options\")\n        return val if isinstance(val, dict) else {}\n    \n    def get_user(self):\n        val = self.params.get(\"user\")\n        return str(val) if val is not None else None\n    \n    def get_metadata(self):\n        val = self.params.get(\"metadata\")\n        return val if isinstance(val, dict) else {}"
               },
               "params_dict": {
                 "_input_type": "HandleInput",
@@ -1213,8 +1297,8 @@
           "width": 320
         },
         "position": {
-          "x": -294.2399070399145,
-          "y": 114.51439848603601
+          "x": 164.08885872631382,
+          "y": 264.2260963400499
         },
         "selected": false,
         "type": "genericNode"
@@ -1240,9 +1324,8 @@
             "frozen": false,
             "icon": "stethoscope",
             "legacy": false,
-            "lf_version": "1.8.4",
             "metadata": {
-              "code_hash": "32fcd680076a",
+              "code_hash": "9422fe01aa11",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1299,19 +1382,17 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import traceback\r\nfrom lfx.custom import Component\r\nfrom lfx.io import Output, HandleInput\r\nfrom langchain_core.messages import HumanMessage\r\nfrom langchain_core.language_models.chat_models import BaseChatModel\r\nfrom lfx.schema import Message\r\n\r\nfrom pprint import pprint\r\n\r\nclass TestInferenceComponent(Component):\r\n    display_name = \"Test Inference\"\r\n    description = \"Executes a hardcoded test request to verify the language model connection.\"\r\n    icon = \"stethoscope\"\r\n    category = \"testing\"\r\n\r\n    inputs = [\r\n        HandleInput(\r\n            name=\"llm\",\r\n            display_name=\"Language Model\",\r\n            info=\"Connect your local model provider here to test the connection.\",\r\n            input_types=[\"LanguageModel\", \"BaseChatModel\"],\r\n            required=True,\r\n        ),\r\n        BoolInput(\r\n            name=\"enable\",\r\n            display_name=\"Enable\",\r\n            input_types=[\"bool\"],\r\n            advanced=True,\r\n            info=\"Whether to run this test\",\r\n            value=True,\r\n        ),\r\n    ]\r\n\r\n    outputs = [\r\n        Output(display_name=\"Test Result\", name=\"output_message\", method=\"run_test\")\r\n    ]\r\n\r\n    def run_test(self) -> Message:\r\n        if not self.enable:\r\n            return Message(text=f\"Test skipped\")\r\n            \r\n        print(\"\\n\" + \"=\"*50)\r\n        print(\"\ud83e\uddea RUNNING HARDCODED MODEL TEST\")\r\n        print(\"=\"*50)\r\n        \r\n        if not getattr(self, \"llm\", None):\r\n            msg = \"\u274c No Language Model connected!\"\r\n            print(msg)\r\n            return Message(text=msg)\r\n\r\n        # The hardcoded test message\r\n        test_content = \"Hello! This is an API test. Please reply ONLY with the exact phrase: 'Test successful'.\"\r\n        messages = [HumanMessage(content=test_content)]\r\n        \r\n        print(\"Sending hardcoded test message...\")\r\n        \r\n        kwargs = self.llm._serialized.get('kwargs', {})\r\n        print(f'  Model : {kwargs.get(\"model_name\", None)}')\r\n        print(f'  Base URL : {kwargs.get(\"openai_api_base\", None)}')\r\n        print(f\"  Prompt: '{test_content}'\\n\")\r\n        \r\n        try:\r\n            # We use invoke instead of stream for a simple ping test\r\n            response = self.llm.invoke(messages)\r\n            \r\n            print(\"\u2705 SUCCESS! Response Received:\")\r\n            print(f'\"{response.content}\"')\r\n            print(\"=\"*50 + \"\\n\")\r\n            \r\n            return Message(text=f\"\u2705 Test Passed!\\n\\nModel Response:\\n{response.content}\")\r\n            \r\n        except Exception as e:\r\n            print(\"\u274c FAILED! Connection or API Error:\")\r\n            print(str(e))\r\n            print(\"\\n--- Full Error Traceback ---\")\r\n            traceback.print_exc()\r\n            print(\"=\"*50 + \"\\n\")\r\n            \r\n            # Return the error to the Langflow UI as well\r\n            return Message(text=f\"\u274c Test Failed!\\n\\nCheck the console for the full traceback.\\n\\nError Summary:\\n{str(e)}\")\r\n            \r\n"
+                "value": "import traceback\r\nfrom lfx.custom import Component\r\nfrom lfx.io import Output, HandleInput\r\nfrom langchain_core.messages import HumanMessage\r\nfrom langchain_core.language_models.chat_models import BaseChatModel\r\nfrom lfx.schema import Message\r\n\r\nfrom pprint import pprint\r\n\r\nclass TestInferenceComponent(Component):\r\n    display_name = \"Test Inference\"\r\n    description = \"Executes a hardcoded test request to verify the language model connection.\"\r\n    icon = \"stethoscope\"\r\n    category = \"testing\"\r\n\r\n    inputs = [\r\n        HandleInput(\r\n            name=\"llm\",\r\n            display_name=\"Language Model\",\r\n            info=\"Connect your local model provider here to test the connection.\",\r\n            input_types=[\"LanguageModel\", \"BaseChatModel\"],\r\n            required=True,\r\n        ),\r\n        BoolInput(\r\n            name=\"enable\",\r\n            display_name=\"Enable\",\r\n            info=\"Whether to run this test\",\r\n            value=True,\r\n        ),\r\n    ]\r\n\r\n    outputs = [\r\n        Output(display_name=\"Test Result\", name=\"output_message\", method=\"run_test\")\r\n    ]\r\n\r\n    def run_test(self) -> Message:\r\n        if not self.enable:\r\n            return Message(text=f\"Test skipped\")\r\n            \r\n        print(\"\\n\" + \"=\"*50)\r\n        print(\"\ud83e\uddea RUNNING HARDCODED MODEL TEST\")\r\n        print(\"=\"*50)\r\n        \r\n        if not getattr(self, \"llm\", None):\r\n            msg = \"\u274c No Language Model connected!\"\r\n            print(msg)\r\n            return Message(text=msg)\r\n\r\n        # The hardcoded test message\r\n        test_content = \"Hello! This is an API test. Please reply ONLY with the exact phrase: 'Test successful'.\"\r\n        messages = [HumanMessage(content=test_content)]\r\n        \r\n        print(\"Sending hardcoded test message...\")\r\n        \r\n        kwargs = self.llm._serialized.get('kwargs', {})\r\n        print(f'  Model : {kwargs.get(\"model_name\", None)}')\r\n        print(f'  Base URL : {kwargs.get(\"openai_api_base\", None)}')\r\n        print(f\"  Prompt: '{test_content}'\\n\")\r\n        \r\n        try:\r\n            # We use invoke instead of stream for a simple ping test\r\n            response = self.llm.invoke(messages)\r\n            \r\n            return Message(text=f\"\u2705 Test Passed!\")\r\n            \r\n        except Exception as e:\r\n            print(\"\u274c FAILED! Connection or API Error:\")\r\n            print(str(e))\r\n            print(\"\\n--- Full Error Traceback ---\")\r\n            traceback.print_exc()\r\n            print(\"=\"*50 + \"\\n\")\r\n            \r\n            # Return the error to the Langflow UI as well\r\n            return Message(text=f\"\u274c Test Failed!\\n\\nCheck the console for the full traceback.\\n\\nError Summary:\\n{str(e)}\")\r\n            \r\n"
               },
               "enable": {
                 "_input_type": "BoolInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Enable",
                 "dynamic": false,
                 "info": "Whether to run this test",
-                "input_types": [
-                  "bool"
-                ],
                 "list": false,
                 "list_add_label": "Add More",
+                "load_from_db": false,
                 "name": "enable",
                 "override_skip": false,
                 "placeholder": "",
@@ -1356,161 +1437,12 @@
         "dragging": false,
         "id": "CustomComponent-xfIgo",
         "measured": {
-          "height": 184,
+          "height": 226,
           "width": 320
         },
         "position": {
-          "x": 599.8028520176954,
-          "y": -290.48227555019844
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "CustomComponent-GJysN",
-          "node": {
-            "base_classes": [
-              "dict"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Extracts the configuration dictionary for a specific semantic model role.",
-            "display_name": "Model Config",
-            "documentation": "",
-            "edited": true,
-            "field_order": [
-              "model_configs_dict",
-              "role"
-            ],
-            "frozen": false,
-            "icon": "Router",
-            "legacy": false,
-            "lf_version": "1.8.4",
-            "metadata": {
-              "code_hash": "9215a53b93f0",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": "1.8.4"
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "custom_components.model_config"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Role Config (Dict)",
-                "group_outputs": false,
-                "hidden": null,
-                "loop_types": null,
-                "method": "get_role_config",
-                "name": "role_config_out",
-                "options": null,
-                "required_inputs": null,
-                "selected": "dict",
-                "tool_mode": true,
-                "types": [
-                  "dict"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.custom import Component\r\nfrom langflow.io import HandleInput, Output, DropdownInput\r\n\r\nclass ModelConfig(Component):\r\n    display_name = \"Model Config\"\r\n    description = \"Extracts the configuration dictionary for a specific semantic model role.\"\r\n    icon = \"Router\"\r\n    name = \"ModelConfig\"\r\n\r\n    inputs = [\r\n        HandleInput(\r\n            name=\"model_configs_dict\", \r\n            display_name=\"Model Configs\",\r\n            input_types=[\"dict\"],\r\n            info=\"Connect the wire from ChatInput's 'Model Configs' output here.\"\r\n        ),\r\n        DropdownInput(\r\n            name=\"role\",\r\n            display_name=\"Role\",\r\n            options=[\"general\", \"fast\"], # TODO Make this dynamic\r\n            value=\"general\",\r\n            real_time_refresh=True,\r\n        )\r\n    ]\r\n\r\n    outputs = [\r\n        Output(display_name=\"Role Config (Dict)\", name=\"role_config_out\", method=\"get_role_config\", types=[\"dict\"])\r\n    ]\r\n\r\n    def get_role_config(self) -> dict:\r\n        configs = self.model_configs_dict if isinstance(self.model_configs_dict, dict) else {}\r\n        selected_role = getattr(self, \"role\", \"general\")\r\n        return configs.get(selected_role, {})\r\n"
-              },
-              "model_configs_dict": {
-                "_input_type": "HandleInput",
-                "advanced": false,
-                "display_name": "Model Configs",
-                "dynamic": false,
-                "info": "Connect the wire from ChatInput's 'Model Configs' output here.",
-                "input_types": [
-                  "dict"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "model_configs_dict",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": false,
-                "type": "other",
-                "value": ""
-              },
-              "role": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Role",
-                "dynamic": false,
-                "external_options": {},
-                "info": "",
-                "load_from_db": false,
-                "name": "role",
-                "options": [
-                  "general",
-                  "fast"
-                ],
-                "options_metadata": [],
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "str",
-                "value": "fast"
-              }
-            },
-            "tool_mode": false
-          },
-          "selected_output": "provider_out",
-          "showNode": true,
-          "type": "ModelConfig"
-        },
-        "dragging": false,
-        "id": "CustomComponent-GJysN",
-        "measured": {
-          "height": 266,
-          "width": 320
-        },
-        "position": {
-          "x": -291.7670339865834,
-          "y": -212.53394410760876
+          "x": -266.0104512934302,
+          "y": 294.22609634004993
         },
         "selected": false,
         "type": "genericNode"
@@ -1538,9 +1470,8 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
-            "last_updated": "2026-06-15T18:17:10.034Z",
+            "last_updated": "2026-07-23T20:24:00.361Z",
             "legacy": false,
-            "lf_version": "1.8.4",
             "metadata": {
               "code_hash": "55a92be8f8da",
               "dependencies": {
@@ -1597,7 +1528,7 @@
             "pinned": false,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "b71e9d04-2c5a-47f8-a3d6-0badc0ffee02"
+                "value": "31138b87-8065-41f1-bf38-b42aedb6e8c9"
               },
               "_frontend_node_folder_id": {
                 "value": "1093b6b4-ee00-4757-9604-7ff5c9595227"
@@ -1623,7 +1554,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": "~/.secrets/OPENAI_COMPATIBLE_API_API_KEY"
+                "value": "~/.secrets/GENAI_MIL_API_KEY"
               },
               "base_url": {
                 "_input_type": "StrInput",
@@ -1646,7 +1577,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": "https://activate.parallel.works/api/openai/v1"
+                "value": "https://api.genai.mil"
               },
               "code": {
                 "advanced": true,
@@ -1664,7 +1595,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import os\r\nimport re\r\nimport requests\r\nfrom langchain_openai import ChatOpenAI\r\nfrom langchain_core.language_models.chat_models import BaseChatModel\r\nfrom typing import Any\r\n\r\nfrom lfx.base.models.model import LCModelComponent\r\nfrom lfx.io import Output\r\nfrom lfx.inputs.inputs import DropdownInput, StrInput\r\n\r\n# Internal dictionary mapping providers to API spec types\r\nPROVIDER_API_MAP = {\r\n    \"vLLM\": \"openai_compatible\",\r\n    \"GenAI.mil\": \"openai_compatible\",\r\n    \"OpenAI Compatible API\": \"openai_compatible\",\r\n}\r\n\r\nDEFAULT_PROVIDER_MODELS = {\r\n    \"GenAI.mil\": \"gemini-3-flash-preview\",\r\n}\r\n\r\nclass LanguageModelComponent(LCModelComponent):\r\n    display_name = \"Language Model\"\r\n    description = \"Configures a local language model to be consumed by inference nodes.\"\r\n    icon = \"brain-circuit\"\r\n    category = \"models\"\r\n\r\n    outputs = [\r\n        Output(display_name=\"Language Model\", name=\"language_model\", method=\"build_model\")\r\n    ]\r\n\r\n    inputs = [\r\n        HandleInput(\r\n            name=\"config\",\r\n            display_name=\"Config\",\r\n            info=\"Connect a Model Config dict here for stateless override\",\r\n            input_types=[\"dict\"],\r\n            required=False,\r\n            advanced=False,\r\n        ),\r\n        DropdownInput(\r\n            name=\"provider\",\r\n            display_name=\"Provider\",\r\n            info=\"Select the model provider.\",\r\n            options=list(PROVIDER_API_MAP.keys()),\r\n            value=\"GenAI.mil\",\r\n            real_time_refresh=True,\r\n            required=True,\r\n        ),\r\n        StrInput(\r\n            name=\"base_url\",\r\n            display_name=\"Base URL\",\r\n            info=\"URL of the API Endpoint (e.g., http://localhost:8000)\",\r\n            value=\"https://api.genai.mil\",\r\n            real_time_refresh=True,\r\n            required=False,\r\n        ),\r\n        DropdownInput(\r\n            name=\"model\",\r\n            display_name=\"Model\",\r\n            info=\"Select your model from the available local instances.\",\r\n            options=[],  \r\n            real_time_refresh=True,\r\n            required=False,\r\n        ),\r\n        StrInput(\r\n            name=\"api_key_file\",\r\n            display_name=\"API Key File\",\r\n            info=\"Path to the file containing the API key.\",\r\n            value=\"~/.secrets/GENAI_MIL_API_KEY\",\r\n            required=False,\r\n            real_time_refresh=True,\r\n        ),\r\n    ]\r\n\r\n    def _resolve_api_spec(self, provider_name: str) -> str:\r\n        if not provider_name:\r\n            return \"openai_compatible\"\r\n        clean_name = str(provider_name).strip().lower()\r\n        for k,v in PROVIDER_API_MAP.items():\r\n            if k.strip().lower() == clean_name:\r\n                return v\r\n        return \"openai_compatible\"\r\n\r\n    def _get_clean_urls(self, provider_name: str, base_url: str):\r\n        # Enforce GenAI.mil base URL at runtime regardless of the UI or wire value\r\n        if provider_name == \"GenAI.mil\":\r\n            raw_url = \"https://api.genai.mil\"\r\n        else:\r\n            # Fallback to localhost if base_url is completely empty\r\n            raw_url = base_url.rstrip(\"/\") if base_url else \"http://localhost:8000\"\r\n            \r\n        if raw_url.endswith(\"/v1\"):\r\n            return raw_url[:-3], raw_url\r\n        return raw_url, f\"{raw_url}/v1\"\r\n\r\n    def _get_env_var_name(self, provider_name: str) -> str:\r\n        \"\"\"\r\n        Converts a provider name to an environment variable format.\r\n        Example: 'GenAI.mil' -> 'GENAI_MIL_API_KEY'\r\n        \"\"\"\r\n        if not provider_name:\r\n            return \"DUMMY_API_KEY\"\r\n        \r\n        # Replace any non-alphanumeric character with an underscore, then uppercase\r\n        clean_name = re.sub(r'[^a-zA-Z0-9]', '_', provider_name).upper()\r\n        \r\n        # Consolidate multiple consecutive underscores to a single underscore\r\n        clean_name = re.sub(r'_+', '_', clean_name).strip('_')\r\n        \r\n        return f\"{clean_name}_API_KEY\"\r\n\r\n    def _read_key_from_file(self, file_path: str) -> str:\r\n        \"\"\"Statelessly reads the API key from the provided file path.\"\"\"\r\n        if not file_path:\r\n            return \"\"\r\n        try:\r\n            # Safely expand ~ to the actual home directory\r\n            expanded_path = os.path.expanduser(file_path)\r\n            if os.path.exists(expanded_path):\r\n                with open(expanded_path, \"r\") as f:\r\n                    return f.read().strip()\r\n            return \"\"\r\n        except Exception as e:\r\n            print(f\"Error reading API key from {file_path}: {e}\")\r\n            return \"\"\r\n\r\n    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):\r\n        build_config = super().update_build_config(build_config, field_value, field_name)\r\n        \r\n        # Safely extract the provider value from UI\r\n        provider_val = build_config.get(\"provider\", {}).get(\"value\")\r\n        provider_input = provider_val if isinstance(provider_val, str) else \"GenAI.mil\"\r\n\r\n        # Base URL UI Logic\r\n        if \"base_url\" in build_config:\r\n            if provider_input == \"GenAI.mil\":\r\n                if isinstance(build_config[\"base_url\"].get(\"value\"), str):\r\n                    build_config[\"base_url\"][\"value\"] = \"https://api.genai.mil\"\r\n                build_config[\"base_url\"][\"disabled\"] = True\r\n            else:\r\n                build_config[\"base_url\"][\"disabled\"] = False\r\n                current_base = build_config[\"base_url\"].get(\"value\")\r\n                if isinstance(current_base, str) and current_base == \"https://api.genai.mil\":\r\n                    build_config[\"base_url\"][\"value\"] = \"http://localhost:8000\"\r\n\r\n        # Auto-Update API Key File Path on Provider Change\r\n        if field_name == \"provider\" and \"api_key_file\" in build_config:\r\n            current_api_key = build_config[\"api_key_file\"].get(\"value\")\r\n            if isinstance(current_api_key, str) or current_api_key is None:\r\n                env_var_name = self._get_env_var_name(provider_input)\r\n                build_config[\"api_key_file\"][\"value\"] = f\"~/.secrets/{env_var_name}\"\r\n\r\n        # Fetch Models for Standalone Dropdown\r\n        # Detect if the target fields are directly wired (wires appear as dicts in build_config)\r\n        is_model_wired = isinstance(build_config.get(\"model\", {}).get(\"value\"), dict)\r\n        is_provider_wired = isinstance(build_config.get(\"provider\", {}).get(\"value\"), dict)\r\n        \r\n        if not (is_model_wired or is_provider_wired):\r\n            api_spec = self._resolve_api_spec(provider_input)\r\n            \r\n            if api_spec == \"openai_compatible\":\r\n                current_url = build_config.get(\"base_url\", {}).get(\"value\")\r\n                if not isinstance(current_url, str):\r\n                    current_url = \"https://api.genai.mil\" if provider_input == \"GenAI.mil\" else \"http://localhost:8000\"\r\n                    \r\n                try:\r\n                    check_host = current_url.rstrip(\"/\")\r\n                    if check_host.endswith(\"/v1\"):\r\n                        check_host = check_host[:-3]\r\n                    \r\n                    raw_ui_path = build_config.get(\"api_key_file\", {}).get(\"value\")\r\n                    raw_ui_path = raw_ui_path if isinstance(raw_ui_path, str) else \"\"\r\n                    actual_key = self._read_key_from_file(raw_ui_path)\r\n                    \r\n                    headers = {\"Content-Type\": \"application/json\"}\r\n                    if actual_key:\r\n                        headers[\"Authorization\"] = f\"Bearer {actual_key}\"\r\n\r\n                    response = requests.get(f\"{check_host}/v1/models\", headers=headers, timeout=5)\r\n                    \r\n                    if response.status_code == 200:\r\n                        data = response.json()\r\n                        models = [m[\"id\"] for m in data.get(\"data\", [])]\r\n                        \r\n                        if models:\r\n                            build_config[\"model\"][\"options\"] = models\r\n                            current_model = build_config.get(\"model\", {}).get(\"value\")\r\n                            preferred_default = DEFAULT_PROVIDER_MODELS.get(provider_input)\r\n                            \r\n                            if current_model not in models or field_name == \"provider\":\r\n                                if preferred_default and preferred_default in models:\r\n                                    build_config[\"model\"][\"value\"] = preferred_default\r\n                                else:\r\n                                    build_config[\"model\"][\"value\"] = models[0]\r\n                        else:\r\n                            # Fallback if the server responds but returns an empty list\r\n                            preferred_default = DEFAULT_PROVIDER_MODELS.get(provider_input, \"gpt-3.5-turbo\")\r\n                            build_config[\"model\"][\"options\"] = [preferred_default]\r\n                            build_config[\"model\"][\"value\"] = preferred_default\r\n                    else:\r\n                        # Fallback for HTTP errors (e.g., 401 Unauthorized at design time)\r\n                        preferred_default = DEFAULT_PROVIDER_MODELS.get(provider_input, \"gpt-3.5-turbo\")\r\n                        build_config[\"model\"][\"options\"] = [preferred_default]\r\n                        if not build_config.get(\"model\", {}).get(\"value\"):\r\n                            build_config[\"model\"][\"value\"] = preferred_default\r\n                except Exception:\r\n                    # Fallback for Network/Timeout errors.\r\n                    # We use the offline default model instead of a breaking error string!\r\n                    preferred_default = DEFAULT_PROVIDER_MODELS.get(provider_input, \"gpt-3.5-turbo\")\r\n                    build_config[\"model\"][\"options\"] = [preferred_default]\r\n                    build_config[\"model\"][\"value\"] = preferred_default\r\n        else:\r\n            # If directly wired, keep options clear to avoid dropdown validation constraints\r\n            build_config[\"model\"][\"options\"] = []\r\n\r\n        return build_config\r\n\r\n    def build_model(self) -> BaseChatModel:\r\n        # 1. Start with the Standalone UI defaults\r\n        provider_name = getattr(self, \"provider\", \"GenAI.mil\")\r\n        raw_url_input = getattr(self, \"base_url\", \"http://localhost:8000\")\r\n        actual_model = getattr(self, \"model\", \"\")\r\n        raw_path = getattr(self, \"api_key_file\", \"~/.secrets/GENAI_MIL_API_KEY\")\r\n\r\n        # 2. Intercept with Dynamic Overrides if a Dict is wired!\r\n        override = getattr(self, \"config\", {})\r\n        if isinstance(override, dict) and override:\r\n            # Overwrite variables only if the proxy actually provided them\r\n            provider_name = override.get(\"provider\") or provider_name\r\n            raw_url_input = override.get(\"base_url\") or raw_url_input\r\n            actual_model = override.get(\"model\") or actual_model\r\n            api_key_path_override = override.get(\"api_key_file\")\r\n            if api_key_path_override:\r\n                raw_path = api_key_path_override\r\n\r\n        # 3. Process the finalized variables\r\n        _pw_host = os.environ.get(\"PW_PLATFORM_HOST\", \"\").replace(\"https://\", \"\").rstrip(\"/\")\r\n        if _pw_host:\r\n            provider_name = \"OpenAI Compatible API\"\r\n            raw_url_input = os.environ.get(\"PW_OPENAI_BASE_URL\") or f\"https://{_pw_host}/api/openai/v1\"\r\n            actual_model = os.environ.get(\"PW_TEST_MODEL\") or \"org:glm/glm-5.1\"  # force full id; UI dropdown can mangle org:* ids\r\n        api_spec = self._resolve_api_spec(provider_name)\r\n        \r\n        # Initialize an empty variable to hold the final model\r\n        model = None\r\n\r\n        if api_spec == \"openai_compatible\":\r\n            _, openai_api_base = self._get_clean_urls(provider_name, raw_url_input)\r\n            \r\n            if not actual_model:\r\n                actual_model = DEFAULT_PROVIDER_MODELS.get(provider_name, \"gpt-3.5-turbo\")\r\n                \r\n            if not raw_path or raw_path == getattr(self, \"api_key_file\", \"\"):\r\n                env_var_name = self._get_env_var_name(provider_name)\r\n                raw_path = f\"~/.secrets/{env_var_name}\"\r\n                \r\n            actual_api_key = self._read_key_from_file(raw_path) or os.environ.get(\"PW_API_KEY\") or \"dummy\"\r\n\r\n            # ACTIVATE platform org models (org:*) need an X-Allocation header.\r\n            _alloc = os.environ.get(\"PW_ALLOCATION\")\r\n            if not _alloc and _pw_host:\r\n                try:\r\n                    _r = requests.get(f\"https://{_pw_host}/api/allocations\",\r\n                                      headers={\"Authorization\": f\"Bearer {actual_api_key}\"}, timeout=8)\r\n                    if _r.status_code == 200:\r\n                        _names = [a.get(\"name\", \"\") for a in _r.json() if a.get(\"name\")]\r\n                        _alloc = next((n for n in _names if \"LLM\" in n), _names[0] if _names else \"\")\r\n                except Exception:\r\n                    _alloc = \"\"\r\n            _extra_headers = {\"X-Allocation\": _alloc} if _alloc else None\r\n\r\n            try:\r\n                model = ChatOpenAI(\r\n                    base_url=openai_api_base,\r\n                    model=actual_model,\r\n                    api_key=actual_api_key,\r\n                    default_headers=_extra_headers,\r\n                    streaming=True, \r\n                )\r\n            except Exception as e:\r\n                print(f\"ChatOpenAI Initialization Failed: {e}\")\r\n        else:\r\n            print(f\"Unsupported API Spec: {api_spec}\")\r\n            raise ValueError(f\"No execution logic implemented for API spec: {api_spec}\")\r\n\r\n        # 4. Bind to status so users see exactly what the proxy injected\r\n        self.status = model\r\n        \r\n        return model"
+                "value": "import os\r\nimport re\r\nimport requests\r\nfrom langchain_openai import ChatOpenAI\r\nfrom langchain_core.language_models.chat_models import BaseChatModel\r\nfrom typing import Any\r\n\r\nfrom lfx.base.models.model import LCModelComponent\r\nfrom lfx.io import Output\r\nfrom lfx.inputs.inputs import DropdownInput, StrInput\r\n\r\n# Internal dictionary mapping providers to API spec types\r\nPROVIDER_API_MAP = {\r\n    \"vLLM\": \"openai_compatible\",\r\n    \"GenAI.mil\": \"openai_compatible\",\r\n    \"OpenAI Compatible API\": \"openai_compatible\",\r\n}\r\n\r\nDEFAULT_PROVIDER_MODELS = {\r\n    \"GenAI.mil\": \"gemini-3-flash-preview\",\r\n}\r\n\r\nclass LanguageModelComponent(LCModelComponent):\r\n    display_name = \"Language Model\"\r\n    description = \"Configures a local language model to be consumed by inference nodes.\"\r\n    icon = \"brain-circuit\"\r\n    category = \"models\"\r\n\r\n    outputs = [\r\n        Output(display_name=\"Language Model\", name=\"language_model\", method=\"build_model\")\r\n    ]\r\n\r\n    inputs = [\r\n        HandleInput(\r\n            name=\"config\",\r\n            display_name=\"Config\",\r\n            info=\"Connect a Model Config dict here for stateless override\",\r\n            input_types=[\"dict\"],\r\n            required=False,\r\n            advanced=False,\r\n        ),\r\n        DropdownInput(\r\n            name=\"provider\",\r\n            display_name=\"Provider\",\r\n            info=\"Select the model provider.\",\r\n            options=list(PROVIDER_API_MAP.keys()),\r\n            value=\"GenAI.mil\",\r\n            real_time_refresh=True,\r\n            required=True,\r\n        ),\r\n        StrInput(\r\n            name=\"base_url\",\r\n            display_name=\"Base URL\",\r\n            info=\"URL of the API Endpoint (e.g., http://localhost:8000)\",\r\n            value=\"https://api.genai.mil\",\r\n            real_time_refresh=True,\r\n            required=False,\r\n        ),\r\n        DropdownInput(\r\n            name=\"model\",\r\n            display_name=\"Model\",\r\n            info=\"Select your model from the available local instances.\",\r\n            options=[],  \r\n            real_time_refresh=True,\r\n            required=False,\r\n        ),\r\n        StrInput(\r\n            name=\"api_key_file\",\r\n            display_name=\"API Key File\",\r\n            info=\"Path to the file containing the API key.\",\r\n            value=\"~/.secrets/GENAI_MIL_API_KEY\",\r\n            required=False,\r\n            real_time_refresh=True,\r\n        ),\r\n    ]\r\n\r\n    def _resolve_api_spec(self, provider_name: str) -> str:\r\n        if not provider_name:\r\n            return \"openai_compatible\"\r\n        clean_name = str(provider_name).strip().lower()\r\n        for k,v in PROVIDER_API_MAP.items():\r\n            if k.strip().lower() == clean_name:\r\n                return v\r\n        return \"openai_compatible\"\r\n\r\n    def _get_clean_urls(self, provider_name: str, base_url: str):\r\n        # Enforce GenAI.mil base URL at runtime regardless of the UI or wire value\r\n        if provider_name == \"GenAI.mil\":\r\n            raw_url = \"https://api.genai.mil\"\r\n        else:\r\n            # Fallback to localhost if base_url is completely empty\r\n            raw_url = base_url.rstrip(\"/\") if base_url else \"http://localhost:8000\"\r\n            \r\n        if raw_url.endswith(\"/v1\"):\r\n            return raw_url[:-3], raw_url\r\n        return raw_url, f\"{raw_url}/v1\"\r\n\r\n    def _get_env_var_name(self, provider_name: str) -> str:\r\n        \"\"\"\r\n        Converts a provider name to an environment variable format.\r\n        Example: 'GenAI.mil' -> 'GENAI_MIL_API_KEY'\r\n        \"\"\"\r\n        if not provider_name:\r\n            return \"DUMMY_API_KEY\"\r\n        \r\n        # Replace any non-alphanumeric character with an underscore, then uppercase\r\n        clean_name = re.sub(r'[^a-zA-Z0-9]', '_', provider_name).upper()\r\n        \r\n        # Consolidate multiple consecutive underscores to a single underscore\r\n        clean_name = re.sub(r'_+', '_', clean_name).strip('_')\r\n        \r\n        return f\"{clean_name}_API_KEY\"\r\n\r\n    def _read_key_from_file(self, file_path: str) -> str:\r\n        \"\"\"Statelessly reads the API key from the provided file path.\"\"\"\r\n        if not file_path:\r\n            return \"\"\r\n        try:\r\n            # Safely expand ~ to the actual home directory\r\n            expanded_path = os.path.expanduser(file_path)\r\n            if os.path.exists(expanded_path):\r\n                with open(expanded_path, \"r\") as f:\r\n                    return f.read().strip()\r\n            return \"\"\r\n        except Exception as e:\r\n            print(f\"Error reading API key from {file_path}: {e}\")\r\n            return \"\"\r\n\r\n    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):\r\n        build_config = super().update_build_config(build_config, field_value, field_name)\r\n        \r\n        # Safely extract the provider value from UI\r\n        provider_val = build_config.get(\"provider\", {}).get(\"value\")\r\n        provider_input = provider_val if isinstance(provider_val, str) else \"GenAI.mil\"\r\n\r\n        # Base URL UI Logic\r\n        if \"base_url\" in build_config:\r\n            if provider_input == \"GenAI.mil\":\r\n                if isinstance(build_config[\"base_url\"].get(\"value\"), str):\r\n                    build_config[\"base_url\"][\"value\"] = \"https://api.genai.mil\"\r\n                build_config[\"base_url\"][\"disabled\"] = True\r\n            else:\r\n                build_config[\"base_url\"][\"disabled\"] = False\r\n                current_base = build_config[\"base_url\"].get(\"value\")\r\n                if isinstance(current_base, str) and current_base == \"https://api.genai.mil\":\r\n                    build_config[\"base_url\"][\"value\"] = \"http://localhost:8000\"\r\n\r\n        # Auto-Update API Key File Path on Provider Change\r\n        if field_name == \"provider\" and \"api_key_file\" in build_config:\r\n            current_api_key = build_config[\"api_key_file\"].get(\"value\")\r\n            if isinstance(current_api_key, str) or current_api_key is None:\r\n                env_var_name = self._get_env_var_name(provider_input)\r\n                build_config[\"api_key_file\"][\"value\"] = f\"~/.secrets/{env_var_name}\"\r\n\r\n        # Fetch Models for Standalone Dropdown\r\n        # Detect if the target fields are directly wired (wires appear as dicts in build_config)\r\n        is_model_wired = isinstance(build_config.get(\"model\", {}).get(\"value\"), dict)\r\n        is_provider_wired = isinstance(build_config.get(\"provider\", {}).get(\"value\"), dict)\r\n        \r\n        if not (is_model_wired or is_provider_wired):\r\n            api_spec = self._resolve_api_spec(provider_input)\r\n            \r\n            if api_spec == \"openai_compatible\":\r\n                current_url = build_config.get(\"base_url\", {}).get(\"value\")\r\n                if not isinstance(current_url, str):\r\n                    current_url = \"https://api.genai.mil\" if provider_input == \"GenAI.mil\" else \"http://localhost:8000\"\r\n                    \r\n                try:\r\n                    check_host = current_url.rstrip(\"/\")\r\n                    if check_host.endswith(\"/v1\"):\r\n                        check_host = check_host[:-3]\r\n                    \r\n                    raw_ui_path = build_config.get(\"api_key_file\", {}).get(\"value\")\r\n                    raw_ui_path = raw_ui_path if isinstance(raw_ui_path, str) else \"\"\r\n                    actual_key = self._read_key_from_file(raw_ui_path)\r\n                    \r\n                    headers = {\"Content-Type\": \"application/json\"}\r\n                    if actual_key:\r\n                        headers[\"Authorization\"] = f\"Bearer {actual_key}\"\r\n\r\n                    response = requests.get(f\"{check_host}/v1/models\", headers=headers, timeout=5)\r\n                    \r\n                    if response.status_code == 200:\r\n                        data = response.json()\r\n                        models = [m[\"id\"] for m in data.get(\"data\", [])]\r\n                        \r\n                        if models:\r\n                            build_config[\"model\"][\"options\"] = models\r\n                            current_model = build_config.get(\"model\", {}).get(\"value\")\r\n                            preferred_default = DEFAULT_PROVIDER_MODELS.get(provider_input)\r\n                            \r\n                            if current_model not in models or field_name == \"provider\":\r\n                                if preferred_default and preferred_default in models:\r\n                                    build_config[\"model\"][\"value\"] = preferred_default\r\n                                else:\r\n                                    build_config[\"model\"][\"value\"] = models[0]\r\n                        else:\r\n                            # Fallback if the server responds but returns an empty list\r\n                            preferred_default = DEFAULT_PROVIDER_MODELS.get(provider_input, \"gpt-3.5-turbo\")\r\n                            build_config[\"model\"][\"options\"] = [preferred_default]\r\n                            build_config[\"model\"][\"value\"] = preferred_default\r\n                    else:\r\n                        # Fallback for HTTP errors (e.g., 401 Unauthorized at design time)\r\n                        preferred_default = DEFAULT_PROVIDER_MODELS.get(provider_input, \"gpt-3.5-turbo\")\r\n                        build_config[\"model\"][\"options\"] = [preferred_default]\r\n                        if not build_config.get(\"model\", {}).get(\"value\"):\r\n                            build_config[\"model\"][\"value\"] = preferred_default\r\n                except Exception:\r\n                    # Fallback for Network/Timeout errors.\r\n                    # We use the offline default model instead of a breaking error string!\r\n                    preferred_default = DEFAULT_PROVIDER_MODELS.get(provider_input, \"gpt-3.5-turbo\")\r\n                    build_config[\"model\"][\"options\"] = [preferred_default]\r\n                    build_config[\"model\"][\"value\"] = preferred_default\r\n        else:\r\n            # If directly wired, keep options clear to avoid dropdown validation constraints\r\n            build_config[\"model\"][\"options\"] = []\r\n\r\n        return build_config\r\n\r\n    def build_model(self) -> BaseChatModel:\r\n        # 1. Start with the Standalone UI defaults\r\n        provider_name = getattr(self, \"provider\", \"GenAI.mil\")\r\n        raw_url_input = getattr(self, \"base_url\", \"http://localhost:8000\")\r\n        actual_model = getattr(self, \"model\", \"\")\r\n        raw_path = getattr(self, \"api_key_file\", \"~/.secrets/GENAI_MIL_API_KEY\")\r\n\r\n        # 2. Intercept with Dynamic Overrides if a Dict is wired!\r\n        override = getattr(self, \"config\", {})\r\n        if isinstance(override, dict) and override:\r\n            # Overwrite variables only if the proxy actually provided them\r\n            provider_name = override.get(\"provider\") or provider_name\r\n            raw_url_input = override.get(\"base_url\") or raw_url_input\r\n            actual_model = override.get(\"model\") or actual_model\r\n            api_key_path_override = override.get(\"api_key_file\")\r\n            if api_key_path_override:\r\n                raw_path = api_key_path_override\r\n\r\n        # 3. Process the finalized variables\r\n        api_spec = self._resolve_api_spec(provider_name)\r\n        \r\n        # Initialize an empty variable to hold the final model\r\n        model = None\r\n\r\n        if api_spec == \"openai_compatible\":\r\n            _, openai_api_base = self._get_clean_urls(provider_name, raw_url_input)\r\n            \r\n            if not actual_model:\r\n                actual_model = DEFAULT_PROVIDER_MODELS.get(provider_name, \"gpt-3.5-turbo\")\r\n                \r\n            if not raw_path or raw_path == getattr(self, \"api_key_file\", \"\"):\r\n                env_var_name = self._get_env_var_name(provider_name)\r\n                raw_path = f\"~/.secrets/{env_var_name}\"\r\n                \r\n            actual_api_key = self._read_key_from_file(raw_path) or \"dummy\"\r\n\r\n            # ACTIVATE platform org models (org:*) need an X-Allocation header.\r\n            _alloc = None\r\n            if isinstance(override, dict):\r\n                _alloc = override.get(\"allocation\")\r\n            _alloc = _alloc or os.environ.get(\"PW_ALLOCATION\")\r\n            _extra_headers = {\"X-Allocation\": _alloc} if _alloc else None\r\n\r\n            try:\r\n                model = ChatOpenAI(\r\n                    base_url=openai_api_base,\r\n                    model=actual_model,\r\n                    api_key=actual_api_key,\r\n                    streaming=True, \r\n                    default_headers=_extra_headers,\r\n                )\r\n            except Exception as e:\r\n                print(f\"ChatOpenAI Initialization Failed: {e}\")\r\n        else:\r\n            print(f\"Unsupported API Spec: {api_spec}\")\r\n            raise ValueError(f\"No execution logic implemented for API spec: {api_spec}\")\r\n\r\n        # 4. Bind to status so users see exactly what the proxy injected\r\n        self.status = model\r\n        \r\n        return model"
               },
               "config": {
                 "_input_type": "HandleInput",
@@ -1701,8 +1632,11 @@
                 "load_from_db": false,
                 "name": "model",
                 "options": [
-                  "org:glm/glm-5.1",
-                  "org:glm/glm-5-turbo"
+                  "gemini-2.5-flash",
+                  "gemini-2.5-pro",
+                  "gemini-3.1-pro-preview",
+                  "gemini-3.5-flash",
+                  "gemini-3-flash-preview"
                 ],
                 "options_metadata": [],
                 "override_skip": false,
@@ -1716,7 +1650,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "str",
-                "value": "org:glm/glm-5.1"
+                "value": "gemini-3-flash-preview"
               },
               "provider": {
                 "_input_type": "DropdownInput",
@@ -1745,7 +1679,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "str",
-                "value": "OpenAI Compatible API"
+                "value": "GenAI.mil"
               }
             },
             "tool_mode": false
@@ -1756,12 +1690,12 @@
         "dragging": false,
         "id": "CustomComponent-WPmPD",
         "measured": {
-          "height": 511,
+          "height": 510,
           "width": 320
         },
         "position": {
-          "x": 149.80337634542644,
-          "y": -380.78047477042026
+          "x": -266.1735627795778,
+          "y": -220.05084040006744
         },
         "selected": false,
         "type": "genericNode"
@@ -1998,12 +1932,12 @@
         "dragging": false,
         "id": "CustomComponent-D304n",
         "measured": {
-          "height": 443,
+          "height": 442,
           "width": 320
         },
         "position": {
-          "x": 149.80337634542644,
-          "y": 193.56239114969864
+          "x": 164.0888587263138,
+          "y": -180.61247360008437
         },
         "selected": false,
         "type": "genericNode"
@@ -2029,15 +1963,14 @@
               "chat_history",
               "temperature",
               "max_tokens",
-              "stream",
+              "stream_output",
               "stop_on_error"
             ],
             "frozen": false,
             "icon": "message-circle",
             "legacy": false,
-            "lf_version": "1.8.4",
             "metadata": {
-              "code_hash": "48a8adfd7d3b",
+              "code_hash": "2ef281e7c0d6",
               "dependencies": {
                 "dependencies": [
                   {
@@ -2117,7 +2050,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from lfx.custom import Component\r\nfrom lfx.field_typing.range_spec import RangeSpec\r\nfrom lfx.io import Output, MessageInput, MultilineInput, BoolInput, HandleInput, SliderInput, IntInput\r\nfrom langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage\r\nfrom langchain_core.language_models.chat_models import BaseChatModel\r\nfrom lfx.schema import Message\r\nfrom lfx.utils.constants import MESSAGE_SENDER_AI\r\n\r\nclass LanguageModelInferenceComponent(Component):\r\n    display_name = \"Language Model Inference\"\r\n    description = \"Executes streaming inference using a connected Language Model and optional chat history.\"\r\n    icon = \"message-circle\"\r\n    category = \"processing\"\r\n    name = \"LanguageModelInferenceComponent\"\r\n\r\n    inputs = [\r\n        HandleInput(\r\n            name=\"llm\",\r\n            display_name=\"Language Model\",\r\n            info=\"Connect your local model provider here.\",\r\n            input_types=[\"LanguageModel\", \"BaseChatModel\"],\r\n            required=True,\r\n        ),\r\n        MessageInput(\r\n            name=\"input_value\",\r\n            display_name=\"User Prompt\",\r\n            info=\"The current input text to send to the model\",\r\n            required=True,\r\n        ),\r\n        MultilineInput(\r\n            name=\"system_message\",\r\n            display_name=\"System Prompt\",\r\n            info=\"A system message that helps set the behavior of the assistant\",\r\n            advanced=False,\r\n        ),\r\n        HandleInput(\r\n            name=\"chat_history\",\r\n            display_name=\"Chat History\",\r\n            info=\"Connect previous chat messages (up to but not including the current input).\",\r\n            input_types=[\"Message\", \"list\"],\r\n            required=False,\r\n            is_list=True,\r\n        ),\r\n        SliderInput(\r\n            name=\"temperature\",\r\n            display_name=\"Temperature\",\r\n            value=1.0,\r\n            info=\"Controls randomness in responses\",\r\n            input_types=[\"float\"],\r\n            range_spec=RangeSpec(min=0, max=2, step=0.01),\r\n        ),\r\n        IntInput(\r\n            name=\"max_tokens\",\r\n            display_name=\"Max Tokens\",\r\n            info=\"Maximum number of tokens to generate. Leave empty (None) for no limit.\",\r\n            value=None, \r\n            input_types=[\"int\"],\r\n        ),\r\n        BoolInput(\r\n            name=\"stream\",\r\n            display_name=\"Stream Output\",\r\n            input_types=[\"bool\"],\r\n            info=\"Whether to stream the text chunk by chunk to the UI.\",\r\n            value=True,\r\n        ),\r\n        BoolInput(\r\n            name=\"stop_on_error\",\r\n            display_name=\"Stop on Error\",\r\n            input_types=[\"bool\"],\r\n            info=\"If True, the flow will crash upon an API error. If False, it passes the error forward as a Message.\",\r\n            value=True,\r\n            advanced=True,\r\n        ),\r\n    ]\r\n\r\n    outputs = [\r\n        Output(display_name=\"Message\", name=\"output_message\", method=\"run_inference\")\r\n    ]\r\n\r\n    async def run_inference(self) -> Message:\r\n        messages: list[BaseMessage] = []\r\n        \r\n        if getattr(self, \"system_message\", None):\r\n            messages.append(SystemMessage(content=self.system_message))\r\n            \r\n        if getattr(self, \"chat_history\", None):\r\n            history_items = self.chat_history if isinstance(self.chat_history, list) else [self.chat_history]\r\n            for msg in history_items:\r\n                if isinstance(msg, Message):\r\n                    text = msg.text\r\n                    sender = getattr(msg, \"sender\", \"User\")\r\n                elif isinstance(msg, dict):\r\n                    text = msg.get(\"text\", \"\")\r\n                    sender = msg.get(\"sender\", \"User\")\r\n                else:\r\n                    text = str(msg)\r\n                    sender = \"User\"\r\n                    \r\n                if sender == \"AI\":\r\n                    messages.append(AIMessage(content=text))\r\n                else:\r\n                    messages.append(HumanMessage(content=text))\r\n\r\n        if getattr(self, \"input_value\", None):\r\n            user_text = self.input_value.text if hasattr(self.input_value, \"text\") else str(self.input_value)\r\n            messages.append(HumanMessage(content=user_text))\r\n            \r\n        bind_kwargs = {\"temperature\": getattr(self, \"temperature\", 1.0)}\r\n        if getattr(self, \"max_tokens\", None) is not None:\r\n            bind_kwargs[\"max_tokens\"] = self.max_tokens\r\n            \r\n        executable_llm = self.llm.bind(**bind_kwargs)\r\n        \r\n        if hasattr(self, \"graph\"):\r\n            session_id = self.graph.session_id\r\n        elif hasattr(self, \"_session_id\"):\r\n            session_id = self._session_id\r\n        else:\r\n            session_id = None\r\n            \r\n        try:\r\n            if getattr(self, \"stream\", True):\r\n                # Streaming Path\r\n                model_message = Message(\r\n                    text=executable_llm.astream(messages), \r\n                    sender=MESSAGE_SENDER_AI,\r\n                    sender_name=\"AI\",\r\n                    session_id=session_id,\r\n                    # FIX 2: The \"partial\" state forces the UI to anchor the message at the bottom of the chat!\r\n                    properties={\"icon\": self.icon, \"state\": \"partial\"} \r\n                )\r\n                \r\n                lf_message = await self.send_message(model_message)\r\n                return lf_message\r\n                \r\n            else:\r\n                # Non-Streaming Path\r\n                response = await executable_llm.ainvoke(messages)\r\n                model_message = Message(\r\n                    text=str(response.content),\r\n                    sender=MESSAGE_SENDER_AI,\r\n                    sender_name=\"AI\",\r\n                    session_id=session_id,\r\n                    # No \"partial\" state needed here, because it's already a complete text string.\r\n                    properties={\"icon\": self.icon}\r\n                )\r\n                \r\n                # FIX 1: Explicitly call send_message here so it renders in the Playground \r\n                # even when Stream Output is False!\r\n                lf_message = await self.send_message(model_message)\r\n                return lf_message\r\n\r\n        except Exception as e:\r\n            # If the user toggled the advanced \"Stop on Error\" setting to True, crash normally.\r\n            if getattr(self, \"stop_on_error\", False):\r\n                raise e\r\n            \r\n            # Otherwise, package the exception into a Message and pass it downstream to the Catcher.\r\n            error_message = Message(\r\n                text=str(e),\r\n                sender=MESSAGE_SENDER_AI,\r\n                sender_name=\"AI\",\r\n                session_id=session_id,\r\n                properties={\"icon\": \"alert-triangle\"}\r\n            )\r\n            lf_message = await self.send_message(error_message)\r\n            return lf_message"
+                "value": "from lfx.custom import Component\r\nfrom lfx.field_typing.range_spec import RangeSpec\r\nfrom lfx.io import Output, MessageInput, MultilineInput, BoolInput, HandleInput, SliderInput, IntInput\r\nfrom langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage\r\nfrom langchain_core.language_models.chat_models import BaseChatModel\r\nfrom lfx.schema import Message\r\nfrom lfx.utils.constants import MESSAGE_SENDER_AI\r\n\r\nclass LanguageModelInferenceComponent(Component):\r\n    display_name = \"Language Model Inference\"\r\n    description = \"Executes streaming inference using a connected Language Model and optional chat history.\"\r\n    icon = \"message-circle\"\r\n    category = \"processing\"\r\n    name = \"LanguageModelInferenceComponent\"\r\n\r\n    inputs = [\r\n        HandleInput(\r\n            name=\"llm\",\r\n            display_name=\"Language Model\",\r\n            info=\"Connect your local model provider here.\",\r\n            input_types=[\"LanguageModel\", \"BaseChatModel\"],\r\n            required=True,\r\n        ),\r\n        MessageInput(\r\n            name=\"input_value\",\r\n            display_name=\"User Prompt\",\r\n            info=\"The current input text to send to the model\",\r\n            required=True,\r\n        ),\r\n        MultilineInput(\r\n            name=\"system_message\",\r\n            display_name=\"System Prompt\",\r\n            info=\"A system message that helps set the behavior of the assistant\",\r\n            advanced=False,\r\n        ),\r\n        HandleInput(\r\n            name=\"chat_history\",\r\n            display_name=\"Chat History\",\r\n            info=\"Connect previous chat messages (up to but not including the current input).\",\r\n            input_types=[\"Message\", \"list\"],\r\n            required=False,\r\n            is_list=True,\r\n        ),\r\n        SliderInput(\r\n            name=\"temperature\",\r\n            display_name=\"Temperature\",\r\n            value=1.0,\r\n            info=\"Controls randomness in responses\",\r\n            input_types=[\"float\"],\r\n            range_spec=RangeSpec(min=0, max=2, step=0.01),\r\n        ),\r\n        IntInput(\r\n            name=\"max_tokens\",\r\n            display_name=\"Max Tokens\",\r\n            info=\"Maximum number of tokens to generate. Leave empty (None) for no limit.\",\r\n            value=None, \r\n            input_types=[\"int\"],\r\n        ),\r\n        BoolInput(\r\n            # FIX 1: Renamed from \"stream\" to \"stream_output\" to avoid shadowing Component base class methods\r\n            name=\"stream_output\", \r\n            display_name=\"Stream Output\",\r\n            input_types=[\"bool\"],\r\n            info=\"Whether to stream the text chunk by chunk to the UI.\",\r\n            value=True,\r\n        ),\r\n        BoolInput(\r\n            name=\"stop_on_error\",\r\n            display_name=\"Stop on Error\",\r\n            input_types=[\"bool\"],\r\n            info=\"If True, the flow will crash upon an API error. If False, it passes the error forward as a Message.\",\r\n            value=True,\r\n            advanced=True,\r\n        ),\r\n    ]\r\n\r\n    outputs = [\r\n        Output(display_name=\"Message\", name=\"output_message\", method=\"run_inference\")\r\n    ]\r\n\r\n    async def run_inference(self) -> Message:\r\n        messages: list[BaseMessage] = []\r\n        \r\n        if getattr(self, \"system_message\", None):\r\n            messages.append(SystemMessage(content=self.system_message))\r\n            \r\n        if getattr(self, \"chat_history\", None):\r\n            history_items = self.chat_history if isinstance(self.chat_history, list) else [self.chat_history]\r\n            for msg in history_items:\r\n                if isinstance(msg, Message):\r\n                    text = msg.text\r\n                    sender = getattr(msg, \"sender\", \"User\")\r\n                elif isinstance(msg, dict):\r\n                    text = msg.get(\"text\", \"\")\r\n                    sender = msg.get(\"sender\", \"User\")\r\n                else:\r\n                    text = str(msg)\r\n                    sender = \"User\"\r\n                    \r\n                if sender == \"AI\":\r\n                    messages.append(AIMessage(content=text))\r\n                else:\r\n                    messages.append(HumanMessage(content=text))\r\n\r\n        if getattr(self, \"input_value\", None):\r\n            user_text = self.input_value.text if hasattr(self.input_value, \"text\") else str(self.input_value)\r\n            messages.append(HumanMessage(content=user_text))\r\n            \r\n        bind_kwargs = {\"temperature\": getattr(self, \"temperature\", 1.0)}\r\n        if getattr(self, \"max_tokens\", None) is not None:\r\n            bind_kwargs[\"max_tokens\"] = self.max_tokens\r\n            \r\n        executable_llm = self.llm.bind(**bind_kwargs)\r\n        \r\n        if hasattr(self, \"graph\"):\r\n            session_id = self.graph.session_id\r\n        elif hasattr(self, \"_session_id\"):\r\n            session_id = self._session_id\r\n        else:\r\n            session_id = None\r\n            \r\n        try:\r\n            # FIX 2: Check the new variable name. Also gracefully handle if the UI passes string \"False\"\r\n            is_streaming = getattr(self, \"stream_output\", True)\r\n            if isinstance(is_streaming, str):\r\n                is_streaming = is_streaming.lower() == \"true\"\r\n\r\n            if is_streaming:\r\n                # Streaming Path\r\n                model_message = Message(\r\n                    text=executable_llm.astream(messages), \r\n                    sender=MESSAGE_SENDER_AI,\r\n                    sender_name=\"AI\",\r\n                    session_id=session_id,\r\n                    properties={\"icon\": self.icon, \"state\": \"partial\"} \r\n                )\r\n                \r\n                lf_message = await self.send_message(model_message)\r\n                return lf_message\r\n                \r\n            else:\r\n                # Non-Streaming Path\r\n                response = await executable_llm.ainvoke(messages)\r\n                model_message = Message(\r\n                    text=str(response.content),\r\n                    sender=MESSAGE_SENDER_AI,\r\n                    sender_name=\"AI\",\r\n                    session_id=session_id,\r\n                    properties={\"icon\": self.icon}\r\n                )\r\n                \r\n                lf_message = await self.send_message(model_message)\r\n                return lf_message\r\n\r\n        except Exception as e:\r\n            if getattr(self, \"stop_on_error\", False):\r\n                raise e\r\n            \r\n            error_message = Message(\r\n                text=str(e),\r\n                sender=MESSAGE_SENDER_AI,\r\n                sender_name=\"AI\",\r\n                session_id=session_id,\r\n                properties={\"icon\": \"alert-triangle\"}\r\n            )\r\n            lf_message = await self.send_message(error_message)\r\n            return lf_message"
               },
               "input_value": {
                 "_input_type": "MessageInput",
@@ -2214,7 +2147,7 @@
                 "type": "bool",
                 "value": false
               },
-              "stream": {
+              "stream_output": {
                 "_input_type": "BoolInput",
                 "advanced": false,
                 "display_name": "Stream Output",
@@ -2225,8 +2158,7 @@
                 ],
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "stream",
+                "name": "stream_output",
                 "override_skip": false,
                 "placeholder": "",
                 "required": false,
@@ -2276,6 +2208,7 @@
                 "input_types": [
                   "float"
                 ],
+                "load_from_db": false,
                 "max_label": "",
                 "max_label_icon": "",
                 "min_label": "",
@@ -2309,12 +2242,12 @@
         "dragging": false,
         "id": "CustomComponent-cLXQL",
         "measured": {
-          "height": 603,
+          "height": 602,
           "width": 320
         },
         "position": {
-          "x": 599.8028520176954,
-          "y": -86.28047477042026
+          "x": 602.689837817169,
+          "y": -81.77390365995007
         },
         "selected": false,
         "type": "genericNode"
@@ -2339,7 +2272,6 @@
             "frozen": false,
             "icon": "lock",
             "legacy": false,
-            "lf_version": "1.8.4",
             "metadata": {
               "code_hash": "85d1472d1585",
               "dependencies": {
@@ -2452,8 +2384,8 @@
           "width": 320
         },
         "position": {
-          "x": 1022.7688254555146,
-          "y": 48.127678381489
+          "x": 989.0509512956196,
+          "y": 68.79347222142468
         },
         "selected": false,
         "type": "genericNode"
@@ -2705,25 +2637,333 @@
           "width": 320
         },
         "position": {
-          "x": 1022.7688254555146,
-          "y": 330.05787891418254
+          "x": 989.0509512956196,
+          "y": 336.22609634004993
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "CustomComponent-sD70e",
+          "node": {
+            "base_classes": [
+              "dict"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Merges stateless model configs with workflow defaults and routes them to specific tasks.",
+            "display_name": "Model Configs",
+            "documentation": "",
+            "edited": true,
+            "field_order": [
+              "model_configs_dict"
+            ],
+            "frozen": false,
+            "icon": "Split",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "02390aebfd6d",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "langflow",
+                    "version": "1.8.4"
+                  }
+                ],
+                "total_dependencies": 1
+              },
+              "module": "custom_components.model_configs"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Respond Model Config (LLM)",
+                "group_outputs": true,
+                "hidden": null,
+                "loop_types": null,
+                "method": "get_respond_config",
+                "name": "respond_config_out",
+                "options": null,
+                "required_inputs": null,
+                "selected": "dict",
+                "tool_mode": true,
+                "types": [
+                  "dict"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.custom import Component\r\nfrom langflow.io import HandleInput, Output\r\n\r\nclass ModelConfigs(Component):\r\n    display_name = \"Model Configs\"\r\n    description = \"Merges stateless model configs with workflow defaults and routes them to specific tasks.\"\r\n    icon = \"Split\"\r\n    name = \"ModelConfigs\"\r\n\r\n    inputs = [\r\n        HandleInput(\r\n            name=\"model_configs_dict\", \r\n            display_name=\"Master Configs\",\r\n            input_types=[\"dict\"],\r\n            info=\"Connect the wire from ChatInput's 'Model Configs' output here.\"\r\n        )\r\n    ]\r\n\r\n    outputs = [\r\n        Output(display_name=\"Respond Model Config (LLM)\", name=\"respond_config_out\", method=\"get_respond_config\", types=[\"dict\"], group_outputs=True)\r\n    ]\r\n\r\n    def _get_merged_configs(self) -> dict:\r\n        # 1. Define the system defaults for each functional job\r\n        defaults = {\r\n            \"respond\": {\r\n                \"provider\": \"vLLM\",\r\n                \"base_url\": \"http://localhost:8000\",\r\n                \"model\": \"nemotron-3-super\",\r\n            }\r\n        }\r\n\r\n        # 2. Get the incoming overrides from the API payload\r\n        incoming = self.model_configs_dict if isinstance(self.model_configs_dict, dict) else {}\r\n\r\n        # 3. Merge them (incoming partial configs overwrite defaults)\r\n        merged = {}\r\n        for job_title, default_config in defaults.items():\r\n            job_config = default_config.copy()\r\n            \r\n            # If the API provided an override for this specific job, update it\r\n            if job_title in incoming and isinstance(incoming[job_title], dict):\r\n                job_config.update(incoming[job_title])\r\n                \r\n            merged[job_title] = job_config\r\n            \r\n        return merged\r\n\r\n    def get_respond_config(self) -> dict:\r\n        return self._get_merged_configs().get(\"respond\", {})"
+              },
+              "model_configs_dict": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Master Configs",
+                "dynamic": false,
+                "info": "Connect the wire from ChatInput's 'Model Configs' output here.",
+                "input_types": [
+                  "dict"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "model_configs_dict",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "other",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "ModelConfigs"
+        },
+        "dragging": false,
+        "id": "CustomComponent-sD70e",
+        "measured": {
+          "height": 184,
+          "width": 320
+        },
+        "position": {
+          "x": -817.5887005039295,
+          "y": 329.1006664669214
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "CustomComponent-EUlNd",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Prepends the system prompt to the user prompt if the provider is GenAI.mil.",
+            "display_name": "GenAI.mil System Prompt Fix",
+            "documentation": "",
+            "edited": true,
+            "field_order": [
+              "config",
+              "user_prompt",
+              "system_prompt"
+            ],
+            "frozen": false,
+            "icon": "wrench",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "88899c514221",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "langflow",
+                    "version": "1.8.4"
+                  }
+                ],
+                "total_dependencies": 1
+              },
+              "module": "custom_components.genaimil_system_prompt_fix"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "User Prompt",
+                "group_outputs": true,
+                "hidden": null,
+                "loop_types": null,
+                "method": "get_user_prompt",
+                "name": "out_user_prompt",
+                "options": null,
+                "required_inputs": null,
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "System Prompt",
+                "group_outputs": true,
+                "hidden": null,
+                "loop_types": null,
+                "method": "get_system_prompt",
+                "name": "out_system_prompt",
+                "options": null,
+                "required_inputs": null,
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.custom import Component\r\nfrom langflow.io import HandleInput, MessageInput, MultilineInput, Output\r\nfrom langflow.schema import Message\r\n\r\nclass GenAIProviderFixComponent(Component):\r\n    display_name = \"GenAI.mil System Prompt Fix\"\r\n    description = \"Prepends the system prompt to the user prompt if the provider is GenAI.mil.\"\r\n    icon = \"wrench\"\r\n    name = \"GenAIProviderFix\"\r\n\r\n    inputs = [\r\n        HandleInput(\r\n            name=\"config\",\r\n            display_name=\"Model Config\",\r\n            input_types=[\"dict\"],\r\n            info=\"Connect the model configuration dictionary here to check the provider.\"\r\n        ),\r\n        MessageInput(\r\n            name=\"user_prompt\",\r\n            display_name=\"User Prompt\",\r\n            info=\"The original user prompt.\",\r\n            required=True\r\n        ),\r\n        MultilineInput(\r\n            name=\"system_prompt\",\r\n            display_name=\"System Prompt\",\r\n            info=\"The system instructions.\",\r\n            required=False\r\n        )\r\n    ]\r\n\r\n    outputs = [\r\n        Output(display_name=\"User Prompt\", name=\"out_user_prompt\", method=\"get_user_prompt\", types=[\"Message\"], group_outputs=True),\r\n        # FIX: Changed the output type from [\"str\"] to [\"Message\"]\r\n        Output(display_name=\"System Prompt\", name=\"out_system_prompt\", method=\"get_system_prompt\", types=[\"Message\"], group_outputs=True)\r\n    ]\r\n\r\n    def _is_genai_mil(self) -> bool:\r\n        \"\"\"Helper to check if the current provider is GenAI.mil.\"\"\"\r\n        if isinstance(self.config, dict):\r\n            return self.config.get(\"provider\") == \"GenAI.mil\"\r\n        return False\r\n\r\n    def get_user_prompt(self) -> Message:\r\n        # Extract the text safely\r\n        user_text = self.user_prompt.text if isinstance(self.user_prompt, Message) else str(self.user_prompt or \"\")\r\n        sys_text = self.system_prompt if isinstance(self.system_prompt, str) else str(self.system_prompt or \"\")\r\n\r\n        if self._is_genai_mil() and sys_text.strip():\r\n            # Prepend the system prompt to the user prompt using the requested schema\r\n            combined_text = f\"{sys_text}\\n\\nHere is my query:\\n{user_text}\"\r\n            \r\n            # Maintain sender metadata if available\r\n            sender = getattr(self.user_prompt, \"sender\", \"User\") if isinstance(self.user_prompt, Message) else \"User\"\r\n            sender_name = getattr(self.user_prompt, \"sender_name\", \"User\") if isinstance(self.user_prompt, Message) else \"User\"\r\n            \r\n            return Message(text=combined_text, sender=sender, sender_name=sender_name)\r\n        \r\n        # If not GenAI.mil or system prompt is empty, return the original\r\n        if isinstance(self.user_prompt, Message):\r\n            return self.user_prompt\r\n        return Message(text=user_text, sender=\"User\", sender_name=\"User\")\r\n\r\n    # FIX: Changed return type hint to Message and return Message objects\r\n    def get_system_prompt(self) -> Message:\r\n        # If it's GenAI.mil, we've already bundled it into the user prompt, so return a blank Message\r\n        if self._is_genai_mil():\r\n            return Message(text=\"\", sender=\"System\", sender_name=\"System\")\r\n        \r\n        # Otherwise, pass the system prompt through inside a Message\r\n        sys_text = self.system_prompt if isinstance(self.system_prompt, str) else str(self.system_prompt or \"\")\r\n        return Message(text=sys_text, sender=\"System\", sender_name=\"System\")"
+              },
+              "config": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Model Config",
+                "dynamic": false,
+                "info": "Connect the model configuration dictionary here to check the provider.",
+                "input_types": [
+                  "dict"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "config",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "other",
+                "value": ""
+              },
+              "system_prompt": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "ai_enabled": false,
+                "copy_field": false,
+                "display_name": "System Prompt",
+                "dynamic": false,
+                "info": "The system instructions.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "system_prompt",
+                "override_skip": false,
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "user_prompt": {
+                "_input_type": "MessageInput",
+                "advanced": false,
+                "display_name": "User Prompt",
+                "dynamic": false,
+                "info": "The original user prompt.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "user_prompt",
+                "override_skip": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "GenAIProviderFix"
+        },
+        "dragging": false,
+        "id": "CustomComponent-EUlNd",
+        "measured": {
+          "height": 391,
+          "width": 320
+        },
+        "position": {
+          "x": 602.689837817169,
+          "y": -476.48521676879136
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 344.7458189164497,
-      "y": 260.7702114405792,
-      "zoom": 0.42884786608176334
+      "x": 353.53920073367385,
+      "y": 406.76295913702506,
+      "zoom": 0.48959602834229893
     }
   },
-  "description": "ACTIVATE platform test flow \u2014 OpenAI-compatible endpoint + PW_API_KEY, auto X-Allocation for org models.",
+  "description": "Simple chatbot without RAG",
   "endpoint_name": null,
-  "id": "b71e9d04-2c5a-47f8-a3d6-0badc0ffee02",
+  "id": "31138b87-8065-41f1-bf38-b42aedb6e8c9",
   "is_component": false,
   "last_tested_version": "1.8.4",
   "locked": false,
-  "name": "pw-test-one",
+  "name": "Chatbot",
   "tags": []
 }

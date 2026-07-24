@@ -5,9 +5,9 @@ set -x
 ################################################################################
 # Interactive Session Controller - Langflow (Singularity)
 #
-# Purpose: Download the Langflow Singularity sandbox from GHCR and prepare the
-#          data directory. The sandbox is shared across sessions on the same
-#          cluster so the download only happens once.
+# Purpose: Download the Langflow and HFTEI SIF images from GHCR and prepare the
+#          data directory. The images are shared across sessions on the same
+#          cluster so each download only happens once.
 # Runs on: Controller/login node (has internet access)
 # Called by: Workflow preprocessing step
 #
@@ -20,9 +20,9 @@ source ${PW_PARENT_JOB_DIR}/tools/oras/libs.sh
 
 mkdir -p "${service_parent_install_dir}" || true
 if [ -n "${service_parent_install_dir}" ]; then
-    container_dir=${service_parent_install_dir}/containers/langflow
-    if ! [ -d "${container_dir}" ] && ! [ -w "${service_parent_install_dir}" ]; then
-        echo "::warning::container_dir ${container_dir} does not exist and no write permission to ${service_parent_install_dir}. Resetting to ${HOME}/pw/software."
+    container_sif=${service_parent_install_dir}/containers/langflow.sif
+    if ! [ -f "${container_sif}" ] && ! [ -w "${service_parent_install_dir}" ]; then
+        echo "::warning::container_sif ${container_sif} does not exist and no write permission to ${service_parent_install_dir}. Resetting to ${HOME}/pw/software."
         service_parent_install_dir=${HOME}/pw/software
     fi
 else
@@ -32,32 +32,42 @@ fi
 mkdir -p ${service_parent_install_dir}/containers ${service_parent_install_dir}/tools
 chmod a+rX ${service_parent_install_dir}/containers ${service_parent_install_dir}/tools
 
-container_dir=${service_parent_install_dir}/containers/langflow
-container_tgz=${container_dir}.tgz
+container_sif=${service_parent_install_dir}/containers/langflow.sif
 
 # Create and open up the Langflow data directory so the container user can write to it
 mkdir -p "${service_langflow_data_dir:-${HOME}/pw/.langflow}"
 chmod 777 "${service_langflow_data_dir:-${HOME}/pw/.langflow}" -Rf || true
 
 # Download the container only when it is not already present (idempotent)
-if ! [ -d "${container_dir}" ]; then
+if ! [ -f "${container_sif}" ]; then
     echo "::group::Langflow Singularity Container Download"
     echo "::notice::Using GitHub registry to download file"
-    oras_pull_file ghcr.io/parallelworks/langflow:1.0 langflow.tgz ${container_tgz}
-    if [ ! -s ${container_tgz} ]; then
-        echo "::error title=Error::Failed to download file ${container_tgz}"
+    oras_pull_file ghcr.io/parallelworks/langflow:2.0 langflow.sif ${container_sif}
+    if [ ! -s ${container_sif} ]; then
+        echo "::error title=Error::Failed to download file ${container_sif}"
         exit 1
     fi
-    if ! tar -xzf ${container_tgz} -C $(dirname ${container_dir}); then
-        echo "::error title=Error::Failed to extract ${container_tgz}"
-        exit 1
-    fi
-    chmod -R a+rX ${container_dir}
-    rm ${container_tgz}
+    chmod a+r ${container_sif}
     echo "::endgroup::"
 fi
 
-echo "::notice::Langflow container ready at ${container_dir}"
+echo "::notice::Langflow container ready at ${container_sif}"
+
+# ── Optional: HFTEI embeddings server container ────────────────────────────────
+if [ "${langflow_enable_hftei}" = "true" ]; then
+    hftei_sif=${service_parent_install_dir}/containers/hftei-cpu-1.6.0.sif
+    if ! [ -f "${hftei_sif}" ]; then
+        echo "::group::HFTEI Singularity Container Download"
+        oras_pull_file ghcr.io/parallelworks/hftei:cpu-1.6.0 hftei-cpu-1.6.0.sif ${hftei_sif}
+        if [ ! -s ${hftei_sif} ]; then
+            echo "::error title=Error::Failed to download file ${hftei_sif}"
+            exit 1
+        fi
+        chmod a+r ${hftei_sif}
+        echo "::endgroup::"
+    fi
+    echo "::notice::HFTEI container ready at ${hftei_sif}"
+fi
 
 # ── Optional: Langflow proxy Python environment ────────────────────────────────
 # When ${langflow_proxy_dir} is set (combined LibreChat + Langflow workflow), build

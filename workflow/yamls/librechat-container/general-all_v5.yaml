@@ -22,7 +22,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: main
+          branch: librechat
           sparse_checkout:
             - ${{ inputs.container_runtime }}
             - tools/oras
@@ -35,7 +35,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: main
+          branch: librechat
           sparse_checkout:
             - ${{ inputs.container_runtime }}
             - tools/oras
@@ -47,7 +47,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: main
+          branch: librechat
           sparse_checkout:
             - tools/oras
             - langflow-singularity
@@ -357,6 +357,9 @@ jobs:
           service_langflow_config_dir="${{ inputs.langflow.config_dir }}"
           service_langflow_components_path="${{ inputs.langflow.components_path }}"
           service_langflow_database_url="${{ inputs.langflow.database_url }}"
+          langflow_rag_db_dir="${{ inputs.langflow.rag_db_dir }}"
+          langflow_enable_hftei="${{ inputs.langflow.enable_hftei }}"
+          langflow_hftei_model_dir="${{ inputs.langflow.hftei_model_dir }}"
           langflow_enable_proxy="${{ inputs.langflow.enable_proxy }}"
           langflow_proxy_dir="${{ inputs.langflow.proxy_dir }}"
           langflow_proxy_flows_file="${{ inputs.langflow.proxy_flows_file }}"
@@ -702,6 +705,32 @@ jobs:
               For SQLite use: sqlite:////absolute/path/to/langflow.db
               The database directory is bind-mounted automatically.
               Defaults to a persistent SQLite file in the home directory.
+          rag_db_dir:
+            label: RAG Database Directory
+            type: string
+            optional: true
+            tooltip: |
+              Path on the Langflow host to the vector database directory used
+              by the RAG flows. It is mounted at /data inside the Langflow
+              container, so the db_path in the proxy flow configs must be
+              /data (or a path under it).
+          enable_hftei:
+            label: Start HFTEI Embeddings Server?
+            type: boolean
+            default: true
+            tooltip: |
+              Starts a HuggingFace Text Embeddings Inference (TEI) server next
+              to Langflow. The RAG flows use it to embed queries before
+              searching the vector database. Requires HFTEI Model Directory.
+          hftei_model_dir:
+            label: HFTEI Model Directory
+            type: string
+            hidden: ${{ inputs.langflow.enable_hftei == false }}
+            ignore: ${{ inputs.langflow.enable_hftei == false }}
+            tooltip: |
+              Path on the Langflow host to the embedding model weights,
+              mounted at /models/mpnet-v2 inside the HFTEI container
+              (e.g. /p/app/PET/resources/aiml/models/MPNet-V2).
           enable_proxy:
             label: Start Langflow Proxy?
             type: boolean
@@ -719,10 +748,10 @@ jobs:
             hidden: true
             default: true
             tooltip: |
-              When true, the test flows shipped in this repo
-              (langflow-singularity/flows, e.g. pw-test-one) are imported alongside
-              the user's own flows from <Langflow Proxy Path>/flows. Set false to
-              import only the flows in <Langflow Proxy Path>/flows.
+              When true, the flows shipped in this repo
+              (langflow-singularity/flows: chatbot, rag_chatbot) are imported
+              alongside the user's own flows from <Langflow Proxy Path>/flows.
+              Set false to import only the flows in <Langflow Proxy Path>/flows.
           proxy_dir:
             label: Langflow Proxy Path
             type: string
@@ -742,13 +771,18 @@ jobs:
             optional: true
             tooltip: |
               Optional path to a YAML file containing a top-level 'flows:' block
-              with per-flow model routing for the proxy, e.g.:
+              with per-flow model and RAG routing for the proxy, e.g.:
                 flows:
-                  chatbot:
-                    model_configs:
-                      general: { provider: "GenAI.mil", model: "gemini-3.1-pro-preview" }
-              If empty, 'flows.yaml' next to the proxy code is used when present;
-              otherwise all flows are exposed with default settings.
+                  rag_chatbot:
+                    models:
+                      respond: { provider: "GenAI.mil", model: "gemini-3-flash-preview" }
+                      retrieve: { provider: "HuggingFace TEI", base_url: "http://localhost:${HFTEI_PORT}", model: "mpnet-v2" }
+                    rag:
+                      user_query: { top_k: 10, corpus: "policy", db_type: "lancedb", db_path: "/data" }
+              ${HFTEI_PORT} is replaced with the runtime port of the HFTEI
+              server started by this workflow. If empty, 'flows.yaml' next to
+              the proxy code is used when present; otherwise all flows are
+              exposed with default settings.
 
       env_vars:
         type: group

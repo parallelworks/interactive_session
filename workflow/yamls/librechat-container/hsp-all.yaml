@@ -1,22 +1,16 @@
+# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
 permissions:
   - '*'
+
+# The v4 form named this group `env`, which together with this top-level env:
+# block trips the expression parser on CLI runs; v5 renames it to env_vars.
 env:
   PW_API_KEY: ${PW_API_KEY}
-  GENAI_MIL_API_KEY: ${{ inputs.env.GENAI_MIL_API_KEY }}
-  JWT_SECRET: ${{ inputs.env.JWT_SECRET }}
-  JWT_REFRESH_SECRET: ${{ inputs.env.JWT_REFRESH_SECRET }}
-  LIBRECHAT_API_KEY: ${{ inputs.env.LIBRECHAT_API_KEY }}
-  LANGFLOW_API_KEY: ${{ inputs.env.LANGFLOW_API_KEY }}
-
-sessions:
-  librechat:
-    redirect: true
-  manager:
-    redirect: false
-  langflow:
-    useTLS: false
-    redirect: false
-
+  GENAI_MIL_API_KEY: ${{ inputs.env_vars.GENAI_MIL_API_KEY }}
+  JWT_SECRET: ${{ inputs.env_vars.JWT_SECRET }}
+  JWT_REFRESH_SECRET: ${{ inputs.env_vars.JWT_REFRESH_SECRET }}
+  LIBRECHAT_API_KEY: ${{ inputs.env_vars.LIBRECHAT_API_KEY }}
+  LANGFLOW_API_KEY: ${{ inputs.env_vars.LANGFLOW_API_KEY }}
 
 jobs:
   github_checkout:
@@ -28,9 +22,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          # Dev branch carrying the Langflow-proxy scripts. Flip back to `main`
-          # once librechat-all is merged.
-          branch: main
+          branch: librechat
           sparse_checkout:
             - ${{ inputs.container_runtime }}
             - tools/oras
@@ -43,9 +35,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          # Dev branch carrying the Langflow-proxy scripts. Flip back to `main`
-          # once librechat-all is merged.
-          branch: main
+          branch: librechat
           sparse_checkout:
             - ${{ inputs.container_runtime }}
             - tools/oras
@@ -57,13 +47,11 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          # Dev branch carrying the Langflow-proxy scripts. Flip back to `main`
-          # once librechat-all is merged.
-          branch: main
+          branch: librechat
           sparse_checkout:
             - tools/oras
             - langflow-singularity
-  
+
   librechat_preprocessing:
     needs:
       - github_checkout
@@ -84,8 +72,6 @@ jobs:
           sed -i 's/=\(.*\)/="\1"/' inputs.sh
           # Password
           password=$(openssl rand -base64 12 | head -c 12)
-          # basepath
-          basepath=/me/session/${PW_USER}/${{ sessions.librechat }}
           # Write input form variables and ensure the pw agent is in the PATH
           cat <<'EOF' >> inputs.sh
           PATH=$HOME/pw:$PATH
@@ -99,8 +85,8 @@ jobs:
           librechat_resource_name="${{ inputs.librechat_resource.name }}"
           langflow_same_host="${{ inputs.librechat_resource.ip == inputs.langflow_resource.ip }}"
           langflow_scheduler="${{ inputs.langflow_cluster.scheduler }}"
+          pw_endpoints_args="--name librechat-${PW_RUN_SLUG} --slug login"
           EOF
-          echo basepath=${basepath} >> inputs.sh
           echo password=${password} >> inputs.sh
           # Remove empty variables
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
@@ -128,6 +114,50 @@ jobs:
           fi
           echo "job=${PW_JOB_ID:-unknown} user=${PW_USER:-unknown} started=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" > "$_lock"
           echo "::notice::librechat_dir lock created at $_lock"
+        cleanup: |
+          # Covers a cancel that lands before the session runner starts (its
+          # cleanup handles the rest of the lifecycle).
+          if [ -f "${PWD}/SKIP_CLEANUP" ]; then
+            exit 0
+          fi
+          source inputs.sh 2>/dev/null || true
+          rm -f "${librechat_dir:-${HOME}/pw/LibreChat}/.librechat.lock" \
+            && echo "::notice::librechat_dir lock removed" || true
+      - name: Controller Preprocessing
+        run: |
+          set -x
+          # This script prepares the target host and always runs in the controller node
+          cp inputs.sh controller-${PW_JOB_ID}.sh
+          cat ${PW_PARENT_JOB_DIR}/${{ inputs.container_runtime }}/controller-v4.sh >> controller-${PW_JOB_ID}.sh
+          bash controller-${PW_JOB_ID}.sh
+      - name: Create Service Script
+        run: |
+          rm -f HOSTNAME SESSION_PORT job.ended job.started
+          # This script starts the service
+          cp inputs.sh start-service-${PW_JOB_ID}.sh
+
+          # Write code common to all services
+          cat <<'EOF' >> start-service-${PW_JOB_ID}.sh
+
+          cleanup() {
+              trap - EXIT INT TERM HUP QUIT USR1 USR2 PIPE
+              echo "::notice::Cleaning up..."
+              if [ -f cancel.sh ]; then
+                  mv cancel.sh cancel.sh.submitted
+                  echo "echo Cleanup script was already executed" > cancel.sh
+                  bash cancel.sh.submitted
+              fi
+              kill -- -$$
+          }
+
+          trap cleanup EXIT INT TERM HUP QUIT USR1 USR2 PIPE
+
+          echo "::notice::Starting service"
+          EOF
+          cat ${PW_PARENT_JOB_DIR}/${{ inputs.container_runtime }}/start-template-v4.sh >> ./start-service-${PW_JOB_ID}.sh
+          echo "SCRIPT_PATH=${PWD}/start-service-${PW_JOB_ID}.sh" | tee -a $OUTPUTS
+          echo "SKIP_CLEANUP_PATH=${PWD}/SKIP_CLEANUP" | tee -a $OUTPUTS
+
   librechat_session_runner:
     working-directory: ${PW_PARENT_JOB_DIR}/librechat
     needs:
@@ -139,40 +169,69 @@ jobs:
         uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
-          $yaml: workflow/session_runner/v1.4/hsp.yaml
-          session: ${{ sessions.librechat }}
+          $yaml: workflow/script_submitter/v3.6/hsp.yaml
           resource: ${{ inputs.librechat_resource }}
-          cluster:
-            scheduler: ${{ inputs.librechat_cluster.scheduler }}
-            slurm:
-              is_enabled: ${{ inputs.librechat_cluster.slurm.is_enabled }}
-              partition: ${{ inputs.librechat_cluster.slurm.partition }}
-              account: ${{ inputs.librechat_cluster.slurm.account }}
-              qos: ${{ inputs.librechat_cluster.slurm.qos }}
-              cpus_per_task: ${{ inputs.librechat_cluster.slurm.cpus_per_task }}
-              nodes: ${{ inputs.librechat_cluster.slurm.nodes }}
-              node_type: ${{ inputs.librechat_cluster.slurm.node_type }}
-              scheduler_directives: ${{ inputs.librechat_cluster.slurm.scheduler_directives }}
-              time: ${{ inputs.librechat_cluster.slurm.time }}
-            pbs:
-              is_enabled: ${{ inputs.librechat_cluster.pbs.is_enabled }}
-              account: ${{ inputs.librechat_cluster.pbs.account }}
-              scheduler_directives: ${{ inputs.librechat_cluster.pbs.scheduler_directives }}
-          service:
-            start_service_script: ${PW_PARENT_JOB_DIR}/${{ inputs.container_runtime }}/start-template-v3.sh
-            controller_script: ${PW_PARENT_JOB_DIR}/${{ inputs.container_runtime }}/controller-v3.sh
-            inputs_sh: ${PW_PARENT_JOB_DIR}/librechat/inputs.sh
-            slug: login
-            rundir: ${PW_PARENT_JOB_DIR}/librechat
+          shebang: '#!/bin/bash'
+          use_existing_script: true
+          script_path: ${{ needs.librechat_preprocessing.outputs.SCRIPT_PATH }}
+          define_cleanup_script: true
+          cleanup_script_path: ./cancel.sh
+          rundir: ${PW_PARENT_JOB_DIR}/librechat
+          scheduler: ${{ inputs.librechat_cluster.scheduler }}
+          use_scheduler_agent: false
+          submit_and_exit: false
+          skip_cleanups_file: ${{ needs.librechat_preprocessing.outputs.SKIP_CLEANUP_PATH }}
+          slurm:
+            is_enabled: ${{ inputs.librechat_cluster.slurm.is_enabled }}
+            account: ${{ inputs.librechat_cluster.slurm.account }}
+            partition: ${{ inputs.librechat_cluster.slurm.partition }}
+            qos: ${{ inputs.librechat_cluster.slurm.qos }}
+            cpus_per_task: ${{ inputs.librechat_cluster.slurm.cpus_per_task }}
+            nodes: ${{ inputs.librechat_cluster.slurm.nodes }}
+            node_type: ${{ inputs.librechat_cluster.slurm.node_type }}
+            scheduler_directives: ${{ inputs.librechat_cluster.slurm.scheduler_directives }}
+            time: ${{ inputs.librechat_cluster.slurm.time }}
+          pbs:
+            is_enabled: ${{ inputs.librechat_cluster.pbs.is_enabled }}
+            account: ${{ inputs.librechat_cluster.pbs.account }}
+            scheduler_directives: ${{ inputs.librechat_cluster.pbs.scheduler_directives }}
         cleanup: |
           set -x
-          if [ -d tools/oras ]; then
-            echo "Removing tools/oras"
-            rm -rf tools/oras
+          # After the endpoint is up the service owns the lock (cancel.sh removes
+          # it at teardown); this cleanup only covers failure/cancel before that.
+          if [ -f "${{ needs.librechat_preprocessing.outputs.SKIP_CLEANUP_PATH }}" ]; then
+            echo "::notice::Endpoint is up — lock is owned by the service now"
+            exit 0
           fi
           source inputs.sh 2>/dev/null || true
           rm -f "${librechat_dir:-${HOME}/pw/LibreChat}/.librechat.lock" \
             && echo "::notice::librechat_dir lock removed" || true
+
+  librechat_wait_for_endpoint:
+    working-directory: ${PW_PARENT_JOB_DIR}/librechat
+    needs:
+      - librechat_preprocessing
+    ssh:
+      remoteHost: ${{ inputs.librechat_resource.ip }}
+    steps:
+      - name: Wait for endpoint
+        early-cancel: any-job-failed
+        run: |
+          endpoint_name="librechat-${PW_RUN_SLUG}"
+          echo "::notice::Waiting for endpoint ${endpoint_name} to come online"
+          until pw endpoints list | grep -qw "${endpoint_name}"; do
+            echo "$(date) Endpoint ${endpoint_name} not found yet; retrying in 10 seconds"
+            sleep 10
+          done
+          echo "::notice::Endpoint ${endpoint_name} is online"
+          touch ${{ needs.librechat_preprocessing.outputs.SKIP_CLEANUP_PATH }}
+          sleep 2
+      - name: Cancel Script Submitter
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - librechat_session_runner
+
   manager_preprocessing:
     needs:
       - github_checkout
@@ -193,18 +252,52 @@ jobs:
           sed -i 's/=\(.*\)/="\1"/' inputs.sh
           # Write input form variables
           cat <<'EOF' >> inputs.sh
-          basepath="/me/session/${PW_USER}/${{ sessions.manager }}/"
           PATH=$HOME/pw:$PATH
           librechat_dir="${{ inputs.librechat.dir }}"
           resource_uri="${{ inputs.librechat_resource.uri }}"
           librechat_job_dir="${PW_PARENT_JOB_DIR}/librechat"
           scheduler="${{ inputs.librechat_cluster.scheduler }}"
+          pw_endpoints_args="--name librechat-manager-${PW_RUN_SLUG}"
           EOF
           # Remove empty variables
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
           sed -i '/=""/d' inputs.sh
           # Add export to all lines
           sed -i 's/^/export /' inputs.sh
+      - name: Controller Preprocessing
+        run: |
+          set -x
+          cp inputs.sh controller-${PW_JOB_ID}.sh
+          cat ${PW_PARENT_JOB_DIR}/librechat-singularity-manager/controller-v4.sh >> controller-${PW_JOB_ID}.sh
+          bash controller-${PW_JOB_ID}.sh
+      - name: Create Service Script
+        run: |
+          rm -f HOSTNAME SESSION_PORT job.ended job.started
+          # This script starts the service
+          cp inputs.sh start-service-${PW_JOB_ID}.sh
+
+          # Write code common to all services
+          cat <<'EOF' >> start-service-${PW_JOB_ID}.sh
+
+          cleanup() {
+              trap - EXIT INT TERM HUP QUIT USR1 USR2 PIPE
+              echo "::notice::Cleaning up..."
+              if [ -f cancel.sh ]; then
+                  mv cancel.sh cancel.sh.submitted
+                  echo "echo Cleanup script was already executed" > cancel.sh
+                  bash cancel.sh.submitted
+              fi
+              kill -- -$$
+          }
+
+          trap cleanup EXIT INT TERM HUP QUIT USR1 USR2 PIPE
+
+          echo "::notice::Starting service"
+          EOF
+          cat ${PW_PARENT_JOB_DIR}/librechat-singularity-manager/start-template-v4.sh >> ./start-service-${PW_JOB_ID}.sh
+          echo "SCRIPT_PATH=${PWD}/start-service-${PW_JOB_ID}.sh" | tee -a $OUTPUTS
+          echo "SKIP_CLEANUP_PATH=${PWD}/SKIP_CLEANUP" | tee -a $OUTPUTS
+
   manager_session_runner:
     working-directory: ${PW_PARENT_JOB_DIR}/manager
     needs:
@@ -216,32 +309,57 @@ jobs:
         uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
-          $yaml: workflow/session_runner/v1.4/hsp.yaml
-          session: ${{ sessions.manager }}
+          $yaml: workflow/script_submitter/v3.6/hsp.yaml
           resource: ${{ inputs.librechat_resource }}
-          cluster:
-            scheduler: ${{ inputs.librechat_cluster.scheduler }}
-            slurm:
-              is_enabled: ${{ inputs.librechat_cluster.slurm.is_enabled }}
-              partition: ${{ inputs.librechat_cluster.slurm.partition }}
-              account: ${{ inputs.librechat_cluster.slurm.account }}
-              qos: ${{ inputs.librechat_cluster.slurm.qos }}
-              cpus_per_task: ${{ inputs.librechat_cluster.slurm.cpus_per_task }}
-              nodes: ${{ inputs.librechat_cluster.slurm.nodes }}
-              node_type: ${{ inputs.librechat_cluster.slurm.node_type }}
-              scheduler_directives: ${{ inputs.librechat_cluster.slurm.scheduler_directives }}
-              time: ${{ inputs.librechat_cluster.slurm.time }}
-            pbs:
-              is_enabled: ${{ inputs.librechat_cluster.pbs.is_enabled }}
-              account: ${{ inputs.librechat_cluster.pbs.account }}
-              scheduler_directives: ${{ inputs.librechat_cluster.pbs.scheduler_directives }}
-          service:
-            start_service_script: ${PW_PARENT_JOB_DIR}/librechat-singularity-manager/start-template-v3.sh
-            controller_script: ${PW_PARENT_JOB_DIR}/librechat-singularity-manager/controller-v3.sh
-            inputs_sh: ${PW_PARENT_JOB_DIR}/manager/inputs.sh
-            slug: /
-            rundir: ${PW_PARENT_JOB_DIR}/manager
+          shebang: '#!/bin/bash'
+          use_existing_script: true
+          script_path: ${{ needs.manager_preprocessing.outputs.SCRIPT_PATH }}
+          define_cleanup_script: true
+          cleanup_script_path: ./cancel.sh
+          rundir: ${PW_PARENT_JOB_DIR}/manager
+          scheduler: ${{ inputs.librechat_cluster.scheduler }}
+          use_scheduler_agent: false
+          submit_and_exit: false
+          skip_cleanups_file: ${{ needs.manager_preprocessing.outputs.SKIP_CLEANUP_PATH }}
+          slurm:
+            is_enabled: ${{ inputs.librechat_cluster.slurm.is_enabled }}
+            account: ${{ inputs.librechat_cluster.slurm.account }}
+            partition: ${{ inputs.librechat_cluster.slurm.partition }}
+            qos: ${{ inputs.librechat_cluster.slurm.qos }}
+            cpus_per_task: ${{ inputs.librechat_cluster.slurm.cpus_per_task }}
+            nodes: ${{ inputs.librechat_cluster.slurm.nodes }}
+            node_type: ${{ inputs.librechat_cluster.slurm.node_type }}
+            scheduler_directives: ${{ inputs.librechat_cluster.slurm.scheduler_directives }}
+            time: ${{ inputs.librechat_cluster.slurm.time }}
+          pbs:
+            is_enabled: ${{ inputs.librechat_cluster.pbs.is_enabled }}
+            account: ${{ inputs.librechat_cluster.pbs.account }}
+            scheduler_directives: ${{ inputs.librechat_cluster.pbs.scheduler_directives }}
 
+  manager_wait_for_endpoint:
+    working-directory: ${PW_PARENT_JOB_DIR}/manager
+    needs:
+      - manager_preprocessing
+    ssh:
+      remoteHost: ${{ inputs.librechat_resource.ip }}
+    steps:
+      - name: Wait for endpoint
+        early-cancel: any-job-failed
+        run: |
+          endpoint_name="librechat-manager-${PW_RUN_SLUG}"
+          echo "::notice::Waiting for endpoint ${endpoint_name} to come online"
+          until pw endpoints list | grep -qw "${endpoint_name}"; do
+            echo "$(date) Endpoint ${endpoint_name} not found yet; retrying in 10 seconds"
+            sleep 10
+          done
+          echo "::notice::Endpoint ${endpoint_name} is online"
+          touch ${{ needs.manager_preprocessing.outputs.SKIP_CLEANUP_PATH }}
+          sleep 2
+      - name: Cancel Script Submitter
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - manager_session_runner
 
   langflow_preprocessing:
     needs:
@@ -263,16 +381,19 @@ jobs:
           sed -i 's/=\(.*\)/="\1"/' inputs.sh
           # Write input form variables and ensure the pw agent is in the PATH
           cat <<'EOF' >> inputs.sh
-          basepath="/me/session/${PW_USER}/${{ sessions.langflow }}/"
           PATH=$HOME/pw:$PATH
           service_langflow_data_dir="${{ inputs.langflow.data_dir }}"
           service_langflow_config_dir="${{ inputs.langflow.config_dir }}"
           service_langflow_components_path="${{ inputs.langflow.components_path }}"
           service_langflow_database_url="${{ inputs.langflow.database_url }}"
+          langflow_rag_db_dir="${{ inputs.langflow.rag_db_dir }}"
+          langflow_enable_hftei="${{ inputs.langflow.enable_hftei }}"
+          langflow_hftei_model_dir="${{ inputs.langflow.hftei_model_dir }}"
           langflow_enable_proxy="${{ inputs.langflow.enable_proxy }}"
           langflow_proxy_dir="${{ inputs.langflow.proxy_dir }}"
           langflow_proxy_flows_file="${{ inputs.langflow.proxy_flows_file }}"
           langflow_import_bundled_flows="${{ inputs.langflow.import_bundled_flows }}"
+          pw_endpoints_args="--name langflow-${PW_RUN_SLUG}"
           EOF
 
           # Remove empty variables
@@ -287,6 +408,39 @@ jobs:
             echo "export langflow_proxy_dir=\"${_default_proxy_dir}\"" >> inputs.sh
             echo "::notice::Defaulted langflow_proxy_dir to ${_default_proxy_dir}"
           fi
+      - name: Controller Preprocessing
+        run: |
+          set -x
+          cp inputs.sh controller-${PW_JOB_ID}.sh
+          cat ${PW_PARENT_JOB_DIR}/langflow-singularity/controller-v4.sh >> controller-${PW_JOB_ID}.sh
+          bash controller-${PW_JOB_ID}.sh
+      - name: Create Service Script
+        run: |
+          rm -f HOSTNAME SESSION_PORT job.ended job.started
+          # This script starts the service
+          cp inputs.sh start-service-${PW_JOB_ID}.sh
+
+          # Write code common to all services
+          cat <<'EOF' >> start-service-${PW_JOB_ID}.sh
+
+          cleanup() {
+              trap - EXIT INT TERM HUP QUIT USR1 USR2 PIPE
+              echo "::notice::Cleaning up..."
+              if [ -f cancel.sh ]; then
+                  mv cancel.sh cancel.sh.submitted
+                  echo "echo Cleanup script was already executed" > cancel.sh
+                  bash cancel.sh.submitted
+              fi
+              kill -- -$$
+          }
+
+          trap cleanup EXIT INT TERM HUP QUIT USR1 USR2 PIPE
+
+          echo "::notice::Starting service"
+          EOF
+          cat ${PW_PARENT_JOB_DIR}/langflow-singularity/start-template-v4.sh >> ./start-service-${PW_JOB_ID}.sh
+          echo "SCRIPT_PATH=${PWD}/start-service-${PW_JOB_ID}.sh" | tee -a $OUTPUTS
+          echo "SKIP_CLEANUP_PATH=${PWD}/SKIP_CLEANUP" | tee -a $OUTPUTS
 
   langflow_session_runner:
     working-directory: ${PW_PARENT_JOB_DIR}/langflow
@@ -299,31 +453,57 @@ jobs:
         uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
-          $yaml: workflow/session_runner/v1.4/hsp.yaml
-          session: ${{ sessions.langflow }}
+          $yaml: workflow/script_submitter/v3.6/hsp.yaml
           resource: ${{ inputs.langflow_resource }}
-          cluster:
-            scheduler: ${{ inputs.langflow_cluster.scheduler }}
-            slurm:
-              is_enabled: ${{ inputs.langflow_cluster.slurm.is_enabled }}
-              partition: ${{ inputs.langflow_cluster.slurm.partition }}
-              account: ${{ inputs.langflow_cluster.slurm.account }}
-              qos: ${{ inputs.langflow_cluster.slurm.qos }}
-              cpus_per_task: ${{ inputs.langflow_cluster.slurm.cpus_per_task }}
-              nodes: ${{ inputs.langflow_cluster.slurm.nodes }}
-              node_type: ${{ inputs.langflow_cluster.slurm.node_type }}
-              scheduler_directives: ${{ inputs.langflow_cluster.slurm.scheduler_directives }}
-              time: ${{ inputs.langflow_cluster.slurm.time }}
-            pbs:
-              is_enabled: ${{ inputs.langflow_cluster.pbs.is_enabled }}
-              account: ${{ inputs.librechat_cluster.pbs.account }}
-              scheduler_directives: ${{ inputs.langflow_cluster.pbs.scheduler_directives }}
-          service:
-            start_service_script: ${PW_PARENT_JOB_DIR}/langflow-singularity/start-template-v3.sh
-            controller_script: ${PW_PARENT_JOB_DIR}/langflow-singularity/controller-v3.sh
-            inputs_sh: ${PW_PARENT_JOB_DIR}/langflow/inputs.sh
-            slug: ""
-            rundir: ${PW_PARENT_JOB_DIR}/langflow
+          shebang: '#!/bin/bash'
+          use_existing_script: true
+          script_path: ${{ needs.langflow_preprocessing.outputs.SCRIPT_PATH }}
+          define_cleanup_script: true
+          cleanup_script_path: ./cancel.sh
+          rundir: ${PW_PARENT_JOB_DIR}/langflow
+          scheduler: ${{ inputs.langflow_cluster.scheduler }}
+          use_scheduler_agent: false
+          submit_and_exit: false
+          skip_cleanups_file: ${{ needs.langflow_preprocessing.outputs.SKIP_CLEANUP_PATH }}
+          slurm:
+            is_enabled: ${{ inputs.langflow_cluster.slurm.is_enabled }}
+            account: ${{ inputs.langflow_cluster.slurm.account }}
+            partition: ${{ inputs.langflow_cluster.slurm.partition }}
+            qos: ${{ inputs.langflow_cluster.slurm.qos }}
+            cpus_per_task: ${{ inputs.langflow_cluster.slurm.cpus_per_task }}
+            nodes: ${{ inputs.langflow_cluster.slurm.nodes }}
+            node_type: ${{ inputs.langflow_cluster.slurm.node_type }}
+            scheduler_directives: ${{ inputs.langflow_cluster.slurm.scheduler_directives }}
+            time: ${{ inputs.langflow_cluster.slurm.time }}
+          pbs:
+            is_enabled: ${{ inputs.langflow_cluster.pbs.is_enabled }}
+            account: ${{ inputs.langflow_cluster.pbs.account }}
+            scheduler_directives: ${{ inputs.langflow_cluster.pbs.scheduler_directives }}
+
+  langflow_wait_for_endpoint:
+    working-directory: ${PW_PARENT_JOB_DIR}/langflow
+    needs:
+      - langflow_preprocessing
+    ssh:
+      remoteHost: ${{ inputs.langflow_resource.ip }}
+    steps:
+      - name: Wait for endpoint
+        early-cancel: any-job-failed
+        run: |
+          endpoint_name="langflow-${PW_RUN_SLUG}"
+          echo "::notice::Waiting for endpoint ${endpoint_name} to come online"
+          until pw endpoints list | grep -qw "${endpoint_name}"; do
+            echo "$(date) Endpoint ${endpoint_name} not found yet; retrying in 10 seconds"
+            sleep 10
+          done
+          echo "::notice::Endpoint ${endpoint_name} is online"
+          touch ${{ needs.langflow_preprocessing.outputs.SKIP_CLEANUP_PATH }}
+          sleep 2
+      - name: Cancel Script Submitter
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - langflow_session_runner
 
 'on':
   execute:
@@ -711,6 +891,33 @@ jobs:
               For SQLite use: sqlite:////absolute/path/to/langflow.db
               The database directory is bind-mounted automatically.
               Defaults to a persistent SQLite file in the home directory.
+          rag_db_dir:
+            label: RAG Database Directory
+            type: string
+            optional: true
+            tooltip: |
+              Path on the Langflow host to the vector database directory used
+              by the RAG flows. It is mounted at /data inside the Langflow
+              container, so the db_path in the proxy flow configs must be
+              /data (or a path under it).
+          enable_hftei:
+            label: Start HFTEI Embeddings Server?
+            type: boolean
+            default: true
+            tooltip: |
+              Starts a HuggingFace Text Embeddings Inference (TEI) server next
+              to Langflow. The RAG flows use it to embed queries before
+              searching the vector database. Requires HFTEI Model Directory.
+          hftei_model_dir:
+            label: HFTEI Model Directory
+            type: string
+            default: /p/app/PET/resources/aiml/models/MPNet-V2
+            hidden: ${{ inputs.langflow.enable_hftei == false }}
+            ignore: ${{ inputs.langflow.enable_hftei == false }}
+            tooltip: |
+              Path on the Langflow host to the embedding model weights,
+              mounted at /models/mpnet-v2 inside the HFTEI container
+              (e.g. /p/app/PET/resources/aiml/models/MPNet-V2).
           enable_proxy:
             label: Start Langflow Proxy?
             type: boolean
@@ -728,10 +935,10 @@ jobs:
             hidden: true
             default: false
             tooltip: |
-              When true, the test flows shipped in this repo
-              (langflow-singularity/flows, e.g. pw-test-one) are imported alongside
-              the user's own flows from <Langflow Proxy Path>/flows. Set false to
-              import only the flows in <Langflow Proxy Path>/flows.
+              When true, the flows shipped in this repo
+              (langflow-singularity/flows: chatbot, rag_chatbot) are imported
+              alongside the user's own flows from <Langflow Proxy Path>/flows.
+              Set false to import only the flows in <Langflow Proxy Path>/flows.
           proxy_dir:
             label: Langflow Proxy Path
             type: string
@@ -752,15 +959,20 @@ jobs:
             optional: true
             tooltip: |
               Optional path to a YAML file containing a top-level 'flows:' block
-              with per-flow model routing for the proxy, e.g.:
+              with per-flow model and RAG routing for the proxy, e.g.:
                 flows:
-                  chatbot:
-                    model_configs:
-                      general: { provider: "GenAI.mil", model: "gemini-3.1-pro-preview" }
-              If empty, 'flows.yaml' next to the proxy code is used when present;
-              otherwise all flows are exposed with default settings.
+                  rag_chatbot:
+                    models:
+                      respond: { provider: "GenAI.mil", model: "gemini-3-flash-preview" }
+                      retrieve: { provider: "HuggingFace TEI", base_url: "http://localhost:${HFTEI_PORT}", model: "mpnet-v2" }
+                    rag:
+                      user_query: { top_k: 10, corpus: "policy", db_type: "lancedb", db_path: "/data" }
+              ${HFTEI_PORT} is replaced with the runtime port of the HFTEI
+              server started by this workflow. If empty, 'flows.yaml' next to
+              the proxy code is used when present; otherwise all flows are
+              exposed with default settings.
 
-      env:
+      env_vars:
         type: group
         label: Environment Variables
         collapsed: true

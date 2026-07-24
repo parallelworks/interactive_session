@@ -16,6 +16,7 @@ jobs:
   github_checkout:
     steps:
       - name: Librechat and Langflow Checkout
+        early-cancel: any-job-failed
         if: ${{ inputs.librechat_resource.ip == inputs.langflow_resource.ip }}
         ssh:
           remoteHost: ${{ inputs.librechat_resource.ip }}
@@ -29,6 +30,7 @@ jobs:
             - librechat-singularity-manager
             - langflow-singularity
       - name: Librechat Checkout
+        early-cancel: any-job-failed
         if: ${{ inputs.librechat_resource.ip != inputs.langflow_resource.ip }}
         ssh:
           remoteHost: ${{ inputs.librechat_resource.ip }}
@@ -41,6 +43,7 @@ jobs:
             - tools/oras
             - librechat-singularity-manager
       - name: Langflow Checkout
+        early-cancel: any-job-failed
         if: ${{ inputs.librechat_resource.ip != inputs.langflow_resource.ip }}
         ssh:
           remoteHost: ${{ inputs.langflow_resource.ip }}
@@ -60,6 +63,7 @@ jobs:
       remoteHost: ${{ inputs.librechat_resource.ip }}
     steps:
       - name: Create Inputs
+        early-cancel: any-job-failed
         run: |
           set -x
           if [ -z "${PW_PLATFORM_HOST}" ]; then
@@ -94,6 +98,7 @@ jobs:
           # Add export= to all lines
           sed -i 's/^/export /' inputs.sh
       - name: Lock librechat_dir
+        early-cancel: any-job-failed
         run: |
           set -e
           source inputs.sh
@@ -116,6 +121,7 @@ jobs:
           rm -f "${librechat_dir:-${HOME}/pw/LibreChat}/.librechat.lock" \
             && echo "::notice::librechat_dir lock removed" || true
       - name: Controller Preprocessing
+        early-cancel: any-job-failed
         run: |
           set -x
           # This script prepares the target host and always runs in the controller node
@@ -123,6 +129,7 @@ jobs:
           cat ${PW_PARENT_JOB_DIR}/${{ inputs.container_runtime }}/controller-v4.sh >> controller-${PW_JOB_ID}.sh
           bash controller-${PW_JOB_ID}.sh
       - name: Create Service Script
+        early-cancel: any-job-failed
         run: |
           rm -f HOSTNAME SESSION_PORT job.ended job.started
           # This script starts the service
@@ -213,6 +220,7 @@ jobs:
           touch ${{ needs.librechat_preprocessing.outputs.SKIP_CLEANUP_PATH }}
           sleep 2
       - name: Cancel Script Submitter
+        early-cancel: any-job-failed
         uses: parallelworks/cancel-jobs
         with:
           jobs:
@@ -226,6 +234,7 @@ jobs:
       remoteHost: ${{ inputs.librechat_resource.ip }}
     steps:
       - name: Create Inputs
+        early-cancel: any-job-failed
         run: |
           set -x
           if [ -z "${PW_PLATFORM_HOST}" ]; then
@@ -251,12 +260,14 @@ jobs:
           # Add export to all lines
           sed -i 's/^/export /' inputs.sh
       - name: Controller Preprocessing
+        early-cancel: any-job-failed
         run: |
           set -x
           cp inputs.sh controller-${PW_JOB_ID}.sh
           cat ${PW_PARENT_JOB_DIR}/librechat-singularity-manager/controller-v4.sh >> controller-${PW_JOB_ID}.sh
           bash controller-${PW_JOB_ID}.sh
       - name: Create Service Script
+        early-cancel: any-job-failed
         run: |
           rm -f HOSTNAME SESSION_PORT job.ended job.started
           # This script starts the service
@@ -336,6 +347,7 @@ jobs:
           touch ${{ needs.manager_preprocessing.outputs.SKIP_CLEANUP_PATH }}
           sleep 2
       - name: Cancel Script Submitter
+        early-cancel: any-job-failed
         uses: parallelworks/cancel-jobs
         with:
           jobs:
@@ -349,6 +361,7 @@ jobs:
       remoteHost: ${{ inputs.langflow_resource.ip }}
     steps:
       - name: Create Inputs
+        early-cancel: any-job-failed
         run: |
           set -x
           if [ -z "${PW_PLATFORM_HOST}" ]; then
@@ -382,12 +395,14 @@ jobs:
           # Add export to all lines
           sed -i 's/^/export /' inputs.sh
       - name: Controller Preprocessing
+        early-cancel: any-job-failed
         run: |
           set -x
           cp inputs.sh controller-${PW_JOB_ID}.sh
           cat ${PW_PARENT_JOB_DIR}/langflow-singularity/controller-v4.sh >> controller-${PW_JOB_ID}.sh
           bash controller-${PW_JOB_ID}.sh
       - name: Create Service Script
+        early-cancel: any-job-failed
         run: |
           rm -f HOSTNAME SESSION_PORT job.ended job.started
           # This script starts the service
@@ -467,6 +482,7 @@ jobs:
           touch ${{ needs.langflow_preprocessing.outputs.SKIP_CLEANUP_PATH }}
           sleep 2
       - name: Cancel Script Submitter
+        early-cancel: any-job-failed
         uses: parallelworks/cancel-jobs
         with:
           jobs:

@@ -49,10 +49,6 @@ container_sif=${service_parent_install_dir}/containers/langflow.sif
 LANGFLOW_DATA_DIR="${service_langflow_data_dir:-${HOME}/pw/.langflow}"
 LANGFLOW_CONFIG_DIR="${service_langflow_config_dir:-${LANGFLOW_DATA_DIR}}"
 
-# Always pin the database location: Langflow's internal default lives outside
-# the bind mounts, and the proxy discovers flows by reading this exact file.
-service_langflow_database_url="${service_langflow_database_url:-sqlite:////${LANGFLOW_CONFIG_DIR}/langflow.db}"
-
 service_port=$(pw agent open-port) || { echo "::error title=Error::Failed to allocate Langflow port"; exit 1; }
 
 echo '#!/bin/bash' > cancel.sh

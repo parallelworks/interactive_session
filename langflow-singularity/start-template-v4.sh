@@ -400,6 +400,28 @@ PROXYCFG
         echo "::notice::Langflow proxy → http://localhost:${proxy_port}/v1 (pid ${proxy_pid})"
         tail -f langflow-proxy.log &
         echo "kill $! #langflow-proxy-logs" >> cancel.sh
+
+        # Warm up each flow once in the background: the first request after a
+        # cold start can hit a Python import deadlock inside Langflow
+        # (concurrent langchain imports), so absorb it here instead of on a
+        # user-facing request.
+        (
+            auth_args=()
+            [ -n "${LANGFLOW_API_KEY}" ] && auth_args=(-H "Authorization: Bearer ${LANGFLOW_API_KEY}")
+            models=""
+            for _ in $(seq 1 60); do
+                models=$(curl -s -m 5 "${auth_args[@]}" "localhost:${proxy_port}/v1/models" \
+                    | python3 -c 'import sys,json; print(" ".join(m["id"] for m in json.load(sys.stdin).get("data",[])))' 2>/dev/null)
+                [ -n "${models}" ] && break
+                sleep 10
+            done
+            for model in ${models}; do
+                curl -s -m 300 "${auth_args[@]}" -H 'Content-Type: application/json' \
+                    -d "{\"model\": \"${model}\", \"stream\": false, \"max_tokens\": 1, \"messages\": [{\"role\": \"user\", \"content\": \"ping\"}]}" \
+                    "localhost:${proxy_port}/v1/chat/completions" > /dev/null
+                echo "warmed up ${model}"
+            done
+        ) > warmup.log 2>&1 &
     else
         echo "::error title=Langflow proxy venv missing::Proxy venv not found at ${proxy_venv} (controller did not build it). Cannot start the proxy that 'Start Langflow Proxy?' requires."
         exit 1

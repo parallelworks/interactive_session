@@ -33,6 +33,11 @@ singularity build --force n8n.sif docker://n8nio/n8n:1.123.4
 singularity exec n8n.sif n8n --version   # smoke-test before pushing
 ```
 
+No upstream image (e.g. a pip-installed app)? Build from a definition file instead —
+`singularity build --force --fakeroot app.sif app.def` works unprivileged on
+apptainer 1.4.5 (verified: `streamlit-singularity/streamlit.def` on gcpsmall, 2026-07);
+bootstrap from `docker://python:3.12-slim` and `pip install` in `%post`.
+
 Push as a plain ORAS artifact with the repo's own oras binary (`tools/oras/oras`):
 
 ```bash

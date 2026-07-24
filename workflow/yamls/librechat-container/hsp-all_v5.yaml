@@ -11,6 +11,9 @@ env:
   JWT_REFRESH_SECRET: ${{ inputs.env_vars.JWT_REFRESH_SECRET }}
   LIBRECHAT_API_KEY: ${{ inputs.env_vars.LIBRECHAT_API_KEY }}
   LANGFLOW_API_KEY: ${{ inputs.env_vars.LANGFLOW_API_KEY }}
+  # Testing override for hosts without PROJECTS_HOME; on DSRC systems
+  # /etc/profile is sourced afterwards, so the real value wins when set.
+  PROJECTS_HOME: ${HOME}
 
 jobs:
   github_checkout:
@@ -122,12 +125,7 @@ jobs:
           # proxy as enabled (waits for / registers / forwards it). Only needs to be
           # non-empty here — the actual directory is used on the Langflow host.
           if [ "${{ inputs.langflow.enable_proxy }}" = "true" ] && [ -z "${{ inputs.langflow.proxy_dir }}" ]; then
-            if [ -z "${WORKDIR}" ]; then
-              echo "::warning title=Langflow Proxy Path::WORKDIR is empty - falling back to ${HOME}/pw"
-              _default_proxy_dir="${HOME}/pw/hsp/tools/langflow_proxy-main"
-            else
-              _default_proxy_dir="${WORKDIR/$USER/avidalto}/hsp/tools/langflow_proxy-main"
-            fi
+            _default_proxy_dir="${PROJECTS_HOME}/hsp/tools/langflow_proxy-main"
             echo "export langflow_proxy_dir=\"${_default_proxy_dir}\"" >> inputs.sh
             echo "::notice::Defaulted langflow_proxy_dir to ${_default_proxy_dir}"
           fi
@@ -483,14 +481,10 @@ jobs:
           echo "::notice title=Install Directory::Using Install Directory: ${hsp_install_dir}"
           echo "export service_parent_install_dir=${hsp_install_dir}" >> inputs.sh
           # HSP default: if the proxy is enabled but no Langflow Proxy Path was given,
-          # point it at the shared staged copy before it is written to inputs.sh.
+          # point it at the shared staged copy under PROJECTS_HOME; the controller
+          # fails the run if it is missing.
           if [ "${{ inputs.langflow.enable_proxy }}" = "true" ] && [ -z "${{ inputs.langflow.proxy_dir }}" ]; then
-            if [ -z "${WORKDIR}" ]; then
-              echo "::warning title=Langflow Proxy Path::WORKDIR is empty - falling back to ${HOME}/pw"
-              _default_proxy_dir="${HOME}/pw/hsp/tools/langflow_proxy-main"
-            else
-              _default_proxy_dir="${WORKDIR/$USER/avidalto}/hsp/tools/langflow_proxy-main"
-            fi
+            _default_proxy_dir="${PROJECTS_HOME}/hsp/tools/langflow_proxy-main"
             echo "export langflow_proxy_dir=\"${_default_proxy_dir}\"" >> inputs.sh
             echo "::notice::Defaulted langflow_proxy_dir to ${_default_proxy_dir}"
           fi

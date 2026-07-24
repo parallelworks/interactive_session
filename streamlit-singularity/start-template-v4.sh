@@ -8,8 +8,11 @@ set -x
 
 echo "::group::Streamlit Service Starting"
 
+streamlit_registry=${streamlit_registry:-ghcr.io/parallelworks/streamlit:1.0}
+registry_slug=$(printf '%s' "${streamlit_registry}" | tr -c 'a-zA-Z0-9._-' '_')
+
 if [ -n "${service_parent_install_dir}" ]; then
-    container_sif=${service_parent_install_dir}/containers/streamlit.sif
+    container_sif=${service_parent_install_dir}/containers/${registry_slug}/streamlit.sif
     if ! [ -f "${container_sif}" ] && ! [ -w "${service_parent_install_dir}" ]; then
         echo "::warning::container_sif ${container_sif} does not exist and no write permission to ${service_parent_install_dir}. Resetting to ${HOME}/pw/software."
         service_parent_install_dir=${HOME}/pw/software
@@ -18,8 +21,8 @@ else
     service_parent_install_dir=${HOME}/pw/software
 fi
 
-container_sif=${service_parent_install_dir}/containers/streamlit.sif
-sandbox_dir=${service_parent_install_dir}/containers/streamlit-sandbox
+container_sif=${service_parent_install_dir}/containers/${registry_slug}/streamlit.sif
+sandbox_dir=${service_parent_install_dir}/containers/${registry_slug}/streamlit-sandbox
 
 # Load singularity/apptainer if not already in PATH
 if ! which singularity &> /dev/null; then

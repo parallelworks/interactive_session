@@ -33,6 +33,7 @@ jobs:
             PATH=$HOME/pw:$PATH
             service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
             app_script="${{ inputs.service.app_script }}"
+            streamlit_registry="${{ inputs.service.registry }}"
             pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG}"
             EOF
             # Remove empty variables
@@ -143,13 +144,6 @@ jobs:
             label: Service host
             include-workspace: false
             tooltip: Resource to host the service
-            provider:
-              - gclusterv2
-              - pclusterv2
-              - azclusterv2
-              - aws-slurm
-              - google-slurm
-              - azure-slurm
           scheduler:
             type: boolean
             default: false
@@ -225,6 +219,15 @@ jobs:
               Leave empty to run the bundled demo app. The script's directory is
               mounted into the container, so files next to the script are
               available to the app.
+          registry:
+            label: Container Registry
+            type: string
+            default: ghcr.io/parallelworks/streamlit:1.0
+            tooltip: |
+              Registry reference of the Streamlit SIF image (pushed with oras).
+              To use a custom image with extra Python packages, build it with
+              streamlit-singularity/build-container.sh, push it to your own
+              registry, and set the reference here.
           parent_install_dir:
             label: Parent Install Directory
             type: string

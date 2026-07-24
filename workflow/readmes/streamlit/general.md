@@ -15,7 +15,7 @@ The container ships Python 3.12 with `streamlit` (which includes `numpy` and `pa
 oras push ghcr.io/<your-org>/streamlit:<tag> streamlit.sif
 ```
 
-Then point `streamlit-singularity/controller-v4.sh` at your image reference.
+Then set the **Container Registry** input of the workflow to your image reference. The artifact must contain a file named `streamlit.sif`.
 
 ## Accessing the Session
 

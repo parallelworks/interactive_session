@@ -122,6 +122,14 @@ Using n8n as the template (diff `controller-v3.sh` → `controller-v4.sh`):
 
 - `singularity build` from `docker://` needs internet — build on the login node or
   your own machine, never in the start template.
+- Squashfs-less kernels are common, not exotic (e.g. AWS RHEL9 cluster images):
+  the sandbox fallback can be the primary path on a whole cluster. The probe
+  handles it unattended.
+- Apps that create Unix sockets under `$TMPDIR` (vLLM's ZMQ `ipc://`) crash when it
+  points into the deep job dir — socket paths cap at 107 chars. Bind a per-job dir
+  to container `/tmp` and set `TMPDIR=/tmp` inside the container instead.
+- Derive the cached SIF filename from the tag (`vllm:v1.0` → `vllm-v1.0.sif`) so
+  changing the artifact URI re-pulls while old versions stay cached.
 - Set `SINGULARITY_TMPDIR` **and** `SINGULARITY_CACHEDIR` under `${HOME}` for both
   build and fallback: `/tmp` is often too small for image builds and is not shared
   across nodes. (Apptainer also accepts the `APPTAINER_*` names; the `SINGULARITY_*`

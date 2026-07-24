@@ -754,8 +754,9 @@ jobs:
             ignore: ${{ inputs.langflow.enable_hftei == false }}
             tooltip: |
               Path on the Langflow host to the embedding model weights,
-              mounted at /models/mpnet-v2 inside the HFTEI container
-              (e.g. /p/app/PET/resources/aiml/models/MPNet-V2).
+              mounted at /models/mpnet-v2 inside the HFTEI container.
+              If the directory is missing, the controller downloads
+              sentence-transformers/all-mpnet-base-v2 into it.
           enable_proxy:
             label: Start Langflow Proxy?
             type: boolean

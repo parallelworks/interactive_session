@@ -67,6 +67,22 @@ if [ "${langflow_enable_hftei}" = "true" ]; then
         echo "::endgroup::"
     fi
     echo "::notice::HFTEI container ready at ${hftei_sif}"
+
+    # Download the embedding model when it is not already present (idempotent)
+    if [ -n "${langflow_hftei_model_dir}" ] && [ ! -s "${langflow_hftei_model_dir}/model.safetensors" ]; then
+        echo "::group::HFTEI Embedding Model Download (sentence-transformers/all-mpnet-base-v2)"
+        mkdir -p "${langflow_hftei_model_dir}/1_Pooling"
+        hf_base="https://huggingface.co/sentence-transformers/all-mpnet-base-v2/resolve/main"
+        for f in config.json tokenizer.json tokenizer_config.json special_tokens_map.json vocab.txt model.safetensors 1_Pooling/config.json; do
+            if ! curl -sSL --fail -o "${langflow_hftei_model_dir}/${f}" "${hf_base}/${f}"; then
+                echo "::error title=Error::Failed to download ${hf_base}/${f}. Stage the model at ${langflow_hftei_model_dir} manually, or disable HFTEI."
+                exit 1
+            fi
+        done
+        chmod -R a+rX "${langflow_hftei_model_dir}" || true
+        echo "::endgroup::"
+    fi
+    echo "::notice::HFTEI model ready at ${langflow_hftei_model_dir}"
 fi
 
 # ── Optional: Langflow proxy Python environment ────────────────────────────────

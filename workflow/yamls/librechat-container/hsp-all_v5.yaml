@@ -488,6 +488,11 @@ jobs:
             echo "export langflow_proxy_dir=\"${_default_proxy_dir}\"" >> inputs.sh
             echo "::notice::Defaulted langflow_proxy_dir to ${_default_proxy_dir}"
           fi
+          # HSP default: the controller downloads the model here when missing.
+          if [ "${{ inputs.langflow.enable_hftei }}" = "true" ] && [ -z "${{ inputs.langflow.hftei_model_dir }}" ]; then
+            echo "export langflow_hftei_model_dir=\"${hsp_install_dir}/models/MPNet-V2\"" >> inputs.sh
+            echo "::notice::Defaulted langflow_hftei_model_dir to ${hsp_install_dir}/models/MPNet-V2"
+          fi
       - name: Controller Preprocessing
         early-cancel: any-job-failed
         run: |
@@ -994,13 +999,15 @@ jobs:
           hftei_model_dir:
             label: HFTEI Model Directory
             type: string
-            default: /p/app/PET/resources/aiml/models/MPNet-V2
+            optional: true
             hidden: ${{ inputs.langflow.enable_hftei == false }}
             ignore: ${{ inputs.langflow.enable_hftei == false }}
             tooltip: |
               Path on the Langflow host to the embedding model weights,
-              mounted at /models/mpnet-v2 inside the HFTEI container
-              (e.g. /p/app/PET/resources/aiml/models/MPNet-V2).
+              mounted at /models/mpnet-v2 inside the HFTEI container.
+              Defaults to <install dir>/models/MPNet-V2. If the directory is
+              missing, the controller downloads
+              sentence-transformers/all-mpnet-base-v2 into it.
           enable_proxy:
             label: Start Langflow Proxy?
             type: boolean

@@ -18,6 +18,31 @@ env:
 jobs:
   github_checkout:
     steps:
+      - name: Check LLM Model
+        early-cancel: any-job-failed
+        if: ${{ inputs.langflow.enable_proxy == true }}
+        ssh:
+          remoteHost: ${{ inputs.langflow_resource.ip }}
+        run: |
+          set -x
+          if [ -z "${PW_PLATFORM_HOST}" ]; then
+            PW_PLATFORM_HOST=activate.hpc.mil
+          fi
+          PW_PLATFORM_HOST="${PW_PLATFORM_HOST#https://}"
+          llm_base_url="https://${PW_PLATFORM_HOST}/api/openai/v1"
+          llm_model="${{ inputs.langflow.llm_model }}"
+          { set +x; } 2>/dev/null
+          models=$(env -u SSL_CERT_FILE curl -s -m 30 -H "Authorization: Bearer ${PW_API_KEY}" "${llm_base_url}/models"               | python3 -c 'import sys,json; [print(m["id"]) for m in json.load(sys.stdin).get("data",[])]' 2>/dev/null)
+          set -x
+          if [ -z "${models}" ]; then
+            echo "::error title=No connected models::No models are connected to ${llm_base_url}. Connect a model to the platform, or disable the Langflow proxy."
+            exit 1
+          fi
+          if [ -n "${llm_model}" ] && ! printf '%s\n' "${models}" | grep -qxF "${llm_model}"; then
+            echo "::error title=Model not found::'${llm_model}' is not connected to ${llm_base_url}. Available models: $(printf '%s' "${models}" | tr '\n' ' ')"
+            exit 1
+          fi
+          echo "::notice::LLM model check passed (${llm_model:-first available will be used})"
       - name: Librechat and Langflow Checkout
         early-cancel: any-job-failed
         if: ${{ inputs.librechat_resource.ip == inputs.langflow_resource.ip }}

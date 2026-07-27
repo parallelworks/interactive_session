@@ -204,15 +204,15 @@ if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ]; th
     # flow can call https://${PW_PLATFORM_HOST}/api/openai/v1 with the platform key.
     # Platform org models (org:*) also require an X-Allocation header, which the flow
     # forwards from $PW_ALLOCATION — discover one here. No-op for the GenAI.mil flow.
+    { set +x; } 2>/dev/null   # do not trace the platform key
     if [ -n "${PW_API_KEY}" ]; then
-        { set +x; } 2>/dev/null   # do not trace the platform key
         mkdir -p "${HOME}/.secrets"
         printf '%s' "${PW_API_KEY}" > "${HOME}/.secrets/OPENAI_COMPATIBLE_API_API_KEY"
         chmod 600 "${HOME}/.secrets/OPENAI_COMPATIBLE_API_API_KEY" 2>/dev/null || true
         _plat="${PW_PLATFORM_HOST#https://}"
         pw_alloc=""
         for _try in 1 2 3; do
-            pw_alloc=$(curl -s -m 15 "https://${_plat}/api/allocations" \
+            pw_alloc=$(env -u SSL_CERT_FILE curl -s -m 15 "https://${_plat}/api/allocations" \
                 -H "Authorization: Bearer ${PW_API_KEY}" 2>/dev/null | python3 -c '
 import sys, json
 try:
@@ -233,6 +233,7 @@ except Exception:
             echo "::notice::No platform allocation discovered (org models may need X-Allocation)"
         fi
     fi
+    set -x
 fi
 
 # ── Optional: HFTEI embeddings server ──────────────────────────────────────────
@@ -395,7 +396,9 @@ PROXYCFG
     llm_model="${langflow_llm_model}"
     if [ -z "${llm_model}" ]; then
         { set +x; } 2>/dev/null
-        llm_model=$(curl -s -m 30 -H "Authorization: Bearer ${PW_API_KEY}" "${llm_base_url}/models" \
+        # SSL_CERT_FILE is exported for the Debian-based container and does not
+        # exist on RHEL hosts — drop it for host-side HTTPS calls.
+        llm_model=$(env -u SSL_CERT_FILE curl -s -m 30 -H "Authorization: Bearer ${PW_API_KEY}" "${llm_base_url}/models" \
             | python3 -c 'import sys,json; d=json.load(sys.stdin).get("data",[]); print(d[0]["id"] if d else "")' 2>/dev/null)
         set -x
         if [ -z "${llm_model}" ]; then

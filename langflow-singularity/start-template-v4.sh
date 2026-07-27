@@ -389,6 +389,48 @@ PROXYCFG
         sed -i "s/\${HFTEI_PORT}/${hftei_port}/g" "${proxy_config}"
     fi
 
+    # Route the bundled flows' LLM calls through the platform endpoint, using
+    # the requested model or the first connected one.
+    llm_base_url="https://${PW_PLATFORM_HOST#https://}/api/openai/v1"
+    llm_model="${langflow_llm_model}"
+    if [ -z "${llm_model}" ]; then
+        { set +x; } 2>/dev/null
+        llm_model=$(curl -s -m 30 -H "Authorization: Bearer ${PW_API_KEY}" "${llm_base_url}/models" \
+            | python3 -c 'import sys,json; d=json.load(sys.stdin).get("data",[]); print(d[0]["id"] if d else "")' 2>/dev/null)
+        set -x
+        if [ -z "${llm_model}" ]; then
+            echo "::error title=No connected models::No 'LLM Model' was set and no models are connected to ${llm_base_url}. Connect a model to the platform, or set 'LLM Model' in Langflow Settings."
+            exit 1
+        fi
+        echo "::notice::Using connected model: ${llm_model}"
+    fi
+    singularity exec --bind "${PW_PARENT_JOB_DIR}:${PW_PARENT_JOB_DIR}" "${container_ref}" \
+        /app/.venv/bin/python - "${proxy_config}" "${llm_base_url}" "${llm_model}" <<'LLMPY'
+import sys, yaml
+
+path, base_url, model = sys.argv[1:4]
+with open(path) as f:
+    cfg = yaml.safe_load(f) or {}
+
+flows = cfg.get("flows") or {}
+for flow, default_tasks in (("chatbot", ["respond"]), ("rag_chatbot", ["enhance", "respond"])):
+    fcfg = flows.get(flow) or {}
+    models = fcfg.get("models") or {}
+    # Every LLM entry follows the model parameter; embeddings entries do not.
+    tasks = [k for k, m in models.items() if (m or {}).get("provider") != "HuggingFace TEI"] or default_tasks
+    for task in tasks:
+        m = models.get(task) or {}
+        m.update(provider="OpenAI Compatible API", base_url=base_url, model=model)
+        models[task] = m
+    fcfg["models"] = models
+    flows[flow] = fcfg
+cfg["flows"] = flows
+
+with open(path, "w") as f:
+    yaml.safe_dump(cfg, f, sort_keys=False)
+print(f"Routed chatbot/rag_chatbot LLM calls to {model} at {base_url}")
+LLMPY
+
     # Run the proxy with the Langflow container's Python: it ships every proxy
     # dependency, so no host venv (or host Python version) is involved. Launch
     # uvicorn directly (not bin/langflow_proxy) so a not-yet-created Langflow DB

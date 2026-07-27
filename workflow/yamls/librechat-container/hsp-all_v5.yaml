@@ -26,7 +26,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: librechat
+          branch: librechat-v2
           sparse_checkout:
             - ${{ inputs.container_runtime }}
             - tools/oras
@@ -40,7 +40,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: librechat
+          branch: librechat-v2
           sparse_checkout:
             - ${{ inputs.container_runtime }}
             - tools/oras
@@ -53,7 +53,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: librechat
+          branch: librechat-v2
           sparse_checkout:
             - tools/oras
             - langflow-singularity
@@ -445,6 +445,7 @@ jobs:
           service_langflow_components_path="${{ inputs.langflow.components_path }}"
           service_langflow_database_url="${{ inputs.langflow.database_url }}"
           langflow_rag_db_dir="${{ inputs.langflow.rag_db_dir }}"
+          langflow_llm_model="${{ inputs.langflow.llm_model }}"
           langflow_enable_hftei="${{ inputs.langflow.enable_hftei }}"
           langflow_hftei_model_dir="${{ inputs.langflow.hftei_model_dir }}"
           langflow_enable_proxy="${{ inputs.langflow.enable_proxy }}"
@@ -983,6 +984,17 @@ jobs:
               For SQLite use: sqlite:////absolute/path/to/langflow.db
               The database directory is bind-mounted automatically.
               Defaults to a persistent SQLite file in the home directory.
+          llm_model:
+            label: LLM Model
+            type: string
+            optional: true
+            tooltip: |
+              Model id used by the bundled chatbot and rag_chatbot flows through
+              https://<platform host>/api/openai/v1
+              (e.g. session:<user>:<session>//<model>). Overrides the model
+              entries in the proxy flow configs. Leave empty to use the first
+              model connected to the platform; the run fails if none are
+              connected.
           rag_db_dir:
             label: RAG Database Directory
             type: string

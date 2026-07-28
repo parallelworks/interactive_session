@@ -11,9 +11,7 @@ env:
   JWT_REFRESH_SECRET: ${{ inputs.env_vars.JWT_REFRESH_SECRET }}
   LIBRECHAT_API_KEY: ${{ inputs.env_vars.LIBRECHAT_API_KEY }}
   LANGFLOW_API_KEY: ${{ inputs.env_vars.LANGFLOW_API_KEY }}
-  # Testing override for hosts without PROJECTS_HOME; on DSRC systems
-  # /etc/profile is sourced afterwards, so the real value wins when set.
-  PROJECTS_HOME: ${HOME}
+
 
 jobs:
   github_checkout:
@@ -51,7 +49,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: librechat-v2
+          branch: main
           sparse_checkout:
             - ${{ inputs.container_runtime }}
             - tools/oras
@@ -65,7 +63,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: librechat-v2
+          branch: main
           sparse_checkout:
             - ${{ inputs.container_runtime }}
             - tools/oras
@@ -78,7 +76,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: librechat-v2
+          branch: main
           sparse_checkout:
             - tools/oras
             - langflow-singularity

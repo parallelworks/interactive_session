@@ -22,26 +22,10 @@ container_sif=${service_parent_install_dir}/containers/kasmvnc-${kasmvnc_os}-gpu
 # the compute node where the container ultimately runs. Its only job is to download
 # the SIF; whether the node can mount it (and whether a sandbox must be built from
 # it) is decided at run time by start-template-v4.sh.
-sif_repo=ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-sif:v1
-
-# A truncated SIF (e.g. left by an interrupted download before pulls were
-# atomic) fails every downstream mount and sandbox build with squashfs EOF
-# errors, so never trust an existing file blindly: compare its size against
-# the registry manifest and re-download on mismatch. Skipped when the manifest
-# fetch fails, so an offline controller keeps working with the existing file.
-if [ -f "${container_sif}" ]; then
-    expected_size=$(oras_expected_size ${sif_repo})
-    actual_size=$(stat -c%s "${container_sif}" 2>/dev/null || echo 0)
-    if [ -n "${expected_size}" ] && [ "${actual_size}" != "${expected_size}" ]; then
-        echo "::warning::${container_sif} is ${actual_size} bytes but the registry manifest says ${expected_size}; re-downloading"
-        rm -f "${container_sif}"
-    fi
-fi
-
 if ! [ -f "${container_sif}" ]; then
     echo "::group::KasmVNC SIF Download"
     echo "::notice::Using GitHub registry to download file"
-    oras_pull_file ${sif_repo} kasmvnc-${kasmvnc_os}-gpu.sif ${container_sif}
+    oras_pull_file ghcr.io/parallelworks/kasmvnc-${kasmvnc_os}-sif:v1 kasmvnc-${kasmvnc_os}-gpu.sif ${container_sif}
     if [ ! -s ${container_sif} ]; then
         echo "::error title=Error::Failed to download file ${container_sif}"
         exit 1

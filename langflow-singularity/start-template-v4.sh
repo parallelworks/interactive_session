@@ -1,18 +1,16 @@
 #!/usr/bin/env bash
-# start-template-v3.sh — Langflow via Singularity (runs on compute node)
+# start-template-v4.sh — Langflow via Singularity (runs on the service node)
 #
-# Uses the sandbox downloaded by controller-v3.sh.
-# Patches the Langflow frontend for reverse-proxy base-path access,
-# then launches Langflow bound to the allocated port.
+# Uses the SIF images downloaded by controller-v4.sh. Optionally launches an
+# HFTEI embeddings server for RAG, then Langflow and the OpenAI-compatible
+# Langflow proxy, and registers the Langflow endpoint.
 
 set -o pipefail
 set -x
 
 ################################################################################
 # Required Environment Variables:
-#   - service_port:               Allocated port (from session_runner)
 #   - service_parent_install_dir: Installation directory
-#   - basepath:                   Session URL base path (e.g. /me/session/user/sess/)
 #   - PW_PARENT_JOB_DIR:          Job working directory
 #
 # Optional Environment Variables:
@@ -27,33 +25,41 @@ set -x
 #   - service_langflow_database_url:    LANGFLOW_DATABASE_URL; for SQLite the
 #                                       database dir is bind-mounted automatically
 #                                       (default: sqlite inside config dir)
+#   - langflow_rag_db_dir:              Host directory with the RAG vector
+#                                       database; mounted at /data inside the
+#                                       Langflow container (default: unset)
+#   - langflow_enable_hftei:            "true" → start the HFTEI embeddings
+#                                       server used by the RAG flows
+#   - langflow_hftei_model_dir:         Host directory with the embedding model
+#                                       weights; mounted at /models/mpnet-v2 in
+#                                       the HFTEI container
 ################################################################################
 
 if [ -n "${service_parent_install_dir}" ]; then
-    container_dir=${service_parent_install_dir}/containers/langflow
-    if ! [ -d "${container_dir}" ] && ! [ -w "${service_parent_install_dir}" ]; then
-        echo "::warning::container_dir ${container_dir} does not exist and no write permission to ${service_parent_install_dir}. Resetting to ${HOME}/pw/software."
+    container_sif=${service_parent_install_dir}/containers/langflow.sif
+    if ! [ -f "${container_sif}" ] && ! [ -w "${service_parent_install_dir}" ]; then
+        echo "::warning::container_sif ${container_sif} does not exist and no write permission to ${service_parent_install_dir}. Resetting to ${HOME}/pw/software."
         service_parent_install_dir=${HOME}/pw/software
     fi
 else
     service_parent_install_dir=${HOME}/pw/software
 fi
 
-container_dir=${service_parent_install_dir}/containers/langflow
+container_sif=${service_parent_install_dir}/containers/langflow.sif
 LANGFLOW_DATA_DIR="${service_langflow_data_dir:-${HOME}/pw/.langflow}"
 LANGFLOW_CONFIG_DIR="${service_langflow_config_dir:-${LANGFLOW_DATA_DIR}}"
 
-# Initialize cancel script
-# v5 endpoints: no session_runner port or base path. Langflow serves at the
-# endpoint's root URL, so the v3 base-path patching below degrades to a no-op.
 service_port=$(pw agent open-port) || { echo "::error title=Error::Failed to allocate Langflow port"; exit 1; }
-basepath=""
 
 echo '#!/bin/bash' > cancel.sh
 chmod +x cancel.sh
 
-if ! [ -d "${container_dir}" ]; then
-    echo "::error title=Error::Langflow container not found at ${container_dir}. Run controller first."
+# The LibreChat job waits for this file to locate the Langflow node; scheduled
+# runs get it from the sbatch/qsub headers, unscheduled runs need it here.
+hostname > HOSTNAME
+
+if ! [ -f "${container_sif}" ]; then
+    echo "::error title=Error::Langflow container not found at ${container_sif}. Run controller first."
     exit 1
 fi
 
@@ -89,6 +95,38 @@ if [ "${LANGFLOW_CONFIG_DIR}" != "${LANGFLOW_DATA_DIR}" ]; then
     chmod 777 "${LANGFLOW_CONFIG_DIR}" -Rf || true
 fi
 
+# ── SIF or sandbox fallback ────────────────────────────────────────────────────
+# Some nodes cannot mount SIF images (no squashfs/FUSE support). Probe on this
+# node — the one that runs the service — and fall back to unpacking a sandbox
+# once (offline-safe: pure local unpack). The same probe result applies to
+# every container on this node.
+resolve_container_ref() {
+    # $1 = SIF path, $2 = sandbox dir; prints the reference to run
+    if [ "${use_sandbox}" != "true" ]; then
+        echo "$1"
+        return
+    fi
+    if ! [ -d "$2" ]; then
+        singularity build --fakeroot --force --sandbox "$2" "$1" >&2 || return 1
+    fi
+    echo "$2"
+}
+
+if singularity exec "${container_sif}" /bin/true > /dev/null 2>&1; then
+    use_sandbox=false
+else
+    echo "::notice::SIF mounting not supported on this node; using sandbox fallback"
+    export SINGULARITY_TMPDIR=${HOME}/.singularity_tmp
+    export SINGULARITY_CACHEDIR=${HOME}/.singularity_cache
+    mkdir -p $SINGULARITY_TMPDIR $SINGULARITY_CACHEDIR
+    use_sandbox=true
+fi
+
+container_ref=$(resolve_container_ref "${container_sif}" "${service_parent_install_dir}/containers/langflow-sandbox") || {
+    echo "::error title=Error::Failed to build Langflow sandbox from ${container_sif}"
+    exit 1
+}
+
 # Build optional --bind / --env arrays for the singularity exec call
 EXTRA_BINDS=()
 EXTRA_ENVS=()
@@ -116,113 +154,20 @@ if [ -n "${service_langflow_database_url}" ]; then
     EXTRA_ENVS+=(--env "LANGFLOW_DATABASE_URL=${service_langflow_database_url}")
 fi
 
+# Optional: RAG vector database, mounted where the RAG flows expect it (/data).
+# The proxy flow configs reference corpora by table name inside this directory.
+if [ -n "${langflow_rag_db_dir}" ]; then
+    if ! [ -d "${langflow_rag_db_dir}" ]; then
+        echo "::error title=RAG database not found::RAG Database Directory '${langflow_rag_db_dir}' does not exist on the Langflow host ($(hostname))."
+        exit 1
+    fi
+    EXTRA_BINDS+=(--bind "${langflow_rag_db_dir}:/data")
+    echo "::notice::RAG database ${langflow_rag_db_dir} mounted at /data"
+fi
+
 # Per-job /tmp prevents cross-user permission conflicts on shared nodes
 mkdir -p "$PWD/container_tmp"
 echo "rm -rf $PWD/container_tmp" >> cancel.sh
-
-# ── Patch frontend for base-path access ────────────────────────────────────────
-# Langflow's Vite frontend is built with BASENAME="" and <base href="/"> hardcoded
-# in index.html. Behind a path-prefixed reverse proxy, this breaks in two ways:
-#
-#  1. Assets: relative paths (assets/index.js) resolve via <base href="/"> to
-#     /assets/index.js — the platform can't route these without the session prefix.
-#
-#  2. React Router: reads window.location.pathname (e.g. /me/session/user/sess/)
-#     with no basename configured, finds no matching route, and navigates to
-#     /login (without the basepath). Subsequent API calls land on the platform
-#     instead of the session service.
-#
-# Fix: copy the frontend out of the container to a session dir, patch index.html
-# via Python (sed is unreliable here — & in JS replacement strings expands to the
-# matched text), inject a shim, and bind-mount the patched version back in.
-echo "::group::Patching frontend for base path: ${basepath}"
-
-FRONTEND_INSIDE=$(singularity exec "${container_dir}" python3 -c \
-    "import langflow, os; print(os.path.join(os.path.dirname(langflow.__file__), 'frontend'))" \
-    2>/dev/null)
-
-if [ -z "${FRONTEND_INSIDE}" ]; then
-    echo "::error title=Error::Could not locate Langflow frontend inside container"
-    exit 1
-fi
-echo "::notice::Frontend inside container: ${FRONTEND_INSIDE}"
-
-SESSION_FRONTEND="${PW_PARENT_JOB_DIR}/langflow-frontend"
-
-# Copy the frontend from the container to the session directory.
-# PW_PARENT_JOB_DIR is bind-mounted at the same path so cp can write to the host.
-singularity exec \
-    --bind "${PW_PARENT_JOB_DIR}:${PW_PARENT_JOB_DIR}" \
-    "${container_dir}" \
-    cp -r "${FRONTEND_INSIDE}" "${SESSION_FRONTEND}"
-
-INDEX_HTML="${SESSION_FRONTEND}/index.html"
-if [ ! -f "${INDEX_HTML}" ]; then
-    echo "::error title=Error::index.html not found in ${SESSION_FRONTEND}"
-    exit 1
-fi
-
-# Patch index.html using Python so JS special chars (&&, &, \) are never
-# misinterpreted as sed metacharacters in the replacement string.
-python3 - "${INDEX_HTML}" "${basepath}" <<'PYEOF'
-import sys
-
-index_path, basepath = sys.argv[1], sys.argv[2].rstrip('/')
-
-with open(index_path) as f:
-    html = f.read()
-
-# Fix the hardcoded <base href="/"> so relative Vite assets (src="assets/...")
-# resolve to basepath/assets/... instead of /assets/...
-html = html.replace('href="/', f'href="{basepath}/')
-html = html.replace('src="/', f'src="{basepath}/')
-
-# Shim injected before </head> so it runs before the React bundle:
-#
-#  - Location.prototype.pathname: strip basepath so React Router sees / instead
-#    of /me/session/user/sess/ and matches its routes correctly.
-#
-#  - history.pushState / replaceState: add basepath so client-side navigation
-#    produces URLs the platform can route back to this session.
-#
-#  - window.fetch / XMLHttpRequest / WebSocket: prepend basepath to all
-#    root-relative calls (/api/v1/...) so they are routed to this session.
-shim = f"""<script>(function(){{
-  var b="{basepath}";
-  // React Router routing fix
-  try{{
-    var pd=Object.getOwnPropertyDescriptor(Location.prototype,"pathname");
-    Object.defineProperty(Location.prototype,"pathname",{{
-      get:function(){{var p=pd.get.call(this);return p===b?"/":(p.startsWith(b+"/")?p.slice(b.length):p);}},
-      configurable:true
-    }});
-  }}catch(e){{}}
-  // Navigation fix
-  function pfx(u){{return typeof u==="string"&&u.charAt(0)==="/"&&u.indexOf(b)!==0?b+u:u;}}
-  var oP=history.pushState,oR=history.replaceState;
-  history.pushState=function(s,t,u){{return oP.call(this,s,t,pfx(u));}};
-  history.replaceState=function(s,t,u){{return oR.call(this,s,t,pfx(u));}};
-  // Network call fixes
-  var oF=window.fetch;
-  window.fetch=function(u,o){{return oF.call(this,typeof u==="string"?pfx(u):u,o);}};
-  var oX=XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open=function(m,u){{if(typeof u==="string")arguments[1]=pfx(u);return oX.apply(this,arguments);}};
-  var oW=window.WebSocket;
-  function PW(url,proto){{return proto?new oW(pfx(url),proto):new oW(pfx(url));}}
-  PW.prototype=oW.prototype;PW.CONNECTING=0;PW.OPEN=1;PW.CLOSING=2;PW.CLOSED=3;
-  window.WebSocket=PW;
-}})();</script>"""
-
-html = html.replace('</head>', shim + '</head>', 1)
-
-with open(index_path, 'w') as f:
-    f.write(html)
-
-print(f"Patched {index_path}")
-PYEOF
-
-echo "::notice::Frontend patched — binding ${SESSION_FRONTEND} → ${FRONTEND_INSIDE}"
-echo "::endgroup::"
 
 # ── Optional: auto-import bundled flows ────────────────────────────────────────
 # When the combined LibreChat + Langflow workflow ships flow JSONs alongside the
@@ -232,8 +177,9 @@ echo "::endgroup::"
 # non-null user_id and the proxy discovers them as selectable models.
 if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ]; then
     # Import the user's own flows from ${langflow_proxy_dir}/flows. Optionally also import
-    # the test flows bundled in this repo (langflow-singularity/flows, e.g. pw-test-one) —
-    # only when ${langflow_import_bundled_flows} is true (on for general-all, off for hsp-all).
+    # the flows bundled in this repo (langflow-singularity/flows, e.g. chatbot,
+    # rag_chatbot) — only when ${langflow_import_bundled_flows} is true (on for
+    # general-all, off for hsp-all).
     # Everything is merged into one directory so a single LANGFLOW_LOAD_FLOWS_PATH imports it;
     # imported flows are owned by the superuser, so the proxy discovers them as models.
     proxy_flows_import_dir="${PW_PARENT_JOB_DIR}/langflow/import-flows"
@@ -258,15 +204,15 @@ if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ]; th
     # flow can call https://${PW_PLATFORM_HOST}/api/openai/v1 with the platform key.
     # Platform org models (org:*) also require an X-Allocation header, which the flow
     # forwards from $PW_ALLOCATION — discover one here. No-op for the GenAI.mil flow.
+    { set +x; } 2>/dev/null   # do not trace the platform key
     if [ -n "${PW_API_KEY}" ]; then
-        { set +x; } 2>/dev/null   # do not trace the platform key
         mkdir -p "${HOME}/.secrets"
         printf '%s' "${PW_API_KEY}" > "${HOME}/.secrets/OPENAI_COMPATIBLE_API_API_KEY"
         chmod 600 "${HOME}/.secrets/OPENAI_COMPATIBLE_API_API_KEY" 2>/dev/null || true
         _plat="${PW_PLATFORM_HOST#https://}"
         pw_alloc=""
         for _try in 1 2 3; do
-            pw_alloc=$(curl -s -m 15 "https://${_plat}/api/allocations" \
+            pw_alloc=$(env -u SSL_CERT_FILE curl -s -m 15 "https://${_plat}/api/allocations" \
                 -H "Authorization: Bearer ${PW_API_KEY}" 2>/dev/null | python3 -c '
 import sys, json
 try:
@@ -287,6 +233,46 @@ except Exception:
             echo "::notice::No platform allocation discovered (org models may need X-Allocation)"
         fi
     fi
+    set -x
+fi
+
+# ── Optional: HFTEI embeddings server ──────────────────────────────────────────
+# Serves the embedding model the RAG flows use to vectorize queries. Runs on a
+# runtime-allocated port; the proxy flow configs reference it with the
+# ${HFTEI_PORT} placeholder, substituted into the proxy config below.
+if [ "${langflow_enable_hftei}" = "true" ]; then
+    hftei_sif=${service_parent_install_dir}/containers/hftei-cpu-1.6.0.sif
+    if ! [ -f "${hftei_sif}" ]; then
+        echo "::error title=Error::HFTEI container not found at ${hftei_sif}. Run controller first."
+        exit 1
+    fi
+    if [ -z "${langflow_hftei_model_dir}" ] || ! [ -d "${langflow_hftei_model_dir}" ]; then
+        echo "::error title=HFTEI model not found::HFTEI Model Directory '${langflow_hftei_model_dir:-<empty>}' does not exist on the Langflow host ($(hostname)). Stage the embedding model weights there, or disable HFTEI."
+        exit 1
+    fi
+    hftei_ref=$(resolve_container_ref "${hftei_sif}" "${service_parent_install_dir}/containers/hftei-sandbox") || {
+        echo "::error title=Error::Failed to build HFTEI sandbox from ${hftei_sif}"
+        exit 1
+    }
+    hftei_port=$(pw agent open-port) || { echo "::error title=Error::Failed to allocate HFTEI port"; exit 1; }
+
+    echo "::group::Starting HFTEI embeddings server"
+    echo "::notice::Model: ${langflow_hftei_model_dir} → /models/mpnet-v2, port ${hftei_port}"
+    singularity exec \
+        --bind "${langflow_hftei_model_dir}:/models/mpnet-v2" \
+        "${hftei_ref}" \
+        text-embeddings-router \
+            --hostname 0.0.0.0 \
+            --port "${hftei_port}" \
+            --model-id /models/mpnet-v2 \
+            --pooling mean \
+            --tokenization-workers 4 \
+        > hftei.log 2>&1 &
+
+    echo "kill $! #hftei" >> cancel.sh
+    tail -f hftei.log &
+    echo "kill $! #hftei-logs" >> cancel.sh
+    echo "::endgroup::"
 fi
 
 # ── Start Langflow ─────────────────────────────────────────────────────────────
@@ -294,25 +280,22 @@ echo "::group::Starting Langflow"
 echo "::notice::Port: ${service_port}"
 echo "::notice::Data directory: ${LANGFLOW_DATA_DIR}"
 echo "::notice::Config directory: ${LANGFLOW_CONFIG_DIR}"
-echo "::notice::Container: ${container_dir}"
+echo "::notice::Container: ${container_ref}"
 [ -n "${service_langflow_components_path}" ] && echo "::notice::Components path: ${service_langflow_components_path}"
 [ -n "${service_langflow_database_url}" ]    && echo "::notice::Database URL: ${service_langflow_database_url}"
 
 singularity exec \
     --writable-tmpfs \
     --bind "${LANGFLOW_DATA_DIR}:${LANGFLOW_DATA_DIR}" \
-    --bind "${SESSION_FRONTEND}:${FRONTEND_INSIDE}" \
     --bind "$PWD/container_tmp:/tmp" \
     "${EXTRA_BINDS[@]}" \
     --env LANGFLOW_CONFIG_DIR="${LANGFLOW_CONFIG_DIR}" \
     "${EXTRA_ENVS[@]}" \
-    --env LANGFLOW_FRONTEND_PATH="${FRONTEND_INSIDE}" \
-    --env LANGFLOW_ROOT_PATH="${basepath}" \
     --env DO_NOT_TRACK="true" \
     --env LANGFLOW_DO_NOT_TRACK="true" \
     --env LANGFLOW_ALEMBIC_LOG_TO_STDOUT="true" \
     --env LANGFLOW_SKIP_AUTH_AUTO_LOGIN="true" \
-    "${container_dir}" \
+    "${container_ref}" \
     langflow run \
         --host 0.0.0.0 \
         --port "${service_port}" \
@@ -348,7 +331,6 @@ if [ "${langflow_enable_proxy}" = "true" ] && { [ -z "${langflow_proxy_dir}" ] |
 fi
 if [ "${langflow_enable_proxy}" = "true" ] && [ -n "${langflow_proxy_dir}" ] && [ -d "${langflow_proxy_dir}/langflow_proxy" ]; then
     echo "::group::Starting Langflow proxy"
-    proxy_venv="${service_parent_install_dir}/tools/langflow_proxy_venv"
     # Allocate a port dynamically and publish it to the shared job dir so the
     # (parallel) LibreChat job can read it and register the proxy endpoint.
     proxy_port=$(pw agent open-port)
@@ -402,24 +384,98 @@ PROXYCFG
     fi
     [ -n "${proxy_flows_file}" ] && cat "${proxy_flows_file}" >> "${proxy_config}"
 
-    if [ -x "${proxy_venv}/bin/python" ]; then
-        # Launch uvicorn directly (not bin/langflow_proxy) so a not-yet-created
-        # Langflow DB doesn't trip the strict pre-flight validator; the proxy
-        # discovers flows lazily and re-reads its config on every request.
-        APP_CONFIG_PATH="${proxy_config}" \
-        PYTHONPATH="${langflow_proxy_dir}:${PYTHONPATH:-}" \
-        "${proxy_venv}/bin/python" -m uvicorn langflow_proxy.main:app \
-            --host 0.0.0.0 --port "${proxy_port}" \
-            > langflow-proxy.log 2>&1 &
-        proxy_pid=$!
-        echo "kill ${proxy_pid} #langflow-proxy" >> cancel.sh
-        echo "::notice::Langflow proxy → http://localhost:${proxy_port}/v1 (pid ${proxy_pid})"
-        tail -f langflow-proxy.log &
-        echo "kill $! #langflow-proxy-logs" >> cancel.sh
-    else
-        echo "::error title=Langflow proxy venv missing::Proxy venv not found at ${proxy_venv} (controller did not build it). Cannot start the proxy that 'Start Langflow Proxy?' requires."
-        exit 1
+    # The flows file cannot know the runtime-allocated HFTEI port, so it
+    # references it as ${HFTEI_PORT} (e.g. base_url: "http://localhost:${HFTEI_PORT}").
+    if [ -n "${hftei_port:-}" ]; then
+        sed -i "s/\${HFTEI_PORT}/${hftei_port}/g" "${proxy_config}"
     fi
+
+    # Route the bundled flows' LLM calls through the platform endpoint, using
+    # the requested model or the first connected one.
+    llm_base_url="https://${PW_PLATFORM_HOST#https://}/api/openai/v1"
+    llm_model="${langflow_llm_model}"
+    if [ -z "${llm_model}" ]; then
+        { set +x; } 2>/dev/null
+        # SSL_CERT_FILE is exported for the Debian-based container and does not
+        # exist on RHEL hosts — drop it for host-side HTTPS calls.
+        llm_model=$(env -u SSL_CERT_FILE curl -s -m 30 -H "Authorization: Bearer ${PW_API_KEY}" "${llm_base_url}/models" \
+            | python3 -c 'import sys,json; d=json.load(sys.stdin).get("data",[]); print(d[0]["id"] if d else "")' 2>/dev/null)
+        set -x
+        if [ -z "${llm_model}" ]; then
+            echo "::error title=No connected models::No 'LLM Model' was set and no models are connected to ${llm_base_url}. Connect a model to the platform, or set 'LLM Model' in Langflow Settings."
+            exit 1
+        fi
+        echo "::notice::Using connected model: ${llm_model}"
+    fi
+    singularity exec --bind "${PW_PARENT_JOB_DIR}:${PW_PARENT_JOB_DIR}" "${container_ref}" \
+        /app/.venv/bin/python - "${proxy_config}" "${llm_base_url}" "${llm_model}" <<'LLMPY'
+import sys, yaml
+
+path, base_url, model = sys.argv[1:4]
+with open(path) as f:
+    cfg = yaml.safe_load(f) or {}
+
+flows = cfg.get("flows") or {}
+for flow, default_tasks in (("chatbot", ["respond"]), ("rag_chatbot", ["enhance", "respond"])):
+    fcfg = flows.get(flow) or {}
+    models = fcfg.get("models") or {}
+    # Every LLM entry follows the model parameter; embeddings entries do not.
+    tasks = [k for k, m in models.items() if (m or {}).get("provider") != "HuggingFace TEI"] or default_tasks
+    for task in tasks:
+        m = models.get(task) or {}
+        m.update(provider="OpenAI Compatible API", base_url=base_url, model=model)
+        models[task] = m
+    fcfg["models"] = models
+    flows[flow] = fcfg
+cfg["flows"] = flows
+
+with open(path, "w") as f:
+    yaml.safe_dump(cfg, f, sort_keys=False)
+print(f"Routed chatbot/rag_chatbot LLM calls to {model} at {base_url}")
+LLMPY
+
+    # Run the proxy with the Langflow container's Python: it ships every proxy
+    # dependency, so no host venv (or host Python version) is involved. Launch
+    # uvicorn directly (not bin/langflow_proxy) so a not-yet-created Langflow DB
+    # doesn't trip the strict pre-flight validator; the proxy discovers flows
+    # lazily and re-reads its config on every request.
+    singularity exec \
+        --bind "${langflow_proxy_dir}:${langflow_proxy_dir}" \
+        --bind "${PW_PARENT_JOB_DIR}:${PW_PARENT_JOB_DIR}" \
+        --bind "$(dirname "${proxy_db_path}"):$(dirname "${proxy_db_path}")" \
+        --env APP_CONFIG_PATH="${proxy_config}" \
+        --env PYTHONPATH="${langflow_proxy_dir}" \
+        "${container_ref}" \
+        /app/.venv/bin/python -m uvicorn langflow_proxy.main:app \
+            --host 0.0.0.0 --port "${proxy_port}" \
+        > langflow-proxy.log 2>&1 &
+    proxy_pid=$!
+    echo "kill ${proxy_pid} #langflow-proxy" >> cancel.sh
+    echo "::notice::Langflow proxy → http://localhost:${proxy_port}/v1 (pid ${proxy_pid})"
+    tail -f langflow-proxy.log &
+    echo "kill $! #langflow-proxy-logs" >> cancel.sh
+
+    # Warm up each flow once in the background: the first request after a
+    # cold start can hit a Python import deadlock inside Langflow
+    # (concurrent langchain imports), so absorb it here instead of on a
+    # user-facing request.
+    (
+        auth_args=()
+        [ -n "${LANGFLOW_API_KEY}" ] && auth_args=(-H "Authorization: Bearer ${LANGFLOW_API_KEY}")
+        models=""
+        for _ in $(seq 1 60); do
+            models=$(curl -s -m 5 "${auth_args[@]}" "localhost:${proxy_port}/v1/models" \
+                | python3 -c 'import sys,json; print(" ".join(m["id"] for m in json.load(sys.stdin).get("data",[])))' 2>/dev/null)
+            [ -n "${models}" ] && break
+            sleep 10
+        done
+        for model in ${models}; do
+            curl -s -m 300 "${auth_args[@]}" -H 'Content-Type: application/json' \
+                -d "{\"model\": \"${model}\", \"stream\": false, \"max_tokens\": 1, \"messages\": [{\"role\": \"user\", \"content\": \"ping\"}]}" \
+                "localhost:${proxy_port}/v1/chat/completions" > /dev/null
+            echo "warmed up ${model}"
+        done
+    ) > warmup.log 2>&1 &
     echo "::endgroup::"
 fi
 

@@ -5,9 +5,9 @@ set -x
 ################################################################################
 # Interactive Session Controller - Langflow (Singularity)
 #
-# Purpose: Download the Langflow Singularity sandbox from GHCR and prepare the
-#          data directory. The sandbox is shared across sessions on the same
-#          cluster so the download only happens once.
+# Purpose: Download the Langflow and HFTEI SIF images from GHCR and prepare the
+#          data directory. The images are shared across sessions on the same
+#          cluster so each download only happens once.
 # Runs on: Controller/login node (has internet access)
 # Called by: Workflow preprocessing step
 #
@@ -20,9 +20,9 @@ source ${PW_PARENT_JOB_DIR}/tools/oras/libs.sh
 
 mkdir -p "${service_parent_install_dir}" || true
 if [ -n "${service_parent_install_dir}" ]; then
-    container_dir=${service_parent_install_dir}/containers/langflow
-    if ! [ -d "${container_dir}" ] && ! [ -w "${service_parent_install_dir}" ]; then
-        echo "::warning::container_dir ${container_dir} does not exist and no write permission to ${service_parent_install_dir}. Resetting to ${HOME}/pw/software."
+    container_sif=${service_parent_install_dir}/containers/langflow.sif
+    if ! [ -f "${container_sif}" ] && ! [ -w "${service_parent_install_dir}" ]; then
+        echo "::warning::container_sif ${container_sif} does not exist and no write permission to ${service_parent_install_dir}. Resetting to ${HOME}/pw/software."
         service_parent_install_dir=${HOME}/pw/software
     fi
 else
@@ -32,37 +32,62 @@ fi
 mkdir -p ${service_parent_install_dir}/containers ${service_parent_install_dir}/tools
 chmod a+rX ${service_parent_install_dir}/containers ${service_parent_install_dir}/tools
 
-container_dir=${service_parent_install_dir}/containers/langflow
-container_tgz=${container_dir}.tgz
+container_sif=${service_parent_install_dir}/containers/langflow.sif
 
 # Create and open up the Langflow data directory so the container user can write to it
 mkdir -p "${service_langflow_data_dir:-${HOME}/pw/.langflow}"
 chmod 777 "${service_langflow_data_dir:-${HOME}/pw/.langflow}" -Rf || true
 
 # Download the container only when it is not already present (idempotent)
-if ! [ -d "${container_dir}" ]; then
+if ! [ -f "${container_sif}" ]; then
     echo "::group::Langflow Singularity Container Download"
     echo "::notice::Using GitHub registry to download file"
-    oras_pull_file ghcr.io/parallelworks/langflow:1.0 langflow.tgz ${container_tgz}
-    if [ ! -s ${container_tgz} ]; then
-        echo "::error title=Error::Failed to download file ${container_tgz}"
+    oras_pull_file ghcr.io/parallelworks/langflow:2.0 langflow.sif ${container_sif}
+    if [ ! -s ${container_sif} ]; then
+        echo "::error title=Error::Failed to download file ${container_sif}"
         exit 1
     fi
-    if ! tar -xzf ${container_tgz} -C $(dirname ${container_dir}); then
-        echo "::error title=Error::Failed to extract ${container_tgz}"
-        exit 1
-    fi
-    chmod -R a+rX ${container_dir}
-    rm ${container_tgz}
+    chmod a+r ${container_sif}
     echo "::endgroup::"
 fi
 
-echo "::notice::Langflow container ready at ${container_dir}"
+echo "::notice::Langflow container ready at ${container_sif}"
 
-# ── Optional: Langflow proxy Python environment ────────────────────────────────
-# When ${langflow_proxy_dir} is set (combined LibreChat + Langflow workflow), build
-# a venv with the proxy's dependencies so the start script can launch the
-# OpenAI-compatible proxy alongside Langflow. The proxy CODE lives at
+# ── Optional: HFTEI embeddings server container ────────────────────────────────
+if [ "${langflow_enable_hftei}" = "true" ]; then
+    hftei_sif=${service_parent_install_dir}/containers/hftei-cpu-1.6.0.sif
+    if ! [ -f "${hftei_sif}" ]; then
+        echo "::group::HFTEI Singularity Container Download"
+        oras_pull_file ghcr.io/parallelworks/hftei:cpu-1.6.0 hftei-cpu-1.6.0.sif ${hftei_sif}
+        if [ ! -s ${hftei_sif} ]; then
+            echo "::error title=Error::Failed to download file ${hftei_sif}"
+            exit 1
+        fi
+        chmod a+r ${hftei_sif}
+        echo "::endgroup::"
+    fi
+    echo "::notice::HFTEI container ready at ${hftei_sif}"
+
+    # Download the embedding model when it is not already present (idempotent)
+    if [ -n "${langflow_hftei_model_dir}" ] && [ ! -s "${langflow_hftei_model_dir}/model.safetensors" ]; then
+        echo "::group::HFTEI Embedding Model Download (sentence-transformers/all-mpnet-base-v2)"
+        mkdir -p "${langflow_hftei_model_dir}/1_Pooling"
+        hf_base="https://huggingface.co/sentence-transformers/all-mpnet-base-v2/resolve/main"
+        for f in config.json tokenizer.json tokenizer_config.json special_tokens_map.json vocab.txt model.safetensors 1_Pooling/config.json; do
+            if ! curl -sSL --fail -o "${langflow_hftei_model_dir}/${f}" "${hf_base}/${f}"; then
+                echo "::error title=Error::Failed to download ${hf_base}/${f}. Stage the model at ${langflow_hftei_model_dir} manually, or disable HFTEI."
+                exit 1
+            fi
+        done
+        chmod -R a+rX "${langflow_hftei_model_dir}" || true
+        echo "::endgroup::"
+    fi
+    echo "::notice::HFTEI model ready at ${langflow_hftei_model_dir}"
+fi
+
+# ── Optional: Langflow proxy code checks ───────────────────────────────────────
+# The proxy runs inside the Langflow container (its Python ships every proxy
+# dependency), so no host venv is built. The proxy CODE lives at
 # ${langflow_proxy_dir} and is intentionally NOT shipped in this repo.
 if [ "${langflow_enable_proxy}" = "true" ]; then
     # The proxy is enabled, so a valid proxy code directory is REQUIRED on this (Langflow)
@@ -80,17 +105,5 @@ if [ "${langflow_enable_proxy}" = "true" ]; then
         echo "::error title=Langflow proxy code not found::'Langflow Proxy Path' = '${langflow_proxy_dir}' has no 'langflow_proxy/' package on the Langflow host ($(hostname)). Stage the langflow_proxy code there (it is not shipped in this repo; remember each cluster has its own filesystem), or disable the proxy."
         exit 1
     fi
-    proxy_venv="${service_parent_install_dir}/tools/langflow_proxy_venv"
-    if [ ! -x "${proxy_venv}/bin/python" ]; then
-        echo "::group::Langflow proxy venv setup"
-        python3 -m venv "${proxy_venv}"
-        # requirements.txt is an editable self-install (-e .) which needs write
-        # access to the code dir; install the declared deps directly instead.
-        "${proxy_venv}/bin/pip" install --quiet --upgrade pip
-        "${proxy_venv}/bin/pip" install --quiet fastapi uvicorn pydantic aiohttp pyyaml
-        # Make the venv usable by any user (shared install under service_parent_install_dir).
-        chmod -R a+rX "${proxy_venv}" || true
-        echo "::endgroup::"
-    fi
-    echo "::notice::Langflow proxy venv ready at ${proxy_venv}"
+    echo "::notice::Langflow proxy code ready at ${langflow_proxy_dir}"
 fi

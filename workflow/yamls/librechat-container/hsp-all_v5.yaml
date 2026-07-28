@@ -12,6 +12,7 @@ env:
   LIBRECHAT_API_KEY: ${{ inputs.env_vars.LIBRECHAT_API_KEY }}
   LANGFLOW_API_KEY: ${{ inputs.env_vars.LANGFLOW_API_KEY }}
 
+
 jobs:
   github_checkout:
     steps:
@@ -48,7 +49,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: librechat-v2
+          branch: main
           sparse_checkout:
             - ${{ inputs.container_runtime }}
             - tools/oras
@@ -62,7 +63,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: librechat-v2
+          branch: main
           sparse_checkout:
             - ${{ inputs.container_runtime }}
             - tools/oras
@@ -75,7 +76,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: librechat-v2
+          branch: main
           sparse_checkout:
             - tools/oras
             - langflow-singularity
@@ -122,6 +123,35 @@ jobs:
           sed -i '/=""/d' inputs.sh # remove var=""
           # Add export= to all lines
           sed -i 's/^/export /' inputs.sh
+          # session_runner v1.4 computed the shared HSP install dir; v5 calls
+          # script_submitter directly, so replicate that step here.
+          source /etc/profile
+          if [ -z "${PROJECTS_HOME}" ]; then
+            echo "::warning title=Install Directory::PROJECTS_HOME is empty - falling back to ${HOME}/pw"
+            hsp_install_dir="${HOME}/pw"
+          else
+            hsp_install_dir="${PROJECTS_HOME}/hsp"
+          fi
+          if [ ! -d "${hsp_install_dir}" ]; then
+            if ! mkdir -p "${hsp_install_dir}"; then
+              echo "::error title=Install Directory::Failed to create ${hsp_install_dir} - permission denied"
+              exit 1
+            fi
+            if ! chmod g+rwx,o+rx "${hsp_install_dir}"; then
+              echo "::error title=Install Directory::Failed to set permissions on ${hsp_install_dir} - permission denied"
+              exit 1
+            fi
+          fi
+          echo "::notice title=Install Directory::Using Install Directory: ${hsp_install_dir}"
+          echo "export service_parent_install_dir=${hsp_install_dir}" >> inputs.sh
+          # HSP default: mirror the Langflow proxy-path default so LibreChat treats the
+          # proxy as enabled (waits for / registers / forwards it). Only needs to be
+          # non-empty here — the actual directory is used on the Langflow host.
+          if [ "${{ inputs.langflow.enable_proxy }}" = "true" ] && [ -z "${{ inputs.langflow.proxy_dir }}" ]; then
+            _default_proxy_dir="${PROJECTS_HOME}/hsp/tools/langflow_proxy-main"
+            echo "export langflow_proxy_dir=\"${_default_proxy_dir}\"" >> inputs.sh
+            echo "::notice::Defaulted langflow_proxy_dir to ${_default_proxy_dir}"
+          fi
       - name: Lock librechat_dir
         early-cancel: any-job-failed
         run: |
@@ -193,7 +223,7 @@ jobs:
         uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
-          $yaml: workflow/script_submitter/v3.6/general.yaml
+          $yaml: workflow/script_submitter/v3.6/hsp.yaml
           resource: ${{ inputs.librechat_resource }}
           shebang: '#!/bin/bash'
           use_existing_script: true
@@ -207,11 +237,17 @@ jobs:
           skip_cleanups_file: ${{ needs.librechat_preprocessing.outputs.SKIP_CLEANUP_PATH }}
           slurm:
             is_enabled: ${{ inputs.librechat_cluster.slurm.is_enabled }}
+            account: ${{ inputs.librechat_cluster.slurm.account }}
             partition: ${{ inputs.librechat_cluster.slurm.partition }}
+            qos: ${{ inputs.librechat_cluster.slurm.qos }}
+            cpus_per_task: ${{ inputs.librechat_cluster.slurm.cpus_per_task }}
+            nodes: ${{ inputs.librechat_cluster.slurm.nodes }}
+            node_type: ${{ inputs.librechat_cluster.slurm.node_type }}
             scheduler_directives: ${{ inputs.librechat_cluster.slurm.scheduler_directives }}
             time: ${{ inputs.librechat_cluster.slurm.time }}
           pbs:
             is_enabled: ${{ inputs.librechat_cluster.pbs.is_enabled }}
+            account: ${{ inputs.librechat_cluster.pbs.account }}
             scheduler_directives: ${{ inputs.librechat_cluster.pbs.scheduler_directives }}
         cleanup: |
           set -x
@@ -224,11 +260,6 @@ jobs:
           source inputs.sh 2>/dev/null || true
           rm -f "${librechat_dir:-${HOME}/pw/LibreChat}/.librechat.lock" \
             && echo "::notice::librechat_dir lock removed" || true
-      - name: Cancel Wait for Endpoint
-        uses: parallelworks/cancel-jobs
-        with:
-          jobs:
-            - librechat_wait_for_endpoint
 
   librechat_wait_for_endpoint:
     working-directory: ${PW_PARENT_JOB_DIR}/librechat
@@ -289,6 +320,27 @@ jobs:
           sed -i '/=""/d' inputs.sh
           # Add export to all lines
           sed -i 's/^/export /' inputs.sh
+          # session_runner v1.4 computed the shared HSP install dir; v5 calls
+          # script_submitter directly, so replicate that step here.
+          source /etc/profile
+          if [ -z "${PROJECTS_HOME}" ]; then
+            echo "::warning title=Install Directory::PROJECTS_HOME is empty - falling back to ${HOME}/pw"
+            hsp_install_dir="${HOME}/pw"
+          else
+            hsp_install_dir="${PROJECTS_HOME}/hsp"
+          fi
+          if [ ! -d "${hsp_install_dir}" ]; then
+            if ! mkdir -p "${hsp_install_dir}"; then
+              echo "::error title=Install Directory::Failed to create ${hsp_install_dir} - permission denied"
+              exit 1
+            fi
+            if ! chmod g+rwx,o+rx "${hsp_install_dir}"; then
+              echo "::error title=Install Directory::Failed to set permissions on ${hsp_install_dir} - permission denied"
+              exit 1
+            fi
+          fi
+          echo "::notice title=Install Directory::Using Install Directory: ${hsp_install_dir}"
+          echo "export service_parent_install_dir=${hsp_install_dir}" >> inputs.sh
       - name: Controller Preprocessing
         early-cancel: any-job-failed
         run: |
@@ -336,7 +388,7 @@ jobs:
         uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
-          $yaml: workflow/script_submitter/v3.6/general.yaml
+          $yaml: workflow/script_submitter/v3.6/hsp.yaml
           resource: ${{ inputs.librechat_resource }}
           shebang: '#!/bin/bash'
           use_existing_script: true
@@ -350,17 +402,18 @@ jobs:
           skip_cleanups_file: ${{ needs.manager_preprocessing.outputs.SKIP_CLEANUP_PATH }}
           slurm:
             is_enabled: ${{ inputs.librechat_cluster.slurm.is_enabled }}
+            account: ${{ inputs.librechat_cluster.slurm.account }}
             partition: ${{ inputs.librechat_cluster.slurm.partition }}
+            qos: ${{ inputs.librechat_cluster.slurm.qos }}
+            cpus_per_task: ${{ inputs.librechat_cluster.slurm.cpus_per_task }}
+            nodes: ${{ inputs.librechat_cluster.slurm.nodes }}
+            node_type: ${{ inputs.librechat_cluster.slurm.node_type }}
             scheduler_directives: ${{ inputs.librechat_cluster.slurm.scheduler_directives }}
             time: ${{ inputs.librechat_cluster.slurm.time }}
           pbs:
             is_enabled: ${{ inputs.librechat_cluster.pbs.is_enabled }}
+            account: ${{ inputs.librechat_cluster.pbs.account }}
             scheduler_directives: ${{ inputs.librechat_cluster.pbs.scheduler_directives }}
-      - name: Cancel Wait for Endpoint
-        uses: parallelworks/cancel-jobs
-        with:
-          jobs:
-            - manager_wait_for_endpoint
 
   manager_wait_for_endpoint:
     working-directory: ${PW_PARENT_JOB_DIR}/manager
@@ -430,6 +483,44 @@ jobs:
           sed -i '/=""/d' inputs.sh
           # Add export to all lines
           sed -i 's/^/export /' inputs.sh
+          # session_runner v1.4 computed the shared HSP install dir; v5 calls
+          # script_submitter directly, so replicate that step here.
+          source /etc/profile
+          if [ -z "${PROJECTS_HOME}" ]; then
+            echo "::warning title=Install Directory::PROJECTS_HOME is empty - falling back to ${HOME}/pw"
+            hsp_install_dir="${HOME}/pw"
+          else
+            hsp_install_dir="${PROJECTS_HOME}/hsp"
+          fi
+          if [ ! -d "${hsp_install_dir}" ]; then
+            if ! mkdir -p "${hsp_install_dir}"; then
+              echo "::error title=Install Directory::Failed to create ${hsp_install_dir} - permission denied"
+              exit 1
+            fi
+            if ! chmod g+rwx,o+rx "${hsp_install_dir}"; then
+              echo "::error title=Install Directory::Failed to set permissions on ${hsp_install_dir} - permission denied"
+              exit 1
+            fi
+          fi
+          echo "::notice title=Install Directory::Using Install Directory: ${hsp_install_dir}"
+          echo "export service_parent_install_dir=${hsp_install_dir}" >> inputs.sh
+          # HSP default: if the proxy is enabled but no Langflow Proxy Path was given,
+          # point it at the shared staged copy under PROJECTS_HOME; the controller
+          # fails the run if it is missing.
+          if [ "${{ inputs.langflow.enable_proxy }}" = "true" ] && [ -z "${{ inputs.langflow.proxy_dir }}" ]; then
+            _default_proxy_dir="${PROJECTS_HOME}/hsp/tools/langflow_proxy-main"
+            echo "export langflow_proxy_dir=\"${_default_proxy_dir}\"" >> inputs.sh
+            echo "::notice::Defaulted langflow_proxy_dir to ${_default_proxy_dir}"
+          fi
+          # Form defaults may reference ${PROJECTS_HOME}; export it (resolved by the
+          # install-dir step above) at the top of inputs.sh so they expand on source.
+          sed -i "1i export PROJECTS_HOME=\"${PROJECTS_HOME:-${HOME}}\"" inputs.sh
+          # Backstop for CLI runs that omit the field; the controller downloads
+          # the model here when missing.
+          if [ "${{ inputs.langflow.enable_hftei }}" = "true" ] && [ -z "${{ inputs.langflow.hftei_model_dir }}" ]; then
+            echo 'export langflow_hftei_model_dir="${PROJECTS_HOME}/hsp/models/MPNet-V2"' >> inputs.sh
+            echo "::notice::Defaulted langflow_hftei_model_dir"
+          fi
       - name: Controller Preprocessing
         early-cancel: any-job-failed
         run: |
@@ -477,7 +568,7 @@ jobs:
         uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
-          $yaml: workflow/script_submitter/v3.6/general.yaml
+          $yaml: workflow/script_submitter/v3.6/hsp.yaml
           resource: ${{ inputs.langflow_resource }}
           shebang: '#!/bin/bash'
           use_existing_script: true
@@ -491,17 +582,18 @@ jobs:
           skip_cleanups_file: ${{ needs.langflow_preprocessing.outputs.SKIP_CLEANUP_PATH }}
           slurm:
             is_enabled: ${{ inputs.langflow_cluster.slurm.is_enabled }}
+            account: ${{ inputs.langflow_cluster.slurm.account }}
             partition: ${{ inputs.langflow_cluster.slurm.partition }}
+            qos: ${{ inputs.langflow_cluster.slurm.qos }}
+            cpus_per_task: ${{ inputs.langflow_cluster.slurm.cpus_per_task }}
+            nodes: ${{ inputs.langflow_cluster.slurm.nodes }}
+            node_type: ${{ inputs.langflow_cluster.slurm.node_type }}
             scheduler_directives: ${{ inputs.langflow_cluster.slurm.scheduler_directives }}
             time: ${{ inputs.langflow_cluster.slurm.time }}
           pbs:
             is_enabled: ${{ inputs.langflow_cluster.pbs.is_enabled }}
+            account: ${{ inputs.langflow_cluster.pbs.account }}
             scheduler_directives: ${{ inputs.langflow_cluster.pbs.scheduler_directives }}
-      - name: Cancel Wait for Endpoint
-        uses: parallelworks/cancel-jobs
-        with:
-          jobs:
-            - langflow_wait_for_endpoint
 
   langflow_wait_for_endpoint:
     working-directory: ${PW_PARENT_JOB_DIR}/langflow
@@ -577,12 +669,81 @@ jobs:
                 hidden: true
                 default: true
                 label: Is SLURM enabled? Yes, unless the slurm section is hidden and ignored
+              account:
+                label: SLURM account
+                type: slurm-accounts
+                resource: ${{ inputs.librechat_resource }}
+                tooltip: '--account=value slurm directive'
+                ignore: ${{ 'existing' != inputs.librechat_resource.provider }}
+                hidden: ${{ .ignore }}
               partition:
                 type: slurm-partitions
                 label: SLURM partition
                 optional: true
                 resource: ${{ inputs.librechat_resource }}
                 tooltip: '--qos=partition slurm directive'
+              qos:
+                label: Quality of Service [QoS]
+                type: slurm-qos
+                resource: ${{ inputs.librechat_resource }}
+                tooltip: '--qos=value slurm directive'
+                ignore: ${{ 'existing' != inputs.librechat_resource.provider }}
+                hidden: ${{ .ignore }}
+              cpus_per_task:
+                label: CPUs per task
+                type: number
+                default: 1
+                tooltip: '--cpus-per-task= SLURM directive to set the number of CPUs per task'
+                ignore: ${{ 'existing' != inputs.librechat_resource.provider }}
+                hidden: ${{ .ignore }}
+              nodes:
+                label: Number of nodes
+                type: number
+                default: 1
+                tooltip: '--nodes=value slurm directive'
+                ignore: ${{ 'existing' != inputs.librechat_resource.provider }}
+                hidden: ${{ .ignore }}
+              node_type:
+                label: Node Type
+                type: dropdown
+                optional: true
+                default: ""
+                option-key: ${{ inputs.librechat_resource.ip }}
+                tooltip: '--constraint=<value> slurm directive'
+                ignore: ${{ 'existing' != inputs.librechat_resource.provider || (inputs.librechat_resource.ip != 'blueback.navydsrc.hpc.mil' && inputs.librechat_resource.ip != 'narwhal.navydsrc.hpc.mil' && inputs.librechat_resource.ip != 'nautilus.navydsrc.hpc.mil' && inputs.librechat_resource.ip != 'raider.afrl.hpc.mil' && inputs.librechat_resource.ip != 'crux.mhpcc.hpc.mil') }}
+                hidden: ${{ .ignore }}
+                options:
+                  blueback.navydsrc.hpc.mil:
+                    - standard
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  narwhal.navydsrc.hpc.mil:
+                    - standard
+                    - bigmem
+                    - mla
+                    - smla
+                    - dmla
+                    - viz
+                    - transfer
+                  nautilus.navydsrc.hpc.mil:
+                    - standard
+                    - highclock
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  raider.afrl.hpc.mil:
+                    - standard
+                    - highclock
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  crux.mhpcc.hpc.mil:
+                    - AMD
+                    - Intel
               time:
                 label: Walltime
                 type: string
@@ -608,6 +769,9 @@ jobs:
                 hidden: true
                 default: true
                 label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
+              account:
+                label: Account
+                type: string
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
@@ -651,12 +815,81 @@ jobs:
                 hidden: true
                 default: true
                 label: Is SLURM enabled? Yes, unless the slurm section is hidden and ignored
+              account:
+                label: SLURM account
+                type: slurm-accounts
+                resource: ${{ inputs.langflow_resource }}
+                tooltip: '--account=value slurm directive'
+                ignore: ${{ 'existing' != inputs.langflow_resource.provider }}
+                hidden: ${{ .ignore }}
               partition:
                 type: slurm-partitions
                 label: SLURM partition
                 optional: true
                 resource: ${{ inputs.langflow_resource }}
                 tooltip: '--qos=partition slurm directive'
+              qos:
+                label: Quality of Service [QoS]
+                type: slurm-qos
+                resource: ${{ inputs.langflow_resource }}
+                tooltip: '--qos=value slurm directive'
+                ignore: ${{ 'existing' != inputs.langflow_resource.provider }}
+                hidden: ${{ .ignore }}
+              cpus_per_task:
+                label: CPUs per task
+                type: number
+                default: 1
+                tooltip: '--cpus-per-task= SLURM directive to set the number of CPUs per task'
+                ignore: ${{ 'existing' != inputs.langflow_resource.provider }}
+                hidden: ${{ .ignore }}
+              nodes:
+                label: Number of nodes
+                type: number
+                default: 1
+                tooltip: '--nodes=value slurm directive'
+                ignore: ${{ 'existing' != inputs.langflow_resource.provider }}
+                hidden: ${{ .ignore }}
+              node_type:
+                label: Node Type
+                type: dropdown
+                optional: true
+                default: ""
+                option-key: ${{ inputs.langflow_resource.ip }}
+                tooltip: '--constraint=<value> slurm directive'
+                ignore: ${{ 'existing' != inputs.langflow_resource.provider || (inputs.langflow_resource.ip != 'blueback.navydsrc.hpc.mil' && inputs.langflow_resource.ip != 'narwhal.navydsrc.hpc.mil' && inputs.langflow_resource.ip != 'nautilus.navydsrc.hpc.mil' && inputs.langflow_resource.ip != 'raider.afrl.hpc.mil' && inputs.langflow_resource.ip != 'crux.mhpcc.hpc.mil') }}
+                hidden: ${{ .ignore }}
+                options:
+                  blueback.navydsrc.hpc.mil:
+                    - standard
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  narwhal.navydsrc.hpc.mil:
+                    - standard
+                    - bigmem
+                    - mla
+                    - smla
+                    - dmla
+                    - viz
+                    - transfer
+                  nautilus.navydsrc.hpc.mil:
+                    - standard
+                    - highclock
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  raider.afrl.hpc.mil:
+                    - standard
+                    - highclock
+                    - bigmem
+                    - mla
+                    - viz
+                    - transfer
+                  crux.mhpcc.hpc.mil:
+                    - AMD
+                    - Intel
               time:
                 label: Walltime
                 type: string
@@ -682,6 +915,9 @@ jobs:
                 hidden: true
                 default: true
                 label: Is PBS enabled? Yes, unless the pbs section is hidden and ignored
+              account:
+                label: Account
+                type: string
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
@@ -802,12 +1038,14 @@ jobs:
           hftei_model_dir:
             label: HFTEI Model Directory
             type: string
+            default: ${PROJECTS_HOME}/hsp/models/MPNet-V2
             hidden: ${{ inputs.langflow.enable_hftei == false }}
             ignore: ${{ inputs.langflow.enable_hftei == false }}
             tooltip: |
               Path on the Langflow host to the embedding model weights,
               mounted at /models/mpnet-v2 inside the HFTEI container.
-              If the directory is missing, the controller downloads
+              Defaults to <install dir>/models/MPNet-V2. If the directory is
+              missing, the controller downloads
               sentence-transformers/all-mpnet-base-v2 into it.
           enable_proxy:
             label: Start Langflow Proxy?
@@ -824,7 +1062,7 @@ jobs:
             label: Import bundled test flows?
             type: boolean
             hidden: true
-            default: true
+            default: false
             tooltip: |
               When true, the flows shipped in this repo
               (langflow-singularity/flows: chatbot, rag_chatbot) are imported
@@ -833,6 +1071,7 @@ jobs:
           proxy_dir:
             label: Langflow Proxy Path
             type: string
+            optional: true
             tooltip: |
               Path on the service host to the langflow_proxy code (the directory
               that contains the 'langflow_proxy/' Python package). Required when

@@ -11,7 +11,7 @@ jobs:
           uses: parallelworks/checkout
           with:
             repo: https://github.com/parallelworks/interactive_session.git
-            branch: streamlit
+            branch: main
             sparse_checkout:
               - streamlit-singularity
               - tools/oras

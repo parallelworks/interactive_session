@@ -245,12 +245,49 @@ if ${CONTAINER} exec ${USERNS_FLAG} "${container_sif}" true >/dev/null 2>&1; the
     container_image="${container_sif}"
 else
     echo "::notice::Cannot mount SIF on this node; using sandbox directory"
-    export SINGULARITY_TMPDIR=${HOME}/.singularity_tmp
-    export SINGULARITY_CACHEDIR=${HOME}/.singularity_cache
-    mkdir -p $SINGULARITY_TMPDIR $SINGULARITY_CACHEDIR
+    export APPTAINER_CACHEDIR=${HOME}/.singularity_cache
+    export SINGULARITY_CACHEDIR=${APPTAINER_CACHEDIR}
+    mkdir -p ${APPTAINER_CACHEDIR}
+    # A sandbox left behind by an interrupted build passes the -d check but
+    # cannot run; rebuild it instead of failing at launch. Fakeroot-built
+    # sandboxes contain write-protected directories, hence the chmod before rm.
+    if [ -d "${sandbox_dir}" ] && ! ${CONTAINER} exec ${USERNS_FLAG} "${sandbox_dir}" true >/dev/null 2>&1; then
+        echo "::warning::Existing sandbox ${sandbox_dir} is not runnable; rebuilding"
+        chmod -R u+w "${sandbox_dir}" 2>/dev/null || true
+        rm -rf "${sandbox_dir}"
+    fi
     if ! [ -d "${sandbox_dir}" ]; then
         echo "Building KasmVNC sandbox from ${container_sif}..."
-        if ! ${CONTAINER} build --fakeroot --force --sandbox "${sandbox_dir}" "${container_sif}"; then
+        # The build tmpdir must allow exec (the temporary rootfs lives there) and,
+        # with --fakeroot, ownership changes -- network homes (e.g. HSP /p/home)
+        # reject the chowns and a noexec /var/tmp or /tmp rejects the rootfs, so
+        # probe tmpdir candidates and build modes until one produces a runnable
+        # sandbox. A non-fakeroot build simply leaves every file owned by the
+        # user, which --userns runs are fine with.
+        sif_kb=$(du -k "${container_sif}" | cut -f1)
+        sandbox_built=""
+        for _tmp_base in /var/tmp /tmp "${HOME}"; do
+            [ -d "${_tmp_base}" ] && [ -w "${_tmp_base}" ] || continue
+            [ "$(df -Pk "${_tmp_base}" 2>/dev/null | awk 'NR==2{print $4}')" -ge "$((sif_kb * 4))" ] 2>/dev/null || continue
+            export APPTAINER_TMPDIR="${_tmp_base}/.kasmvnc_build_$$"
+            export SINGULARITY_TMPDIR="${APPTAINER_TMPDIR}" TMPDIR="${APPTAINER_TMPDIR}"
+            mkdir -p "${APPTAINER_TMPDIR}"
+            for _fakeroot_flag in --fakeroot ""; do
+                chmod -R u+w "${sandbox_dir}" 2>/dev/null || true
+                rm -rf "${sandbox_dir}"
+                if ${CONTAINER} build ${_fakeroot_flag} --force --sandbox "${sandbox_dir}" "${container_sif}" \
+                   && ${CONTAINER} exec ${USERNS_FLAG} "${sandbox_dir}" true >/dev/null 2>&1; then
+                    sandbox_built=1
+                    break
+                fi
+                echo "::warning::Sandbox build failed (tmpdir ${_tmp_base}, flags '${_fakeroot_flag}'); trying next option"
+            done
+            rm -rf "${APPTAINER_TMPDIR}"
+            if [ -n "${sandbox_built}" ]; then break; fi
+        done
+        if [ -z "${sandbox_built}" ]; then
+            chmod -R u+w "${sandbox_dir}" 2>/dev/null || true
+            rm -rf "${sandbox_dir}"
             echo "::error title=Error::Failed to build sandbox from ${container_sif}"
             exit 1
         fi

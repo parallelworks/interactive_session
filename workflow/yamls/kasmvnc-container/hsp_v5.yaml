@@ -9,7 +9,7 @@ jobs:
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
-          branch: main
+          branch: endpoints-hsp
           sparse_checkout:
             - ${{ inputs.container_runtime }}
             - tools/oras
@@ -128,6 +128,11 @@ jobs:
         with:
           jobs:
             - wait_for_endpoint
+      - name: Exit Workflow with Error
+        run: |
+          echo "::error title=Error::Session runner failed before the endpoint came online"
+          exit 1
+
   wait_for_endpoint:
     needs:
       - preprocessing

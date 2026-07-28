@@ -113,6 +113,11 @@ jobs:
           pbs:
             is_enabled: false
             scheduler_directives: ""
+      - name: Cancel Wait for Endpoint
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - wait_for_endpoint
 
   wait_for_endpoint:
     needs:

@@ -142,6 +142,11 @@ jobs:
           source inputs.sh 2>/dev/null || true
           rm -f "${librechat_dir:-${HOME}/pw/LibreChat}/.librechat.lock" \
             && echo "::notice::librechat_dir lock removed" || true
+      - name: Cancel Wait for Endpoint
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - wait_for_endpoint
 
   wait_for_endpoint:
     needs:

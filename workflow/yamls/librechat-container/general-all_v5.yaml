@@ -183,6 +183,11 @@ jobs:
           source inputs.sh 2>/dev/null || true
           rm -f "${librechat_dir:-${HOME}/pw/LibreChat}/.librechat.lock" \
             && echo "::notice::librechat_dir lock removed" || true
+      - name: Cancel Wait for Endpoint
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - librechat_wait_for_endpoint
 
   librechat_wait_for_endpoint:
     working-directory: ${PW_PARENT_JOB_DIR}/librechat
@@ -306,6 +311,11 @@ jobs:
           pbs:
             is_enabled: ${{ inputs.librechat_cluster.pbs.is_enabled }}
             scheduler_directives: ${{ inputs.librechat_cluster.pbs.scheduler_directives }}
+      - name: Cancel Wait for Endpoint
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - manager_wait_for_endpoint
 
   manager_wait_for_endpoint:
     working-directory: ${PW_PARENT_JOB_DIR}/manager
@@ -434,6 +444,11 @@ jobs:
           pbs:
             is_enabled: ${{ inputs.langflow_cluster.pbs.is_enabled }}
             scheduler_directives: ${{ inputs.langflow_cluster.pbs.scheduler_directives }}
+      - name: Cancel Wait for Endpoint
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - langflow_wait_for_endpoint
 
   langflow_wait_for_endpoint:
     working-directory: ${PW_PARENT_JOB_DIR}/langflow

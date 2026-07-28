@@ -123,6 +123,11 @@ jobs:
             echo "Removing tools/oras"
             rm -rf tools/oras
           fi
+      - name: Cancel Wait for Endpoint
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - wait_for_endpoint
 
   wait_for_endpoint:
     if: ${{ inputs.resource.type != 'kubernetes' }}

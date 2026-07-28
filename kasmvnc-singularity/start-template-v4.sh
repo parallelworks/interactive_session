@@ -221,42 +221,131 @@ else
     echo "::warning::Skipping /etc/environment bind (file missing or contains shell syntax)"
 fi
 
-USERNS_FLAG=""
-WRITABLE_TMPFS_FLAG=""
-_sing_bin=$(command -v "${CONTAINER}" 2>/dev/null)
-if [ -n "${_sing_bin}" ] && ! test -u "${_sing_bin}"; then
-    # No setuid bit: unprivileged installation requires --userns
-    USERNS_FLAG="--userns"
-    echo "::notice::${CONTAINER} has no setuid bit, enabling --userns"
-elif df -T "${service_parent_install_dir}/containers" 2>/dev/null | awk 'NR==2{print $2}' | grep -qi lustre; then
-    echo "::notice::Container is on a Lustre filesystem, skipping --writable-tmpfs (overlay not supported)"
-else
-    WRITABLE_TMPFS_FLAG="--writable-tmpfs"
-fi
-
-# Prefer running the SIF directly; some nodes cannot mount it (no squashfs
-# kernel/FUSE support), in which case unpack it once into a sandbox directory.
 if ! [ -f "${container_sif}" ]; then
     echo "::error title=Error::Missing container image ${container_sif}"
     exit 1
 fi
-if ${CONTAINER} exec ${USERNS_FLAG} "${container_sif}" true >/dev/null 2>&1; then
-    echo "::notice::SIF image is runnable on this node"
-    container_image="${container_sif}"
-else
-    echo "::notice::Cannot mount SIF on this node; using sandbox directory"
-    export SINGULARITY_TMPDIR=${HOME}/.singularity_tmp
-    export SINGULARITY_CACHEDIR=${HOME}/.singularity_cache
-    mkdir -p $SINGULARITY_TMPDIR $SINGULARITY_CACHEDIR
-    if ! [ -d "${sandbox_dir}" ]; then
-        echo "Building KasmVNC sandbox from ${container_sif}..."
-        if ! ${CONTAINER} build --fakeroot --force --sandbox "${sandbox_dir}" "${container_sif}"; then
-            echo "::error title=Error::Failed to build sandbox from ${container_sif}"
-            exit 1
-        fi
-        chmod -R a+rX "${sandbox_dir}" || true
+
+# Pick a (runtime, image) combination proven to work on this node by probing a
+# real 'exec true'. No single signal can be trusted across this fleet: FIPS-Go
+# apptainer builds whose engine panics when it cannot dlopen libcrypto
+# (narwhal's 1.3.6 module), SIF FUSE mounts unavailable, sandboxes on NFS or
+# parallel home filesystems failing exec with I/O errors, and noexec tmpdirs.
+# Order: each candidate runtime tries the SIF, then a previously built
+# sandbox, then a fresh sandbox extracted to node-local disk first (shared
+# filesystems are where sandbox exec breaks).
+sif_kb=$(du -k "${container_sif}" | cut -f1)
+
+runtime_userns_flag() {
+    local bin
+    bin=$(command -v "$1" 2>/dev/null) || true
+    if [ -n "${bin}" ] && ! test -u "${bin}"; then
+        echo "--userns"
     fi
-    container_image="${sandbox_dir}"
+}
+
+probe_image() { # <runtime> <image>
+    "$1" exec $(runtime_userns_flag "$1") "$2" /bin/true >/dev/null 2>&1
+}
+
+sif_squashfs_offset() { # <runtime>: squashfs partition offset (CLI-only, works even when the engine is broken)
+    "$1" sif list "${container_sif}" 2>/dev/null \
+        | awk -F'|' 'tolower($0) ~ /squashfs/ {split($4, a, "-"); gsub(/[^0-9]/, "", a[1]); print a[1]; exit}'
+}
+
+extract_sandbox() { # <runtime> <dest>
+    local rt=$1 dest=$2 offset
+    chmod -R u+w "${dest}" 2>/dev/null || true
+    rm -rf "${dest}"
+    # Host unsquashfs reads the squashfs partition straight out of the SIF:
+    # no container engine, no fakeroot, no build tmpdir constraints. Files
+    # come out owned by the invoking user, which --userns runs are fine with.
+    offset=$(sif_squashfs_offset "${rt}")
+    if [ -n "${offset}" ] && command -v unsquashfs >/dev/null 2>&1; then
+        if unsquashfs -no-xattrs -o "${offset}" -d "${dest}" "${container_sif}"; then
+            return 0
+        fi
+        chmod -R u+w "${dest}" 2>/dev/null || true
+        rm -rf "${dest}"
+        # unsquashfs older than 4.5 has no -o: carve the partition out first
+        if tail -c +"$((offset + 1))" "${container_sif}" > "${dest}.part" \
+           && unsquashfs -no-xattrs -d "${dest}" "${dest}.part"; then
+            rm -f "${dest}.part"
+            return 0
+        fi
+        rm -f "${dest}.part"
+        chmod -R u+w "${dest}" 2>/dev/null || true
+        rm -rf "${dest}"
+    fi
+    # No usable unsquashfs: fall back to the runtime's own converter
+    ${rt} build --force --sandbox "${dest}" "${container_sif}"
+}
+
+container_image=""
+_tried_runtimes=""
+for _rt in "${CONTAINER}" apptainer singularity; do
+    case " ${_tried_runtimes} " in *" ${_rt} "*) continue ;; esac
+    _tried_runtimes="${_tried_runtimes} ${_rt}"
+    command -v ${_rt} >/dev/null 2>&1 || module load ${_rt} >/dev/null 2>&1 || true
+    command -v ${_rt} >/dev/null 2>&1 || continue
+
+    if probe_image "${_rt}" "${container_sif}"; then
+        echo "::notice::${_rt} runs the SIF directly on this node"
+        CONTAINER=${_rt}
+        container_image="${container_sif}"
+        break
+    fi
+    echo "::notice::${_rt} cannot run the SIF directly on this node; trying sandbox"
+
+    if [ -d "${sandbox_dir}" ] && probe_image "${_rt}" "${sandbox_dir}"; then
+        CONTAINER=${_rt}
+        container_image="${sandbox_dir}"
+        break
+    fi
+
+    for _loc in "${TMPDIR:-}" /tmp /var/tmp "${service_parent_install_dir}/containers"; do
+        [ -n "${_loc}" ] && [ -d "${_loc}" ] && [ -w "${_loc}" ] || continue
+        [ "$(df -Pk "${_loc}" 2>/dev/null | awk 'NR==2{print $4}')" -ge "$((sif_kb * 4))" ] 2>/dev/null || continue
+        # noexec mounts cannot host a runnable sandbox; catch them cheaply
+        if cp /bin/true "${_loc}/.exec-probe-$$" 2>/dev/null && "${_loc}/.exec-probe-$$" 2>/dev/null; then
+            _exec_ok=1
+        else
+            _exec_ok=""
+        fi
+        rm -f "${_loc}/.exec-probe-$$"
+        [ -n "${_exec_ok}" ] || continue
+        if [ "${_loc}" = "${service_parent_install_dir}/containers" ]; then
+            _dest="${sandbox_dir}"    # shared install dir: persistent, reused by later runs
+        else
+            _dest="${_loc}/kasmvnc-${kasmvnc_os}-sandbox-${PW_RUN_SLUG}"    # node-local: per-run
+            echo "chmod -R u+w ${_dest} 2>/dev/null; rm -rf ${_dest} # node-local sandbox" >> cancel.sh
+        fi
+        echo "::notice::Extracting sandbox to ${_dest}"
+        if extract_sandbox "${_rt}" "${_dest}" && probe_image "${_rt}" "${_dest}"; then
+            CONTAINER=${_rt}
+            container_image="${_dest}"
+            break 2
+        fi
+        echo "::warning::Sandbox at ${_dest} is not runnable with ${_rt}; trying next option"
+        chmod -R u+w "${_dest}" 2>/dev/null || true
+        rm -rf "${_dest}"
+    done
+done
+
+if [ -z "${container_image}" ]; then
+    echo "::error title=Error::No container runtime on this node can run ${container_sif} (tried:${_tried_runtimes})"
+    exit 1
+fi
+echo "::notice::Using ${CONTAINER} with image ${container_image}"
+
+USERNS_FLAG=$(runtime_userns_flag "${CONTAINER}")
+WRITABLE_TMPFS_FLAG=""
+if [ -n "${USERNS_FLAG}" ]; then
+    echo "::notice::${CONTAINER} has no setuid bit, enabling --userns"
+elif df -T "$(dirname "${container_image}")" 2>/dev/null | awk 'NR==2{print $2}' | grep -qi lustre; then
+    echo "::notice::Container is on a Lustre filesystem, skipping --writable-tmpfs (overlay not supported)"
+else
+    WRITABLE_TMPFS_FLAG="--writable-tmpfs"
 fi
 
 env

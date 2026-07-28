@@ -229,6 +229,10 @@ jobs:
         with:
           jobs:
             - librechat_wait_for_endpoint
+      - name: Exit Workflow with Error
+        run: |
+          echo "::error title=Error::Librechat session runner failed before the endpoint came online"
+          exit 1
 
   librechat_wait_for_endpoint:
     working-directory: ${PW_PARENT_JOB_DIR}/librechat
@@ -361,6 +365,10 @@ jobs:
         with:
           jobs:
             - manager_wait_for_endpoint
+      - name: Exit Workflow with Error
+        run: |
+          echo "::error title=Error::Manager session runner failed before the endpoint came online"
+          exit 1
 
   manager_wait_for_endpoint:
     working-directory: ${PW_PARENT_JOB_DIR}/manager
@@ -502,6 +510,10 @@ jobs:
         with:
           jobs:
             - langflow_wait_for_endpoint
+      - name: Exit Workflow with Error
+        run: |
+          echo "::error title=Error::Langflow session runner failed before the endpoint came online"
+          exit 1
 
   langflow_wait_for_endpoint:
     working-directory: ${PW_PARENT_JOB_DIR}/langflow

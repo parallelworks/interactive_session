@@ -7,6 +7,16 @@
 > jupyterlab `*_v5.yaml` files as the ground truth; this doc explains the deltas and
 > the order to apply them. Platform facts live in
 > [activate-platform.md](activate-platform.md) (§12 "Endpoint sessions").
+>
+> **hsp variant (`hsp_v5.yaml`):** same steps, but start from `hsp_v4.yaml`'s form —
+> keep the top-level `resource` input and the full hsp `slurm`/`pbs` groups
+> (account/qos/cpus_per_task/nodes/node_type) and pass them all through to
+> `workflow/script_submitter/v3.6/hsp.yaml` (copy the `with:` block from
+> `kasmvnc-container/hsp_v5.yaml`). Also drop the v4 hsp extras: the
+> `PW_PLATFORM_HOST=activate.hpc.mil` fallback, the random `password=`, the
+> `module load singularity` line, and `service_rootless_docker`. Verified end-to-end
+> with `jupyterlab-host/hsp_v5.yaml` on gcpsmall, 2026-07-29 (run completed in ~2 min,
+> `{port}` substituted, 200 on `/lab`, anon 307, delete killed the tree).
 
 ## What changes conceptually
 

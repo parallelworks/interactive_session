@@ -105,6 +105,10 @@ jobs:
         with:
           jobs:
             - wait_for_endpoint
+      - name: Exit Workflow with Error
+        run: |
+          echo "::error title=Error::Session runner failed before the endpoint came online"
+          exit 1
   wait_for_endpoint:
     needs:
       - preprocessing

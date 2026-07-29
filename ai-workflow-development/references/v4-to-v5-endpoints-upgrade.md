@@ -178,6 +178,20 @@ full ask_cluster round trip).
 
 ## Gotchas checklist (each one bit a real run)
 
+- **Step `cleanup:` runs when its JOB ends — on success too — not at workflow end**
+  (verified 2026-07-29, librechat hsp_v5 run 00001). A preprocessing-step cleanup
+  guarded by `[ -f "${PWD}/SKIP_CLEANUP" ]` always fires before `wait_for_endpoint`
+  can touch that file, so it deleted the librechat_dir lock while the service ran.
+  Guard job-scoped cleanups with a completion marker the job's LAST step writes
+  (`touch PREPROCESSING_DONE`; see `librechat-container/hsp_v5.yaml`) — only
+  cross-job cleanups (e.g. session_runner's) can use the SKIP_CLEANUP file.
+  `hsp-all_v5.yaml`'s librechat Lock cleanup still carries the broken guard.
+- **hsp conversions of services that used `session_runner/v1.4/hsp.yaml` must
+  replicate its shared-install-dir step**: derive `service_parent_install_dir` from
+  `PROJECTS_HOME` (`${PROJECTS_HOME}/hsp`, falling back to `${HOME}/pw`) in
+  preprocessing — `script_submitter` does not compute it (copy the block from
+  `hsp-all_v5.yaml` / `librechat-container/hsp_v5.yaml`).
+
 - **The endpoint proxy preserves the public Host header** (`<name>.activate.pw`).
   An app with a DNS-rebinding/host guard (hermes dashboard v0.17+) passes every
   local curl and then 400s "Invalid Host header" for real users — and the

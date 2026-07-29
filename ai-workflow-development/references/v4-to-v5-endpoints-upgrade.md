@@ -16,7 +16,11 @@
 > `PW_PLATFORM_HOST=activate.hpc.mil` fallback, the random `password=`, the
 > `module load singularity` line, and `service_rootless_docker`. Verified end-to-end
 > with `jupyterlab-host/hsp_v5.yaml` on gcpsmall, 2026-07-29 (run completed in ~2 min,
-> `{port}` substituted, 200 on `/lab`, anon 307, delete killed the tree).
+> `{port}` substituted, 200 on `/lab`, anon 307, delete killed the tree); same checks
+> passed for the pre-existing `openvscode/hsp_v5.yaml` the same day.
+> **Check whether an `hsp_v5.yaml` already exists before writing one** — openvscode's
+> shipped with the original endpoints PRs (#976/#982), and "creating" it would have
+> clobbered the #1015/#1016 fixes.
 
 ## What changes conceptually
 

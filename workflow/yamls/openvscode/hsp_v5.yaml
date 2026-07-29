@@ -17,9 +17,6 @@ jobs:
         - name: Create Inputs
           run: |
             set -x
-            if [ -z "${PW_PLATFORM_HOST}" ]; then
-              PW_PLATFORM_HOST=activate.hpc.mil
-            fi
             # Write PW variables
             env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
             # Encase values between quotes
@@ -326,7 +323,5 @@ jobs:
             label: Parent Install Directory
             type: string
             default: ${HOME}/pw/software
-            hidden: ${{ inputs.service.conda_install == false }}
-            ignore: ${{ .hidden }}
             tooltip: Software dependencies are installed in this directory. Ensure the directory has sufficient space!
 

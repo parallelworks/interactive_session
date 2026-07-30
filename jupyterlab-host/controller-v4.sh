@@ -75,7 +75,10 @@ f_set_up_conda_from_yaml() {
 
 if [[ "${service_conda_install}" == "true" ]]; then
     echo "::group::Conda Installation"
-    if [[ "${service_install_instructions}" == "yaml" ]]; then
+    if [[ "${service_install_instructions}" == "install_command" ]]; then
+        echo "::notice::Running install command ${service_install_command}"
+        eval ${service_install_command}
+    elif [[ "${service_install_instructions}" == "yaml" ]]; then
         echo "::notice::Installing custom conda environment"
         printf "%b" "${service_yaml}" > conda.yaml
         cat conda.yaml
@@ -110,7 +113,9 @@ if [[ "${service_conda_install}" == "true" ]]; then
         f_set_up_conda_from_yaml ${service_parent_install_dir}/${service_conda_install_dir} ${service_conda_env} ${service_install_instructions}.yaml
     fi
     echo "::endgroup::"
-    service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
+    if [ -z "${service_load_env}" ]; then
+        service_load_env="source ${service_conda_sh}; conda activate ${service_conda_env}"
+    fi
 fi
 
 eval "${service_load_env}"

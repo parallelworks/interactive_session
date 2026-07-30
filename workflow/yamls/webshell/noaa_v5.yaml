@@ -1,5 +1,7 @@
+# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
 permissions:
   - '*'
+
 jobs:
   preprocessing:
     ssh:
@@ -22,11 +24,9 @@ jobs:
           # Write input form variables and ensure the pw agent is in the PATH
           cat <<'EOF' >> inputs.sh
           PATH=$HOME/pw:$PATH
-          service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
-          service_download_url="${{ inputs.service.download_url }}"
-          service_password="${{ inputs.password }}"
-          service_directory="${{ inputs.service.directory }}"
-          pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG} --slug ?folder=${{ inputs.service.directory }}"
+          service_parent_install_dir="${{ inputs.service.novnc_parent_install_dir }}"
+          service_novnc_tgz_basename="${{ inputs.service.novnc_tgz_basename }}"
+          pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG}"
           EOF
           # Remove empty variables
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
@@ -76,6 +76,7 @@ jobs:
           cat ${{ inputs.service.name }}/start-template-v4.sh >> ./start-service-${PW_JOB_ID}.sh
           echo "SCRIPT_PATH=${PWD}/start-service-${PW_JOB_ID}.sh" | tee -a $OUTPUTS
           echo "SKIP_CLEANUP_PATH=${PWD}/SKIP_CLEANUP" | tee -a $OUTPUTS
+
   session_runner:
     needs:
       - preprocessing
@@ -118,6 +119,7 @@ jobs:
         run: |
           echo "::error title=Error::Session runner failed before the endpoint came online"
           exit 1
+
   wait_for_endpoint:
     needs:
       - preprocessing
@@ -141,13 +143,10 @@ jobs:
         with:
           jobs:
             - session_runner
+
 'on':
   execute:
     inputs:
-      password:
-        label: Password for IDE session
-        type: password
-        tooltip: Enter password or leave blank for no password
       resource:
         type: compute-clusters
         label: Service host
@@ -210,7 +209,7 @@ jobs:
                 default: 1
                 tooltip: '--nodes=value slurm directive'
                 ignore: ${{ 'existing' != inputs.resource.provider }}
-                hidden: true
+                hidden: ${{ .ignore }}
               time:
                 label: Walltime
                 type: string
@@ -243,25 +242,20 @@ jobs:
                   #PBS -l ngpus=1
       service:
         type: group
-        label: VS Code Settings
-        collapsed: true
+        hidden: true
+        label: Webshell
         items:
           name:
             type: string
             hidden: true
-            default: openvscode
-          parent_install_dir:
-            label: Parent Install Directory
+            default: webshell
+          novnc_parent_install_dir:
+            label: noVNC installation directory
             type: string
+            hidden: true
             default: ${HOME}/pw/software
-            tooltip: Defaults to ~/pw/software. Make sure there is enough disk space available!
-          download_url:
-            label: Download URL
+          novnc_tgz_basename:
+            label: Basename of the novnc tgz file
             type: string
-            default: https://github.com/coder/code-server/releases/download/v4.105.1/code-server-4.105.1-linux-amd64.tar.gz
-            tooltip: Downloads or uses the code-server server version specified in the URL
-          directory:
-            label: Directory to open in VS Code
-            type: string
-            default: ${HOME}
-            tooltip: Directory to open in VS code
+            hidden: true
+            default: noVNC-1.3.0.tgz

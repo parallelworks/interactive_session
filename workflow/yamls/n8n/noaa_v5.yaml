@@ -1,17 +1,26 @@
+# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
 permissions:
   - '*'
+
 jobs:
   preprocessing:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - name: Checkout
+      - name: Checkout ${{ inputs.service.container_runtime }}
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
           branch: main
           sparse_checkout:
-            - ${{ inputs.service.name }}
+            - ${{ inputs.service.container_runtime }}
+            - tools/oras
+        cleanup: |
+          set -x
+          if [ -d tools/oras ]; then
+            echo "Removing tools/oras"
+            rm -rf tools/oras
+          fi
       - name: Create Inputs
         run: |
           set -x
@@ -22,11 +31,10 @@ jobs:
           # Write input form variables and ensure the pw agent is in the PATH
           cat <<'EOF' >> inputs.sh
           PATH=$HOME/pw:$PATH
-          service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
-          service_download_url="${{ inputs.service.download_url }}"
-          service_password="${{ inputs.password }}"
-          service_directory="${{ inputs.service.directory }}"
-          pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG} --slug ?folder=${{ inputs.service.directory }}"
+          service_parent_install_dir="${{ inputs.parent_install_dir }}"
+          n8n_image_tag="${{ inputs.service.n8n_image_tag }}"
+          n8n_data_dir="${{ inputs.service.n8n_data_dir }}"
+          pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG}"
           EOF
           # Remove empty variables
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
@@ -47,7 +55,7 @@ jobs:
           set -x
           # This script prepares the target host and always runs in the controller node
           cp inputs.sh controller-${PW_JOB_ID}.sh
-          cat ${{ inputs.service.name }}/controller-v4.sh >> controller-${PW_JOB_ID}.sh
+          cat ${{ inputs.service.container_runtime }}/controller-v4.sh >> controller-${PW_JOB_ID}.sh
           bash controller-${PW_JOB_ID}.sh
       - name: Create Service Script
         run: |
@@ -73,9 +81,10 @@ jobs:
 
           echo "::notice::Starting service"
           EOF
-          cat ${{ inputs.service.name }}/start-template-v4.sh >> ./start-service-${PW_JOB_ID}.sh
+          cat ${{ inputs.service.container_runtime }}/start-template-v4.sh >> ./start-service-${PW_JOB_ID}.sh
           echo "SCRIPT_PATH=${PWD}/start-service-${PW_JOB_ID}.sh" | tee -a $OUTPUTS
           echo "SKIP_CLEANUP_PATH=${PWD}/SKIP_CLEANUP" | tee -a $OUTPUTS
+
   session_runner:
     needs:
       - preprocessing
@@ -118,6 +127,7 @@ jobs:
         run: |
           echo "::error title=Error::Session runner failed before the endpoint came online"
           exit 1
+
   wait_for_endpoint:
     needs:
       - preprocessing
@@ -141,18 +151,20 @@ jobs:
         with:
           jobs:
             - session_runner
+
 'on':
   execute:
     inputs:
-      password:
-        label: Password for IDE session
-        type: password
-        tooltip: Enter password or leave blank for no password
       resource:
         type: compute-clusters
         label: Service host
         include-workspace: false
         tooltip: Resource to host the service
+      parent_install_dir:
+        label: Install Directory
+        type: string
+        optional: true
+        tooltip: 'Parent directory for software installation. Default: /contrib/pw if it exists, otherwise ${HOME}/pw/software. Ensure you have ~2 GB of free quota available.'
       cluster:
         hidden: ${{ inputs.resource.schedulerType == '' }}
         ignore: ${{ inputs.resource.schedulerType == '' }}
@@ -243,25 +255,31 @@ jobs:
                   #PBS -l ngpus=1
       service:
         type: group
-        label: VS Code Settings
-        collapsed: true
+        label: n8n Settings
         items:
           name:
             type: string
             hidden: true
-            default: openvscode
-          parent_install_dir:
-            label: Parent Install Directory
+            default: n8n
+          container_runtime:
+            type: dropdown
+            label: Run container using
+            default: n8n-singularity
+            tooltip: Select which container runtime will be used to launch the n8n container (e.g., Docker or Singularity).
+            options:
+              - label: Docker
+                value: n8n-docker
+              - label: Singularity
+                value: n8n-singularity
+          n8n_image_tag:
+            label: n8n Image Tag
             type: string
-            default: ${HOME}/pw/software
-            tooltip: Defaults to ~/pw/software. Make sure there is enough disk space available!
-          download_url:
-            label: Download URL
+            default: '1.123.4'
+            hidden: ${{ inputs.service.container_runtime == 'n8n-singularity' }}
+            ignore: ${{ .hidden }}
+            tooltip: n8n Docker image version tag (e.g. 1.123.4 or latest). The Singularity runtime uses the prebuilt ghcr.io/parallelworks/n8n:2.0 image instead.
+          n8n_data_dir:
+            label: n8n Data Directory
             type: string
-            default: https://github.com/coder/code-server/releases/download/v4.105.1/code-server-4.105.1-linux-amd64.tar.gz
-            tooltip: Downloads or uses the code-server server version specified in the URL
-          directory:
-            label: Directory to open in VS Code
-            type: string
-            default: ${HOME}
-            tooltip: Directory to open in VS code
+            default: ${HOME}/pw/n8n
+            tooltip: Directory where n8n stores its data (workflows, credentials). Persists between sessions if on a shared filesystem.

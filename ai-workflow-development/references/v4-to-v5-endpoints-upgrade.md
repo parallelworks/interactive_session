@@ -21,6 +21,34 @@
 > **Check whether an `hsp_v5.yaml` already exists before writing one** — openvscode's
 > shipped with the original endpoints PRs (#976/#982), and "creating" it would have
 > clobbered the #1015/#1016 fixes.
+>
+> **noaa variant (`noaa_v5.yaml`):** same steps, but start from `noaa_v4.yaml`'s form —
+> keep the **top-level** `resource` input (not nested under `cluster`) and the noaa
+> `slurm` group (account/qos/ntasks/nodes, shown only for `provider == 'existing'`),
+> and pass them all through to `workflow/script_submitter/v3.6/noaa.yaml`. Replicate
+> `session_runner/v1.4/noaa.yaml`'s extra **"Set Up Install Parent Directory"** step in
+> preprocessing, between *Create Inputs* and *Controller Preprocessing* (if
+> `service_parent_install_dir` is empty and `/contrib/pw` exists, append it to
+> `inputs.sh`) — `script_submitter` does not compute it. Drop the v4 noaa extras: Juice
+> lines and the `PW_PLATFORM_HOST=noaa.parallel.works` fallback. Verified end-to-end on
+> gcpsmall 2026-07-30 for jupyter-host, jupyterlab-host, webshell, n8n, openvscode, and
+> kasmvnc (desktop + rstudio): all runs completed, `{port}` substituted, local 200s,
+> anon 307, `pw endpoints delete` killed the trees. Two catches: (1) jupyter-host
+> noaa_v4's `conda_install_dir: .miniconda3c` collides with jupyterlab-host's — the
+> shared `base` env made `jupyter-notebook` crash with `No module named
+> 'jupyter_server.contents'`; use `.miniconda3cn` like the general variants. (2) a
+> non-optional `password` field rejects `""` from the CLI `-i` payload — pass a real
+> test value. (3) noaa/emed forms carry `existing`-provider-only fields
+> (`use_conda`, `install_command`, `*_tag_existing`) that only ever ran against the
+> v3 scripts — **check the v4 scripts still support them before wiring the form**.
+> `jupyterlab-host/controller-v4.sh` had dropped v3's `install_command` branch and
+> unconditionally overwrote `service_load_env` with the conda path (start template
+> too), so a NOAA `existing` run fell into the conda-yaml branch with a nonexistent
+> `install_command.yaml` (fixed 2026-07-30 by mirroring `jupyter-host/controller-v4.sh`:
+> re-add the branch, guard the overwrite with `[ -z "${service_load_env}" ]`). Note the
+> ignored `parent_install_dir` NOT appearing in `inputs.sh` on `existing` clusters is
+> by design — ignored fields interpolate empty and the `sed '/=""/d'` removes them; the
+> "Set Up Install Parent Directory" step appends `/contrib/pw` right after.
 
 ## What changes conceptually
 

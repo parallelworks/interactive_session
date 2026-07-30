@@ -1,5 +1,7 @@
+# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
 permissions:
   - '*'
+
 jobs:
   preprocessing:
     ssh:
@@ -22,17 +24,29 @@ jobs:
           # Write input form variables and ensure the pw agent is in the PATH
           cat <<'EOF' >> inputs.sh
           PATH=$HOME/pw:$PATH
+          service_notebook_dir="${{ inputs.service.notebook_dir }}"
+          service_password="${{ inputs.service.password }}"
+          service_conda_install="${{ inputs.service.conda_install }}"
+          service_use_conda="${{ inputs.service.use_conda }}"
           service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
-          service_download_url="${{ inputs.service.download_url }}"
-          service_password="${{ inputs.password }}"
-          service_directory="${{ inputs.service.directory }}"
-          pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG} --slug ?folder=${{ inputs.service.directory }}"
+          service_conda_install_dir="${{ inputs.service.conda_install_dir }}"
+          service_conda_env="${{ inputs.service.conda_env }}"
+          service_load_env="${{ inputs.service.load_env_tag_cloud }}"
+          service_load_env="${{ inputs.service.load_env_tag_existing }}"
+          service_install_instructions="${{ inputs.service.install_instructions_tag_cloud }}"
+          service_install_instructions="${{ inputs.service.install_instructions_tag_existing }}"
+          service_yaml="${{ inputs.service.yaml }}"
+          service_install_kernels="${{ inputs.service.install_kernels }}"
+          service_install_command="${{ inputs.service.install_command }}"
+          pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG} --slug tree"
           EOF
           # Remove empty variables
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
           sed -i '/=""/d' inputs.sh # remove var=""
           # Add export= to all lines
           sed -i 's/^/export /' inputs.sh
+          # Copy conda environment YAMLs to the job directory
+          cp ${{ inputs.service.name }}/*.yaml .
       - name: Set Up Install Parent Directory
         run: |
           source inputs.sh
@@ -76,6 +90,7 @@ jobs:
           cat ${{ inputs.service.name }}/start-template-v4.sh >> ./start-service-${PW_JOB_ID}.sh
           echo "SCRIPT_PATH=${PWD}/start-service-${PW_JOB_ID}.sh" | tee -a $OUTPUTS
           echo "SKIP_CLEANUP_PATH=${PWD}/SKIP_CLEANUP" | tee -a $OUTPUTS
+
   session_runner:
     needs:
       - preprocessing
@@ -118,6 +133,7 @@ jobs:
         run: |
           echo "::error title=Error::Session runner failed before the endpoint came online"
           exit 1
+
   wait_for_endpoint:
     needs:
       - preprocessing
@@ -141,13 +157,10 @@ jobs:
         with:
           jobs:
             - session_runner
+
 'on':
   execute:
     inputs:
-      password:
-        label: Password for IDE session
-        type: password
-        tooltip: Enter password or leave blank for no password
       resource:
         type: compute-clusters
         label: Service host
@@ -243,25 +256,115 @@ jobs:
                   #PBS -l ngpus=1
       service:
         type: group
-        label: VS Code Settings
-        collapsed: true
+        label: Jupyter Notebook Settings
         items:
           name:
             type: string
             hidden: true
-            default: openvscode
+            default: jupyter-host
+          password:
+            label: Password for notebook session
+            type: password
+            optional: true
+            hidden: true
+            ignore: true
+            tooltip: Enter password or leave blank for no password
+          notebook_dir:
+            label: Directory to start Jupyter Notebook GUI
+            type: string
+            default: ${HOME}
+            tooltip: This is the directory that you start with when the Jupyter graphical user interface starts. The default value here is your home directory.
+          conda_install:
+            label: Install Jupyter-Notebook If Not There?
+            type: boolean
+            default: true
+            tooltip: Select Yes to install Jupyter in miniconda environment and No to load an existing python environment
+          use_conda:
+            label: Use Conda?
+            type: boolean
+            default: false
+            hidden: ${{ 'existing' != inputs.resource.provider  }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Select Yes to install Jupyter in miniconda environment and No to load an existing python environment
           parent_install_dir:
             label: Parent Install Directory
             type: string
             default: ${HOME}/pw/software
-            tooltip: Defaults to ~/pw/software. Make sure there is enough disk space available!
-          download_url:
-            label: Download URL
+            hidden: ${{ inputs.service.conda_install == false || ('existing' == inputs.resource.provider &&  inputs.service.use_conda == false) }}
+            ignore: ${{ .hidden }}
+            tooltip: Software dependencies are installed in this directory. Defaults to ~/pw/software. Ensure the directory has sufficient space!
+          conda_install_dir:
+            label: Name of the Conda Installation Directory
             type: string
-            default: https://github.com/coder/code-server/releases/download/v4.105.1/code-server-4.105.1-linux-amd64.tar.gz
-            tooltip: Downloads or uses the code-server server version specified in the URL
-          directory:
-            label: Directory to open in VS Code
+            default: .miniconda3cn
+            hidden: ${{ inputs.service.conda_install == false || ('existing' == inputs.resource.provider &&  inputs.service.use_conda == false) }}
+            ignore: ${{ .hidden }}
+            tooltip: Ensure the directory has sufficient space for Conda and its packages.
+          conda_env:
+            label: Conda environment
             type: string
-            default: ${HOME}
-            tooltip: Directory to open in VS code
+            default: base
+            hidden: ${{ inputs.service.conda_install == false || ('existing' == inputs.resource.provider &&  inputs.service.use_conda == false) }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Environment to active. The base environment enables changing kernel to other environments!
+          load_env_tag_cloud:
+            label: Command to load Jupyter Notebook to the PATH
+            type: string
+            default: source ${HOME}/pw/software/.miniconda3cn/etc/profile.d/conda.sh; conda activate base
+            hidden: ${{ inputs.service.conda_install == true || ('existing' == inputs.resource.provider &&  inputs.service.use_conda == false) }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Use a bash command
+          load_env_tag_existing:
+            label: Command to load Jupyter Notebook to the PATH
+            type: string
+            default: export PATH=$PATH:/home/${USER}/.local/bin; module load python
+            hidden: ${{ 'existing' != inputs.resource.provider ||  inputs.service.use_conda == true }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Use a bash command
+          install_instructions_tag_cloud:
+            label: Install Instructions
+            type: dropdown
+            hidden: ${{ inputs.service.conda_install == false || ('existing' == inputs.resource.provider  &&  inputs.service.use_conda == false) }}
+            ignore: ${{ .hidden }}
+            default: notebook7.2.2-python3.12.2
+            options:
+              - value: latest
+                label: Latest default versions of Jupyter Notebook and Python (not thoroughly tested)
+              - value: notebook7.2.2-python3.12.2
+                label: Jupyter Notebook 7.2.2 with Python version 3.12.2
+              - value: yaml
+                label: Provide custom Conda environment YAML file
+          install_instructions_tag_existing:
+            label: Install Instructions
+            type: string
+            default: install_command
+            hidden: true
+            ignore: ${{ inputs.service.conda_install == false || 'existing' != inputs.resource.provider ||  inputs.service.use_conda == true  }}
+          yaml:
+            label: Paste Conda Environment Defition YAML
+            type: editor
+            hidden: ${{ inputs.service.install_instructions_tag_cloud != yaml ||  inputs.service.conda_install == false  ||  ('existing' == inputs.resource.provider &&  inputs.service.use_conda == false) }}
+            optional: ${{ .hidden }}
+            ignore: ${{ .hidden }}
+            tooltip: Copy and paste a custom Conda environment definition YAML file
+          install_kernels:
+            label: Select additional kernels to install
+            type: multi-dropdown
+            optional: true
+            hidden: ${{ inputs.service.conda_install == false ||  ('existing' == inputs.resource.provider &&  inputs.service.use_conda == false)  }}
+            ignore: ${{ .hidden }}
+            options:
+              - value: julia-kernel
+                label: Julia Kernel
+              - value: R-kernel
+                label: R Kernel
+          install_command:
+            label: Command to install Jupyter
+            type: string
+            default: export PATH=$PATH:/home/${USER}/.local/bin; module load python; pip install --upgrade "notebook>=7" --no-warn-script-location
+            hidden: ${{ inputs.service.conda_install == false || 'existing' != inputs.resource.provider  ||  inputs.service.use_conda == true  }}
+            ignore: ${{ .hidden }}

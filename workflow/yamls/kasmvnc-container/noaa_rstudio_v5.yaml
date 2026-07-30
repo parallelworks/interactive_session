@@ -1,17 +1,20 @@
+# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
 permissions:
   - '*'
+
 jobs:
   preprocessing:
     ssh:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
-      - name: Checkout
+      - name: Checkout ${{ inputs.container_runtime }}
         uses: parallelworks/checkout
         with:
           repo: https://github.com/parallelworks/interactive_session.git
           branch: main
           sparse_checkout:
-            - ${{ inputs.service.name }}
+            - ${{ inputs.container_runtime }}
+            - tools/oras
       - name: Create Inputs
         run: |
           set -x
@@ -19,20 +22,34 @@ jobs:
           env | grep '^PW_' | grep -v 'PW_API_KEY' > inputs.sh
           # Encase values between quotes
           sed -i 's/=\(.*\)/="\1"/' inputs.sh
+          # Password (vestigial: the container disables VNC auth, but the viewer
+          # accepts it in the URL, so keep v4 parity)
+          password=$(openssl rand -base64 12 | head -c 12)
+          # Any non-root path: the container's nginx template renders a duplicate
+          # `location /` (and fails) when BASE_PATH is "/", while any other value
+          # is harmless because the template also proxies the root location,
+          # which is where the subdomain endpoint serves from.
+          basepath=/kasm
           # Write input form variables and ensure the pw agent is in the PATH
           cat <<'EOF' >> inputs.sh
           PATH=$HOME/pw:$PATH
-          service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
-          service_download_url="${{ inputs.service.download_url }}"
-          service_password="${{ inputs.password }}"
-          service_directory="${{ inputs.service.directory }}"
-          pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG} --slug ?folder=${{ inputs.service.directory }}"
+          kasmvnc_os="${{ inputs.desktop.kasmvnc_os }}"
+          startup_command="${{ inputs.desktop.startup_command }}"
+          container_mount_paths="${{ inputs.desktop.container_mount_paths }}"
+          service_parent_install_dir="${{ inputs.parent_install_dir }}"
           EOF
+          echo basepath=${basepath} >> inputs.sh
+          echo password=${password} >> inputs.sh
+          echo "endpoint_name=kasmvnc-${PW_RUN_SLUG}" >> inputs.sh
+          echo "endpoint_slug=\"vnc.html?resize=remote&autoconnect=true&show_dot=true&path=websockify&password=${password}&dt=0\"" >> inputs.sh
           # Remove empty variables
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
           sed -i '/=""/d' inputs.sh # remove var=""
-          # Add export= to all lines
-          sed -i 's/^/export /' inputs.sh
+          # Prepend 'export ' to each VAR= assignment line only -- NOT to the
+          # continuation lines of a multi-line value. container_mount_paths is an
+          # 'editor' input written one path per line; a blanket 's/^/export /' would
+          # turn each extra path into 'export /path' and corrupt inputs.sh.
+          sed -i -E 's/^([A-Za-z_][A-Za-z0-9_]*=)/export \1/' inputs.sh
       - name: Set Up Install Parent Directory
         run: |
           source inputs.sh
@@ -47,7 +64,7 @@ jobs:
           set -x
           # This script prepares the target host and always runs in the controller node
           cp inputs.sh controller-${PW_JOB_ID}.sh
-          cat ${{ inputs.service.name }}/controller-v4.sh >> controller-${PW_JOB_ID}.sh
+          cat ${{ inputs.container_runtime }}/controller-v4.sh >> controller-${PW_JOB_ID}.sh
           bash controller-${PW_JOB_ID}.sh
       - name: Create Service Script
         run: |
@@ -73,9 +90,10 @@ jobs:
 
           echo "::notice::Starting service"
           EOF
-          cat ${{ inputs.service.name }}/start-template-v4.sh >> ./start-service-${PW_JOB_ID}.sh
+          cat ${{ inputs.container_runtime }}/start-template-v4.sh >> ./start-service-${PW_JOB_ID}.sh
           echo "SCRIPT_PATH=${PWD}/start-service-${PW_JOB_ID}.sh" | tee -a $OUTPUTS
           echo "SKIP_CLEANUP_PATH=${PWD}/SKIP_CLEANUP" | tee -a $OUTPUTS
+
   session_runner:
     needs:
       - preprocessing
@@ -109,6 +127,12 @@ jobs:
           pbs:
             is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
+        cleanup: |
+          set -x
+          if [ -d tools/oras ]; then
+            echo "Removing tools/oras"
+            rm -rf tools/oras
+          fi
       - name: Cancel Wait for Endpoint
         uses: parallelworks/cancel-jobs
         with:
@@ -118,6 +142,7 @@ jobs:
         run: |
           echo "::error title=Error::Session runner failed before the endpoint came online"
           exit 1
+
   wait_for_endpoint:
     needs:
       - preprocessing
@@ -127,7 +152,7 @@ jobs:
       - name: Wait for endpoint
         early-cancel: any-job-failed
         run: |
-          endpoint_name="${{ inputs.service.name }}-${PW_RUN_SLUG}"
+          endpoint_name="kasmvnc-${PW_RUN_SLUG}"
           echo "::notice::Waiting for endpoint ${endpoint_name} to come online"
           until pw endpoints list | grep -qw "${endpoint_name}"; do
             echo "$(date) Endpoint ${endpoint_name} not found yet; retrying in 10 seconds"
@@ -141,18 +166,24 @@ jobs:
         with:
           jobs:
             - session_runner
+
 'on':
   execute:
     inputs:
-      password:
-        label: Password for IDE session
-        type: password
-        tooltip: Enter password or leave blank for no password
       resource:
         type: compute-clusters
         label: Service host
         include-workspace: false
         tooltip: Resource to host the service
+      parent_install_dir:
+        label: Install Directory
+        type: string
+        optional: true
+        tooltip: 'Parent directory for software installation. Default: /contrib/pw if it exists, otherwise ${HOME}/pw/software. Ensure you have ~3 GB of free quota available.'
+      container_runtime:
+        type: string
+        hidden: true
+        default: kasmvnc-singularity
       cluster:
         hidden: ${{ inputs.resource.schedulerType == '' }}
         ignore: ${{ inputs.resource.schedulerType == '' }}
@@ -241,27 +272,34 @@ jobs:
                   Add extra PBS directives, one per line, using the #PBS prefix. For example:
                   #PBS -l mem=16gb
                   #PBS -l ngpus=1
-      service:
+      desktop:
         type: group
-        label: VS Code Settings
+        label: Desktop Settings
         collapsed: true
         items:
-          name:
+          kasmvnc_os:
+            type: dropdown
+            label: Operating System
+            default: rocky9
+            tooltip: Choose the operating system for the KasmVNC container
+            options:
+              - label: Rocky Linux 8
+                value: rocky8
+              - label: Rocky Linux 9
+                value: rocky9
+              - label: Ubuntu 22.04
+                value: ubuntu
+          startup_command:
             type: string
-            hidden: true
-            default: openvscode
-          parent_install_dir:
-            label: Parent Install Directory
-            type: string
-            default: ${HOME}/pw/software
-            tooltip: Defaults to ~/pw/software. Make sure there is enough disk space available!
-          download_url:
-            label: Download URL
-            type: string
-            default: https://github.com/coder/code-server/releases/download/v4.105.1/code-server-4.105.1-linux-amd64.tar.gz
-            tooltip: Downloads or uses the code-server server version specified in the URL
-          directory:
-            label: Directory to open in VS Code
-            type: string
-            default: ${HOME}
-            tooltip: Directory to open in VS code
+            label: Startup Application
+            default: rstudio
+            tooltip: Command to load and run RStudio
+            optional: true
+          container_mount_paths:
+            type: editor
+            label: Additional Mount Paths
+            optional: true
+            tooltip: |-
+              Extra directories to bind-mount into the container, one per line.
+              Each path is mounted if it exists on the host; if it does not, a warning is logged and the path is skipped.
+              Auto-mounted when present: /p/home, /p/work, /p/work1, /p/app, /p/cwfs, /scratch, /run/munge, /etc/pbs.conf, /var/spool/pbs, /opt/pbs

@@ -92,6 +92,7 @@ jobs:
               partition: ${{ inputs.cluster.slurm.partition }}
               scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
               time: ${{ inputs.cluster.slurm.time }}
+              gpus: ${{ inputs.cluster.slurm.gpus }}
             pbs:
               is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
               scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
@@ -164,6 +165,15 @@ jobs:
                 type: string
                 default: '01:00:00'
                 tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
+              gpus:
+                label: Number of GPUs
+                type: number
+                optional: true
+                min: 0
+                default: 0
+                hidden: ${{ inputs.resource.ip != 'dn-slurm-1.parallel.works' }}
+                ignore: ${{ .hidden }}
+                tooltip: '--gpus= SLURM directive to set the number of GPUs allocated for the job'
               scheduler_directives:
                 type: editor
                 optional: true

@@ -61,6 +61,11 @@ jobs:
             echo "#SBATCH --partition=${{ inputs.slurm.partition }}" >> headers.sh
           fi
 
+          # The gpus directive parameter is always optional
+          if ! [ -z "${{ inputs.slurm.gpus }}" ]; then
+            echo "#SBATCH --gpus=${{ inputs.slurm.gpus }}" >> headers.sh
+          fi
+
           # The scheduler directives parameter is always optional
           if ! [ -z "${{ inputs.slurm.scheduler_directives }}" ]; then
             echo "${{ inputs.slurm.scheduler_directives }}" >> headers.sh
@@ -591,6 +596,15 @@ jobs:
             type: string
             default: '01:00:00'
             tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
+          gpus:
+            label: Number of GPUs
+            type: number
+            optional: true
+            min: 0
+            default: 0
+            hidden: ${{ inputs.resource.ip != 'dn-slurm-1.parallel.works' }}
+            ignore: ${{ .hidden }}
+            tooltip: '--gpus= SLURM directive to set the number of GPUs allocated for the job'
           scheduler_directives:
             type: editor
             optional: true

@@ -5,6 +5,8 @@ dashboard to watch/restart services, and a **Langflow** visual flow builder — 
 every Langflow flow available as a selectable model inside LibreChat, including a
 ready-made **RAG pipeline** (embeddings server + vector database included).
 
+📽️ **Demo slides**: [browser demo walkthrough](https://docs.google.com/presentation/d/1GuFDqojqDlqAz9TV3RBG5zsO_cDigw0e/edit?usp=sharing&ouid=109780783715781979532&rtpof=true&sd=true)
+
 ```
                      Activate platform — session links
   ┌──────────────┐        ┌──────────────┐        ┌──────────────┐
@@ -51,7 +53,7 @@ Everything lives on the **Langflow host** unless noted. `<install dir>` is
 | 1 | **Langflow proxy code** | `<install dir>/tools/langflow_proxy-main/` (or set **Langflow Proxy Path**) | The dir containing the `langflow_proxy/` package. Not shipped in this repo. |
 | 2 | **Flow definitions** | `<proxy dir>/flows/*.json` | `chatbot.json`, `rag_chatbot.json` — use the **fixed copies from `langflow-singularity/flows/`** (or set *Import bundled test flows?* to import them straight from the repo). |
 | 3 | **Proxy flow configs** | `<proxy dir>/flows.yaml` (or set **Proxy Flow Configs File**) | Deployment routing: RAG corpus, TEI `retrieve` entry, per-model extras like `allocation:`. Example below. |
-| 4 | **RAG vector database** | Any dir → set **RAG Database Directory** | LanceDB directory; each table is a corpus. Mounted at **`/data`** in the Langflow container. |
+| 4 | **RAG vector database** | Any dir → set **RAG Database Directory** | LanceDB directory; each table is a corpus. Mounted at **`/data`** in the Langflow container. `data.lancedb.tgz` corresponds to the `policy-docs` corpus. |
 
 ### The workflow fetches these for you ✅
 

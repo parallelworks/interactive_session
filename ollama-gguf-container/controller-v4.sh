@@ -76,15 +76,62 @@ else
     container_ref="${sandbox_dir}"
 fi
 
-echo "::group::Pull Models"
 # Model weights are shared with the native ollama-gguf variant
-export OLLAMA_MODELS=${service_parent_install_dir}/ollama-gguf/models
+if [ -z "${service_models_dir}" ]; then
+    service_models_dir=${service_parent_install_dir}/ollama-gguf/models
+fi
+export OLLAMA_MODELS=${service_models_dir}
+
+model_manifest_path() {
+    local ref=$1 name=$1 tag=latest
+    case "${ref}" in *:*) name=${ref%%:*}; tag=${ref##*:};; esac
+    case "${name}" in
+        */*/*) echo "${OLLAMA_MODELS}/manifests/${name}/${tag}" ;;
+        */*) echo "${OLLAMA_MODELS}/manifests/registry.ollama.ai/${name}/${tag}" ;;
+        *) echo "${OLLAMA_MODELS}/manifests/registry.ollama.ai/library/${name}/${tag}" ;;
+    esac
+}
+
+need_pull=false
+for model in ${service_models//,/ }; do
+    if ! [ -s "$(model_manifest_path ${model})" ]; then
+        need_pull=true
+    fi
+done
+
+# Writability of the store, probing the nearest existing ancestor when the
+# directory does not exist yet
+probe=${OLLAMA_MODELS}
+while [ ! -e "${probe}" ]; do probe=$(dirname "${probe}"); done
+skip_pull=false
+if ! [ -w "${probe}" ]; then
+    if [ "${need_pull}" = "true" ]; then
+        fallback_dir=${HOME}/pw/software/ollama-gguf/models
+        echo "::warning title=Model Directory::Cannot write to ${OLLAMA_MODELS} and some requested models are not cached there; falling back to ${fallback_dir}"
+        service_models_dir=${fallback_dir}
+        export OLLAMA_MODELS=${fallback_dir}
+    else
+        echo "::notice title=Model Directory::${OLLAMA_MODELS} is not writable; serving the cached models read-only"
+        echo "export OLLAMA_NOPRUNE=1" >> inputs.sh
+        export OLLAMA_NOPRUNE=1
+        skip_pull=true
+    fi
+fi
+# The start template reads the resolved store from inputs.sh
+echo "export service_models_dir=\"${service_models_dir}\"" >> inputs.sh
+
+if [ "${skip_pull}" = "true" ]; then
+    exit 0
+fi
+
+echo "::group::Pull Models"
 mkdir -p ${OLLAMA_MODELS}
 # Model pulls go through a temporary server on an ephemeral port; the weights
 # land in the shared-filesystem OLLAMA_MODELS dir for the service to read
 export OLLAMA_HOST=127.0.0.1:$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')
 singularity exec \
     --bind "${service_parent_install_dir}:${service_parent_install_dir}" \
+    --bind "${OLLAMA_MODELS}:${OLLAMA_MODELS}" \
     --env OLLAMA_HOST=${OLLAMA_HOST} \
     --env OLLAMA_MODELS=${OLLAMA_MODELS} \
     "${container_ref}" /bin/ollama serve > ollama-controller-serve.log 2>&1 &

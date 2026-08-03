@@ -62,8 +62,9 @@ else
     container_ref="${sandbox_dir}"
 fi
 
-# Model weights are shared with the native ollama-gguf variant
-export OLLAMA_MODELS=${service_parent_install_dir}/ollama-gguf/models
+# Model weights are shared with the native ollama-gguf variant; the controller
+# appends the resolved service_models_dir to inputs.sh
+export OLLAMA_MODELS=${service_models_dir:-${service_parent_install_dir}/ollama-gguf/models}
 
 nv_flag=""
 if nvidia-smi -L > /dev/null 2>&1; then
@@ -80,6 +81,7 @@ cat > launch-ollama-${PW_JOB_ID}.sh <<EOF
 #!/bin/bash
 exec singularity exec ${nv_flag} \\
     --bind "${service_parent_install_dir}:${service_parent_install_dir}" \\
+    --bind "${OLLAMA_MODELS}:${OLLAMA_MODELS}" \\
     --bind "${PWD}/container_tmp:/tmp" \\
     --env OLLAMA_HOST="127.0.0.1:\${PORT}" \\
     --env OLLAMA_MODELS="${OLLAMA_MODELS}" \\

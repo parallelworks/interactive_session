@@ -35,7 +35,15 @@ Any GGUF repo on Hugging Face works with the `hf.co/<owner>/<repo>:<quant>`
 form. Size the quantization to the host: a Q4_K_M of a 31B model is ~19 GB on
 disk and needs about as much free memory to run.
 
-The server serves every model present under the install directory, not only
+The **Model Directory** input sets where weights are stored (`OLLAMA_MODELS`;
+ollama keeps them as a content-addressed store with `blobs/` and `manifests/`
+subdirectories). It defaults to the shared per-platform location, so weights
+download once per cluster regardless of runtime. If new models must be pulled
+and the directory is not writable, the run warns and falls back to
+`${HOME}/pw/software/ollama-gguf/models`; if it is not writable but every
+requested model is already cached there, the run serves the store read-only.
+
+The server serves every model present under the model directory, not only
 the ones listed by the current run, and the platform re-polls the model list —
 `ollama pull` on the live server adds chat models without relaunching.
 

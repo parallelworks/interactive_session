@@ -25,7 +25,8 @@ if ! ${service_exec} --version > /dev/null 2>&1; then
     exit 1
 fi
 
-export OLLAMA_MODELS=${service_install_dir}/models
+# The controller appends the resolved service_models_dir to inputs.sh
+export OLLAMA_MODELS=${service_models_dir:-${service_install_dir}/models}
 export OLLAMA_CONTEXT_LENGTH=${service_context_length:-8192}
 export OLLAMA_KEEP_ALIVE=${service_keep_alive:-5m}
 

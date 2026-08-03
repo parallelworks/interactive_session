@@ -372,10 +372,25 @@ jobs:
               model directory. Available with the Singularity container runtime, which
               mounts a filtered view of the model manifests into the container.
           context_length:
-            label: Context length (tokens)
-            type: number
-            default: 8192
-            tooltip: Context window used for loaded models (OLLAMA_CONTEXT_LENGTH)
+            label: Max Context Length
+            type: dropdown
+            default: '8192'
+            tooltip: Context window used for loaded models (OLLAMA_CONTEXT_LENGTH). Lower values reduce memory usage.
+            options:
+              - value: auto
+                label: Auto (model default)
+              - value: '4096'
+                label: 4K tokens
+              - value: '8192'
+                label: 8K tokens
+              - value: '16384'
+                label: 16K tokens
+              - value: '32768'
+                label: 32K tokens
+              - value: '65536'
+                label: 64K tokens
+              - value: '131072'
+                label: 128K tokens
           keep_alive:
             label: Keep models loaded
             type: string

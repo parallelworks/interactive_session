@@ -72,6 +72,12 @@ if nvidia-smi -L > /dev/null 2>&1; then
     nv_flag="--nv"
 fi
 
+# auto leaves OLLAMA_CONTEXT_LENGTH unset so ollama picks the default
+ctx_env=""
+if [ -n "${service_context_length}" ] && [ "${service_context_length}" != "auto" ]; then
+    ctx_env="--env OLLAMA_CONTEXT_LENGTH=${service_context_length}"
+fi
+
 # Per-job /tmp prevents cross-user permission conflicts on shared nodes
 mkdir -p "$PWD/container_tmp"
 
@@ -104,7 +110,7 @@ exec singularity exec ${nv_flag} \\
     --env OLLAMA_HOST="127.0.0.1:\${PORT}" \\
     --env OLLAMA_NOPRUNE="${OLLAMA_NOPRUNE:-false}" \\
     --env OLLAMA_MODELS="${OLLAMA_MODELS}" \\
-    --env OLLAMA_CONTEXT_LENGTH="${service_context_length:-8192}" \\
+    ${ctx_env} \\
     --env OLLAMA_KEEP_ALIVE="${service_keep_alive:-5m}" \\
     "${container_ref}" /bin/ollama serve
 EOF

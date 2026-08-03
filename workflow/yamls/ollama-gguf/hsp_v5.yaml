@@ -336,7 +336,7 @@ jobs:
           name:
             label: Runtime
             type: dropdown
-            default: ollama-gguf
+            default: ollama-gguf-container
             tooltip: |
               Native installs the Ollama release tarball on the host (needs glibc >= 2.28
               and zstd). The Singularity container runs the official ollama/ollama image
@@ -352,7 +352,7 @@ jobs:
             default: hf.co/bartowski/gemma-2-2b-it-abliterated-GGUF:Q4_K_M
             tooltip: |
               Space or comma separated list of models to pull and serve. Accepts Ollama
-              library names (qwen3:4b) or Hugging Face GGUF references
+              library names or Hugging Face GGUF references
               (hf.co/<owner>/<repo>:<quant>). Ensure the host has enough disk and memory
               for the quantization you pick — a Q4_K_M of a 31B model is about 19 GB.
               Examples:

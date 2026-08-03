@@ -48,6 +48,8 @@ if ! which singularity &> /dev/null; then
     fi
 fi
 
+service_ollama_version=${service_ollama_version:-v0.32.5}
+
 if ! [ -f "${container_sif}" ]; then
     echo "::group::Ollama SIF Download"
     oras_pull_file ghcr.io/parallelworks/ollama-gguf:${service_ollama_version#v} ollama-gguf.sif ${container_sif}

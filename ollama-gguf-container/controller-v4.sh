@@ -124,6 +124,13 @@ if [ "${skip_pull}" = "true" ]; then
     exit 0
 fi
 
+# Cached models are served as-is: pulling them again rewrites their manifest,
+# which fails when another user owns the file in a shared store
+if [ "${need_pull}" != "true" ]; then
+    echo "::notice title=Model Directory::All requested models are already cached in ${OLLAMA_MODELS}"
+    exit 0
+fi
+
 echo "::group::Pull Models"
 mkdir -p ${OLLAMA_MODELS}
 # Model pulls go through a temporary server on an ephemeral port; the weights
@@ -151,6 +158,10 @@ done
 # Pulls resume from partial blobs, so a stalled transfer (ollama can hang on a
 # dead connection) is bounded by the timeout and finished by the retry
 for model in ${service_models//,/ }; do
+    if [ -s "$(model_manifest_path ${model})" ]; then
+        echo "::notice::${model} is already cached; skipping pull"
+        continue
+    fi
     echo "::notice::Pulling ${model}"
     pulled=false
     for attempt in 1 2 3; do
@@ -165,6 +176,10 @@ for model in ${service_models//,/ }; do
         exit 1
     fi
 done
+
+# Best-effort group sharing so other users of a shared store can read the
+# weights and add models later
+chmod -R g+rwX ${OLLAMA_MODELS} 2> /dev/null || true
 
 singularity exec --env OLLAMA_HOST=${OLLAMA_HOST} "${container_ref}" /bin/ollama list
 echo "::endgroup::"

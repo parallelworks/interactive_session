@@ -62,9 +62,19 @@ until curl -s http://${OLLAMA_HOST}/ > /dev/null; do
     sleep 1
 done
 
+# Pulls resume from partial blobs, so a stalled transfer (ollama can hang on a
+# dead connection) is bounded by the timeout and finished by the retry
 for model in ${service_models//,/ }; do
     echo "::notice::Pulling ${model}"
-    if ! ${service_exec} pull ${model}; then
+    pulled=false
+    for attempt in 1 2 3; do
+        if timeout 1800 ${service_exec} pull ${model}; then
+            pulled=true
+            break
+        fi
+        echo "::warning::Pull attempt ${attempt} for ${model} failed or timed out; retrying"
+    done
+    if [ "${pulled}" != "true" ]; then
         echo "::error title=Error::failed to pull model ${model}"
         exit 1
     fi

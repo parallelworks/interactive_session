@@ -157,6 +157,13 @@ if [ "${need_pull}" != "true" ]; then
     exit 0
 fi
 
+# Cached models are served as-is: pulling them again rewrites their manifest,
+# which fails when another user owns the file in a shared store
+if [ "${need_pull}" != "true" ]; then
+    echo "::notice title=Model Directory::All requested models are already cached in ${OLLAMA_MODELS}"
+    exit 0
+fi
+
 echo "::group::Pull Models"
 mkdir -p ${OLLAMA_MODELS}
 # Model pulls go through a temporary server on an ephemeral port; the weights

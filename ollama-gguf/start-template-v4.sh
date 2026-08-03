@@ -1,0 +1,50 @@
+################################################################################
+# Interactive Session Service Starter - Ollama GGUF
+#
+# Purpose: Serve the pulled GGUF models through Ollama's OpenAI-compatible API
+#          on a pw endpoint registered in the platform chat and AI providers
+# Runs on: Controller or compute node
+# Called by: Workflow after controller setup
+#
+# Required Environment Variables:
+#   - pw_endpoints_args: Arguments for pw endpoints run (--name, ...)
+#   - service_parent_install_dir: Installation directory
+#   - service_context_length: Model context window in tokens (default: 8192)
+#   - service_keep_alive: How long models stay loaded in memory (default: 5m)
+################################################################################
+
+if [ -z ${service_parent_install_dir} ]; then
+    service_parent_install_dir=${HOME}/pw/software
+fi
+
+service_install_dir=${service_parent_install_dir}/ollama-gguf
+service_exec=${service_install_dir}/bin/ollama
+
+if ! ${service_exec} --version > /dev/null 2>&1; then
+    echo "::error title=Error::ollama not found in ${service_install_dir}"
+    exit 1
+fi
+
+export OLLAMA_MODELS=${service_install_dir}/models
+export OLLAMA_CONTEXT_LENGTH=${service_context_length:-8192}
+export OLLAMA_KEEP_ALIVE=${service_keep_alive:-5m}
+
+# START SERVICE
+echo "::group::Start Service"
+echo "::notice::Starting ollama: pw endpoints run --openai --rewrite-host=localhost ${pw_endpoints_args}"
+
+set -x
+# {port} is replaced by pw endpoints run with the local port it forwards to.
+# --openai registers the endpoint as an OpenAI-compatible provider in the
+# platform chat; --rewrite-host satisfies ollama's Host header guard.
+pw endpoints run --openai --rewrite-host=localhost ${pw_endpoints_args} -- \
+    sh -c "OLLAMA_HOST=127.0.0.1:{port} ${service_exec} serve"
+
+if [ $? -ne 0 ]; then
+    echo "::error title=Error::pw endpoints command failed"
+    # Fail loud: without this, wait_for_endpoint polls forever for an endpoint
+    # that will never register
+    pw workflows runs cancel ${PW_RUN_SLUG}
+    exit 1
+fi
+echo "::endgroup::"

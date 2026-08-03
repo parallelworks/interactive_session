@@ -87,6 +87,15 @@ fi
 # at runtime (it is unknown before launch)
 cat > launch-ollama-${PW_JOB_ID}.sh <<EOF
 #!/bin/bash
+if [ "${service_preload:-true}" = "true" ]; then
+    (
+        until curl -s "http://127.0.0.1:\${PORT}/" > /dev/null 2>&1; do sleep 1; done
+        for model in ${service_models//,/ }; do
+            echo "Preloading \${model}"
+            curl -s "http://127.0.0.1:\${PORT}/api/generate" -d "{\"model\": \"\${model}\"}" > /dev/null
+        done
+    ) &
+fi
 exec singularity exec ${nv_flag} \\
     --bind "${service_parent_install_dir}:${service_parent_install_dir}" \\
     --bind "${OLLAMA_MODELS}:${OLLAMA_MODELS}" \\

@@ -30,16 +30,32 @@ export OLLAMA_MODELS=${service_models_dir:-${service_install_dir}/models}
 export OLLAMA_CONTEXT_LENGTH=${service_context_length:-8192}
 export OLLAMA_KEEP_ALIVE=${service_keep_alive:-5m}
 
+# pw endpoints run exports PORT to the wrapped command; the launcher reads it
+# at runtime (it is unknown before launch)
+cat > launch-ollama-${PW_JOB_ID}.sh <<EOF
+#!/bin/bash
+export OLLAMA_HOST="127.0.0.1:\${PORT}"
+if [ "${service_preload:-true}" = "true" ]; then
+    (
+        until curl -s "http://127.0.0.1:\${PORT}/" > /dev/null 2>&1; do sleep 1; done
+        for model in ${service_models//,/ }; do
+            echo "Preloading \${model}"
+            curl -s "http://127.0.0.1:\${PORT}/api/generate" -d "{\"model\": \"\${model}\"}" > /dev/null
+        done
+    ) &
+fi
+exec ${service_exec} serve
+EOF
+chmod +x launch-ollama-${PW_JOB_ID}.sh
+
 # START SERVICE
 echo "::group::Start Service"
 echo "::notice::Starting ollama: pw endpoints run --openai --rewrite-host=localhost ${pw_endpoints_args}"
 
 set -x
-# {port} is replaced by pw endpoints run with the local port it forwards to.
 # --openai registers the endpoint as an OpenAI-compatible provider in the
 # platform chat; --rewrite-host satisfies ollama's Host header guard.
-pw endpoints run --openai --rewrite-host=localhost ${pw_endpoints_args} -- \
-    sh -c "OLLAMA_HOST=127.0.0.1:{port} ${service_exec} serve"
+pw endpoints run --openai --rewrite-host=localhost ${pw_endpoints_args} -- ./launch-ollama-${PW_JOB_ID}.sh
 
 if [ $? -ne 0 ]; then
     echo "::error title=Error::pw endpoints command failed"

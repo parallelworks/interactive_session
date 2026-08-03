@@ -29,6 +29,7 @@ jobs:
           service_serve_only_requested="${{ inputs.service.serve_only_requested }}"
           service_context_length="${{ inputs.service.context_length }}"
           service_keep_alive="${{ inputs.service.keep_alive }}"
+          service_preload="${{ inputs.service.preload }}"
           service_models_dir="${{ inputs.service.models_dir }}"
           service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
           service_ollama_version="${{ inputs.service.ollama_version }}"
@@ -277,6 +278,11 @@ jobs:
             default: 5m
             optional: true
             tooltip: How long a model stays loaded in memory after its last request (OLLAMA_KEEP_ALIVE), e.g. 5m, 1h, or -1 to keep it loaded forever
+          preload:
+            label: Preload models
+            type: boolean
+            default: true
+            tooltip: Load the requested models into memory as soon as the server starts, so the first request does not wait for the model to load. Combine with Keep models loaded = -1 to keep them in memory permanently.
           models_dir:
             label: Model Directory
             type: string

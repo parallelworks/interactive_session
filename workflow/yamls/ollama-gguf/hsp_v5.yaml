@@ -336,7 +336,7 @@ jobs:
           name:
             label: Runtime
             type: dropdown
-            default: ollama-gguf
+            default: ollama-gguf-container
             tooltip: |
               Native installs the Ollama release tarball on the host (needs glibc >= 2.28
               and zstd). The Singularity container runs the official ollama/ollama image

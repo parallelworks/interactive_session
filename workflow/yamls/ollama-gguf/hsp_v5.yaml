@@ -398,7 +398,7 @@ jobs:
           keep_alive:
             label: Keep models loaded
             type: string
-            default: 5m
+            default: -1
             optional: true
             tooltip: How long a model stays loaded in memory after its last request (OLLAMA_KEEP_ALIVE), e.g. 5m, 1h, or -1 to keep it loaded forever
           preload:

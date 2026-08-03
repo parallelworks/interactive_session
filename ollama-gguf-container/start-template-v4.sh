@@ -75,6 +75,14 @@ fi
 # Per-job /tmp prevents cross-user permission conflicts on shared nodes
 mkdir -p "$PWD/container_tmp"
 
+# When the controller built a filtered manifests view, over-mount it so the
+# container serves only the requested models
+manifests_bind=""
+if [ -n "${service_manifests_view}" ]; then
+    echo "::notice::Serving only the requested models"
+    manifests_bind="--bind ${service_manifests_view}:${OLLAMA_MODELS}/manifests"
+fi
+
 # pw endpoints run exports PORT to the wrapped command; the launcher reads it
 # at runtime (it is unknown before launch)
 cat > launch-ollama-${PW_JOB_ID}.sh <<EOF
@@ -82,8 +90,10 @@ cat > launch-ollama-${PW_JOB_ID}.sh <<EOF
 exec singularity exec ${nv_flag} \\
     --bind "${service_parent_install_dir}:${service_parent_install_dir}" \\
     --bind "${OLLAMA_MODELS}:${OLLAMA_MODELS}" \\
+    ${manifests_bind} \\
     --bind "${PWD}/container_tmp:/tmp" \\
     --env OLLAMA_HOST="127.0.0.1:\${PORT}" \\
+    --env OLLAMA_NOPRUNE="${OLLAMA_NOPRUNE:-false}" \\
     --env OLLAMA_MODELS="${OLLAMA_MODELS}" \\
     --env OLLAMA_CONTEXT_LENGTH="${service_context_length:-8192}" \\
     --env OLLAMA_KEEP_ALIVE="${service_keep_alive:-5m}" \\

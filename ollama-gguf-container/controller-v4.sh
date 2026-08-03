@@ -92,6 +92,30 @@ model_manifest_path() {
     esac
 }
 
+# Serve only the requested models by over-mounting a filtered manifests
+# directory into the container: the store contents define what ollama serves,
+# there is no native allowlist
+build_manifests_view() {
+    if [ "${service_serve_only_requested}" != "true" ]; then
+        return 0
+    fi
+    manifests_view=${PW_PARENT_JOB_DIR}/ollama-manifests-view
+    rm -rf ${manifests_view}
+    for model in ${service_models//,/ }; do
+        src=$(model_manifest_path ${model})
+        if ! [ -s "${src}" ]; then
+            echo "::error title=Error::manifest for ${model} not found at ${src}"
+            exit 1
+        fi
+        rel=${src#${OLLAMA_MODELS}/manifests/}
+        mkdir -p ${manifests_view}/$(dirname ${rel})
+        cp ${src} ${manifests_view}/${rel}
+    done
+    # Pruning would delete shared blobs the filtered manifests do not reference
+    echo "export OLLAMA_NOPRUNE=1" >> inputs.sh
+    echo "export service_manifests_view=\"${manifests_view}\"" >> inputs.sh
+}
+
 need_pull=false
 for model in ${service_models//,/ }; do
     if ! [ -s "$(model_manifest_path ${model})" ]; then
@@ -121,6 +145,7 @@ fi
 echo "export service_models_dir=\"${service_models_dir}\"" >> inputs.sh
 
 if [ "${skip_pull}" = "true" ]; then
+    build_manifests_view
     exit 0
 fi
 
@@ -128,6 +153,7 @@ fi
 # which fails when another user owns the file in a shared store
 if [ "${need_pull}" != "true" ]; then
     echo "::notice title=Model Directory::All requested models are already cached in ${OLLAMA_MODELS}"
+    build_manifests_view
     exit 0
 fi
 
@@ -183,3 +209,5 @@ chmod -R g+rwX ${OLLAMA_MODELS} 2> /dev/null || true
 
 singularity exec --env OLLAMA_HOST=${OLLAMA_HOST} "${container_ref}" /bin/ollama list
 echo "::endgroup::"
+
+build_manifests_view

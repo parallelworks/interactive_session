@@ -48,8 +48,12 @@ and the directory is not writable, the run warns and falls back to
 `${HOME}/pw/software/ollama-gguf/models`; if it is not writable but every
 requested model is already cached there, the run serves the store read-only.
 
-The server serves every model present under the model directory, not only
-the ones listed by the current run, and the platform re-polls the model list —
+With the Singularity runtime, **Serve only the requested models** (on by
+default) mounts a filtered view of the model manifests into the container so
+the endpoint exposes just the models listed by the run — useful with shared
+model directories, where the store accumulates everyone's models. When
+disabled (and always with the native runtime), the server serves every model
+present under the model directory, and the platform re-polls the model list —
 `ollama pull` on the live server adds chat models without relaunching.
 
 Models whose chat template does not declare tool support (common for

@@ -26,6 +26,7 @@ jobs:
           cat <<'EOF' >> inputs.sh
           PATH=$HOME/pw:$PATH
           service_models="${{ inputs.service.models }}"
+          service_serve_only_requested="${{ inputs.service.serve_only_requested }}"
           service_context_length="${{ inputs.service.context_length }}"
           service_keep_alive="${{ inputs.service.keep_alive }}"
           service_models_dir="${{ inputs.service.models_dir }}"
@@ -359,6 +360,16 @@ jobs:
               Examples:
               hf.co/mradermacher/gemma-4-31B-it-heretic-GGUF:Q4_K_M
               hf.co/mradermacher/gemma-4-31B-it-The-DECKARD-HERETIC-UNCENSORED-Thinking-GGUF:Q4_K_M
+          serve_only_requested:
+            label: Serve only the requested models
+            type: boolean
+            default: true
+            hidden: ${{ inputs.service.name == 'ollama-gguf' }}
+            ignore: ${{ .hidden }}
+            tooltip: |
+              Expose only the models listed above instead of every model cached in the
+              model directory. Available with the Singularity container runtime, which
+              mounts a filtered view of the model manifests into the container.
           context_length:
             label: Context length (tokens)
             type: number

@@ -373,8 +373,8 @@ jobs:
           models_dir:
             label: Model Directory
             type: string
-            default: ${PROJECTS_HOME:-$HOME/pw}/hsp/ollama-gguf/models
-            tooltip: Directory where model weights are stored (OLLAMA_MODELS). If new models must be pulled and this directory is not writable, the run falls back to ${HOME}/pw/software/ollama-gguf/models.
+            optional: true
+            tooltip: Directory where model weights are stored (OLLAMA_MODELS). Default is <install directory>/ollama-gguf/models, which resolves to ${PROJECTS_HOME}/hsp/ollama-gguf/models on HSP systems. If new models must be pulled and this directory is not writable, the run falls back to ${HOME}/pw/software/ollama-gguf/models.
           ollama_version:
             label: Ollama version
             type: string

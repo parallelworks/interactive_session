@@ -40,12 +40,23 @@ jobs:
       - name: Controller Preprocessing
         run: |
           set -x
+          # Fail loud when the checkout did not materialize the service scripts
+          # (e.g. the runtime does not exist on the checked-out branch); a failing
+          # cat mid-step would otherwise be silently ignored
+          if [ ! -f "${{ inputs.service.name }}/controller-v4.sh" ]; then
+            echo "::error title=Error::${{ inputs.service.name }}/controller-v4.sh not found in the checkout of branch main"
+            exit 1
+          fi
           # This script prepares the target host and always runs in the controller node
           cp inputs.sh controller-${PW_JOB_ID}.sh
           cat ${{ inputs.service.name }}/controller-v4.sh >> controller-${PW_JOB_ID}.sh
           bash controller-${PW_JOB_ID}.sh
       - name: Create Service Script
         run: |
+          if [ ! -f "${{ inputs.service.name }}/start-template-v4.sh" ]; then
+            echo "::error title=Error::${{ inputs.service.name }}/start-template-v4.sh not found in the checkout of branch main"
+            exit 1
+          fi
           rm -f HOSTNAME SESSION_PORT job.ended job.started
           # This script starts the service
           cp inputs.sh start-service-${PW_JOB_ID}.sh

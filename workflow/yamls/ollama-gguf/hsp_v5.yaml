@@ -374,3 +374,60 @@ jobs:
             type: string
             hidden: true
             default: v0.32.5
+
+configurations:
+  Carpenter:
+    inputs:
+      cluster:
+        scheduler: true
+        pbs:
+          scheduler_directives: |
+            #PBS -q HIE
+            #PBS -l select=1:ncpus=128:mpiprocs=1:ngpus=1
+            #PBS -l walltime=01:00:00
+            #PBS -V
+      service:
+        name: ollama-gguf-container
+
+  Makau:
+    inputs:
+      cluster:
+        scheduler: true
+        slurm:
+          cpus_per_task: 1
+          is_enabled: true
+          nodes: 1
+          partition: standard
+          qos: standard
+          scheduler_directives: "#SBATCH --gres=gpu:h100_nvl:1"
+          time: "01:00:00"
+      service:
+        name: ollama-gguf-container
+
+  Nautilus:
+    inputs:
+      cluster:
+        scheduler: true
+        slurm:
+          cpus_per_task: 1
+          is_enabled: true
+          nodes: 1
+          node_type: mla
+          partition: general
+          qos: hie
+          time: "01:00:00"
+      service:
+        name: ollama-gguf-container
+
+  Wheat:
+    inputs:
+      cluster:
+        scheduler: true
+        pbs:
+          scheduler_directives: |
+            #PBS -q HIE
+            #PBS -l select=1:ncpus=92:mpiprocs=1:ngpus=1
+            #PBS -l walltime=01:00:00
+            #PBS -V
+      service:
+        name: ollama-gguf-container

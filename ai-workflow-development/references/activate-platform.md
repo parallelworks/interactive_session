@@ -823,6 +823,28 @@ subdomain URL (`https://<name>.activate.pw/<slug>`; `--slug` may be a query stri
   instead of leaving `wait_for_endpoint` polling forever. Both vars reach scheduled
   compute nodes via the `inputs.sh` `env | grep '^PW_'` capture.
 
+### Serving GGUF models with Ollama behind an endpoint (verified, `ollama-gguf`)
+- **The whole pattern is one command** (from `pw endpoints run --help`'s own example):
+  `pw endpoints run --openai --rewrite-host=localhost --name <n> -- sh -c 'OLLAMA_HOST=127.0.0.1:{port} ollama serve'`.
+  `--openai` registers every model the server lists as a chat model
+  `session:<user>:<n>/<model-id>` in `pw ai models ls`; `--rewrite-host` satisfies
+  ollama's Host-header guard. Endpoints re-poll `/v1/models` too, so `ollama pull`
+  against the live server adds chat models without relaunching (verified).
+- **Ollama release assets are `.tar.zst` since ~v0.32** — the old
+  `ollama-linux-amd64.tgz` URL 404s. Install per-user with the GitHub release
+  `ollama-linux-amd64.tar.zst` + `tar --use-compress-program=unzstd -x` (zstd is
+  present on EL9 nodes). No root needed; don't use ollama's install.sh.
+- **`ollama pull hf.co/<owner>/<repo>:<QUANT>` pulls any Hugging Face GGUF repo**
+  (e.g. `hf.co/mradermacher/gemma-4-31B-it-heretic-GGUF:Q4_K_M`). Pulls need a
+  running server: start a temp `ollama serve` on an ephemeral 127.0.0.1 port in the
+  controller, pull, kill it — weights land in `$OLLAMA_MODELS` on the shared FS for
+  the service node (see `ollama-gguf/controller-v4.sh`).
+- **`pw ai chats new` is deprecated → redirects to `pw code`, which sends tools on
+  every request.** A model whose chat template lacks tool support 400s through the
+  platform with `"<model> does not support tools"` (its plain
+  `/v1/chat/completions` works fine) — this is the agentic client, not a tunnel
+  failure. Verify agentic chat with a tools-capable model (e.g. `qwen3:0.6b`).
+
 ### More verified gotchas
 - **`pw workflows run <name>` uses the STORED definition.** After editing a YAML,
   `pw workflows update <name> --yaml file.yaml` first, or the run uses the old form

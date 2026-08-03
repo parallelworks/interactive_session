@@ -20,6 +20,15 @@ Any GGUF repo on Hugging Face works with the `hf.co/<owner>/<repo>:<quant>`
 form. Size the quantization to the host: a Q4_K_M of a 31B model is ~19 GB on
 disk and needs about as much free memory to run.
 
+The server serves every model present under the install directory, not only
+the ones listed by the current run, and the platform re-polls the model list —
+`ollama pull` on the live server adds chat models without relaunching.
+
+Models whose chat template does not declare tool support (common for
+abliterated GGUFs) work in the platform chat and through
+`/v1/chat/completions`, but agentic clients that send tools (`pw code`) reject
+them with "does not support tools".
+
 ## Lifecycle
 
 The workflow run completes once the endpoint registers; the service keeps

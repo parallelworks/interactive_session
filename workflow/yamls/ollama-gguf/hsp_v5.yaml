@@ -32,7 +32,8 @@ jobs:
           service_preload="${{ inputs.service.preload }}"
           service_models_dir="${{ inputs.service.models_dir }}"
           service_ollama_version="${{ inputs.service.ollama_version }}"
-          pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG}"
+          endpoint_name="${{ inputs.service.endpoint_name }}"
+          pw_endpoints_args="--name ${endpoint_name:-${{ inputs.service.name }}-${PW_RUN_SLUG}}"
           EOF
           # Remove empty variables
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
@@ -160,7 +161,10 @@ jobs:
       - name: Wait for endpoint
         early-cancel: any-job-failed
         run: |
-          endpoint_name="${{ inputs.service.name }}-${PW_RUN_SLUG}"
+          endpoint_name="${{ inputs.service.endpoint_name }}"
+          if [ -z "${endpoint_name}" ]; then
+            endpoint_name="${{ inputs.service.name }}-${PW_RUN_SLUG}"
+          fi
           echo "::notice::Waiting for endpoint ${endpoint_name} to come online"
           until pw endpoints list | grep -qw "${endpoint_name}"; do
             echo "$(date) Endpoint ${endpoint_name} not found yet; retrying in 10 seconds"
@@ -407,6 +411,11 @@ jobs:
             type: string
             optional: true
             tooltip: Directory where model weights are stored (OLLAMA_MODELS). Default is <install directory>/ollama-gguf/models, which resolves to ${PROJECTS_HOME}/hsp/ollama-gguf/models on HSP systems. If new models must be pulled and this directory is not writable, the run falls back to ${HOME}/pw/software/ollama-gguf/models.
+          endpoint_name:
+            label: Endpoint name
+            type: string
+            optional: true
+            tooltip: Name of the endpoint session. Defaults to <runtime>-<run slug>. A fixed name must be unique among your endpoints and keeps the chat model ids stable across relaunches.
           ollama_version:
             label: Ollama version
             type: string

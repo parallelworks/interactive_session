@@ -5,7 +5,7 @@ permissions:
 jobs:
   preprocessing:
     ssh:
-      remoteHost: ${{ inputs.cluster.resource.ip }}
+      remoteHost: ${{ inputs.resource.ip }}
     steps:
       - name: Checkout
         uses: parallelworks/checkout
@@ -25,10 +25,10 @@ jobs:
           # Write input form variables and ensure the pw agent is in the PATH
           cat <<'EOF' >> inputs.sh
           PATH=$HOME/pw:$PATH
+          service_parent_install_dir="${{ inputs.parent_install_dir }}"
           service_models="${{ inputs.service.models }}"
           service_context_length="${{ inputs.service.context_length }}"
           service_keep_alive="${{ inputs.service.keep_alive }}"
-          service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
           service_ollama_version="${{ inputs.service.ollama_version }}"
           pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG}"
           EOF
@@ -37,6 +37,15 @@ jobs:
           sed -i '/=""/d' inputs.sh # remove var=""
           # Add export= to all lines
           sed -i 's/^/export /' inputs.sh
+      - name: Set Up Install Parent Directory
+        run: |
+          source inputs.sh
+          set -x
+          # This script prepares the target host and always runs in the controller node
+          if [ -z "${service_parent_install_dir}" ] && [ -d /contrib/pw ]; then
+            echo "::notice title=Install Directory::Using Install Directory: /contrib/pw"
+            echo "service_parent_install_dir=/contrib/pw" >> inputs.sh
+          fi
       - name: Controller Preprocessing
         run: |
           set -x
@@ -87,14 +96,14 @@ jobs:
     needs:
       - preprocessing
     ssh:
-      remoteHost: ${{ inputs.cluster.resource.ip }}
+      remoteHost: ${{ inputs.resource.ip }}
     steps:
       - name: Session Runner
         uses: github/parallelworks/interactive_session@main
         early-cancel: any-job-failed
         with:
-          $yaml: workflow/script_submitter/v3.6/general.yaml
-          resource: ${{ inputs.cluster.resource }}
+          $yaml: workflow/script_submitter/v3.6/noaa.yaml
+          resource: ${{ inputs.resource }}
           shebang: '#!/bin/bash'
           use_existing_script: true
           script_path: ${{ needs.preprocessing.outputs.SCRIPT_PATH }}
@@ -106,10 +115,13 @@ jobs:
           skip_cleanups_file: ${{ needs.preprocessing.outputs.SKIP_CLEANUP_PATH }}
           slurm:
             is_enabled: ${{ inputs.cluster.slurm.is_enabled }}
+            account: ${{ inputs.cluster.slurm.account }}
             partition: ${{ inputs.cluster.slurm.partition }}
+            qos: ${{ inputs.cluster.slurm.qos }}
+            ntasks: ${{ inputs.cluster.slurm.ntasks }}
+            nodes: ${{ inputs.cluster.slurm.nodes }}
             scheduler_directives: ${{ inputs.cluster.slurm.scheduler_directives }}
             time: ${{ inputs.cluster.slurm.time }}
-            gpus: ${{ inputs.cluster.slurm.gpus }}
           pbs:
             is_enabled: ${{ inputs.cluster.pbs.is_enabled }}
             scheduler_directives: ${{ inputs.cluster.pbs.scheduler_directives }}
@@ -127,7 +139,7 @@ jobs:
     needs:
       - preprocessing
     ssh:
-      remoteHost: ${{ inputs.cluster.resource.ip }}
+      remoteHost: ${{ inputs.resource.ip }}
     steps:
       - name: Wait for endpoint
         early-cancel: any-job-failed
@@ -150,55 +162,79 @@ jobs:
 'on':
   execute:
     inputs:
+      resource:
+        type: compute-clusters
+        label: Service host
+        include-workspace: false
+        tooltip: Resource to host the service
+      parent_install_dir:
+        label: Install Directory
+        type: string
+        optional: true
+        tooltip: 'Parent directory for software installation. Default: /contrib/pw if it exists, otherwise ${HOME}/pw/software. Ensure the directory has sufficient space for the model weights!'
       cluster:
         type: group
         label: Compute Cluster Settings
+        hidden: ${{ inputs.resource.schedulerType == '' }}
+        ignore: ${{ inputs.resource.schedulerType == '' }}
         items:
-          resource:
-            type: compute-clusters
-            label: Service host
-            include-workspace: false
-            tooltip: Resource to host the service
           scheduler:
             type: boolean
             default: false
             label: Schedule Job?
-            hidden: ${{ inputs.cluster.resource.schedulerType == '' }}
-            ignore: ${{ .hidden }}
             tooltip: |
               Yes → Job is submitted to the scheduler using sbatch, qsub, etc
               No  → Job is executed in the controller or login node instead
           slurm:
             type: group
             label: SLURM Directives
-            hidden: ${{ inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
-            ignore: ${{ inputs.cluster.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            hidden: ${{ inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.schedulerType != 'slurm' || inputs.cluster.scheduler == false }}
             items:
               is_enabled:
                 type: boolean
                 hidden: true
                 default: true
-                label: Is SLURM Enabled? Yes, unless the slurm section is hidden and ignored
+                label: Is SLURM enabled? Yes, unless the slurm section is hidden and ignored
+              account:
+                label: SLURM account
+                type: slurm-accounts
+                resource: ${{ inputs.resource }}
+                tooltip: '--account=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
               partition:
                 type: slurm-partitions
                 label: SLURM partition
                 optional: true
-                resource: ${{ inputs.cluster.resource }}
-                tooltip: Select a partition from the drop down menu.
+                resource: ${{ inputs.resource }}
+                tooltip: '--partition=value SLURM directive'
+              qos:
+                label: Quality of Service [QoS]
+                type: slurm-qos
+                resource: ${{ inputs.resource }}
+                tooltip: '--qos=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              ntasks:
+                label: Number of tasks
+                type: number
+                default: 1
+                tooltip: '--ntasks=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: ${{ .ignore }}
+              nodes:
+                label: Number of nodes
+                type: number
+                default: 1
+                tooltip: '--nodes=value slurm directive'
+                ignore: ${{ 'existing' != inputs.resource.provider }}
+                hidden: true
               time:
                 label: Walltime
                 type: string
                 default: '01:00:00'
                 tooltip: '--time= SLURM directive to set the maximum wall-clock time limit for the job'
-              gpus:
-                label: Number of GPUs
-                type: number
-                optional: true
-                min: 0
-                default: 0
-                hidden: ${{ inputs.cluster.resource.ip != 'dn-slurm-1.parallel.works' }}
-                ignore: ${{ .hidden }}
-                tooltip: '--gpus= SLURM directive to set the number of GPUs allocated for the job'
               scheduler_directives:
                 type: editor
                 optional: true
@@ -209,8 +245,8 @@ jobs:
           pbs:
             type: group
             label: PBS Directives
-            hidden: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
-            ignore: ${{ inputs.cluster.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            hidden: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
+            ignore: ${{ inputs.resource.schedulerType != 'pbs' || inputs.cluster.scheduler == false }}
             items:
               is_enabled:
                 type: boolean
@@ -265,12 +301,6 @@ jobs:
             default: 5m
             optional: true
             tooltip: How long a model stays loaded in memory after its last request (OLLAMA_KEEP_ALIVE), e.g. 5m, 1h, or -1 to keep it loaded forever
-          parent_install_dir:
-            label: Parent Install Directory
-            type: string
-            hidden: true
-            default: ${HOME}/pw/software
-            tooltip: Ollama and the model weights are installed under this directory. Ensure it has sufficient space!
           ollama_version:
             label: Ollama version
             type: string

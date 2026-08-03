@@ -6,6 +6,21 @@ endpoint. The endpoint is registered as an OpenAI-compatible provider
 built-in chat and AI providers and can be used by any tool that consumes an
 OpenAI-compatible API, such as a RAG system.
 
+## Runtime
+
+The **Runtime** input picks how Ollama runs:
+
+- **Native (Ollama tarball)** — installs the official release tarball on the
+  host. Needs glibc >= 2.28 and zstd; bundles CUDA runtimes, so a working
+  NVIDIA driver is the only GPU requirement.
+- **Singularity container** — runs the official `ollama/ollama` image as a SIF
+  (pulled from `ghcr.io/parallelworks/ollama-gguf`), with a sandbox fallback
+  for nodes that cannot mount SIFs. Use it on hosts where the native binary
+  cannot run (older glibc, no zstd). GPU support via `--nv` is enabled
+  automatically when a working NVIDIA driver is detected.
+
+Both runtimes share the same model store, so weights are downloaded once.
+
 ## Models
 
 The **Models to serve** input takes a space or comma separated list of model

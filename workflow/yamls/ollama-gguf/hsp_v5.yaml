@@ -28,6 +28,7 @@ jobs:
           service_models="${{ inputs.service.models }}"
           service_context_length="${{ inputs.service.context_length }}"
           service_keep_alive="${{ inputs.service.keep_alive }}"
+          service_models_dir="${{ inputs.service.models_dir }}"
           service_ollama_version="${{ inputs.service.ollama_version }}"
           pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG}"
           EOF
@@ -369,6 +370,11 @@ jobs:
             default: 5m
             optional: true
             tooltip: How long a model stays loaded in memory after its last request (OLLAMA_KEEP_ALIVE), e.g. 5m, 1h, or -1 to keep it loaded forever
+          models_dir:
+            label: Model Directory
+            type: string
+            default: ${PROJECTS_HOME:-$HOME/pw}/hsp/ollama-gguf/models
+            tooltip: Directory where model weights are stored (OLLAMA_MODELS). If new models must be pulled and this directory is not writable, the run falls back to ${HOME}/pw/software/ollama-gguf/models.
           ollama_version:
             label: Ollama version
             type: string

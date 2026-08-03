@@ -1,4 +1,3 @@
-# yaml-language-server: $schema=https://activate.parallel.works/workflow.schema.json
 permissions:
   - '*'
 
@@ -1049,6 +1048,8 @@ jobs:
             label: RAG Database Directory
             type: string
             optional: true
+            prefillDefault: true
+            default: ${PROJECTS_HOME}/hsp/examples/data
             tooltip: |
               Path on the Langflow host to the vector database directory used
               by the RAG flows. It is mounted at /data inside the Langflow
@@ -1098,6 +1099,8 @@ jobs:
           proxy_dir:
             label: Langflow Proxy Path
             type: string
+            prefillDefault: true
+            default: ${PROJECTS_HOME}/hsp/tools/langflow_proxy-main
             optional: true
             tooltip: |
               Path on the service host to the langflow_proxy code (the directory

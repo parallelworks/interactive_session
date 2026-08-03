@@ -118,6 +118,30 @@ Using n8n as the template (diff `controller-v3.sh` → `controller-v4.sh`):
    `singularity exec <dir> <app> --version` on the target node to prove the
    fallback works there.
 
+## Ollama conversion notes (`ollama-gguf-container`, verified 2026-08)
+
+Verified on gcpsmall (apptainer 1.4.5, CPU) and awsgpu (singularity-ce 4.4.2,
+A10G GPU):
+
+- SIF built from the official image (`docker://ollama/ollama:<tag>`), pushed as
+  `ghcr.io/parallelworks/ollama-gguf:<tag>` (same tag as the release).
+- One YAML serves both runtimes: a `service.name` **dropdown**
+  (`ollama-gguf` | `ollama-gguf-container`) feeds `sparse_checkout` and the
+  `<name>/controller-v4.sh` / `<name>/start-template-v4.sh` paths (the
+  kasmvnc-container pattern). Add `tools/oras` to `sparse_checkout` — the
+  container controller sources `tools/oras/libs.sh`.
+- The launcher passes the endpoint port with `--env
+  OLLAMA_HOST="127.0.0.1:\${PORT}"`; add `--nv` when `nvidia-smi -L` succeeds —
+  in-container ollama then reports `library=CUDA` and loads models 100% GPU.
+- The host model store is shared with the native variant
+  (`--bind ${service_parent_install_dir}`; `OLLAMA_MODELS` env) so weights
+  download once regardless of runtime. Controller-side pulls run a temp
+  in-container server on an ephemeral port, same as the native flow.
+- `pw endpoints delete` kills the **whole in-container tree** (apptainer
+  starter → `ollama serve` → `llama-server` runner) on both apptainer and
+  singularity-ce, and leaves sibling endpoints' trees untouched (verified with
+  two ollama endpoints on one node).
+
 ## Gotchas
 
 - `singularity build` from `docker://` needs internet — build on the login node or

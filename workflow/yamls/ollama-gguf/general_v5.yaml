@@ -26,12 +26,15 @@ jobs:
           cat <<'EOF' >> inputs.sh
           PATH=$HOME/pw:$PATH
           service_models="${{ inputs.service.models }}"
+          service_serve_only_requested="${{ inputs.service.serve_only_requested }}"
           service_context_length="${{ inputs.service.context_length }}"
           service_keep_alive="${{ inputs.service.keep_alive }}"
+          service_preload="${{ inputs.service.preload }}"
           service_models_dir="${{ inputs.service.models_dir }}"
           service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
           service_ollama_version="${{ inputs.service.ollama_version }}"
-          pw_endpoints_args="--name ${{ inputs.service.name }}-${PW_RUN_SLUG}"
+          endpoint_name="${{ inputs.service.endpoint_name }}"
+          pw_endpoints_args="--name ${endpoint_name:-${{ inputs.service.name }}-${PW_RUN_SLUG}}"
           EOF
           # Remove empty variables
           sed -i '/=\s*$\|=undefined\s*$/d' inputs.sh
@@ -133,7 +136,10 @@ jobs:
       - name: Wait for endpoint
         early-cancel: any-job-failed
         run: |
-          endpoint_name="${{ inputs.service.name }}-${PW_RUN_SLUG}"
+          endpoint_name="${{ inputs.service.endpoint_name }}"
+          if [ -z "${endpoint_name}" ]; then
+            endpoint_name="${{ inputs.service.name }}-${PW_RUN_SLUG}"
+          fi
           echo "::notice::Waiting for endpoint ${endpoint_name} to come online"
           until pw endpoints list | grep -qw "${endpoint_name}"; do
             echo "$(date) Endpoint ${endpoint_name} not found yet; retrying in 10 seconds"
@@ -255,17 +261,47 @@ jobs:
               Examples:
               hf.co/mradermacher/gemma-4-31B-it-heretic-GGUF:Q4_K_M
               hf.co/mradermacher/gemma-4-31B-it-The-DECKARD-HERETIC-UNCENSORED-Thinking-GGUF:Q4_K_M
+          serve_only_requested:
+            label: Serve only the requested models
+            type: boolean
+            default: true
+            hidden: ${{ inputs.service.name == 'ollama-gguf' }}
+            ignore: ${{ .hidden }}
+            tooltip: |
+              Expose only the models listed above instead of every model cached in the
+              model directory. Available with the Singularity container runtime, which
+              mounts a filtered view of the model manifests into the container.
           context_length:
-            label: Context length (tokens)
-            type: number
-            default: 8192
-            tooltip: Context window used for loaded models (OLLAMA_CONTEXT_LENGTH)
+            label: Max Context Length
+            type: dropdown
+            default: '8192'
+            tooltip: Context window used for loaded models (OLLAMA_CONTEXT_LENGTH). Lower values reduce memory usage.
+            options:
+              - value: auto
+                label: Auto (model default)
+              - value: '4096'
+                label: 4K tokens
+              - value: '8192'
+                label: 8K tokens
+              - value: '16384'
+                label: 16K tokens
+              - value: '32768'
+                label: 32K tokens
+              - value: '65536'
+                label: 64K tokens
+              - value: '131072'
+                label: 128K tokens
           keep_alive:
             label: Keep models loaded
             type: string
             default: 5m
             optional: true
             tooltip: How long a model stays loaded in memory after its last request (OLLAMA_KEEP_ALIVE), e.g. 5m, 1h, or -1 to keep it loaded forever
+          preload:
+            label: Preload models
+            type: boolean
+            default: true
+            tooltip: Load the requested models into memory as soon as the server starts, so the first request does not wait for the model to load. Combine with Keep models loaded = -1 to keep them in memory permanently.
           models_dir:
             label: Model Directory
             type: string
@@ -277,6 +313,11 @@ jobs:
             hidden: true
             default: ${HOME}/pw/software
             tooltip: Ollama and the model weights are installed under this directory. Ensure it has sufficient space!
+          endpoint_name:
+            label: Endpoint name
+            type: string
+            optional: true
+            tooltip: Name of the endpoint session. Defaults to <runtime>-<run slug>. A fixed name must be unique among your endpoints and keeps the chat model ids stable across relaunches.
           ollama_version:
             label: Ollama version
             type: string

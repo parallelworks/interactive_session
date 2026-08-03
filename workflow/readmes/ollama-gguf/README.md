@@ -35,6 +35,11 @@ Any GGUF repo on Hugging Face works with the `hf.co/<owner>/<repo>:<quant>`
 form. Size the quantization to the host: a Q4_K_M of a 31B model is ~19 GB on
 disk and needs about as much free memory to run.
 
+Models already present in the model directory are served as-is and never
+re-pulled — this keeps runs fast and lets several users share one store
+(re-pulling would rewrite a manifest file another user may own). To force a
+refresh of a tag, delete its file under `<model directory>/manifests/`.
+
 The **Model Directory** input sets where weights are stored (`OLLAMA_MODELS`;
 ollama keeps them as a content-addressed store with `blobs/` and `manifests/`
 subdirectories). It defaults to the shared per-platform location, so weights

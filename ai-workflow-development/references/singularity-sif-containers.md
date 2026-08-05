@@ -142,6 +142,19 @@ A10G GPU):
   singularity-ce, and leaves sibling endpoints' trees untouched (verified with
   two ollama endpoints on one node).
 
+## Gotchas (def-file builds — verified, rag-service 2026-08)
+
+- **Upgrade pip first in `%post`** when bootstrapping from `python:3.9-slim`: its
+  bundled pip rejects wheels from `download.pytorch.org` with
+  `inconsistent Name: expected 'jinja2', but metadata has 'Jinja2'` and the build
+  dies. `pip install --upgrade pip` before anything else fixes it.
+- **CPU-only torch shrinks the SIF dramatically**: `pip install torch==<v>+cpu
+  --index-url https://download.pytorch.org/whl/cpu` *before* `-r requirements.txt`
+  (PEP 440 ignores the `+cpu` local label, so a plain `torch==<v>` pin stays
+  satisfied). rag-service: 453 MB SIF instead of multi-GB with the CUDA stack.
+- Keep the app code OUT of the environment container (deliver it via checkout) so
+  code iterations never need a rebuild/re-push.
+
 ## Gotchas
 
 - `singularity build` from `docker://` needs internet — build on the login node or

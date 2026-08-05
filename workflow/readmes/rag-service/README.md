@@ -91,11 +91,13 @@ Operational endpoints:
 
 ### Example curls
 
-Endpoints are platform-authenticated; from a workflow/cluster shell you can use
-your `PW_API_KEY` as a cookie (anonymous requests get a 307 to the login page):
+Endpoints are platform-authenticated; anonymous requests get a 307 to the
+login page. A platform token (`PW_API_KEY` inside a workflow, or the `token`
+from `~/.config/pw/credentials`) passed as a Bearer header authenticates
+(verified live):
 
 ```bash
-AUTH="Cookie: pw-token=${PW_API_KEY}"
+AUTH="Authorization: Bearer ${PW_API_KEY}"
 BASE=https://<subdomain>.activate.pw    # from `pw endpoints list`
 
 curl -H "$AUTH" "$BASE/health"

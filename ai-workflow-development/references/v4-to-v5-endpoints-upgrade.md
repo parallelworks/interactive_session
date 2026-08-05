@@ -242,3 +242,13 @@ full ask_cluster round trip).
   read-only without `-W`. No writable flag needed (verified over the ws protocol).
 - A root-slug service (webshell) just omits `--slug` from `pw_endpoints_args` —
   `--slug ""` risks the empty token being eaten by the arg parser.
+- **Smoke-testing the public endpoint URL from a script** (verified, rag-service):
+  `curl -H "Authorization: Bearer <token>"` against `https://<sub>.activate.pw/...`
+  returns the app's response (200) where anonymous gets the 307 login redirect.
+  The token is the runtime `PW_API_KEY` inside a workflow, or the `token` field of
+  `~/.config/pw/credentials` on a node where the CLI is logged in. Cookie-style
+  (`pw-token=`) and `X-API-Key` headers do NOT work.
+- **A backgrounded sibling process** (e.g. an indexer started by the start template
+  before `pw endpoints run`) dies with the tree on `pw endpoints delete` when the
+  generic trap + a `cancel.sh` (written to the script CWD with the child's PID) are
+  in place — verified live with rag-service; don't rely on tree-kill alone.

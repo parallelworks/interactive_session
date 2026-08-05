@@ -27,10 +27,9 @@ jobs:
           # The name prefix fractal-<run-slug>- is shared by every worker in
           # this run — that is what the race keys on. The suffix must be unique
           # per worker, and two workers can target the same resource, so the
-          # matrix worker id (fractal_demo-0, -1, ...) is appended too; it has
-          # no environment variable of its own, but it is a component of
-          # PW_JOB_DIR. Empty when this workflow runs outside the matrix.
-          worker=$(echo "${PW_JOB_DIR}" | grep -oE 'fractal_demo-[0-9]+' | head -1 | grep -oE '[0-9]+$' || true)
+          # matrix worker index (PW_MATRIX_INDEX, set even inside this
+          # subworkflow) is appended too. Unset outside the matrix.
+          worker="${PW_MATRIX_INDEX:-}"
           endpoint_name="fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }}${worker:+-w${worker}}"
           echo "ENDPOINT_NAME=${endpoint_name}" | tee -a $OUTPUTS
           cat <<EOF >> script.sh

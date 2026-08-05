@@ -416,9 +416,9 @@ Until now everything ran on the **controller** (login) node. Heavy work belongs 
       - name: Create Run Script
         run: |
           # A run can target the same resource twice (the Stage 5/6 matrix), so
-          # the endpoint name also carries the matrix worker id — there is no
-          # variable for it, but it is a component of PW_JOB_DIR.
-          worker=$(echo "${PW_JOB_DIR}" | grep -oE 'fractal_demo-[0-9]+' | head -1 | grep -oE '[0-9]+$' || true)
+          # the endpoint name also carries the matrix worker index, exported
+          # as PW_MATRIX_INDEX. Unset outside the matrix.
+          worker="${PW_MATRIX_INDEX:-}"
           endpoint_name="fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }}${worker:+-w${worker}}"
           echo "ENDPOINT_NAME=${endpoint_name}" | tee -a $OUTPUTS
           cat <<EOF >> script.sh
@@ -517,7 +517,7 @@ The submitter has a shortcut input that ends the run even sooner: submit the scr
 The wait step's tools are Stage 3's — `retry` until the endpoint shows up, `$OUTPUTS` + `::notice::` to surface the URL — but the poll window grows to ~30 minutes (`max-retries: 180` × `10s`), because a scheduled job can sit in the queue, or wait for a cloud node to boot, long before the script runs. And a wait that long must not outlive a dead partner: [`early-cancel: any-job-failed`](https://parallelworks.com/docs/run/workflows/building-workflows/yaml-fields#jobsjobstepsearly-cancel) on **both** the wait step and the submitter step means whichever side fails takes the other down instead of leaving it hanging.
 
 **Per-worker endpoint names.**
-The name becomes `fractal-<run-slug>-<resource-name>-wN`. `PW_RUN_SLUG` is *run-scoped* — in Stage 5 every matrix worker shares it — and a run can even target the *same resource* twice, so the resource name alone is not unique either. The worker's matrix index has no environment variable of its own, but it is a component of `PW_JOB_DIR` (`…/subworkflows/fractal_demo-0/…`), so `install` extracts it, appends `-w0`, `-w1`, …, and publishes the finished name as the `ENDPOINT_NAME` output — one place builds the name, every other job just reads it. The shared `fractal-<run-slug>-` prefix is what lets Stage 6 find *all* of this run's endpoints.
+The name becomes `fractal-<run-slug>-<resource-name>-wN`. `PW_RUN_SLUG` is *run-scoped* — in Stage 5 every matrix worker shares it — and a run can even target the *same resource* twice, so the resource name alone is not unique either. The worker's matrix index is exported as `PW_MATRIX_INDEX` (`0`, `1`, …) — set even here, inside the subworkflow the matrix job invokes, and unset when the workflow runs on its own — so `install` appends it as `-w0`, `-w1`, …, and publishes the finished name as the `ENDPOINT_NAME` output — one place builds the name, every other job just reads it. The shared `fractal-<run-slug>-` prefix is what lets Stage 6 find *all* of this run's endpoints.
 
 **A form that adapts to the resource.**
 The "Schedule Job?" toggle and the `slurm`/`pbs` groups only appear when they apply: `hidden`/`ignore` key off `inputs.resource.schedulerType` (`slurm`, `pbs`, or empty) and `inputs.scheduler`. [`slurm-partitions`](https://parallelworks.com/docs/run/workflows/building-workflows/inputs-and-expressions#slurm-partitions) is a **dynamic dropdown** that fetches its choices from the chosen cluster. The hidden `is_enabled` boolean (default `true`, sent only when the group is active) is what tells the subworkflow which path to take.

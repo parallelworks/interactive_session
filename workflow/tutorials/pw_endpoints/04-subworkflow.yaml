@@ -26,11 +26,11 @@ jobs:
         run: |
           # The endpoint name must be unique per worker, and a run can target
           # the same resource more than once (the Stage 5/6 matrix), so the
-          # resource name alone is not enough. The matrix worker id
-          # (fractal_demo-0, fractal_demo-1, ...) has no environment variable
-          # of its own, but it is a component of PW_JOB_DIR — pull the number
-          # out. Empty when this workflow runs on its own, outside the matrix.
-          worker=$(echo "${PW_JOB_DIR}" | grep -oE 'fractal_demo-[0-9]+' | head -1 | grep -oE '[0-9]+$' || true)
+          # resource name alone is not enough. PW_MATRIX_INDEX carries the
+          # matrix worker index (0, 1, ...) — even here, inside the
+          # subworkflow the matrix job invokes. Unset when this workflow runs
+          # on its own, outside the matrix.
+          worker="${PW_MATRIX_INDEX:-}"
           endpoint_name="fractal-${PW_RUN_SLUG}-${{ inputs.resource.name }}${worker:+-w${worker}}"
           echo "ENDPOINT_NAME=${endpoint_name}" | tee -a $OUTPUTS
           cat <<EOF >> script.sh

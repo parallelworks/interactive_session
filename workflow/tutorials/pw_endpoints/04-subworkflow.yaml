@@ -47,7 +47,10 @@ jobs:
           chmod +x script.sh
           # We need to pass the PATH to the script submitter subworkflow
           echo "SCRIPT_PATH=${PWD}/script.sh" | tee -a $OUTPUTS
-          # Do not run the cleanup when the workflow exits
+          # The script submitter defines cleanups that cancel whatever it
+          # started — scancel/qdel the SLURM/PBS job, for example. This file
+          # skips them; wait_for_endpoint creates it once the endpoint is
+          # online, so only a live render survives a cancel.
           echo "SKIP_CLEANUP_PATH=${PWD}/SKIP_CLEANUP" | tee -a $OUTPUTS
 
   script_submitter:

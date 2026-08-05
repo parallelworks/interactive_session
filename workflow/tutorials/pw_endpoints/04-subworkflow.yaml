@@ -83,7 +83,21 @@ jobs:
           pbs:
             is_enabled: ${{ inputs.pbs.is_enabled }}
             scheduler_directives: ${{ inputs.pbs.scheduler_directives }}
-
+      # On the happy path this job is CANCELED by wait_for_endpoint before the
+      # step above returns, so reaching these steps means the script exited —
+      # render crashed, walltime expired — before its endpoint came online.
+      # Shut the waiter down and fail loud instead of letting it poll out its
+      # 30 minutes. (A step that FAILS skips the rest of its job, so a hard
+      # submitter failure lands on the waiter's early-cancel instead.)
+      - name: Cancel Wait for Endpoint
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - wait_for_endpoint
+      - name: Exit Workflow with Error
+        run: |
+          echo "::error title=Error::The fractal script exited before its endpoint came online"
+          exit 1
 
   wait_for_endpoint:
     needs:

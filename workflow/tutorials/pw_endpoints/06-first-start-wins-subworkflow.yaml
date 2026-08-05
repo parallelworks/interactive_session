@@ -77,6 +77,20 @@ jobs:
           pbs:
             is_enabled: ${{ inputs.pbs.is_enabled }}
             scheduler_directives: ${{ inputs.pbs.scheduler_directives }}
+      # Same guard as Stage 4: on the happy path this job is CANCELED by
+      # first_start_wins (win or lose) before the step above returns, so
+      # reaching these steps means this worker's render died before the race
+      # was decided. Stop our poller and fail this worker loud — the parent's
+      # fail-fast takes it from there.
+      - name: Cancel First Start Wins
+        uses: parallelworks/cancel-jobs
+        with:
+          jobs:
+            - first_start_wins
+      - name: Exit Workflow with Error
+        run: |
+          echo "::error title=Error::The fractal script exited before its endpoint came online"
+          exit 1
 
   first_start_wins:
     needs:
@@ -85,6 +99,7 @@ jobs:
       remoteHost: ${{ inputs.resource.ip }}
     steps:
       - name: First Start Wins
+        early-cancel: any-job-failed
         retry:
           max-retries: 8640
           interval: 10s

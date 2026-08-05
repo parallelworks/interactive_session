@@ -454,6 +454,15 @@ Until now everything ran on the **controller** (login) node. Heavy work belongs 
           skip_cleanups_file: ${{ needs.install.outputs.SKIP_CLEANUP_PATH }}
           slurm:   # ... the form's SLURM group, passed straight through ...
           pbs:     # ... same idea ...
+      - name: Cancel Wait for Endpoint    # reached only if the script exits early —
+        uses: parallelworks/cancel-jobs   # on the happy path this job is canceled first
+        with:
+          jobs:
+            - wait_for_endpoint
+      - name: Exit Workflow with Error
+        run: |
+          echo "::error title=Error::The fractal script exited before its endpoint came online"
+          exit 1
 ```
 
 **`wait_for_endpoint`** polls until the endpoint registers and publishes its URL — then it **creates the skip file and cancels the submitter** (the [`cancel-jobs`](https://parallelworks.com/docs/run/workflows/building-workflows/actions#cancel-jobs) action), which is what lets the run complete while the job keeps serving:
@@ -515,6 +524,9 @@ The submitter has a shortcut input that ends the run even sooner: submit the scr
 
 **`retry` and `early-cancel`, stretched for the queue.**
 The wait step's tools are Stage 3's — `retry` until the endpoint shows up, `$OUTPUTS` + `::notice::` to surface the URL — but the poll window grows to ~30 minutes (`max-retries: 180` × `10s`), because a scheduled job can sit in the queue, or wait for a cloud node to boot, long before the script runs. And a wait that long must not outlive a dead partner: [`early-cancel: any-job-failed`](https://parallelworks.com/docs/run/workflows/building-workflows/yaml-fields#jobsjobstepsearly-cancel) on **both** the wait step and the submitter step means whichever side fails takes the other down instead of leaving it hanging.
+
+**The submitter returning is itself a failure.**
+`run.sh` serves forever, so on the happy path the *Script Submitter* step never returns — `wait_for_endpoint` cancels the whole job first. That leaves exactly one way to *reach* the two steps after it: the script exited — the render crashed, the walltime expired — before its endpoint came online. Those steps turn that into a fast, loud ending: cancel the waiter (it would otherwise poll out its full ~30 minutes) and `exit 1` under an `::error` annotation that puts the reason on the run page. The division of labor hangs on a step-semantics detail: a step that **fails** ends its job on the spot — the steps after it are *skipped* — so the trailing steps only handle the script *returning*, while a hard failure of the submitter itself (a bad partition, say) fails the job there and lands on the waiter's `early-cancel`. Both paths end the run promptly, and the production `*_v5.yaml` session workflows carry this same tail.
 
 **Per-worker endpoint names.**
 The name becomes `fractal-<run-slug>-<resource-name>-wN`. `PW_RUN_SLUG` is *run-scoped* — in Stage 5 every matrix worker shares it — and a run can even target the *same resource* twice, so the resource name alone is not unique either. The worker's matrix index is exported as `PW_MATRIX_INDEX` (`0`, `1`, …) — set even here, inside the subworkflow the matrix job invokes, and unset when the workflow runs on its own — so `install` appends it as `-w0`, `-w1`, …, and publishes the finished name as the `ENDPOINT_NAME` output — one place builds the name, every other job just reads it. The shared `fractal-<run-slug>-` prefix is what lets Stage 6 find *all* of this run's endpoints.
@@ -641,6 +653,9 @@ Winner and losers end exactly the same way: cancel your own `script_submitter`. 
 | The submitter's cleanup | finds the file — the render keeps serving | runs — the render is killed, and its endpoint deregisters on its own (an endpoint *is* its client process) |
 
 The guarded `pw endpoints delete` in the [`cleanup:`](https://parallelworks.com/docs/run/workflows/building-workflows/yaml-fields#jobsjobstepscleanup) is a defensive no-op for a loser process that lingers — the file test keeps it away from the winner's endpoint. When the dust settles, the whole fan-out has **completed** and exactly one page is serving; delete its endpoint later, like every stage since 3.
+
+**Stage 4's failure tail guards the race too.**
+The subworkflow's `script_submitter` keeps the same two trailing steps: a worker whose render dies before the race is decided cancels its own `first_start_wins` poller (which would otherwise poll out its window) and fails loud — the parent's `fail-fast: true` then stands the other workers down. And `first_start_wins` carries `early-cancel: any-job-failed` for the mirror case, a submitter that fails outright.
 
 ---
 

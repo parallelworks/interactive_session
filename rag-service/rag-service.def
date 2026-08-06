@@ -1,0 +1,29 @@
+Bootstrap: docker
+From: python:3.9-slim
+
+# Python runtime for rag-service (indexer.py + rag_server.py). The service
+# code itself is NOT baked in -- it comes from the workflow checkout -- so code
+# changes never require a container rebuild.
+
+%files
+    requirements.txt /opt/rag-service/requirements.txt
+
+%post
+    # The image's bundled pip is too old for the pytorch index's wheel metadata
+    pip install --no-cache-dir --upgrade pip
+    # CPU-only torch first: the PyPI default wheel drags in the CUDA stack
+    # (several GB) that this CPU service never uses. 2.8.0+cpu satisfies the
+    # torch==2.8.0 pin in requirements.txt (PEP 440 ignores local labels).
+    pip install --no-cache-dir torch==2.8.0+cpu --index-url https://download.pytorch.org/whl/cpu
+    pip install --no-cache-dir -r /opt/rag-service/requirements.txt
+
+%test
+    python3 -c "import lancedb, sentence_transformers, watchdog, pypdf; print('deps ok')"
+
+%labels
+    org.opencontainers.image.source https://github.com/parallelworks/interactive_session
+    org.opencontainers.image.description Python environment for the rag-service ACTIVATE workflow
+
+%help
+    Run the rag-service processes with this environment, e.g.:
+      singularity exec rag-service.sif python3 /path/to/rag_server.py --help

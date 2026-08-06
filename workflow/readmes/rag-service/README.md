@@ -3,7 +3,7 @@
 A standalone retrieval service for agents. It watches a directory of documents
 on the cluster, indexes them into an embedded [LanceDB](https://lancedb.com)
 dataset (dense vectors + BM25 full-text), and exposes a search HTTP API through
-a platform endpoint (`https://<name>.activate.pw/`). It serves retrieval only:
+a platform endpoint. It serves retrieval only:
 no LLM, no chat proxy, no OpenAI-compatible surface.
 
 Two processes run on one node, launched by the start script:
@@ -31,7 +31,7 @@ Two processes run on one node, launched by the start script:
 | `parent_install_dir` | *(empty)* | Root for the dependency container and model cache; falls back to `${HOME}/pw/software` when left empty. |
 
 The LanceDB dataset itself (vectors + FTS index + state file) lives under the
-**run's job directory** (`~/pw/jobs/rag-service/<NNNNN>/rag-db/`), so each run
+**run's job directory**, so each run
 indexes its corpus fresh and two runs never share a table.
 
 ### Embedding model options

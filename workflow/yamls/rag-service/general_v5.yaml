@@ -267,12 +267,3 @@ jobs:
             tooltip: >-
               LanceDB table to index into. Use different tables to serve
               several corpora from the same cluster.
-          parent_install_dir:
-            label: Parent install directory
-            type: string
-            optional: true
-            tooltip: >-
-              Where the service keeps its dependency container
-              (containers/rag-service.sif) and the embedding model cache
-              (models/). Must be on the shared filesystem. Defaults to
-              ${HOME}/pw/software when left empty.

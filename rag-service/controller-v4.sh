@@ -32,7 +32,7 @@ else
     service_parent_install_dir=${HOME}/pw/software
 fi
 
-INSTALL_DIR="${service_parent_install_dir/#\~/$HOME}/rag-service"
+MODELS_DIR="${service_parent_install_dir/#\~/$HOME}/models"
 container_sif=${service_parent_install_dir}/containers/rag-service.sif
 sandbox_dir=${service_parent_install_dir}/containers/rag-service-sandbox
 
@@ -58,7 +58,7 @@ if ! which singularity &> /dev/null; then
 fi
 echo "::endgroup::"
 
-mkdir -p ${service_parent_install_dir}/containers "${INSTALL_DIR}"
+mkdir -p ${service_parent_install_dir}/containers "${MODELS_DIR}"
 chmod a+rX ${service_parent_install_dir}/containers
 
 # Download the SIF only when it is not already present (idempotent)
@@ -90,14 +90,28 @@ else
 fi
 
 echo "::group::Embedding model cache"
-# Loading the model once populates ${SENTENCE_TRANSFORMERS_HOME} on the shared
-# filesystem; compute nodes then load it offline via the same cache path.
-export SENTENCE_TRANSFORMERS_HOME="${INSTALL_DIR}/st-cache"
-EMBEDDING_MODEL="${service_embedding_model_id:-sentence-transformers/all-MiniLM-L6-v2}"
-singularity exec --bind "${INSTALL_DIR}" "${container_ref}" \
-    python3 -c "import sys; from sentence_transformers import SentenceTransformer; m = SentenceTransformer(sys.argv[1], device='cpu'); print(f'cached {sys.argv[1]} (dim={m.get_sentence_embedding_dimension()})')" \
-    "${EMBEDDING_MODEL}" \
-    || { echo "::error title=Model download failed::could not cache the embedding model"; exit 1; }
+# Save the model as a plain directory ${MODELS_DIR}/<org>/<name> on the shared
+# filesystem (no hub-cache "models--" naming); compute nodes load that path
+# offline. The hub download itself goes through a throwaway cache dir.
+EMBEDDING_MODEL="${service_embedding_model_id:-BAAI/bge-small-en-v1.5}"
+if [ -f "${MODELS_DIR}/${EMBEDDING_MODEL}/modules.json" ]; then
+    echo "::notice::model already cached at ${MODELS_DIR}/${EMBEDDING_MODEL}"
+else
+    export HF_HOME=$(mktemp -d)
+    singularity exec --bind "${MODELS_DIR}" --bind "${HF_HOME}" "${container_ref}" \
+        python3 -c "
+import os, sys
+from sentence_transformers import SentenceTransformer
+mid, out = sys.argv[1], sys.argv[2]
+m = SentenceTransformer(mid, device='cpu')
+dst = os.path.join(out, mid)
+m.save(dst)
+print(f'saved {mid} (dim={m.get_sentence_embedding_dimension()}) -> {dst}')
+" "${EMBEDDING_MODEL}" "${MODELS_DIR}" \
+        || { rm -rf "${HF_HOME}"; echo "::error title=Model download failed::could not cache the embedding model"; exit 1; }
+    rm -rf "${HF_HOME}"
+    unset HF_HOME
+fi
 echo "::endgroup::"
 
 echo "::notice::rag-service ready | container=${container_ref} | model=${EMBEDDING_MODEL} | docs=${docs_dir_abs}"

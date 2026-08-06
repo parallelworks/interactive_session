@@ -36,6 +36,8 @@ from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 
+from rag_common import embedding_prefixes, resolve_model_path
+
 LOG = logging.getLogger("indexer")
 logging.basicConfig(
     level=os.environ.get("INDEXER_LOGLEVEL", "INFO").upper(),
@@ -117,10 +119,14 @@ class Indexer:
         self.db = lancedb.connect(db_dir)
         self.state_path = os.path.join(db_dir, f"{self.table_name}.state.json")
 
-        LOG.info("Loading embedding model %s", args.embedding_model)
+        model_ref = resolve_model_path(args.embedding_model, os.environ.get("RAG_MODELS_DIR"))
+        LOG.info("Loading embedding model %s (from %s)", args.embedding_model, model_ref)
         self.model = SentenceTransformer(
-            args.embedding_model, device=os.environ.get("EMBEDDING_DEVICE", "cpu")
+            model_ref, device=os.environ.get("EMBEDDING_DEVICE", "cpu")
         )
+        _, self.passage_prefix = embedding_prefixes(args.embedding_model)
+        if self.passage_prefix:
+            LOG.info("Passage prefix for %s: %r", args.embedding_model, self.passage_prefix)
         dim = self.model.get_sentence_embedding_dimension()
 
         schema = pa.schema(
@@ -137,6 +143,14 @@ class Indexer:
         )
         if self.table_name in self.db.table_names():
             self.tbl = self.db.open_table(self.table_name)
+            existing_dim = self.tbl.schema.field("vector").type.list_size
+            if existing_dim != dim:
+                LOG.error(
+                    "Table %s has %d-dim vectors but model %s emits %d dims; "
+                    "use a different table_name or db dir",
+                    self.table_name, existing_dim, args.embedding_model, dim,
+                )
+                raise SystemExit(1)
         else:
             self.tbl = self.db.create_table(self.table_name, schema=schema)
             LOG.info("Created table %s in %s", self.table_name, db_dir)
@@ -221,7 +235,10 @@ class Indexer:
         chunks = [c for c, _ in chunks_spans]
         spans = [s for _, s in chunks_spans]
         LOG.info("[EMBED] %s -> %d chunks", path, len(chunks))
-        vecs = self.model.encode(chunks, show_progress_bar=False)
+        # Prefix only the encoder input; stored text and spans stay original
+        vecs = self.model.encode(
+            [self.passage_prefix + c for c in chunks], show_progress_bar=False
+        )
 
         title = os.path.basename(path)
         rows = [

@@ -40,7 +40,7 @@ else
     service_parent_install_dir=${HOME}/pw/software
 fi
 
-INSTALL_DIR="${service_parent_install_dir/#\~/$HOME}/rag-service"
+MODELS_DIR="${service_parent_install_dir/#\~/$HOME}/models"
 container_sif=${service_parent_install_dir}/containers/rag-service.sif
 sandbox_dir=${service_parent_install_dir}/containers/rag-service-sandbox
 
@@ -88,23 +88,25 @@ else
     container_ref="${sandbox_dir}"
 fi
 
-export SENTENCE_TRANSFORMERS_HOME="${INSTALL_DIR}/st-cache"
-# The model must come from the cache the controller populated -- fail loud
-# rather than attempt a download on a node that may have no internet.
+# The model must come from the plain-directory cache the controller saved
+# under ${MODELS_DIR}/<org>/<name> (resolve_model_path in rag_common.py) --
+# fail loud rather than attempt a download on a node with no internet.
+export RAG_MODELS_DIR="${MODELS_DIR}"
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 
 export RAG_DOCS_DIR="${service_docs_dir/#\~/$HOME}"
-export RAG_DB_DIR="${INSTALL_DIR}/db"
+# The LanceDB dataset (and its state file) live under the run's job dir
+export RAG_DB_DIR="${JOB_DIR}/rag-db"
 export RAG_TABLE="${service_table_name:-activate_rag}"
-export RAG_EMBEDDING_MODEL="${service_embedding_model_id:-sentence-transformers/all-MiniLM-L6-v2}"
+export RAG_EMBEDDING_MODEL="${service_embedding_model_id:-BAAI/bge-small-en-v1.5}"
 export RAG_CHUNK_CHARS="${service_chunk_chars:-700}"
 export RAG_CHUNK_OVERLAP="${service_chunk_overlap:-80}"
 export RAG_DEFAULT_TOP_K="${service_default_top_k:-8}"
 
 # Host env (RAG_*, SENTENCE_TRANSFORMERS_HOME, offline flags) passes into the
 # container; binds cover paths that may sit outside the default $HOME bind.
-CONTAINER_RUN="singularity exec --bind ${RAG_DOCS_DIR} --bind ${INSTALL_DIR} --bind ${JOB_DIR} ${container_ref}"
+CONTAINER_RUN="singularity exec --bind ${RAG_DOCS_DIR} --bind ${MODELS_DIR} --bind ${JOB_DIR} ${container_ref}"
 
 INDEXER_LOG="${JOB_DIR}/rag-indexer.log"
 echo "::notice::Starting indexer (docs=${RAG_DOCS_DIR}, table=${RAG_TABLE}, log=${INDEXER_LOG})"

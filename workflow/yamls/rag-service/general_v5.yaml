@@ -228,11 +228,22 @@ jobs:
               .pdf, .md, .txt, .csv, .log.
           embedding_model_id:
             label: Embedding model
-            type: string
-            default: sentence-transformers/all-MiniLM-L6-v2
+            type: dropdown
+            default: BAAI/bge-small-en-v1.5
+            options:
+              - label: Fast (default MiniLM) — 384 dim, ~80MB, no prefixes
+                value: sentence-transformers/all-MiniLM-L6-v2
+              - label: Balanced (recommended) — bge-small, 384 dim, ~130MB, retrieval-tuned
+                value: BAAI/bge-small-en-v1.5
+              - label: Higher quality (larger corpora) — bge-base, 768 dim, ~440MB, ~3x compute
+                value: BAAI/bge-base-en-v1.5
+              - label: Multilingual corpora — multilingual-e5-small, 384 dim, ~470MB
+                value: intfloat/multilingual-e5-small
             tooltip: >-
-              sentence-transformers model id used to embed chunks and queries.
-              Downloaded once on the login node and cached for offline use.
+              Model used to embed chunks and queries (downloaded once on the
+              login node, cached for offline compute nodes). All options are
+              ungated Apache-2.0/MIT HF repos; query/passage prefix conventions
+              per model family are applied automatically.
           chunk_chars:
             label: Chunk size (characters)
             type: number
@@ -259,8 +270,9 @@ jobs:
           parent_install_dir:
             label: Parent install directory
             type: string
-            default: ${HOME}/pw/software
+            optional: true
             tooltip: >-
-              Where the service keeps its Python virtualenv, the embedding
-              model cache, and the LanceDB dataset. Must be on the shared
-              filesystem.
+              Where the service keeps its dependency container
+              (containers/rag-service.sif) and the embedding model cache
+              (models/). Must be on the shared filesystem. Defaults to
+              ${HOME}/pw/software when left empty.

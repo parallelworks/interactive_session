@@ -21,6 +21,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import lancedb
 from sentence_transformers import SentenceTransformer
 
+from rag_common import embedding_prefixes, resolve_model_path
+
 LOG = logging.getLogger("rag_server")
 logging.basicConfig(
     level=os.environ.get("RAG_SERVER_LOGLEVEL", "INFO").upper(),
@@ -49,10 +51,14 @@ class Backend:
         self.embedding_model_id = embedding_model
         self.state_path = os.path.join(self.db_dir, f"{table}.state.json")
         self.db = lancedb.connect(self.db_dir)
-        LOG.info("Loading embedding model %s", embedding_model)
+        model_ref = resolve_model_path(embedding_model, os.environ.get("RAG_MODELS_DIR"))
+        LOG.info("Loading embedding model %s (from %s)", embedding_model, model_ref)
         self.model = SentenceTransformer(
-            embedding_model, device=os.environ.get("EMBEDDING_DEVICE", "cpu")
+            model_ref, device=os.environ.get("EMBEDDING_DEVICE", "cpu")
         )
+        self.query_prefix, _ = embedding_prefixes(embedding_model)
+        if self.query_prefix:
+            LOG.info("Query prefix for %s: %r", embedding_model, self.query_prefix)
         self._encode_lock = threading.Lock()
 
     def open_table(self):
@@ -63,8 +69,10 @@ class Backend:
             raise TableUnavailable(str(e))
 
     def encode(self, text):
+        # Query-side embedding: some model families expect a query prefix
+        # (see rag_common.embedding_prefixes); FTS/BM25 uses the raw text.
         with self._encode_lock:
-            return self.model.encode(text).tolist()
+            return self.model.encode(self.query_prefix + text).tolist()
 
     def read_state(self):
         try:

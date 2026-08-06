@@ -11,8 +11,10 @@ Two processes run on one node, launched by the start script:
 - **indexer.py** — the sole writer. Polling file watcher (NFS-safe) plus a
   periodic full rescan; chunks (fixed windows with character spans) and embeds
   with sentence-transformers on CPU; per-file delete+re-add on change; persists
-  a path→sha256 state file next to the dataset so restarts re-embed nothing
-  unchanged, and files deleted while it was down are reconciled at startup.
+  a path→sha256 state file next to the dataset so indexer restarts re-embed
+  nothing unchanged, and files deleted while it was down are reconciled at
+  startup. Refuses to write into a table whose vector dimension doesn't match
+  the selected model.
 - **rag_server.py** — read-only search API wrapped by `pw endpoints run`.
   Re-opens the table per request, so new data is searchable without a restart.
 
@@ -21,12 +23,34 @@ Two processes run on one node, launched by the start script:
 | Input | Default | Meaning |
 |---|---|---|
 | `docs_dir` | *(required)* | Directory of documents to index and watch (shared filesystem). `.pdf`, `.md`, `.txt`, `.csv`, `.log`. |
-| `embedding_model_id` | `sentence-transformers/all-MiniLM-L6-v2` | Embedding model; downloaded on the login node, cached for offline compute nodes. |
+| `embedding_model_id` | `BAAI/bge-small-en-v1.5` | Dropdown of curated models (below); downloaded on the login node into `<parent_install_dir>/models`, cached for offline compute nodes. |
 | `chunk_chars` | `700` | Chunk window size in characters. |
 | `chunk_overlap` | `80` | Chunk overlap in characters. |
 | `default_top_k` | `8` | `/search` result count when `top_k` is not given. |
 | `table_name` | `activate_rag` | LanceDB table; use different tables for different corpora. |
-| `parent_install_dir` | `${HOME}/pw/software` | Root for the venv, model cache, and LanceDB dataset. |
+| `parent_install_dir` | *(empty)* | Root for the dependency container and model cache; falls back to `${HOME}/pw/software` when left empty. |
+
+The LanceDB dataset itself (vectors + FTS index + state file) lives under the
+**run's job directory** (`~/pw/jobs/rag-service/<NNNNN>/rag-db/`), so each run
+indexes its corpus fresh and two runs never share a table.
+
+### Embedding model options
+
+| Option | Model | Dim | Size | Prefix convention |
+|---|---|---|---|---|
+| Fast | `sentence-transformers/all-MiniLM-L6-v2` | 384 | ~80MB | none |
+| Balanced *(default)* | `BAAI/bge-small-en-v1.5` | 384 | ~130MB | instruction prefix on queries only |
+| Higher quality | `BAAI/bge-base-en-v1.5` | 768 | ~440MB | instruction prefix on queries only; 2x vector storage, ~3x compute |
+| Multilingual | `intfloat/multilingual-e5-small` | 384 | ~470MB | `query: ` / `passage: ` on both sides |
+
+Models are saved as plain directories, `<parent_install_dir>/models/<org>/<name>`
+(no hub-cache `models--` naming), and the service loads that local copy
+offline. All are ungated Apache-2.0/MIT Hugging Face repos (no auth token
+needed). The
+query/passage prefixes are applied automatically per model family
+(`rag_common.embedding_prefixes`) — only to the text fed to the encoder;
+stored chunk text, spans, and BM25 search always use the original text. All
+four options pass `smoke_search.sh` (validated per option, not assumed).
 
 `scheduler: true` is supported: the controller pre-downloads the embedding
 model into `SENTENCE_TRANSFORMERS_HOME` on the shared filesystem, and the

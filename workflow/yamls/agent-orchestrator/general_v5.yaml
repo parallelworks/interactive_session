@@ -14,7 +14,7 @@ env:
 jobs:
   preprocessing:
     ssh:
-      remoteHost: ${{ inputs.resource.ip }}   # workspace -> empty ip -> runs locally
+      remoteHost: ${{ inputs.resource.ip || localhost }}   # Must explicitly OR localhost for workspace
     steps:
       - name: Checkout
         uses: parallelworks/checkout
@@ -88,7 +88,7 @@ jobs:
     needs:
       - preprocessing
     ssh:
-      remoteHost: ${{ inputs.resource.ip }}
+      remoteHost: ${{ inputs.resource.ip || localhost }}
     steps:
       - name: Session Runner
         uses: github/parallelworks/interactive_session@main
@@ -127,7 +127,7 @@ jobs:
     needs:
       - preprocessing
     ssh:
-      remoteHost: ${{ inputs.resource.ip }}
+      remoteHost: ${{ inputs.resource.ip || localhost }}
     steps:
       - name: Wait for endpoint
         early-cancel: any-job-failed

@@ -9,7 +9,8 @@
 # Required Environment Variables:
 #   - pw_endpoints_args: Arguments for pw endpoints run (--name, ...)
 #   - service_parent_install_dir: Installation directory
-#   - service_context_length: Model context window in tokens (default: 8192)
+#   - service_context_length: Model context window in tokens, or auto or max
+#     (default: 8192; max uses service_context_resolved from the controller)
 #   - service_keep_alive: How long models stay loaded in memory (default: 5m)
 ################################################################################
 
@@ -27,8 +28,14 @@ fi
 
 # The controller appends the resolved service_models_dir to inputs.sh
 export OLLAMA_MODELS=${service_models_dir:-${service_install_dir}/models}
-# auto leaves OLLAMA_CONTEXT_LENGTH unset so ollama picks the default
-if [ -n "${service_context_length}" ] && [ "${service_context_length}" != "auto" ]; then
+# auto leaves OLLAMA_CONTEXT_LENGTH unset so ollama picks its own default,
+# which is small; max uses the window the controller read from the model
+# metadata, and anything else is the number the operator chose.
+if [ "${service_context_length}" = "max" ]; then
+    if [ -n "${service_context_resolved}" ]; then
+        export OLLAMA_CONTEXT_LENGTH=${service_context_resolved}
+    fi
+elif [ -n "${service_context_length}" ] && [ "${service_context_length}" != "auto" ]; then
     export OLLAMA_CONTEXT_LENGTH=${service_context_length}
 fi
 export OLLAMA_KEEP_ALIVE=${service_keep_alive:-5m}

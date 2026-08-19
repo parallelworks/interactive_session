@@ -145,10 +145,11 @@ jobs:
           remote_host="${{ needs.wait_for_job_start.outputs.HOSTNAME }}"
           remote_port="${{ needs.create_session.outputs.SESSION_PORT }}"
 
-          # Function to check if server is listening
+          # Function to check if the service responds without a gateway error
           check_server() {
-              curl --silent --connect-timeout "$TIMEOUT" "http://${remote_host}:${remote_port}" >/dev/null 2>&1
-              return $?
+              local http_code
+              http_code=$(curl --silent --output /dev/null --write-out '%{http_code}' --connect-timeout "$TIMEOUT" "http://${remote_host}:${remote_port}" 2>/dev/null)
+              [ -n "${http_code}" ] && [ "${http_code}" != "000" ] && [ "${http_code}" -lt 500 ]
           }
 
           echo "::group::Waiting for server to respond"

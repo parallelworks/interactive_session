@@ -356,13 +356,14 @@ jobs:
           models:
             label: Models to serve
             type: string
-            default: hf.co/bartowski/gemma-2-2b-it-abliterated-GGUF:Q4_K_M
+            default: hf.co/culturerevolt/gemma-4-12b-heretic-abliterated-GGUF:Q4_K_M
             tooltip: |
               Space or comma separated list of models to pull and serve. Accepts Ollama
               library names or Hugging Face GGUF references
               (hf.co/<owner>/<repo>:<quant>). Ensure the host has enough disk and memory
               for the quantization you pick — a Q4_K_M of a 31B model is about 19 GB.
-              Examples:
+              Examples, lightest first:
+              hf.co/unsloth/gemma-4-E4B-it-GGUF:Q4_K_M
               hf.co/mradermacher/gemma-4-31B-it-heretic-GGUF:Q4_K_M
               hf.co/mradermacher/gemma-4-31B-it-The-DECKARD-HERETIC-UNCENSORED-Thinking-GGUF:Q4_K_M
           serve_only_requested:

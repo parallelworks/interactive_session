@@ -85,7 +85,48 @@ fi
 # The start template reads the resolved store from inputs.sh
 echo "export service_models_dir=\"${service_models_dir}\"" >> inputs.sh
 
+start_temp_server() {
+    export OLLAMA_HOST=127.0.0.1:$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')
+    ${service_exec} serve > ollama-controller-serve.log 2>&1 &
+    server_pid=$!
+    trap "kill ${server_pid} 2> /dev/null" EXIT
+    retries=0
+    until curl -s http://${OLLAMA_HOST}/ > /dev/null; do
+        retries=$((retries + 1))
+        if [ ${retries} -gt 30 ]; then
+            echo "::error title=Error::ollama server did not start; see ollama-controller-serve.log"
+            return 1
+        fi
+        sleep 1
+    done
+}
+
+# "Max" means the largest window the models were trained for, which only the
+# model metadata knows. Resolve it here, where a server is available, and hand
+# the number to the start template: the service reads OLLAMA_CONTEXT_LENGTH
+# once at startup and cannot ask later.
+resolve_max_context() {
+    [ "${service_context_length}" = "max" ] || return 0
+    local best=0 n=""
+    for model in ${service_models//,/ }; do
+        n=$(${service_exec} show ${model} 2>/dev/null | awk '$1 == "context" && $2 == "length" {print $3; exit}')
+        case "${n}" in
+            ''|*[!0-9]*) continue ;;
+        esac
+        [ "${n}" -gt "${best}" ] && best=${n}
+    done
+    if [ "${best}" -gt 0 ]; then
+        echo "::notice title=Context Length::Serving at the model maximum of ${best} tokens"
+        echo "export service_context_resolved=${best}" >> inputs.sh
+    else
+        echo "::warning title=Context Length::Could not read a context length from the model metadata; falling back to the ollama default"
+    fi
+}
+
 if [ "${skip_pull}" = "true" ]; then
+    if [ "${service_context_length}" = "max" ] && start_temp_server; then
+        resolve_max_context
+    fi
     exit 0
 fi
 
@@ -93,6 +134,9 @@ fi
 # which fails when another user owns the file in a shared store
 if [ "${need_pull}" != "true" ]; then
     echo "::notice title=Model Directory::All requested models are already cached in ${OLLAMA_MODELS}"
+    if [ "${service_context_length}" = "max" ] && start_temp_server; then
+        resolve_max_context
+    fi
     exit 0
 fi
 
@@ -100,20 +144,7 @@ echo "::group::Pull Models"
 mkdir -p ${OLLAMA_MODELS}
 # Model pulls go through a temporary server on an ephemeral port; the weights
 # land in the shared-filesystem OLLAMA_MODELS dir for the service to read
-export OLLAMA_HOST=127.0.0.1:$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')
-${service_exec} serve > ollama-controller-serve.log 2>&1 &
-server_pid=$!
-trap "kill ${server_pid} 2> /dev/null" EXIT
-
-retries=0
-until curl -s http://${OLLAMA_HOST}/ > /dev/null; do
-    retries=$((retries + 1))
-    if [ ${retries} -gt 30 ]; then
-        echo "::error title=Error::ollama server did not start; see ollama-controller-serve.log"
-        exit 1
-    fi
-    sleep 1
-done
+start_temp_server || exit 1
 
 # Pulls resume from partial blobs, so a stalled transfer (ollama can hang on a
 # dead connection) is bounded by the timeout and finished by the retry
@@ -140,6 +171,8 @@ done
 # Best-effort group sharing so other users of a shared store can read the
 # weights and add models later
 chmod -R g+rwX ${OLLAMA_MODELS} 2> /dev/null || true
+
+resolve_max_context
 
 ${service_exec} list
 echo "::endgroup::"

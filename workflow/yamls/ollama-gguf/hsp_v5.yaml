@@ -391,13 +391,22 @@ jobs:
               model directory. Available with the Singularity container runtime, which
               mounts a filtered view of the model manifests into the container.
           context_length:
-            label: Max Context Length
+            label: Context Length
             type: dropdown
-            default: '8192'
-            tooltip: Context window used for loaded models (OLLAMA_CONTEXT_LENGTH). Lower values reduce memory usage.
+            default: max
+            tooltip: |
+              Context window used for loaded models (OLLAMA_CONTEXT_LENGTH). The
+              default reads the window the model was trained for and serves at that,
+              which is what most people expect and what makes long documents and
+              conversations work. It costs memory: the KV cache grows with the window,
+              and a GPU that cannot hold it offloads to CPU and answers more slowly, so
+              pick a fixed size on a small GPU or a heavily shared one. Auto leaves the
+              choice to ollama, whose own default is small.
             options:
+              - value: max
+                label: Model maximum (full trained window)
               - value: auto
-                label: Auto (model default)
+                label: Auto (ollama default, small)
               - value: '4096'
                 label: 4K tokens
               - value: '8192'

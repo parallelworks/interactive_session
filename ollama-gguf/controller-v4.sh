@@ -47,6 +47,21 @@ if [ -z "${service_models_dir}" ]; then
 fi
 export OLLAMA_MODELS=${service_models_dir}
 
+# hf.co and huggingface.co address the same registry, and sites that filter by
+# domain commonly allow the long name while blocking the short one, which
+# surfaces as a connection reset rather than a policy message. Normalise every
+# reference once, here, so the manifest paths and every later loop agree.
+if [ -n "${service_models}" ]; then
+    normalised_models=""
+    for ref in ${service_models//,/ }; do
+        case "${ref}" in
+            hf.co/*) ref="huggingface.co/${ref#hf.co/}" ;;
+        esac
+        normalised_models="${normalised_models} ${ref}"
+    done
+    service_models="$(echo ${normalised_models} | xargs)"
+fi
+
 model_manifest_path() {
     local ref=$1 name=$1 tag=latest
     case "${ref}" in *:*) name=${ref%%:*}; tag=${ref##*:};; esac

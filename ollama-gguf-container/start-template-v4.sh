@@ -87,6 +87,20 @@ if [ -z "${container_runtime}" ]; then
 fi
 echo "::notice::Container runtime: ${container_runtime}"
 
+# Sites that inspect TLS present their own certificate authority. The host
+# trusts it; the container carries its own store and does not, so every pull
+# fails with "certificate signed by unknown authority" on a network that looks
+# fine from the shell. Bind the host bundle in where one exists.
+container_ca_args=""
+for bundle in /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem \
+              /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-bundle.crt; do
+    if [ -r "${bundle}" ]; then
+        container_ca_args="--bind ${bundle}:/etc/ssl/certs/ca-certificates.crt --env SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt"
+        echo "::notice::Trusting the host certificate bundle ${bundle} inside the container"
+        break
+    fi
+done
+
 if ! [ -f "${container_sif}" ]; then
     echo "::error title=Error::Missing container image ${container_sif}"
     exit 1
@@ -112,6 +126,21 @@ fi
 # Model weights are shared with the native ollama-gguf variant; the controller
 # appends the resolved service_models_dir to inputs.sh
 export OLLAMA_MODELS=${service_models_dir:-${service_parent_install_dir}/ollama-gguf/models}
+
+# hf.co and huggingface.co address the same registry, and sites that filter by
+# domain commonly allow the long name while blocking the short one, which
+# surfaces as a connection reset rather than a policy message. Normalise every
+# reference once, here, so the manifest paths and every later loop agree.
+if [ -n "${service_models}" ]; then
+    normalised_models=""
+    for ref in ${service_models//,/ }; do
+        case "${ref}" in
+            hf.co/*) ref="huggingface.co/${ref#hf.co/}" ;;
+        esac
+        normalised_models="${normalised_models} ${ref}"
+    done
+    service_models="$(echo ${normalised_models} | xargs)"
+fi
 
 nv_flag=""
 if nvidia-smi -L > /dev/null 2>&1; then
@@ -149,7 +178,7 @@ if [ "${service_preload:-true}" = "true" ]; then
         done
     ) &
 fi
-exec "${container_runtime}" exec ${nv_flag} \\
+exec "${container_runtime}" exec ${nv_flag} ${container_ca_args} \\
     --bind "${service_parent_install_dir}:${service_parent_install_dir}" \\
     --bind "${OLLAMA_MODELS}:${OLLAMA_MODELS}" \\
     ${manifests_bind} \\

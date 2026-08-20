@@ -306,16 +306,16 @@ jobs:
           models:
             label: Models to serve
             type: string
-            default: hf.co/culturerevolt/gemma-4-12b-heretic-abliterated-GGUF:Q4_K_M
+            default: huggingface.co/culturerevolt/gemma-4-12b-heretic-abliterated-GGUF:Q4_K_M
             tooltip: |
               Space or comma separated list of models to pull and serve. Accepts Ollama
               library names (qwen3:4b) or Hugging Face GGUF references
-              (hf.co/<owner>/<repo>:<quant>). Ensure the host has enough disk and memory
+              (huggingface.co/<owner>/<repo>:<quant>). Ensure the host has enough disk and memory
               for the quantization you pick — a Q4_K_M of a 31B model is about 19 GB.
               Examples, lightest first:
-              hf.co/unsloth/gemma-4-E4B-it-GGUF:Q4_K_M
-              hf.co/mradermacher/gemma-4-31B-it-heretic-GGUF:Q4_K_M
-              hf.co/mradermacher/gemma-4-31B-it-The-DECKARD-HERETIC-UNCENSORED-Thinking-GGUF:Q4_K_M
+              huggingface.co/unsloth/gemma-4-E4B-it-GGUF:Q4_K_M
+              huggingface.co/mradermacher/gemma-4-31B-it-heretic-GGUF:Q4_K_M
+              huggingface.co/mradermacher/gemma-4-31B-it-The-DECKARD-HERETIC-UNCENSORED-Thinking-GGUF:Q4_K_M
           serve_only_requested:
             label: Serve only the requested models
             type: boolean

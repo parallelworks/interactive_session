@@ -95,6 +95,20 @@ if [ -z "${container_runtime}" ]; then
 fi
 echo "::notice::Container runtime: ${container_runtime}"
 
+# Sites that inspect TLS present their own certificate authority. The host
+# trusts it; the container carries its own store and does not, so every pull
+# fails with "certificate signed by unknown authority" on a network that looks
+# fine from the shell. Bind the host bundle in where one exists.
+container_ca_args=""
+for bundle in /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem \
+              /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-bundle.crt; do
+    if [ -r "${bundle}" ]; then
+        container_ca_args="--bind ${bundle}:/etc/ssl/certs/ca-certificates.crt --env SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt"
+        echo "::notice::Trusting the host certificate bundle ${bundle} inside the container"
+        break
+    fi
+done
+
 service_ollama_version=${service_ollama_version:-v0.32.5}
 
 if ! [ -f "${container_sif}" ]; then
@@ -128,6 +142,21 @@ if [ -z "${service_models_dir}" ]; then
     service_models_dir=${service_parent_install_dir}/ollama-gguf/models
 fi
 export OLLAMA_MODELS=${service_models_dir}
+
+# hf.co and huggingface.co address the same registry, and sites that filter by
+# domain commonly allow the long name while blocking the short one, which
+# surfaces as a connection reset rather than a policy message. Normalise every
+# reference once, here, so the manifest paths and every later loop agree.
+if [ -n "${service_models}" ]; then
+    normalised_models=""
+    for ref in ${service_models//,/ }; do
+        case "${ref}" in
+            hf.co/*) ref="huggingface.co/${ref#hf.co/}" ;;
+        esac
+        normalised_models="${normalised_models} ${ref}"
+    done
+    service_models="$(echo ${normalised_models} | xargs)"
+fi
 
 model_manifest_path() {
     local ref=$1 name=$1 tag=latest
@@ -216,7 +245,7 @@ mkdir -p ${OLLAMA_MODELS}
 # Model pulls go through a temporary server on an ephemeral port; the weights
 # land in the shared-filesystem OLLAMA_MODELS dir for the service to read
 export OLLAMA_HOST=127.0.0.1:$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')
-"${container_runtime}" exec \
+"${container_runtime}" exec ${container_ca_args} \
     --bind "${service_parent_install_dir}:${service_parent_install_dir}" \
     --bind "${OLLAMA_MODELS}:${OLLAMA_MODELS}" \
     --env OLLAMA_HOST=${OLLAMA_HOST} \
@@ -245,7 +274,7 @@ for model in ${service_models//,/ }; do
     echo "::notice::Pulling ${model}"
     pulled=false
     for attempt in 1 2 3; do
-        if timeout 1800 "${container_runtime}" exec --env OLLAMA_HOST=${OLLAMA_HOST} "${container_ref}" /bin/ollama pull ${model}; then
+        if timeout 1800 "${container_runtime}" exec ${container_ca_args} --env OLLAMA_HOST=${OLLAMA_HOST} "${container_ref}" /bin/ollama pull ${model}; then
             pulled=true
             break
         fi
@@ -261,7 +290,7 @@ done
 # weights and add models later
 chmod -R g+rwX ${OLLAMA_MODELS} 2> /dev/null || true
 
-"${container_runtime}" exec --env OLLAMA_HOST=${OLLAMA_HOST} "${container_ref}" /bin/ollama list
+"${container_runtime}" exec ${container_ca_args} --env OLLAMA_HOST=${OLLAMA_HOST} "${container_ref}" /bin/ollama list
 echo "::endgroup::"
 
 build_manifests_view

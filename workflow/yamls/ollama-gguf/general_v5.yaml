@@ -41,24 +41,45 @@ jobs:
           sed -i '/=""/d' inputs.sh # remove var=""
           # Add export= to all lines
           sed -i 's/^/export /' inputs.sh
+
+          # The container implementation needs singularity or apptainer, and not
+          # every system has one. Rather than failing a launch that the native
+          # implementation could serve, decide here which one this host can run
+          # and let the later steps assemble that.
+          service_impl="${{ inputs.service.name }}"
+          if [ "${service_impl}" = "ollama-gguf-container" ]; then
+            if ! command -v singularity > /dev/null 2>&1 && ! command -v apptainer > /dev/null 2>&1; then
+              for candidate in apptainer singularity singularityce; do
+                module load ${candidate} 2> /dev/null && break
+              done
+            fi
+            if ! command -v singularity > /dev/null 2>&1 && ! command -v apptainer > /dev/null 2>&1; then
+              echo "::warning title=Container Runtime::No singularity or apptainer on this system; serving with the native ollama install instead"
+              service_impl="ollama-gguf"
+            fi
+          fi
+          echo "::notice title=Implementation::Using ${service_impl}"
+          echo "${service_impl}" > service_impl.txt
       - name: Controller Preprocessing
         run: |
           set -x
           # Fail loud when the checkout did not materialize the service scripts
           # (e.g. the runtime does not exist on the checked-out branch); a failing
           # cat mid-step would otherwise be silently ignored
-          if [ ! -f "${{ inputs.service.name }}/controller-v4.sh" ]; then
-            echo "::error title=Error::${{ inputs.service.name }}/controller-v4.sh not found in the checkout of branch main"
+          service_impl="$(cat service_impl.txt)"
+          if [ ! -f "${service_impl}/controller-v4.sh" ]; then
+            echo "::error title=Error::${service_impl}/controller-v4.sh not found in the checkout of branch main"
             exit 1
           fi
           # This script prepares the target host and always runs in the controller node
           cp inputs.sh controller-${PW_JOB_ID}.sh
-          cat ${{ inputs.service.name }}/controller-v4.sh >> controller-${PW_JOB_ID}.sh
+          cat "${service_impl}/controller-v4.sh" >> controller-${PW_JOB_ID}.sh
           bash controller-${PW_JOB_ID}.sh
       - name: Create Service Script
         run: |
-          if [ ! -f "${{ inputs.service.name }}/start-template-v4.sh" ]; then
-            echo "::error title=Error::${{ inputs.service.name }}/start-template-v4.sh not found in the checkout of branch main"
+          service_impl="$(cat service_impl.txt)"
+          if [ ! -f "${service_impl}/start-template-v4.sh" ]; then
+            echo "::error title=Error::${service_impl}/start-template-v4.sh not found in the checkout of branch main"
             exit 1
           fi
           rm -f HOSTNAME SESSION_PORT job.ended job.started
@@ -83,7 +104,7 @@ jobs:
 
           echo "::notice::Starting service"
           EOF
-          cat ${{ inputs.service.name }}/start-template-v4.sh >> ./start-service-${PW_JOB_ID}.sh
+          cat "${service_impl}/start-template-v4.sh" >> ./start-service-${PW_JOB_ID}.sh
           echo "SCRIPT_PATH=${PWD}/start-service-${PW_JOB_ID}.sh" | tee -a $OUTPUTS
           echo "SKIP_CLEANUP_PATH=${PWD}/SKIP_CLEANUP" | tee -a $OUTPUTS
 

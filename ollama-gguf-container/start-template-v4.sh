@@ -29,16 +29,30 @@ fi
 container_sif=${service_parent_install_dir}/containers/ollama-gguf.sif
 sandbox_dir=${service_parent_install_dir}/containers/ollama-gguf-sandbox
 
+# Apptainer renamed the command, so a host can have the runtime under either
+# name, or under a module whose name carries a version. Look for both, try the
+# usual module spellings, and where only apptainer exists, stand in for the
+# singularity command the rest of this script calls.
 if ! which singularity &> /dev/null; then
-    if module load apptainer 2>/dev/null; then
-        echo "::notice::Loaded apptainer module"
-    elif module load singularity 2>/dev/null; then
-        echo "::notice::Loaded singularity module"
+    if which apptainer &> /dev/null; then
+        echo "::notice::Using apptainer as singularity"
     else
-        echo "::error title=Error::singularity/apptainer not found in PATH and could not be loaded via module"
-        exit 1
+        for candidate in apptainer singularity singularityce apptainer/1.3 singularity/3.11; do
+            if module load ${candidate} 2>/dev/null; then
+                echo "::notice::Loaded ${candidate} module"
+                break
+            fi
+        done
     fi
 fi
+# Resolved once and called by path: a shell function would not survive the
+# exec in the generated launcher, which bypasses functions by design.
+container_runtime="$(command -v singularity || command -v apptainer)"
+if [ -z "${container_runtime}" ]; then
+    echo "::error title=Error::No container runtime on this system: neither singularity nor apptainer is in PATH, and no module of either name could be loaded. Re-run with the service set to Native (Ollama tarball), which installs ollama directly and needs no container runtime."
+    exit 1
+fi
+echo "::notice::Container runtime: ${container_runtime}"
 
 if ! [ -f "${container_sif}" ]; then
     echo "::error title=Error::Missing container image ${container_sif}"
@@ -47,7 +61,7 @@ fi
 
 # Prefer running the SIF directly; some nodes cannot mount it (no squashfs
 # kernel/FUSE support), in which case unpack it once into a sandbox directory
-if singularity exec "${container_sif}" /bin/true > /dev/null 2>&1; then
+if "${container_runtime}" exec "${container_sif}" /bin/true > /dev/null 2>&1; then
     echo "::notice::SIF image is runnable on this node"
     container_ref="${container_sif}"
 else
@@ -57,7 +71,7 @@ else
     mkdir -p $SINGULARITY_TMPDIR $SINGULARITY_CACHEDIR
     if ! [ -d "${sandbox_dir}" ]; then
         echo "Building ollama sandbox..."
-        singularity build --fakeroot --force --sandbox "${sandbox_dir}" "${container_sif}"
+        "${container_runtime}" build --fakeroot --force --sandbox "${sandbox_dir}" "${container_sif}"
     fi
     container_ref="${sandbox_dir}"
 fi
@@ -102,7 +116,7 @@ if [ "${service_preload:-true}" = "true" ]; then
         done
     ) &
 fi
-exec singularity exec ${nv_flag} \\
+exec "${container_runtime}" exec ${nv_flag} \\
     --bind "${service_parent_install_dir}:${service_parent_install_dir}" \\
     --bind "${OLLAMA_MODELS}:${OLLAMA_MODELS}" \\
     ${manifests_bind} \\

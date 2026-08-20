@@ -42,22 +42,36 @@ jobs:
           sed -i 's/^/export /' inputs.sh
           # session_runner v1.4 computed the shared HSP install dir; v5 calls
           # script_submitter directly, so replicate that step here.
+          #
+          # The shared location is preferred because several users then read one
+          # copy of the software, but it is not guaranteed: PROJECTS_HOME can be
+          # unset, can point at a tree the account cannot write (seen as
+          # /p/app/unsupported on a system with no project directory yet), or can
+          # exist while its parent refuses a new subdirectory. A private
+          # directory always works, so an unusable shared one degrades to that
+          # instead of ending the run.
           source /etc/profile
-          if [ -z "${PROJECTS_HOME}" ]; then
-            echo "::warning title=Install Directory::PROJECTS_HOME is empty - falling back to ${HOME}/pw"
+          usable_dir() { # writable if it exists, creatable if it does not
+            [ -n "$1" ] || return 1
+            if [ -d "$1" ]; then
+              [ -w "$1" ] || return 1
+            else
+              mkdir -p "$1" 2> /dev/null || return 1
+              chmod g+rwx,o+rx "$1" 2> /dev/null || true
+            fi
+            return 0
+          }
+          hsp_install_dir=""
+          if [ -n "${PROJECTS_HOME}" ] && usable_dir "${PROJECTS_HOME}/hsp"; then
+            hsp_install_dir="${PROJECTS_HOME}/hsp"
+          elif usable_dir "${HOME}/pw"; then
+            [ -n "${PROJECTS_HOME}" ] \
+              && echo "::warning title=Install Directory::${PROJECTS_HOME}/hsp is not writable by this account; installing to ${HOME}/pw instead, which no other user shares" \
+              || echo "::warning title=Install Directory::PROJECTS_HOME is empty; installing to ${HOME}/pw, which no other user shares"
             hsp_install_dir="${HOME}/pw"
           else
-            hsp_install_dir="${PROJECTS_HOME}/hsp"
-          fi
-          if [ ! -d "${hsp_install_dir}" ]; then
-            if ! mkdir -p "${hsp_install_dir}"; then
-              echo "::error title=Install Directory::Failed to create ${hsp_install_dir} - permission denied"
-              exit 1
-            fi
-            if ! chmod g+rwx,o+rx "${hsp_install_dir}"; then
-              echo "::error title=Install Directory::Failed to set permissions on ${hsp_install_dir} - permission denied"
-              exit 1
-            fi
+            echo "::error title=Install Directory::Neither ${PROJECTS_HOME:-a project directory} nor ${HOME}/pw can be written; the run has nowhere to install"
+            exit 1
           fi
           echo "::notice title=Install Directory::Using Install Directory: ${hsp_install_dir}"
           echo "export service_parent_install_dir=${hsp_install_dir}" >> inputs.sh

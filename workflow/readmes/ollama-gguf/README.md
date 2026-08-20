@@ -28,10 +28,10 @@ references, pulled on the controller node before the service starts:
 
 - Ollama library names, e.g. `qwen3:4b`
 - Hugging Face GGUF references, e.g.
-  `hf.co/culturerevolt/gemma-4-12b-heretic-abliterated-GGUF:Q4_K_M` (the
-  default, about 7 GB) or `hf.co/mradermacher/gemma-4-31B-it-heretic-GGUF:Q4_K_M`
+  `huggingface.co/culturerevolt/gemma-4-12b-heretic-abliterated-GGUF:Q4_K_M` (the
+  default, about 7 GB) or `huggingface.co/mradermacher/gemma-4-31B-it-heretic-GGUF:Q4_K_M`
 
-Any GGUF repo on Hugging Face works with the `hf.co/<owner>/<repo>:<quant>`
+Any GGUF repo on Hugging Face works with the `huggingface.co/<owner>/<repo>:<quant>`
 form. Size the quantization to the host: a Q4_K_M of a 31B model is ~19 GB on
 disk and needs about as much free memory to run.
 

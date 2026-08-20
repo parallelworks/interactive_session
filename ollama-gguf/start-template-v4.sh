@@ -28,6 +28,21 @@ fi
 
 # The controller appends the resolved service_models_dir to inputs.sh
 export OLLAMA_MODELS=${service_models_dir:-${service_install_dir}/models}
+
+# hf.co and huggingface.co address the same registry, and sites that filter by
+# domain commonly allow the long name while blocking the short one, which
+# surfaces as a connection reset rather than a policy message. Normalise every
+# reference once, here, so the manifest paths and every later loop agree.
+if [ -n "${service_models}" ]; then
+    normalised_models=""
+    for ref in ${service_models//,/ }; do
+        case "${ref}" in
+            hf.co/*) ref="huggingface.co/${ref#hf.co/}" ;;
+        esac
+        normalised_models="${normalised_models} ${ref}"
+    done
+    service_models="$(echo ${normalised_models} | xargs)"
+fi
 # auto leaves OLLAMA_CONTEXT_LENGTH unset so ollama picks its own default,
 # which is small; max uses the window the controller read from the model
 # metadata, and anything else is the number the operator chose.

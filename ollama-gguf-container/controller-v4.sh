@@ -140,10 +140,35 @@ else
         mkdir -p "${sandbox_dir%/*}"
     fi
     if ! [ -d "${sandbox_dir}/usr" ]; then
+        echo "Expanding the image into a sandbox..."
         rm -rf "${sandbox_dir}"
-        if ! "${container_runtime}" build --fakeroot --force --sandbox "${sandbox_dir}" "${container_sif}"; then
-            echo "::error title=Error::Could not build a runnable sandbox from ${container_sif} in ${sandbox_dir}"
-            exit 1
+        # build --fakeroot needs a user namespace, which plenty of login nodes
+        # do not give out ("no user namespace available for fakeroot"). Where
+        # that is refused, take the squashfs partition straight out of the SIF
+        # and unpack it, which needs no privilege at all.
+        if ! "${container_runtime}" build --fakeroot --force --sandbox "${sandbox_dir}" "${container_sif}" 2> sandbox-build.log; then
+            tail -3 sandbox-build.log 2> /dev/null
+            echo "::notice::fakeroot build refused; unpacking the image partition instead"
+            if ! command -v unsquashfs > /dev/null 2>&1; then
+                echo "::error title=Error::Cannot mount ${container_sif}, cannot build a sandbox with fakeroot, and unsquashfs is unavailable to unpack it"
+                exit 1
+            fi
+            fs_id=$("${container_runtime}" sif list "${container_sif}" | awk -F'|' '$5 ~ /Squashfs/ { gsub(/ /, "", $1); print $1; exit }')
+            if [ -z "${fs_id}" ]; then
+                echo "::error title=Error::No squashfs partition found in ${container_sif}"
+                exit 1
+            fi
+            "${container_runtime}" sif dump "${fs_id}" "${container_sif}" > "${sandbox_dir}.squash" || {
+                echo "::error title=Error::Could not read the image partition from ${container_sif}"
+                exit 1
+            }
+            # -no-xattrs: many shared filesystems refuse them and nothing in
+            # the image depends on them
+            unsquashfs -q -f -no-xattrs -d "${sandbox_dir}" "${sandbox_dir}.squash" || {
+                echo "::error title=Error::Could not unpack ${container_sif} into ${sandbox_dir}"
+                exit 1
+            }
+            rm -f "${sandbox_dir}.squash"
         fi
     fi
     container_ref="${sandbox_dir}"
@@ -157,15 +182,33 @@ export OLLAMA_MODELS=${service_models_dir}
 
 # hf.co and huggingface.co address the same registry, and sites that filter by
 # domain commonly allow the long name while blocking the short one, which
-# surfaces as a connection reset rather than a policy message. Normalise every
-# reference once, here, so the manifest paths and every later loop agree.
+# surfaces as a connection reset rather than a policy message. Prefer whichever
+# form is already in the model store, since a cache written under one name is
+# invisible under the other and would be re-pulled in full; otherwise take the
+# long name, which more sites allow.
 if [ -n "${service_models}" ]; then
     normalised_models=""
     for ref in ${service_models//,/ }; do
+        short="${ref}"; long="${ref}"
         case "${ref}" in
-            hf.co/*) ref="huggingface.co/${ref#hf.co/}" ;;
+            hf.co/*) long="huggingface.co/${ref#hf.co/}" ;;
+            huggingface.co/*) short="hf.co/${ref#huggingface.co/}" ;;
         esac
-        normalised_models="${normalised_models} ${ref}"
+        chosen="${long}"
+        for candidate in "${ref}" "${short}" "${long}"; do
+            name="${candidate}"; tag=latest
+            case "${candidate}" in *:*) name="${candidate%%:*}"; tag="${candidate##*:}" ;; esac
+            case "${name}" in
+                */*/*) manifest="${OLLAMA_MODELS}/manifests/${name}/${tag}" ;;
+                */*) manifest="${OLLAMA_MODELS}/manifests/registry.ollama.ai/${name}/${tag}" ;;
+                *) manifest="${OLLAMA_MODELS}/manifests/registry.ollama.ai/library/${name}/${tag}" ;;
+            esac
+            if [ -s "${manifest}" ]; then
+                chosen="${candidate}"
+                break
+            fi
+        done
+        normalised_models="${normalised_models} ${chosen}"
     done
     service_models="$(echo ${normalised_models} | xargs)"
 fi

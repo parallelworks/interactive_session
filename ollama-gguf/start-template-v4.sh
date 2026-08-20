@@ -31,15 +31,33 @@ export OLLAMA_MODELS=${service_models_dir:-${service_install_dir}/models}
 
 # hf.co and huggingface.co address the same registry, and sites that filter by
 # domain commonly allow the long name while blocking the short one, which
-# surfaces as a connection reset rather than a policy message. Normalise every
-# reference once, here, so the manifest paths and every later loop agree.
+# surfaces as a connection reset rather than a policy message. Prefer whichever
+# form is already in the model store, since a cache written under one name is
+# invisible under the other and would be re-pulled in full; otherwise take the
+# long name, which more sites allow.
 if [ -n "${service_models}" ]; then
     normalised_models=""
     for ref in ${service_models//,/ }; do
+        short="${ref}"; long="${ref}"
         case "${ref}" in
-            hf.co/*) ref="huggingface.co/${ref#hf.co/}" ;;
+            hf.co/*) long="huggingface.co/${ref#hf.co/}" ;;
+            huggingface.co/*) short="hf.co/${ref#huggingface.co/}" ;;
         esac
-        normalised_models="${normalised_models} ${ref}"
+        chosen="${long}"
+        for candidate in "${ref}" "${short}" "${long}"; do
+            name="${candidate}"; tag=latest
+            case "${candidate}" in *:*) name="${candidate%%:*}"; tag="${candidate##*:}" ;; esac
+            case "${name}" in
+                */*/*) manifest="${OLLAMA_MODELS}/manifests/${name}/${tag}" ;;
+                */*) manifest="${OLLAMA_MODELS}/manifests/registry.ollama.ai/${name}/${tag}" ;;
+                *) manifest="${OLLAMA_MODELS}/manifests/registry.ollama.ai/library/${name}/${tag}" ;;
+            esac
+            if [ -s "${manifest}" ]; then
+                chosen="${candidate}"
+                break
+            fi
+        done
+        normalised_models="${normalised_models} ${chosen}"
     done
     service_models="$(echo ${normalised_models} | xargs)"
 fi

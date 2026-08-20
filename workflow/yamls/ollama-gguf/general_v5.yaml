@@ -209,8 +209,16 @@ jobs:
               scheduler_directives:
                 type: editor
                 optional: true
+                default: |
+                  #SBATCH --gres=gpu:1
                 tooltip: |
-                  Add extra SLURM directives, one per line, using the #SBATCH prefix. For example:
+                  Add extra SLURM directives, one per line, using the #SBATCH prefix.
+                  One GPU is requested by default, since a model server without one runs
+                  on CPU and answers slowly. How a GPU is named is site specific: plain
+                  gpu:1 works where the scheduler defines no GPU types, and elsewhere the
+                  type belongs in the request, as in --gres=gpu:h100_nvl:1. Run
+                  sinfo -o "%P %G" on the cluster to see the types it offers. Other
+                  examples:
                   #SBATCH --exclusive
                   #SBATCH --nodelist=<node-name>
           pbs:
@@ -227,6 +235,9 @@ jobs:
               scheduler_directives:
                 label: Scheduler Directives
                 type: editor
+                default: |
+                  # The select line is site specific; adjust ncpus to the node shape
+                  #PBS -l select=1:ncpus=1:ngpus=1
                 tooltip: |
                   Add extra PBS directives, one per line, using the #PBS prefix. For example:
                   #PBS -l mem=16gb

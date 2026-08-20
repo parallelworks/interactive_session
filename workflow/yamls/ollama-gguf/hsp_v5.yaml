@@ -379,13 +379,14 @@ jobs:
           context_length:
             label: Context Length
             type: dropdown
-            default: '8192'
+            default: max
             tooltip: |
-              Context window used for loaded models (OLLAMA_CONTEXT_LENGTH). Larger
-              windows hold more of a conversation or document at once and cost
-              proportionally more memory for the KV cache, so a window the GPU cannot
-              hold pushes the model to CPU or fails to load. Model maximum reads the
-              window the model was trained for and serves at that; Auto leaves the
+              Context window used for loaded models (OLLAMA_CONTEXT_LENGTH). The
+              default reads the window the model was trained for and serves at that,
+              which is what most people expect and what makes long documents and
+              conversations work. It costs memory: the KV cache grows with the window,
+              and a GPU that cannot hold it offloads to CPU and answers more slowly, so
+              pick a fixed size on a small GPU or a heavily shared one. Auto leaves the
               choice to ollama, whose own default is small.
             options:
               - value: max

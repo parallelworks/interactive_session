@@ -48,14 +48,36 @@ jobs:
           # and let the later steps assemble that.
           service_impl="${{ inputs.service.name }}"
           if [ "${service_impl}" = "ollama-gguf-container" ]; then
-            if ! command -v singularity > /dev/null 2>&1 && ! command -v apptainer > /dev/null 2>&1; then
-              for candidate in apptainer singularity singularityce; do
-                module load ${candidate} 2> /dev/null && break
+            # The same search the container scripts use, so a runtime that is
+            # installed but off PATH does not quietly demote the run to native.
+            found=""
+            if ! type module > /dev/null 2>&1; then
+              for init in /etc/profile.d/modules.sh /etc/profile.d/lmod.sh \
+                          /usr/share/Modules/init/bash /usr/share/lmod/lmod/init/bash; do
+                [ -r "${init}" ] && . "${init}" 2> /dev/null && break
               done
             fi
-            if ! command -v singularity > /dev/null 2>&1 && ! command -v apptainer > /dev/null 2>&1; then
-              echo "::warning title=Container Runtime::No singularity or apptainer on this system; serving with the native ollama install instead"
+            if type module > /dev/null 2>&1; then
+              for candidate in apptainer singularity singularityce singularity-ce; do
+                module load ${candidate} > /dev/null 2>&1 && break
+              done
+            fi
+            found="$(command -v singularity || command -v apptainer)"
+            if [ -z "${found}" ]; then
+              for candidate in /usr/bin /usr/local/bin /usr/sbin /opt/apptainer/bin /opt/singularity/bin \
+                               /usr/local/apptainer/bin /usr/local/singularity/bin \
+                               /cm/local/apps/apptainer/current/bin /cm/shared/apps/singularity/current/bin \
+                               /sw/apptainer/bin /sw/singularity/bin /apps/singularity/bin; do
+                for name in singularity apptainer; do
+                  [ -x "${candidate}/${name}" ] && found="${candidate}/${name}" && break 2
+                done
+              done
+            fi
+            if [ -z "${found}" ]; then
+              echo "::warning title=Container Runtime::No singularity or apptainer found on this system; serving with the native ollama install instead"
               service_impl="ollama-gguf"
+            else
+              echo "::notice title=Container Runtime::Found ${found}"
             fi
           fi
           echo "::notice title=Implementation::Using ${service_impl}"

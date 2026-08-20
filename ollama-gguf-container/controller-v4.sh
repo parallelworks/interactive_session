@@ -41,21 +41,54 @@ sandbox_dir=${service_parent_install_dir}/containers/ollama-gguf-sandbox
 # name, or under a module whose name carries a version. Look for both, try the
 # usual module spellings, and where only apptainer exists, stand in for the
 # singularity command the rest of this script calls.
-if ! which singularity &> /dev/null; then
-    if which apptainer &> /dev/null; then
-        echo "::notice::Using apptainer as singularity"
-    else
-        for candidate in apptainer singularity singularityce apptainer/1.3 singularity/3.11; do
-            if module load ${candidate} 2>/dev/null; then
-                echo "::notice::Loaded ${candidate} module"
-                break
-            fi
+# Finding the runtime is more involved than a PATH lookup: a login shell may
+# not have run the profile scripts that define module, the runtime is often
+# installed outside the default PATH, and sites publish the module under
+# several names. Each of those has ended a launch on a system that had
+# singularity installed the whole time.
+find_container_runtime() {
+    local tried="PATH"
+    container_runtime="$(command -v singularity || command -v apptainer)"
+    [ -n "${container_runtime}" ] && return 0
+
+    # module is a shell function, so it exists only after its init script runs
+    if ! type module > /dev/null 2>&1; then
+        for init in /etc/profile.d/modules.sh /etc/profile.d/lmod.sh \
+                    /usr/share/Modules/init/bash /usr/share/lmod/lmod/init/bash; do
+            [ -r "${init}" ] && . "${init}" 2> /dev/null && break
         done
     fi
-fi
+    if type module > /dev/null 2>&1; then
+        tried="${tried}, modules"
+        for candidate in apptainer singularity singularityce singularity-ce; do
+            module load ${candidate} > /dev/null 2>&1 && break
+        done
+        container_runtime="$(command -v singularity || command -v apptainer)"
+        [ -n "${container_runtime}" ] && return 0
+    fi
+
+    # Installed but off PATH, which is common where the runtime is a site
+    # package rather than a distribution one
+    tried="${tried}, common install paths"
+    for candidate in /usr/bin /usr/local/bin /usr/sbin /opt/apptainer/bin /opt/singularity/bin \
+                     /usr/local/apptainer/bin /usr/local/singularity/bin \
+                     /cm/local/apps/apptainer/current/bin /cm/shared/apps/singularity/current/bin \
+                     /sw/apptainer/bin /sw/singularity/bin /apps/singularity/bin; do
+        for name in singularity apptainer; do
+            if [ -x "${candidate}/${name}" ]; then
+                container_runtime="${candidate}/${name}"
+                return 0
+            fi
+        done
+    done
+
+    echo "::warning title=Container Runtime::Searched ${tried} and found neither singularity nor apptainer"
+    return 1
+}
+
 # Resolved once and called by path: a shell function would not survive the
 # exec in the generated launcher, which bypasses functions by design.
-container_runtime="$(command -v singularity || command -v apptainer)"
+find_container_runtime
 if [ -z "${container_runtime}" ]; then
     echo "::error title=Error::No container runtime on this system: neither singularity nor apptainer is in PATH, and no module of either name could be loaded. Re-run with the service set to Native (Ollama tarball), which installs ollama directly and needs no container runtime."
     exit 1

@@ -116,9 +116,21 @@ else
     export SINGULARITY_TMPDIR=${HOME}/.singularity_tmp
     export SINGULARITY_CACHEDIR=${HOME}/.singularity_cache
     mkdir -p $SINGULARITY_TMPDIR $SINGULARITY_CACHEDIR
-    if ! [ -d "${sandbox_dir}" ]; then
+    # A shared image directory is often owned by whoever installed the image,
+    # so the sandbox cannot be built beside it. Fall back to a private one
+    # rather than building nothing and running a path that does not exist.
+    if [ ! -d "${sandbox_dir}" ] && ! mkdir -p "${sandbox_dir}" 2> /dev/null; then
+        sandbox_dir="${HOME}/pw/software/containers/$(basename "${sandbox_dir}")"
+        echo "::notice::Image directory is not writable; building the sandbox in ${sandbox_dir}"
+        mkdir -p "${sandbox_dir%/*}"
+    fi
+    if ! [ -d "${sandbox_dir}/usr" ]; then
         echo "Building ollama sandbox..."
-        "${container_runtime}" build --fakeroot --force --sandbox "${sandbox_dir}" "${container_sif}"
+        rm -rf "${sandbox_dir}"
+        if ! "${container_runtime}" build --fakeroot --force --sandbox "${sandbox_dir}" "${container_sif}"; then
+            echo "::error title=Error::Could not build a runnable sandbox from ${container_sif} in ${sandbox_dir}"
+            exit 1
+        fi
     fi
     container_ref="${sandbox_dir}"
 fi

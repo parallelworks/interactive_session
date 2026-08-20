@@ -161,9 +161,47 @@ if nvidia-smi -L > /dev/null 2>&1; then
 fi
 
 # auto leaves OLLAMA_CONTEXT_LENGTH unset so ollama picks the default
+# "max" means the window the model was trained for, which only the model
+# metadata knows. The server reads OLLAMA_CONTEXT_LENGTH once at startup, so
+# the number has to exist first: ask a short-lived server here, on the node
+# that will serve, since the controller's node may not run containers at all.
+ctx_value="${service_context_length}"
+if [ "${ctx_value}" = "max" ]; then
+    ctx_value=""
+    if [ -n "${service_context_resolved}" ]; then
+        ctx_value="${service_context_resolved}"
+    else
+        probe_port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()' 2>/dev/null || echo 41999)
+        "${container_runtime}" exec ${container_ca_args} \
+            --bind "${OLLAMA_MODELS}:${OLLAMA_MODELS}" \
+            --env OLLAMA_HOST=127.0.0.1:${probe_port} --env OLLAMA_MODELS="${OLLAMA_MODELS}" \
+            "${container_ref}" /bin/ollama serve > ctx-probe.log 2>&1 &
+        probe_pid=$!
+        for _ in $(seq 1 30); do
+            curl -s "http://127.0.0.1:${probe_port}/" > /dev/null 2>&1 && break
+            sleep 1
+        done
+        best=0
+        for model in ${service_models//,/ }; do
+            n=$("${container_runtime}" exec --bind "${OLLAMA_MODELS}:${OLLAMA_MODELS}" \
+                --env OLLAMA_HOST=127.0.0.1:${probe_port} --env OLLAMA_MODELS="${OLLAMA_MODELS}" \
+                "${container_ref}" /bin/ollama show "${model}" 2> /dev/null \
+                | awk '$1 == "context" && $2 == "length" {print $3; exit}')
+            case "${n}" in ''|*[!0-9]*) continue ;; esac
+            [ "${n}" -gt "${best}" ] && best=${n}
+        done
+        kill ${probe_pid} 2> /dev/null
+        if [ "${best}" -gt 0 ]; then
+            ctx_value="${best}"
+            echo "::notice title=Context Length::Serving at the model maximum of ${best} tokens"
+        else
+            echo "::warning title=Context Length::Could not read a context length from the model metadata; serving at the ollama default"
+        fi
+    fi
+fi
 ctx_env=""
-if [ -n "${service_context_length}" ] && [ "${service_context_length}" != "auto" ]; then
-    ctx_env="--env OLLAMA_CONTEXT_LENGTH=${service_context_length}"
+if [ -n "${ctx_value}" ] && [ "${ctx_value}" != "auto" ]; then
+    ctx_env="--env OLLAMA_CONTEXT_LENGTH=${ctx_value}"
 fi
 
 # Per-job /tmp prevents cross-user permission conflicts on shared nodes

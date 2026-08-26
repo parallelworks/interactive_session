@@ -345,7 +345,7 @@ jobs:
             default: huggingface.co/culturerevolt/gemma-4-12b-heretic-abliterated-GGUF:Q4_K_M
             tooltip: |
               Space or comma separated list of models to pull and serve. Accepts Ollama
-              library names (qwen3:4b) or Hugging Face GGUF references
+              library names or Hugging Face GGUF references
               (huggingface.co/<owner>/<repo>:<quant>). Ensure the host has enough disk and memory
               for the quantization you pick — a Q4_K_M of a 31B model is about 19 GB.
               Examples, lightest first:

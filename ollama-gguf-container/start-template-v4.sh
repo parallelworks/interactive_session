@@ -108,6 +108,7 @@ fi
 
 # Prefer running the SIF directly; some nodes cannot mount it (no squashfs
 # kernel/FUSE support), in which case unpack it once into a sandbox directory
+host_ollama=""
 if "${container_runtime}" exec "${container_sif}" /bin/true > /dev/null 2>&1; then
     echo "::notice::SIF image is runnable on this node"
     container_ref="${container_sif}"
@@ -157,6 +158,26 @@ else
         fi
     fi
     container_ref="${sandbox_dir}"
+
+    # A non-suid runtime needs an unprivileged user namespace for a sandbox
+    # just as it does for the SIF, so a node that hands out none (seen as
+    # "maximum number of user namespaces exceeded" with max_user_namespaces=0)
+    # cannot start any container. The sandbox is the image's full root tree
+    # and the image wraps the ollama release install, so its binary runs on
+    # the host directly, exactly like the native variant.
+    if ! "${container_runtime}" exec "${container_ref}" /bin/true > /dev/null 2>&1; then
+        for candidate in "${sandbox_dir}/usr/bin/ollama" "${sandbox_dir}/bin/ollama"; do
+            if "${candidate}" --version > /dev/null 2>&1; then
+                host_ollama="${candidate}"
+                break
+            fi
+        done
+        if [ -z "${host_ollama}" ]; then
+            echo "::error title=Error::${container_runtime} cannot start containers on this node (user namespaces are unavailable) and the image's ollama binary in ${sandbox_dir} does not run on the host either"
+            exit 1
+        fi
+        echo "::notice::${container_runtime} cannot start containers on this node; serving with ${host_ollama} directly on the host"
+    fi
 fi
 
 # Model weights are shared with the native ollama-gguf variant; the controller
@@ -214,10 +235,15 @@ if [ "${ctx_value}" = "max" ]; then
         ctx_value="${service_context_resolved}"
     else
         probe_port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()' 2>/dev/null || echo 41999)
-        "${container_runtime}" exec ${container_ca_args} \
-            --bind "${OLLAMA_MODELS}:${OLLAMA_MODELS}" \
-            --env OLLAMA_HOST=127.0.0.1:${probe_port} --env OLLAMA_MODELS="${OLLAMA_MODELS}" \
-            "${container_ref}" /bin/ollama serve > ctx-probe.log 2>&1 &
+        if [ -n "${host_ollama}" ]; then
+            probe_cmd="env OLLAMA_HOST=127.0.0.1:${probe_port} OLLAMA_MODELS=${OLLAMA_MODELS} ${host_ollama}"
+        else
+            probe_cmd="${container_runtime} exec ${container_ca_args} \
+                --bind ${OLLAMA_MODELS}:${OLLAMA_MODELS} \
+                --env OLLAMA_HOST=127.0.0.1:${probe_port} --env OLLAMA_MODELS=${OLLAMA_MODELS} \
+                ${container_ref} /bin/ollama"
+        fi
+        ${probe_cmd} serve > ctx-probe.log 2>&1 &
         probe_pid=$!
         for _ in $(seq 1 30); do
             curl -s "http://127.0.0.1:${probe_port}/" > /dev/null 2>&1 && break
@@ -225,9 +251,7 @@ if [ "${ctx_value}" = "max" ]; then
         done
         best=0
         for model in ${service_models//,/ }; do
-            n=$("${container_runtime}" exec --bind "${OLLAMA_MODELS}:${OLLAMA_MODELS}" \
-                --env OLLAMA_HOST=127.0.0.1:${probe_port} --env OLLAMA_MODELS="${OLLAMA_MODELS}" \
-                "${container_ref}" /bin/ollama show "${model}" 2> /dev/null \
+            n=$(${probe_cmd} show "${model}" 2> /dev/null \
                 | awk '$1 == "context" && $2 == "length" {print $3; exit}')
             case "${n}" in ''|*[!0-9]*) continue ;; esac
             [ "${n}" -gt "${best}" ] && best=${n}
@@ -250,11 +274,21 @@ fi
 mkdir -p "$PWD/container_tmp"
 
 # When the controller built a filtered manifests view, over-mount it so the
-# container serves only the requested models
+# container serves only the requested models. Without a container to mount
+# into, assemble a store whose manifests are the filtered copy and whose
+# blobs are the real ones.
 manifests_bind=""
+serve_store="${OLLAMA_MODELS}"
 if [ -n "${service_manifests_view}" ]; then
     echo "::notice::Serving only the requested models"
-    manifests_bind="--bind ${service_manifests_view}:${OLLAMA_MODELS}/manifests"
+    if [ -n "${host_ollama}" ]; then
+        serve_store=${PWD}/ollama-store-view
+        mkdir -p ${serve_store}
+        ln -sfn "${service_manifests_view}" ${serve_store}/manifests
+        ln -sfn "${OLLAMA_MODELS}/blobs" ${serve_store}/blobs
+    else
+        manifests_bind="--bind ${service_manifests_view}:${OLLAMA_MODELS}/manifests"
+    fi
 fi
 
 # pw endpoints run exports PORT to the wrapped command; the launcher reads it
@@ -270,6 +304,18 @@ if [ "${service_preload:-true}" = "true" ]; then
         done
     ) &
 fi
+EOF
+if [ -n "${host_ollama}" ]; then
+    [ -n "${ctx_env}" ] && echo "export OLLAMA_CONTEXT_LENGTH=${ctx_value}" >> launch-ollama-${PW_JOB_ID}.sh
+    cat >> launch-ollama-${PW_JOB_ID}.sh <<EOF
+export OLLAMA_HOST="127.0.0.1:\${PORT}"
+export OLLAMA_NOPRUNE="${OLLAMA_NOPRUNE:-false}"
+export OLLAMA_MODELS="${serve_store}"
+export OLLAMA_KEEP_ALIVE="${service_keep_alive:-5m}"
+exec "${host_ollama}" serve
+EOF
+else
+    cat >> launch-ollama-${PW_JOB_ID}.sh <<EOF
 exec "${container_runtime}" exec ${nv_flag} ${container_ca_args} \\
     --bind "${service_parent_install_dir}:${service_parent_install_dir}" \\
     --bind "${OLLAMA_MODELS}:${OLLAMA_MODELS}" \\
@@ -282,6 +328,7 @@ exec "${container_runtime}" exec ${nv_flag} ${container_ca_args} \\
     --env OLLAMA_KEEP_ALIVE="${service_keep_alive:-5m}" \\
     "${container_ref}" /bin/ollama serve
 EOF
+fi
 chmod +x launch-ollama-${PW_JOB_ID}.sh
 
 # START SERVICE

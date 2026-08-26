@@ -124,6 +124,7 @@ fi
 
 # Prefer the SIF; fall back to a sandbox when this node cannot mount it. The
 # sandbox lands on the shared filesystem, so the start template can reuse it.
+host_ollama=""
 if "${container_runtime}" exec "${container_sif}" /bin/true > /dev/null 2>&1; then
     container_ref="${container_sif}"
 else
@@ -172,6 +173,26 @@ else
         fi
     fi
     container_ref="${sandbox_dir}"
+
+    # A non-suid runtime needs an unprivileged user namespace for a sandbox
+    # just as it does for the SIF, so a node that hands out none (seen as
+    # "maximum number of user namespaces exceeded" with max_user_namespaces=0)
+    # cannot start any container. The sandbox is the image's full root tree
+    # and the image wraps the ollama release install, so its binary runs on
+    # the host directly; pulling models needs no containment.
+    if ! "${container_runtime}" exec "${container_ref}" /bin/true > /dev/null 2>&1; then
+        for candidate in "${sandbox_dir}/usr/bin/ollama" "${sandbox_dir}/bin/ollama"; do
+            if "${candidate}" --version > /dev/null 2>&1; then
+                host_ollama="${candidate}"
+                break
+            fi
+        done
+        if [ -z "${host_ollama}" ]; then
+            echo "::error title=Error::${container_runtime} cannot start containers on this node (user namespaces are unavailable) and the image's ollama binary in ${sandbox_dir} does not run on the host either"
+            exit 1
+        fi
+        echo "::notice::${container_runtime} cannot start containers on this node; running ${host_ollama} directly on the host"
+    fi
 fi
 
 # Model weights are shared with the native ollama-gguf variant
@@ -288,24 +309,22 @@ if [ "${need_pull}" != "true" ]; then
     exit 0
 fi
 
-# Cached models are served as-is: pulling them again rewrites their manifest,
-# which fails when another user owns the file in a shared store
-if [ "${need_pull}" != "true" ]; then
-    echo "::notice title=Model Directory::All requested models are already cached in ${OLLAMA_MODELS}"
-    exit 0
-fi
-
 echo "::group::Pull Models"
 mkdir -p ${OLLAMA_MODELS}
 # Model pulls go through a temporary server on an ephemeral port; the weights
 # land in the shared-filesystem OLLAMA_MODELS dir for the service to read
 export OLLAMA_HOST=127.0.0.1:$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')
-"${container_runtime}" exec ${container_ca_args} \
-    --bind "${service_parent_install_dir}:${service_parent_install_dir}" \
-    --bind "${OLLAMA_MODELS}:${OLLAMA_MODELS}" \
-    --env OLLAMA_HOST=${OLLAMA_HOST} \
-    --env OLLAMA_MODELS=${OLLAMA_MODELS} \
-    "${container_ref}" /bin/ollama serve > ollama-controller-serve.log 2>&1 &
+if [ -n "${host_ollama}" ]; then
+    ollama_cmd="${host_ollama}"
+else
+    ollama_cmd="${container_runtime} exec ${container_ca_args} \
+        --bind ${service_parent_install_dir}:${service_parent_install_dir} \
+        --bind ${OLLAMA_MODELS}:${OLLAMA_MODELS} \
+        --env OLLAMA_HOST=${OLLAMA_HOST} \
+        --env OLLAMA_MODELS=${OLLAMA_MODELS} \
+        ${container_ref} /bin/ollama"
+fi
+${ollama_cmd} serve > ollama-controller-serve.log 2>&1 &
 server_pid=$!
 trap "kill ${server_pid} 2> /dev/null" EXIT
 
@@ -329,7 +348,7 @@ for model in ${service_models//,/ }; do
     echo "::notice::Pulling ${model}"
     pulled=false
     for attempt in 1 2 3; do
-        if timeout 1800 "${container_runtime}" exec ${container_ca_args} --env OLLAMA_HOST=${OLLAMA_HOST} "${container_ref}" /bin/ollama pull ${model}; then
+        if timeout 1800 ${ollama_cmd} pull ${model}; then
             pulled=true
             break
         fi
@@ -345,7 +364,7 @@ done
 # weights and add models later
 chmod -R g+rwX ${OLLAMA_MODELS} 2> /dev/null || true
 
-"${container_runtime}" exec ${container_ca_args} --env OLLAMA_HOST=${OLLAMA_HOST} "${container_ref}" /bin/ollama list
+${ollama_cmd} list
 echo "::endgroup::"
 
 build_manifests_view

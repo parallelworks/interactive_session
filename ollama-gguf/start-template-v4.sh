@@ -105,6 +105,7 @@ if [ $? -ne 0 ]; then
     # Fail loud: without this, wait_for_endpoint polls forever for an endpoint
     # that will never register
     # pw workflows runs cancel ${PW_RUN_SLUG}
+    sleep 3
     exit 1
 fi
 echo "::endgroup::"

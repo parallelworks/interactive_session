@@ -93,6 +93,18 @@ chmod +x launch-n8n-${PW_JOB_ID}.sh
 pw endpoints run ${pw_endpoints_args} -- ./launch-n8n-${PW_JOB_ID}.sh
 
 if [ $? -ne 0 ]; then
+    # The pw endpoints command blocks for the life of the service, so it also
+    # returns non-zero when the workflow cancels this job after a *successful*
+    # launch - which is exactly how wait_for_endpoint releases the run. Treating
+    # that as a failure cancelled the whole run from inside the compute job:
+    # ollama_gguf runs 24-26 finished "canceled" with the service up, until
+    # #1055 disabled this line for that service. Only a launch that never
+    # registered its endpoint is a real failure.
+    served_name=$(printf '%s' "${pw_endpoints_args}" | sed -n 's/.*--name[ =]\{1,\}\([^ ]*\).*/\1/p')
+    if [ -n "${served_name}" ] && pw endpoints list 2>/dev/null | awk '{print $1}' | grep -qxF "${served_name}"; then
+        echo "::notice::Endpoint ${served_name} served until this job was cancelled; exiting cleanly"
+        exit 0
+    fi
     echo "::error title=Error::pw endpoints command failed"
     # Fail loud: without this, wait_for_endpoint polls forever for an endpoint
     # that will never register

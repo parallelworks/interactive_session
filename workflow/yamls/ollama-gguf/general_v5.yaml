@@ -31,6 +31,7 @@ jobs:
           service_keep_alive="${{ inputs.service.keep_alive }}"
           service_preload="${{ inputs.service.preload }}"
           service_models_dir="${{ inputs.service.models_dir }}"
+          service_model_names="${{ inputs.service.model_names }}"
           service_parent_install_dir="${{ inputs.service.parent_install_dir }}"
           service_ollama_version="${{ inputs.service.ollama_version }}"
           endpoint_name="${{ inputs.service.endpoint_name }}"
@@ -320,12 +321,11 @@ jobs:
             label: Serve only the requested models
             type: boolean
             default: true
-            hidden: ${{ inputs.service.name == 'ollama-gguf' }}
-            ignore: ${{ .hidden }}
             tooltip: |
               Expose only the models listed above instead of every model cached in the
-              model directory. Available with the Singularity container runtime, which
-              mounts a filtered view of the model manifests into the container.
+              model directory. Either way the run serves from a manifests view it
+              assembles for itself, so the models keep the names set above rather than
+              the reference they were pulled with.
           context_length:
             label: Context Length
             type: dropdown
@@ -371,6 +371,18 @@ jobs:
             type: string
             default: ${HOME}/pw/software/ollama-gguf/models
             tooltip: Directory where model weights are stored (OLLAMA_MODELS). If new models must be pulled and this directory is not writable, the run falls back to ${HOME}/pw/software/ollama-gguf/models.
+          model_names:
+            label: Serve models as
+            type: string
+            optional: true
+            tooltip: |
+              Names to serve the models under, in the same order as the list above,
+              space or comma separated. Leave empty for the default, which drops the
+              registry host, the uploader and the -GGUF suffix: a model pulled as
+              huggingface.co/mradermacher/gemma-4-31B-it-heretic-GGUF:Q4_K_M is served
+              as gemma-4-31b-it-heretic:q4_k_m. The name is what the platform chat
+              shows as the model id, so a short one is worth setting where the
+              repository name is long.
           parent_install_dir:
             label: Parent Install Directory
             type: string

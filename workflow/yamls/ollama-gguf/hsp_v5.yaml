@@ -571,6 +571,22 @@ configurations:
           time: "01:00:00"
       service:
         name: ollama-gguf-container
+        # The h100_nvl nodes (cn17-24) carry 94 GB, which is enough to serve a
+        # 31B at Q8_0 rather than the Q4_K_M a smaller card forces, and Q8_0 is
+        # near-lossless against the BF16 release for a model this size. Measured
+        # on this hardware: Q4_K_M of a 31B took 17.4 GiB of weights and 12.3 GiB
+        # of KV cache at a 128K window, so Q8_0 lands near 44 GiB at 128K and
+        # near 58 GiB at the model's full 262144, both comfortable. Gemma's
+        # sliding-window attention is what keeps the cache that small; a model
+        # without it would not fit at this context.
+        #
+        # Staged in the project directory, so a run that keeps this default
+        # starts without downloading 33 GB first.
+        models: hf.co/llmfan46/gemma-4-31B-it-uncensored-heretic-GGUF:Q8_0
+        # A fixed name keeps the chat model id stable across relaunches, which
+        # is what a RAG or agent config needs. Endpoint names are per-user, so
+        # this only collides with a second concurrent run of your own.
+        endpoint_name: ollama
 
   Nautilus:
     inputs:

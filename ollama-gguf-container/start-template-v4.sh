@@ -16,17 +16,13 @@
 
 set -x
 
-if [ -n "${service_parent_install_dir}" ]; then
-    container_sif=${service_parent_install_dir}/containers/ollama-gguf.sif
-    if ! [ -f "${container_sif}" ] && ! [ -w "${service_parent_install_dir}" ]; then
-        echo "::warning::container_sif ${container_sif} does not exist and no write permission to ${service_parent_install_dir}. Resetting to ${HOME}/pw/software."
-        service_parent_install_dir=${HOME}/pw/software
-    fi
-else
+# The controller resolved which image to run and where this run may write, and
+# appended both to inputs.sh; re-deriving them here is how the two steps end up
+# pointing at different copies.
+if [ -z "${service_parent_install_dir}" ]; then
     service_parent_install_dir=${HOME}/pw/software
 fi
-
-container_sif=${service_parent_install_dir}/containers/ollama-gguf.sif
+container_sif=${service_container_sif:-${service_parent_install_dir}/containers/ollama-gguf.sif}
 sandbox_dir=${service_parent_install_dir}/containers/ollama-gguf-sandbox
 
 # Apptainer renamed the command, so a host can have the runtime under either
@@ -101,7 +97,7 @@ for bundle in /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem \
     fi
 done
 
-if ! [ -f "${container_sif}" ]; then
+if ! [ -r "${container_sif}" ]; then
     echo "::error title=Error::Missing container image ${container_sif}"
     exit 1
 fi
@@ -312,7 +308,19 @@ echo "::notice::Starting ollama: pw endpoints run --openai --rewrite-host=localh
 # platform chat; --rewrite-host satisfies ollama's Host header guard.
 pw endpoints run --openai --rewrite-host=localhost ${pw_endpoints_args} -- ./launch-ollama-${PW_JOB_ID}.sh
 
-if [ $? -ne 0 ]; then
+endpoints_rc=$?
+
+# The workflow cancels this job the moment the endpoint registers, which kills
+# the wrapped command and returns non-zero. That is how a successful launch
+# ends, not a failure, and calling it an error is why a healthy run shows a red
+# step and reads as broken. Only a launch that never registered an endpoint is
+# one.
+if [ ${endpoints_rc} -ne 0 ]; then
+    served_name=$(printf '%s' "${pw_endpoints_args}" | sed -n 's/.*--name[ =]\{1,\}\([^ ]*\).*/\1/p')
+    if [ -n "${served_name}" ] && pw endpoints list 2>/dev/null | awk '{print $1}' | grep -qxF "${served_name}"; then
+        echo "::notice::Endpoint ${served_name} served until this job was cancelled; exiting cleanly"
+        exit 0
+    fi
     echo "::error title=Error::pw endpoints command failed"
     # Fail loud: without this, wait_for_endpoint polls forever for an endpoint
     # that will never register

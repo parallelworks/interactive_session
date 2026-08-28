@@ -31,6 +31,7 @@ jobs:
           service_keep_alive="${{ inputs.service.keep_alive }}"
           service_preload="${{ inputs.service.preload }}"
           service_models_dir="${{ inputs.service.models_dir }}"
+          service_model_names="${{ inputs.service.model_names }}"
           service_ollama_version="${{ inputs.service.ollama_version }}"
           endpoint_name="${{ inputs.service.endpoint_name }}"
           pw_endpoints_args="--name ${endpoint_name:-${{ inputs.service.name }}-${PW_RUN_SLUG}}"
@@ -61,20 +62,43 @@ jobs:
             fi
             return 0
           }
+          # Home is the smallest filesystem on these systems and the image and
+          # its sandbox are gigabytes, so a private install goes to the work
+          # filesystem where the site defines one and only falls back to home
+          # where it does not.
           hsp_install_dir=""
+          private_dir="${HOME}/pw"
+          [ -n "${WORKDIR}" ] && [ -d "${WORKDIR}" ] && private_dir="${WORKDIR}/pw"
           if [ -n "${PROJECTS_HOME}" ] && usable_dir "${PROJECTS_HOME}/hsp"; then
             hsp_install_dir="${PROJECTS_HOME}/hsp"
-          elif usable_dir "${HOME}/pw"; then
+          elif usable_dir "${private_dir}"; then
             [ -n "${PROJECTS_HOME}" ] \
-              && echo "::warning title=Install Directory::${PROJECTS_HOME}/hsp is not writable by this account; installing to ${HOME}/pw instead, which no other user shares" \
-              || echo "::warning title=Install Directory::PROJECTS_HOME is empty; installing to ${HOME}/pw, which no other user shares"
+              && echo "::warning title=Install Directory::${PROJECTS_HOME}/hsp is not writable by this account; installing to ${private_dir} instead, which no other user shares" \
+              || echo "::warning title=Install Directory::PROJECTS_HOME is empty; installing to ${private_dir}, which no other user shares"
+            hsp_install_dir="${private_dir}"
+          elif usable_dir "${HOME}/pw"; then
+            echo "::warning title=Install Directory::${private_dir} is not writable by this account; installing to ${HOME}/pw, which is the smallest filesystem here"
             hsp_install_dir="${HOME}/pw"
           else
-            echo "::error title=Install Directory::Neither ${PROJECTS_HOME:-a project directory} nor ${HOME}/pw can be written; the run has nowhere to install"
+            echo "::error title=Install Directory::Neither ${PROJECTS_HOME:-a project directory} nor ${private_dir} nor ${HOME}/pw can be written; the run has nowhere to install"
             exit 1
           fi
           echo "::notice title=Install Directory::Using Install Directory: ${hsp_install_dir}"
           echo "export service_parent_install_dir=${hsp_install_dir}" >> inputs.sh
+
+          # Where the software goes and where the models come from are separate
+          # questions. Installing needs a writable directory; reading a model
+          # that is already staged needs only read permission, and the project
+          # directory is where models are staged for everyone on the system.
+          # Tying the two together is what sent an account outside the project
+          # group off to re-download tens of gigabytes that were already on the
+          # filesystem, so the project store is named here whether or not this
+          # account can write to it, and the controller decides between reusing
+          # it read-only and staging into the work filesystem instead.
+          if [ -n "${PROJECTS_HOME}" ] && [ -d "${PROJECTS_HOME}/hsp/ollama-gguf/models" ]; then
+            echo "::notice title=Model Directory::Project model store: ${PROJECTS_HOME}/hsp/ollama-gguf/models"
+            echo "export service_shared_models_dir=\"${PROJECTS_HOME}/hsp/ollama-gguf/models\"" >> inputs.sh
+          fi
 
           # The container implementation needs singularity or apptainer, and not
           # every system has one. Rather than failing a launch that the native
@@ -435,12 +459,11 @@ jobs:
             label: Serve only the requested models
             type: boolean
             default: true
-            hidden: ${{ inputs.service.name == 'ollama-gguf' }}
-            ignore: ${{ .hidden }}
             tooltip: |
               Expose only the models listed above instead of every model cached in the
-              model directory. Available with the Singularity container runtime, which
-              mounts a filtered view of the model manifests into the container.
+              model directory. Either way the run serves from a manifests view it
+              assembles for itself, so the models keep the names set above rather than
+              the reference they were pulled with.
           context_length:
             label: Context Length
             type: dropdown
@@ -485,7 +508,30 @@ jobs:
             label: Model Directory
             type: string
             optional: true
-            tooltip: Directory where model weights are stored (OLLAMA_MODELS). Default is <install directory>/ollama-gguf/models, which resolves to ${PROJECTS_HOME}/hsp/ollama-gguf/models on HSP systems. If new models must be pulled and this directory is not writable, the run falls back to ${HOME}/pw/software/ollama-gguf/models.
+            tooltip: |
+              Directory where model weights are stored (OLLAMA_MODELS). Setting it
+              pins the store and skips the search. Left empty, the run looks for a
+              store that already holds every model requested, in order:
+              ${PROJECTS_HOME}/hsp/ollama-gguf/models, which is where models are
+              staged for everyone on the system and is reused even where this
+              account cannot write to it; then the install directory; then
+              ${WORKDIR}/pw/software/ollama-gguf/models; then the same path under
+              ${HOME}. If no store holds them all, they are pulled into the first
+              writable one in that same order — the work filesystem before home,
+              which has far less quota. WORKDIR is scratch and is purged, which is
+              the right trade for a cache that can be pulled again.
+          model_names:
+            label: Serve models as
+            type: string
+            optional: true
+            tooltip: |
+              Names to serve the models under, in the same order as the list above,
+              space or comma separated. Leave empty for the default, which drops the
+              registry host, the uploader and the -GGUF suffix: a model pulled as
+              huggingface.co/mradermacher/gemma-4-31B-it-heretic-GGUF:Q4_K_M is served
+              as gemma-4-31b-it-heretic:q4_k_m. The name is what the platform chat
+              shows as the model id, so a short one is worth setting where the
+              repository name is long.
           endpoint_name:
             label: Endpoint name
             type: string

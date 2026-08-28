@@ -195,44 +195,13 @@ else
     fi
 fi
 
-# Model weights are shared with the native ollama-gguf variant
-if [ -z "${service_models_dir}" ]; then
-    service_models_dir=${service_parent_install_dir}/ollama-gguf/models
-fi
-export OLLAMA_MODELS=${service_models_dir}
-
-# hf.co and huggingface.co address the same registry, and sites that filter by
-# domain commonly allow the long name while blocking the short one, which
-# surfaces as a connection reset rather than a policy message. Prefer whichever
-# form is already in the model store, since a cache written under one name is
-# invisible under the other and would be re-pulled in full; otherwise take the
-# long name, which more sites allow.
-if [ -n "${service_models}" ]; then
-    normalised_models=""
-    for ref in ${service_models//,/ }; do
-        short="${ref}"; long="${ref}"
-        case "${ref}" in
-            hf.co/*) long="huggingface.co/${ref#hf.co/}" ;;
-            huggingface.co/*) short="hf.co/${ref#huggingface.co/}" ;;
-        esac
-        chosen="${long}"
-        for candidate in "${ref}" "${short}" "${long}"; do
-            name="${candidate}"; tag=latest
-            case "${candidate}" in *:*) name="${candidate%%:*}"; tag="${candidate##*:}" ;; esac
-            case "${name}" in
-                */*/*) manifest="${OLLAMA_MODELS}/manifests/${name}/${tag}" ;;
-                */*) manifest="${OLLAMA_MODELS}/manifests/registry.ollama.ai/${name}/${tag}" ;;
-                *) manifest="${OLLAMA_MODELS}/manifests/registry.ollama.ai/library/${name}/${tag}" ;;
-            esac
-            if [ -s "${manifest}" ]; then
-                chosen="${candidate}"
-                break
-            fi
-        done
-        normalised_models="${normalised_models} ${chosen}"
-    done
-    service_models="$(echo ${normalised_models} | xargs)"
-fi
+# Model store resolution. The order is deliberate: a project directory holds
+# models prestaged for everyone on the system, so it is looked at first and is
+# worth reusing even where this account cannot write to it; the work filesystem
+# comes next, because home is the smallest filesystem on these systems and one
+# quantized model is tens of gigabytes; home is the last resort. An operator who
+# names a directory on the input form gets that directory and no search.
+service_models_requested="${service_models}"
 
 model_manifest_path() {
     local ref=$1 name=$1 tag=latest
@@ -244,24 +213,201 @@ model_manifest_path() {
     esac
 }
 
-# Serve only the requested models by over-mounting a filtered manifests
-# directory into the container: the store contents define what ollama serves,
-# there is no native allowlist
-build_manifests_view() {
-    if [ "${service_serve_only_requested}" != "true" ]; then
-        return 0
+# "Is there a manifest" and "can this account open it" are different questions,
+# and a store is only prestaged for the accounts that can read it. A project
+# directory whose default ACL denies other leaves every manifest and blob at
+# mode rw-rw----: they stat fine, so a plain -s test calls the model cached and
+# the failure lands much later as a load error on the compute node. Check the
+# manifest and every blob it names for read permission instead.
+model_is_readable() {
+    local manifest=$1 digest=""
+    [ -s "${manifest}" ] && [ -r "${manifest}" ] || return 1
+    for digest in $(tr ',' '\n' < "${manifest}" \
+        | sed -n 's/.*"digest"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'); do
+        [ -r "${OLLAMA_MODELS}/blobs/${digest/:/-}" ] || return 1
+    done
+    return 0
+}
+
+# hf.co and huggingface.co address the same registry, and sites that filter by
+# domain commonly allow the long name while blocking the short one, which
+# surfaces as a connection reset rather than a policy message. Prefer whichever
+# form a given store already holds, since a cache written under one name is
+# invisible under the other and would be re-pulled in full; otherwise take the
+# long name, which more sites allow.
+normalise_models_for_store() {
+    local store=$1 saved=${OLLAMA_MODELS} out="" ref short long chosen candidate
+    export OLLAMA_MODELS=${store}
+    for ref in ${service_models_requested//,/ }; do
+        short="${ref}"; long="${ref}"
+        case "${ref}" in
+            hf.co/*) long="huggingface.co/${ref#hf.co/}" ;;
+            huggingface.co/*) short="hf.co/${ref#huggingface.co/}" ;;
+        esac
+        chosen="${long}"
+        for candidate in "${ref}" "${short}" "${long}"; do
+            if [ -s "$(model_manifest_path ${candidate})" ]; then
+                chosen="${candidate}"
+                break
+            fi
+        done
+        out="${out} ${chosen}"
+    done
+    export OLLAMA_MODELS=${saved}
+    service_models="$(echo ${out} | xargs)"
+}
+
+model_store_candidates() {
+    local seen="" dir=""
+    for dir in "${service_shared_models_dir}" \
+               "${service_parent_install_dir}/ollama-gguf/models" \
+               "${WORKDIR:+${WORKDIR}/pw/software/ollama-gguf/models}" \
+               "${HOME}/pw/software/ollama-gguf/models"; do
+        [ -n "${dir}" ] || continue
+        case " ${seen} " in *" ${dir} "*) continue ;; esac
+        seen="${seen} ${dir}"
+        echo "${dir}"
+    done
+}
+
+# Leaves service_models normalised against the store it was asked about
+store_has_all_models() {
+    local store=$1 saved=${OLLAMA_MODELS} model="" manifest="" unreadable="" ok=0
+    normalise_models_for_store "${store}"
+    export OLLAMA_MODELS=${store}
+    for model in ${service_models//,/ }; do
+        manifest=$(model_manifest_path ${model})
+        model_is_readable "${manifest}" && continue
+        ok=1
+        [ -s "${manifest}" ] && unreadable="${unreadable} ${model}"
+    done
+    export OLLAMA_MODELS=${saved}
+    if [ -n "${unreadable}" ]; then
+        echo "::warning title=Model Directory::${store} already holds${unreadable}, but this account cannot read the files. Under a project directory's default ACL the weights land at mode rw-rw----, readable only to the project group, so they have to be staged again elsewhere. Whoever owns the store can open it once with: chmod -R a+rX ${store}; find ${store} -type d -exec setfacl -d -m o::rx {} +"
     fi
+    return ${ok}
+}
+
+store_is_writable() {
+    local probe=$1
+    while [ ! -e "${probe}" ]; do probe=$(dirname "${probe}"); done
+    [ -w "${probe}" ]
+}
+
+if [ -n "${service_models_dir}" ]; then
+    echo "::notice title=Model Directory::Using the model directory from the input form: ${service_models_dir}"
+else
+    for candidate in $(model_store_candidates); do
+        if store_has_all_models "${candidate}"; then
+            service_models_dir=${candidate}
+            echo "::notice title=Model Directory::Every requested model is already staged in ${candidate}"
+            break
+        fi
+    done
+fi
+if [ -z "${service_models_dir}" ]; then
+    for candidate in $(model_store_candidates); do
+        if store_is_writable "${candidate}"; then
+            service_models_dir=${candidate}
+            echo "::notice title=Model Directory::No store holds every requested model; staging into ${candidate}"
+            break
+        fi
+        echo "::notice title=Model Directory::${candidate} is not writable; trying the next candidate"
+    done
+fi
+if [ -z "${service_models_dir}" ]; then
+    echo "::error title=Model Directory::No usable model directory: no candidate holds every requested model in a form this account can read, and none of them can be written"
+    exit 1
+fi
+export OLLAMA_MODELS=${service_models_dir}
+normalise_models_for_store "${OLLAMA_MODELS}"
+echo "export service_models=\"${service_models}\"" >> inputs.sh
+
+# Ollama names a model after the reference it was pulled with, so a Hugging
+# Face model is served - and listed in the platform chat - as
+# hf.co/<uploader>/<repo>:<quant>. The registry host and the uploader are
+# provenance, not identity, and they make the model id in the chat picker
+# unreadable. Serve a plain name instead: the repository, lowercased, without
+# the registry, the uploader or the -GGUF suffix, with the quantization as the
+# tag. Ollama accepts [a-z0-9._-] in a name, so anything else folds to a dash,
+# and a pathological repository name is cut rather than left to fail the
+# server's own name validation.
+ollama_safe_name() {
+    printf '%s' "$1" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9._-' '-' \
+        | sed 's/--*/-/g; s/^[-._]*//; s/[-._]*$//' | cut -c1-64 | sed 's/[-._]*$//'
+}
+
+normalise_served_name() {
+    local n=$1 tag=latest
+    case "${n}" in *:*) tag=${n##*:}; n=${n%%:*} ;; esac
+    printf '%s:%s' "$(ollama_safe_name "${n}")" "$(ollama_safe_name "${tag}")"
+}
+
+served_name_for() {
+    local ref=$1 name=$1 tag=latest repo=""
+    case "${ref}" in *:*) name=${ref%%:*}; tag=${ref##*:} ;; esac
+    repo=${name##*/}
+    repo=${repo%-GGUF}; repo=${repo%-gguf}; repo=${repo%.gguf}
+    normalise_served_name "${repo}:${tag}"
+}
+
+# Positional: the operator's names where given, a derived plain name otherwise.
+# Dropping the uploader can make two references collide - the same repository
+# name and quantization from two accounts - and the loser would silently vanish
+# from the view, so a collision is numbered and reported rather than served as
+# one model.
+read -r -a model_refs <<< "${service_models}"
+read -r -a name_overrides <<< "${service_model_names//,/ }"
+served_models=""
+for i in "${!model_refs[@]}"; do
+    if [ -n "${name_overrides[$i]}" ]; then
+        candidate=$(normalise_served_name "${name_overrides[$i]}")
+    else
+        candidate=$(served_name_for "${model_refs[$i]}")
+    fi
+    [ "${candidate%%:*}" = "" ] && candidate="model:${candidate##*:}"
+    suffix=1
+    while case " ${served_models} " in *" ${candidate} "*) true ;; *) false ;; esac; do
+        suffix=$((suffix + 1))
+        candidate="$(ollama_safe_name "${candidate%%:*}-${suffix}"):${candidate##*:}"
+        echo "::warning title=Model Name::Two models resolve to the same served name; serving one of them as ${candidate}. Set \"Serve models as\" to name them yourself."
+    done
+    served_models="${served_models} ${candidate}"
+done
+served_models="$(echo ${served_models} | xargs)"
+read -r -a served_refs <<< "${served_models}"
+echo "export service_served_models=\"${served_models}\"" >> inputs.sh
+
+# The store's contents are the only thing that decides what ollama serves -
+# there is no allowlist and no rename at the server - so both are done by
+# assembling a manifests directory for this run and serving that instead. An
+# alias is the same manifest file written under the name to serve it as, which
+# costs nothing: manifests are a kilobyte and the blobs they point at are never
+# copied.
+build_manifests_view() {
+    local src rel alias i
     manifests_view=${PW_PARENT_JOB_DIR}/ollama-manifests-view
     rm -rf ${manifests_view}
-    for model in ${service_models//,/ }; do
-        src=$(model_manifest_path ${model})
+    mkdir -p ${manifests_view}
+    # Not filtering means every cached model stays visible, so mirror the
+    # store's manifests first and write the aliases on top of that
+    if [ "${service_serve_only_requested}" != "true" ] && [ -d "${OLLAMA_MODELS}/manifests" ]; then
+        (cd ${OLLAMA_MODELS}/manifests && find . -type f -exec cp --parents {} ${manifests_view}/ \;) 2> /dev/null
+    fi
+    for i in "${!model_refs[@]}"; do
+        src=$(model_manifest_path "${model_refs[$i]}")
         if ! [ -s "${src}" ]; then
-            echo "::error title=Error::manifest for ${model} not found at ${src}"
+            echo "::error title=Error::manifest for ${model_refs[$i]} not found at ${src}"
             exit 1
         fi
-        rel=${src#${OLLAMA_MODELS}/manifests/}
+        alias=${served_refs[$i]}
+        rel="registry.ollama.ai/library/${alias%%:*}/${alias##*:}"
         mkdir -p ${manifests_view}/$(dirname ${rel})
         cp ${src} ${manifests_view}/${rel}
+        chmod u+w ${manifests_view}/${rel}
+        if [ "${alias}" != "${model_refs[$i]}" ]; then
+            echo "::notice title=Model Name::Serving ${model_refs[$i]} as ${alias}"
+        fi
     done
     # Pruning would delete shared blobs the filtered manifests do not reference
     echo "export OLLAMA_NOPRUNE=1" >> inputs.sh
@@ -270,29 +416,17 @@ build_manifests_view() {
 
 need_pull=false
 for model in ${service_models//,/ }; do
-    if ! [ -s "$(model_manifest_path ${model})" ]; then
-        need_pull=true
-    fi
+    model_is_readable "$(model_manifest_path ${model})" || need_pull=true
 done
 
-# Writability of the store, probing the nearest existing ancestor when the
-# directory does not exist yet
-probe=${OLLAMA_MODELS}
-while [ ! -e "${probe}" ]; do probe=$(dirname "${probe}"); done
 skip_pull=false
-if ! [ -w "${probe}" ]; then
-    if [ "${need_pull}" = "true" ]; then
-        fallback_dir=${HOME}/pw/software/ollama-gguf/models
-        echo "::warning title=Model Directory::Cannot write to ${OLLAMA_MODELS} and some requested models are not cached there; falling back to ${fallback_dir}"
-        service_models_dir=${fallback_dir}
-        export OLLAMA_MODELS=${fallback_dir}
-    else
-        echo "::notice title=Model Directory::${OLLAMA_MODELS} is not writable; serving the cached models read-only"
-        echo "export OLLAMA_NOPRUNE=1" >> inputs.sh
-        export OLLAMA_NOPRUNE=1
-        skip_pull=true
-    fi
+if ! store_is_writable "${OLLAMA_MODELS}"; then
+    echo "::notice title=Model Directory::${OLLAMA_MODELS} is not writable; serving the staged models read-only"
+    echo "export OLLAMA_NOPRUNE=1" >> inputs.sh
+    export OLLAMA_NOPRUNE=1
+    skip_pull=true
 fi
+
 # The start template reads the resolved store from inputs.sh
 echo "export service_models_dir=\"${service_models_dir}\"" >> inputs.sh
 
@@ -341,7 +475,7 @@ done
 # Pulls resume from partial blobs, so a stalled transfer (ollama can hang on a
 # dead connection) is bounded by the timeout and finished by the retry
 for model in ${service_models//,/ }; do
-    if [ -s "$(model_manifest_path ${model})" ]; then
+    if model_is_readable "$(model_manifest_path ${model})"; then
         echo "::notice::${model} is already cached; skipping pull"
         continue
     fi
@@ -362,7 +496,17 @@ done
 
 # Best-effort group sharing so other users of a shared store can read the
 # weights and add models later
-chmod -R g+rwX ${OLLAMA_MODELS} 2> /dev/null || true
+# A store is only prestaged for the accounts that can read it. Where the project
+# directory's default ACL denies other, every blob this run pulled lands at mode
+# rw-rw---- and the next account outside the project group re-downloads what is
+# already on the filesystem. Widen what this run wrote and set the default so
+# later pulls inherit it. Both are best effort: files another account owns
+# cannot be changed from here.
+chmod -R a+rX,ug+w ${OLLAMA_MODELS} 2> /dev/null || true
+if command -v setfacl > /dev/null 2>&1; then
+    setfacl -R -m o::rX ${OLLAMA_MODELS} 2> /dev/null || true
+    find ${OLLAMA_MODELS} -type d -exec setfacl -d -m o::rx {} + 2> /dev/null || true
+fi
 
 ${ollama_cmd} list
 echo "::endgroup::"

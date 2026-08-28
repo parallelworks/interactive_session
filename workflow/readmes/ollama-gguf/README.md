@@ -40,21 +40,61 @@ re-pulled — this keeps runs fast and lets several users share one store
 (re-pulling would rewrite a manifest file another user may own). To force a
 refresh of a tag, delete its file under `<model directory>/manifests/`.
 
+### Where the weights live
+
 The **Model Directory** input sets where weights are stored (`OLLAMA_MODELS`;
 ollama keeps them as a content-addressed store with `blobs/` and `manifests/`
-subdirectories). It defaults to the shared per-platform location, so weights
-download once per cluster regardless of runtime. If new models must be pulled
-and the directory is not writable, the run warns and falls back to
-`${HOME}/pw/software/ollama-gguf/models`; if it is not writable but every
-requested model is already cached there, the run serves the store read-only.
+subdirectories). Setting it pins the store and skips the search below.
 
-With the Singularity runtime, **Serve only the requested models** (on by
-default) mounts a filtered view of the model manifests into the container so
-the endpoint exposes just the models listed by the run — useful with shared
-model directories, where the store accumulates everyone's models. When
-disabled (and always with the native runtime), the server serves every model
-present under the model directory, and the platform re-polls the model list —
-`ollama pull` on the live server adds chat models without relaunching.
+Left empty, the run first looks for a store that already holds every requested
+model, in this order:
+
+1. the project directory (`${PROJECTS_HOME}/hsp/ollama-gguf/models` on HSP
+   systems), where models are staged for everyone on the system
+2. the install directory
+3. `${WORKDIR}/pw/software/ollama-gguf/models`
+4. `${HOME}/pw/software/ollama-gguf/models`
+
+A store that holds everything is reused **even where this account cannot write
+to it** — reading a staged model needs read permission, not write, and
+re-downloading tens of gigabytes that are already on the filesystem because a
+project directory refuses a write is the expensive mistake. If no store holds
+them all, the missing models are pulled into the first writable candidate in
+the same order: the work filesystem before home, which has far less quota.
+`WORKDIR` is scratch and is purged, which is the right trade for a cache that
+can be pulled again.
+
+Staged weights have to be readable by the account that wants them. A project
+directory whose default ACL denies `other` leaves every blob at mode
+`rw-rw----`, readable only to the project group; the run detects that, says so,
+and stages elsewhere rather than failing later with a load error. Whoever owns
+the store opens it once with:
+
+```
+chmod -R a+rX <model directory>
+find <model directory> -type d -exec setfacl -d -m o::rx {} +
+```
+
+Models this workflow pulls are made world-readable for the same reason.
+
+### What the models are called
+
+Ollama names a model after the reference it was pulled with, so a Hugging Face
+model would otherwise be served — and listed in the platform chat — as
+`hf.co/<uploader>/<repo>:<quant>`. The registry host and the uploader are
+provenance, not identity, so the run serves a plain name instead: the
+repository, lowercased, without the registry, the uploader or the `-GGUF`
+suffix, with the quantization as the tag. `huggingface.co/mradermacher/gemma-4-31B-it-heretic-GGUF:Q4_K_M`
+is served as `gemma-4-31b-it-heretic:q4_k_m`. **Serve models as** overrides
+this per model, in the same order as the model list.
+
+Both runtimes serve from a manifests directory the run assembles for itself, so
+the names hold regardless of runtime. **Serve only the requested models** (on
+by default) additionally limits the endpoint to the models this run listed —
+useful with shared model directories, where the store accumulates everyone's
+models. When disabled, every model cached under the model directory is served
+as well, and the platform re-polls the model list — `ollama pull` on the live
+server adds chat models without relaunching.
 
 Models whose chat template does not declare tool support (common for
 abliterated GGUFs) work in the platform chat and through

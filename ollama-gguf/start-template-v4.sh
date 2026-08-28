@@ -29,37 +29,25 @@ fi
 # The controller appends the resolved service_models_dir to inputs.sh
 export OLLAMA_MODELS=${service_models_dir:-${service_install_dir}/models}
 
-# hf.co and huggingface.co address the same registry, and sites that filter by
-# domain commonly allow the long name while blocking the short one, which
-# surfaces as a connection reset rather than a policy message. Prefer whichever
-# form is already in the model store, since a cache written under one name is
-# invisible under the other and would be re-pulled in full; otherwise take the
-# long name, which more sites allow.
-if [ -n "${service_models}" ]; then
-    normalised_models=""
-    for ref in ${service_models//,/ }; do
-        short="${ref}"; long="${ref}"
-        case "${ref}" in
-            hf.co/*) long="huggingface.co/${ref#hf.co/}" ;;
-            huggingface.co/*) short="hf.co/${ref#huggingface.co/}" ;;
-        esac
-        chosen="${long}"
-        for candidate in "${ref}" "${short}" "${long}"; do
-            name="${candidate}"; tag=latest
-            case "${candidate}" in *:*) name="${candidate%%:*}"; tag="${candidate##*:}" ;; esac
-            case "${name}" in
-                */*/*) manifest="${OLLAMA_MODELS}/manifests/${name}/${tag}" ;;
-                */*) manifest="${OLLAMA_MODELS}/manifests/registry.ollama.ai/${name}/${tag}" ;;
-                *) manifest="${OLLAMA_MODELS}/manifests/registry.ollama.ai/library/${name}/${tag}" ;;
-            esac
-            if [ -s "${manifest}" ]; then
-                chosen="${candidate}"
-                break
-            fi
-        done
-        normalised_models="${normalised_models} ${chosen}"
-    done
-    service_models="$(echo ${normalised_models} | xargs)"
+# The controller resolved the store, picked the hf.co / huggingface.co spelling
+# that store actually holds, and exported both service_models and the plain
+# names to serve them under, so nothing is re-derived here: two copies of that
+# logic disagreeing is how a model ends up served under a name the manifests
+# view does not contain.
+
+# The controller also assembled a manifests directory for this run: a filtered
+# view where only the requested models are to be served, and in every case the
+# plain names those models are served under. ollama has no allowlist and no
+# rename at the server, so it is handed a store whose manifests are that
+# directory and whose blobs are the real ones.
+if [ -n "${service_manifests_view}" ]; then
+    serve_store=${PWD}/ollama-store-view
+    mkdir -p ${serve_store}
+    ln -sfn "${service_manifests_view}" ${serve_store}/manifests
+    ln -sfn "${OLLAMA_MODELS}/blobs" ${serve_store}/blobs
+    echo "::notice::Serving ${service_served_models:-${service_models}} from the manifests view the controller assembled"
+    export OLLAMA_MODELS=${serve_store}
+    export OLLAMA_NOPRUNE="${OLLAMA_NOPRUNE:-1}"
 fi
 # auto leaves OLLAMA_CONTEXT_LENGTH unset so ollama picks its own default,
 # which is small; max uses the window the controller read from the model
@@ -81,7 +69,7 @@ export OLLAMA_HOST="127.0.0.1:\${PORT}"
 if [ "${service_preload:-true}" = "true" ]; then
     (
         until curl -s "http://127.0.0.1:\${PORT}/" > /dev/null 2>&1; do sleep 1; done
-        for model in ${service_models//,/ }; do
+        for model in ${service_served_models:-${service_models}}; do
             echo "Preloading \${model}"
             curl -s "http://127.0.0.1:\${PORT}/api/generate" -d "{\"model\": \"\${model}\"}" > /dev/null
         done

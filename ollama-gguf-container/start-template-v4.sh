@@ -184,38 +184,11 @@ fi
 # appends the resolved service_models_dir to inputs.sh
 export OLLAMA_MODELS=${service_models_dir:-${service_parent_install_dir}/ollama-gguf/models}
 
-# hf.co and huggingface.co address the same registry, and sites that filter by
-# domain commonly allow the long name while blocking the short one, which
-# surfaces as a connection reset rather than a policy message. Prefer whichever
-# form is already in the model store, since a cache written under one name is
-# invisible under the other and would be re-pulled in full; otherwise take the
-# long name, which more sites allow.
-if [ -n "${service_models}" ]; then
-    normalised_models=""
-    for ref in ${service_models//,/ }; do
-        short="${ref}"; long="${ref}"
-        case "${ref}" in
-            hf.co/*) long="huggingface.co/${ref#hf.co/}" ;;
-            huggingface.co/*) short="hf.co/${ref#huggingface.co/}" ;;
-        esac
-        chosen="${long}"
-        for candidate in "${ref}" "${short}" "${long}"; do
-            name="${candidate}"; tag=latest
-            case "${candidate}" in *:*) name="${candidate%%:*}"; tag="${candidate##*:}" ;; esac
-            case "${name}" in
-                */*/*) manifest="${OLLAMA_MODELS}/manifests/${name}/${tag}" ;;
-                */*) manifest="${OLLAMA_MODELS}/manifests/registry.ollama.ai/${name}/${tag}" ;;
-                *) manifest="${OLLAMA_MODELS}/manifests/registry.ollama.ai/library/${name}/${tag}" ;;
-            esac
-            if [ -s "${manifest}" ]; then
-                chosen="${candidate}"
-                break
-            fi
-        done
-        normalised_models="${normalised_models} ${chosen}"
-    done
-    service_models="$(echo ${normalised_models} | xargs)"
-fi
+# The controller resolved the store, picked the hf.co / huggingface.co spelling
+# that store actually holds, and exported both service_models and the plain
+# names to serve them under, so nothing is re-derived here: two copies of that
+# logic disagreeing is how a model ends up served under a name the manifests
+# view does not contain.
 
 nv_flag=""
 if nvidia-smi -L > /dev/null 2>&1; then
@@ -280,7 +253,7 @@ mkdir -p "$PWD/container_tmp"
 manifests_bind=""
 serve_store="${OLLAMA_MODELS}"
 if [ -n "${service_manifests_view}" ]; then
-    echo "::notice::Serving only the requested models"
+    echo "::notice::Serving ${service_served_models:-${service_models}} from the manifests view the controller assembled"
     if [ -n "${host_ollama}" ]; then
         serve_store=${PWD}/ollama-store-view
         mkdir -p ${serve_store}
@@ -298,7 +271,7 @@ cat > launch-ollama-${PW_JOB_ID}.sh <<EOF
 if [ "${service_preload:-true}" = "true" ]; then
     (
         until curl -s "http://127.0.0.1:\${PORT}/" > /dev/null 2>&1; do sleep 1; done
-        for model in ${service_models//,/ }; do
+        for model in ${service_served_models:-${service_models}}; do
             echo "Preloading \${model}"
             curl -s "http://127.0.0.1:\${PORT}/api/generate" -d "{\"model\": \"\${model}\"}" > /dev/null
         done

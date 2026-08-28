@@ -18,15 +18,91 @@ if ! [ -z ${PW_PARENT_JOB_DIR} ]; then
     cd ${PW_PARENT_JOB_DIR}
 fi
 
-if [ -z ${service_parent_install_dir} ]; then
-    service_parent_install_dir=${HOME}/pw/software
-fi
+# An installed artifact is read-only once staged, so an account that cannot write
+# to the shared install directory can still run the copy already sitting there.
+# Look for a readable one before deciding to download it again, in the same order
+# the model store uses: project directory, install directory, work filesystem,
+# home. Only when no candidate has it does the download go to the first writable
+# one - home last, since it is the smallest filesystem on these systems.
+install_dir_candidates() {
+    local seen="" dir=""
+    for dir in "${service_shared_install_dir}" "${service_parent_install_dir}" \
+               "${WORKDIR:+${WORKDIR}/pw/software}" "${HOME}/pw/software"; do
+        [ -n "${dir}" ] || continue
+        case " ${seen} " in *" ${dir} "*) continue ;; esac
+        seen="${seen} ${dir}"
+        echo "${dir}"
+    done
+}
 
-service_install_dir=${service_parent_install_dir}/ollama-gguf
+# Echoes the candidate directory holding a readable copy of the relative path
+find_staged_in() {
+    local rel=$1 dir=""
+    for dir in $(install_dir_candidates); do
+        if [ -r "${dir}/${rel}" ]; then
+            echo "${dir}"
+            return 0
+        fi
+    done
+    return 1
+}
+
+first_writable_install_dir() {
+    local dir="" probe=""
+    for dir in $(install_dir_candidates); do
+        probe=${dir}
+        while [ ! -e "${probe}" ]; do probe=$(dirname "${probe}"); done
+        if [ -w "${probe}" ]; then
+            echo "${dir}"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Splits the two questions the old single check conflated: which copy of the
+# artifact to run, and where this run may write. Staging a 2.8 GB image again
+# because the directory holding a perfectly readable one refuses a write is the
+# same mistake the model store used to make.
+resolve_install_dirs() {
+    local rel=$1 staged=""
+    staged=$(find_staged_in "${rel}")
+    if [ -n "${staged}" ]; then
+        artifact_dir="${staged}"
+        echo "::notice title=Install Directory::Reusing the staged ${rel} in ${staged}"
+    else
+        artifact_dir=""
+    fi
+    if [ -n "${artifact_dir}" ] && [ -w "${artifact_dir}" ]; then
+        service_parent_install_dir="${artifact_dir}"
+        return 0
+    fi
+    local writable=""
+    writable=$(first_writable_install_dir)
+    if [ -z "${writable}" ]; then
+        if [ -n "${artifact_dir}" ]; then
+            # Nothing to write: the staged copy is enough to run from
+            service_parent_install_dir="${artifact_dir}"
+            return 0
+        fi
+        echo "::error title=Install Directory::No candidate install directory holds ${rel} and none of them can be written"
+        exit 1
+    fi
+    service_parent_install_dir="${writable}"
+    [ -n "${artifact_dir}" ] || artifact_dir="${writable}"
+}
+
+resolve_install_dirs ollama-gguf/bin/ollama
+service_install_dir=${artifact_dir}/ollama-gguf
 service_exec=${service_install_dir}/bin/ollama
+echo "export service_parent_install_dir=\"${service_parent_install_dir}\"" >> inputs.sh
 
 if ! ${service_exec} --version > /dev/null 2>&1; then
     echo "::group::Ollama Installation"
+    # A staged copy that does not run is no better than none: install into the
+    # writable directory instead of next to the one that failed.
+    service_install_dir=${service_parent_install_dir}/ollama-gguf
+    service_exec=${service_install_dir}/bin/ollama
     mkdir -p ${service_install_dir}
     tarball=ollama-linux-amd64.tar.zst
     url=https://github.com/ollama/ollama/releases/download/${service_ollama_version:-v0.32.5}/${tarball}
@@ -41,6 +117,8 @@ if ! ${service_exec} --version; then
     echo "::error title=Error::ollama installation failed"
     exit 1
 fi
+# The start template must run the same binary this step resolved
+echo "export service_exec=\"${service_exec}\"" >> inputs.sh
 
 # Model store resolution. The order is deliberate: a project directory holds
 # models prestaged for everyone on the system, so it is looked at first and is

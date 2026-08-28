@@ -21,21 +21,91 @@ if ! [ -z ${PW_PARENT_JOB_DIR} ]; then
     cd ${PW_PARENT_JOB_DIR}
 fi
 
-if [ -n "${service_parent_install_dir}" ]; then
-    container_sif=${service_parent_install_dir}/containers/ollama-gguf.sif
-    if ! [ -f "${container_sif}" ] && ! [ -w "${service_parent_install_dir}" ]; then
-        echo "::warning::container_sif ${container_sif} does not exist and no write permission to ${service_parent_install_dir}. Resetting to ${HOME}/pw/software."
-        service_parent_install_dir=${HOME}/pw/software
+# An installed artifact is read-only once staged, so an account that cannot write
+# to the shared install directory can still run the copy already sitting there.
+# Look for a readable one before deciding to download it again, in the same order
+# the model store uses: project directory, install directory, work filesystem,
+# home. Only when no candidate has it does the download go to the first writable
+# one - home last, since it is the smallest filesystem on these systems.
+install_dir_candidates() {
+    local seen="" dir=""
+    for dir in "${service_shared_install_dir}" "${service_parent_install_dir}" \
+               "${WORKDIR:+${WORKDIR}/pw/software}" "${HOME}/pw/software"; do
+        [ -n "${dir}" ] || continue
+        case " ${seen} " in *" ${dir} "*) continue ;; esac
+        seen="${seen} ${dir}"
+        echo "${dir}"
+    done
+}
+
+# Echoes the candidate directory holding a readable copy of the relative path
+find_staged_in() {
+    local rel=$1 dir=""
+    for dir in $(install_dir_candidates); do
+        if [ -r "${dir}/${rel}" ]; then
+            echo "${dir}"
+            return 0
+        fi
+    done
+    return 1
+}
+
+first_writable_install_dir() {
+    local dir="" probe=""
+    for dir in $(install_dir_candidates); do
+        probe=${dir}
+        while [ ! -e "${probe}" ]; do probe=$(dirname "${probe}"); done
+        if [ -w "${probe}" ]; then
+            echo "${dir}"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Splits the two questions the old single check conflated: which copy of the
+# artifact to run, and where this run may write. Staging a 2.8 GB image again
+# because the directory holding a perfectly readable one refuses a write is the
+# same mistake the model store used to make.
+resolve_install_dirs() {
+    local rel=$1 staged=""
+    staged=$(find_staged_in "${rel}")
+    if [ -n "${staged}" ]; then
+        artifact_dir="${staged}"
+        echo "::notice title=Install Directory::Reusing the staged ${rel} in ${staged}"
+    else
+        artifact_dir=""
     fi
-else
-    service_parent_install_dir=${HOME}/pw/software
-fi
+    if [ -n "${artifact_dir}" ] && [ -w "${artifact_dir}" ]; then
+        service_parent_install_dir="${artifact_dir}"
+        return 0
+    fi
+    local writable=""
+    writable=$(first_writable_install_dir)
+    if [ -z "${writable}" ]; then
+        if [ -n "${artifact_dir}" ]; then
+            # Nothing to write: the staged copy is enough to run from
+            service_parent_install_dir="${artifact_dir}"
+            return 0
+        fi
+        echo "::error title=Install Directory::No candidate install directory holds ${rel} and none of them can be written"
+        exit 1
+    fi
+    service_parent_install_dir="${writable}"
+    [ -n "${artifact_dir}" ] || artifact_dir="${writable}"
+}
 
-mkdir -p ${service_parent_install_dir}/containers
-chmod a+rX ${service_parent_install_dir}/containers
-
-container_sif=${service_parent_install_dir}/containers/ollama-gguf.sif
+resolve_install_dirs containers/ollama-gguf.sif
+container_sif=${artifact_dir}/containers/ollama-gguf.sif
 sandbox_dir=${service_parent_install_dir}/containers/ollama-gguf-sandbox
+# The start template must run the same image this step resolved
+echo "export service_parent_install_dir=\"${service_parent_install_dir}\"" >> inputs.sh
+echo "export service_container_sif=\"${container_sif}\"" >> inputs.sh
+
+if [ -w "${service_parent_install_dir}" ] || [ ! -e "${service_parent_install_dir}" ]; then
+    mkdir -p ${service_parent_install_dir}/containers 2> /dev/null
+    chmod a+rX ${service_parent_install_dir}/containers 2> /dev/null
+fi
 
 # Apptainer renamed the command, so a host can have the runtime under either
 # name, or under a module whose name carries a version. Look for both, try the
@@ -111,8 +181,11 @@ done
 
 service_ollama_version=${service_ollama_version:-v0.32.5}
 
-if ! [ -f "${container_sif}" ]; then
+if ! [ -r "${container_sif}" ]; then
     echo "::group::Ollama SIF Download"
+    container_sif=${service_parent_install_dir}/containers/ollama-gguf.sif
+    mkdir -p "$(dirname "${container_sif}")"
+    echo "export service_container_sif=\"${container_sif}\"" >> inputs.sh
     oras_pull_file ghcr.io/parallelworks/ollama-gguf:${service_ollama_version#v} ollama-gguf.sif ${container_sif}
     if [ ! -s ${container_sif} ]; then
         echo "::error title=Error::Failed to download file ${container_sif}"

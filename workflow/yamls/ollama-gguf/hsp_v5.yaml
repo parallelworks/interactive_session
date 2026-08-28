@@ -33,7 +33,7 @@ jobs:
           service_models_dir="${{ inputs.service.models_dir }}"
           service_model_names="${{ inputs.service.model_names }}"
           service_ollama_version="${{ inputs.service.ollama_version }}"
-          endpoint_name="${{ inputs.service.endpoint_name }}"
+          endpoint_name="$(printf '%s' '${{ inputs.service.endpoint_name }}' | tr 'A-Z' 'a-z' | tr -c 'a-z0-9-' '-' | sed 's/--*/-/g; s/^-//; s/-$//')"
           pw_endpoints_args="--name ${endpoint_name:-${{ inputs.service.name }}-${PW_RUN_SLUG}}"
           EOF
           # Remove empty variables
@@ -95,6 +95,13 @@ jobs:
           # filesystem, so the project store is named here whether or not this
           # account can write to it, and the controller decides between reusing
           # it read-only and staging into the work filesystem instead.
+          # Same split for the software: an image or tarball already staged in
+          # the project directory is readable by every account on the system, so
+          # an account that cannot write there should run that copy rather than
+          # download 2.8 GB of container again into its own work filesystem.
+          if [ -n "${PROJECTS_HOME}" ] && [ -d "${PROJECTS_HOME}/hsp" ]; then
+            echo "export service_shared_install_dir=\"${PROJECTS_HOME}/hsp\"" >> inputs.sh
+          fi
           if [ -n "${PROJECTS_HOME}" ] && [ -d "${PROJECTS_HOME}/hsp/ollama-gguf/models" ]; then
             echo "::notice title=Model Directory::Project model store: ${PROJECTS_HOME}/hsp/ollama-gguf/models"
             echo "export service_shared_models_dir=\"${PROJECTS_HOME}/hsp/ollama-gguf/models\"" >> inputs.sh
@@ -242,12 +249,22 @@ jobs:
       - name: Wait for endpoint
         early-cancel: any-job-failed
         run: |
-          endpoint_name="${{ inputs.service.endpoint_name }}"
+          # An endpoint name becomes a DNS label, so pw endpoints rejects anything
+          # outside [a-z0-9-] - one uppercase letter is enough to fail the launch.
+          # Fold it here rather than leaving that to the operator, with the same
+          # fold the Create Inputs step used, or this loop waits for a name that
+          # was never registered.
+          endpoint_name="$(printf '%s' '${{ inputs.service.endpoint_name }}' | tr 'A-Z' 'a-z' | tr -c 'a-z0-9-' '-' | sed 's/--*/-/g; s/^-//; s/-$//')"
           if [ -z "${endpoint_name}" ]; then
             endpoint_name="${{ inputs.service.name }}-${PW_RUN_SLUG}"
           fi
           echo "::notice::Waiting for endpoint ${endpoint_name} to come online"
-          until pw endpoints list | grep -qw "${endpoint_name}"; do
+          # grep -w treats a dash as a word boundary, so a short name matches any
+          # longer endpoint starting with it: a run asking for "ollama" accepts a
+          # running "ollama-gguf-container-..." as its own, cancels its script
+          # submitter and finishes green having served nothing. Match the name
+          # column exactly.
+          until pw endpoints list | awk '{print $1}' | grep -qxF "${endpoint_name}"; do
             echo "$(date) Endpoint ${endpoint_name} not found yet; retrying in 10 seconds"
             sleep 10
           done
@@ -536,7 +553,14 @@ jobs:
             label: Endpoint name
             type: string
             optional: true
-            tooltip: Name of the endpoint session. Defaults to <runtime>-<run slug>. A fixed name must be unique among your endpoints and keeps the chat model ids stable across relaunches.
+            tooltip: |
+              Name of the endpoint session. Defaults to <runtime>-<run slug>. A fixed
+              name keeps the chat model ids stable across relaunches, which is what a
+              RAG or agent configuration needs. The name becomes a DNS label, so it is
+              folded to lowercase and anything outside a-z 0-9 - becomes a dash. Pick
+              one that is not a prefix of another of your endpoints: the wait-for-endpoint
+              check matches by prefix, so a shorter name is satisfied by a longer one
+              already running and the launch finishes without serving anything.
           ollama_version:
             label: Ollama version
             type: string

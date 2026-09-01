@@ -60,6 +60,8 @@ configurations:
 
 jobs:
   stream_output:
+    needs:
+      - preprocessing
     if: ${{ inputs.submit_and_exit != true }}
     working-directory: ${{ inputs.rundir }}
     ssh:
